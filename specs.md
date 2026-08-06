@@ -1,6 +1,6 @@
-# Doc de force — Jeu de deckbuilding roguelike (thème vaisseau spatial)
+# Space Fight
 
-*Document de conception — v0.1*
+*Deckbuilder roguelike (vaisseaux spatiaux) — Document de conception — v0.1*
 
 ---
 
@@ -161,36 +161,37 @@ Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fi
 ### 8.1 Disposition générale (wireframe)
 
 ```
-┌────────────────────────────────────────────────────────────────────────────────┐
-│  ÉCRAN DE COMBAT                                              ⚡ Électricité: 3 │
-│                                                                                  │
-│  VAISSEAU DU JOUEUR                              FLOTTE ENNEMIE (6 emplacements)│
-│  ┌───────────────────────────────┐               ┌────────┬────────┬────────┐  │
-│  │        (fond du vaisseau,      │               │   E    │   E    │   E    │  │
-│  │      regroupe les 5 places)    │               │ AVANT  │ AVANT  │ AVANT  │  │
-│  │                                 │               ├────────┼────────┼────────┤  │
-│  │   Gauche    Mid      Droite     │               │   E    │   E    │   E    │  │
-│  │  ┌──────┐ ┌──────┐ ┌──────┐    │               │ARRIÈRE │ARRIÈRE │ARRIÈRE │  │
-│  │  │  FG  │ │      │ │  FD  │    │ ← Avant        └────────┴────────┴────────┘  │
-│  │  └──────┘ │ BASE │ └──────┘    │                                              │
-│  │  ┌──────┐ │      │ ┌──────┐    │ ← Arrière                                    │
-│  │  │  AG  │ │      │ │  AD  │    │                                              │
-│  │  └──────┘ └──────┘ └──────┘    │                                              │
-│  └───────────────────────────────┘                                              │
-│                                                                                  │
-│                                                    ┌─────────┐ ┌─────────┐       │
-│                                                    │ Pioche  │ │Défausse │       │
-│                                                    │  (24)   │ │  (5)    │       │
-│                                                    └─────────┘ └─────────┘       │
-│         ┌───────┐ ┌───────┐ ┌───────┐ ┌───────┐ ┌───────┐                      │
-│         │ Carte │ │ Carte │ │ Carte │ │ Carte │ │ Carte │  ← main, alignée      │
-│         │  1⚡   │ │  2⚡   │ │  1⚡   │ │  0⚡   │ │  3⚡   │   (pas en éventail)   │
-│         └───────┘ └───────┘ └───────┘ └───────┘ └───────┘                      │
-└────────────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│  SPACE FIGHT — ÉCRAN DE COMBAT                                  ⚡ Électricité: 3 │
+│                                                                                    │
+│  VAISSEAU DU JOUEUR                                FLOTTE ENNEMIE (6 emplacements)│
+│  (fond commun aux 5 emplacements)                                                 │
+│                                                                                    │
+│   Arrière          Avant                            Avant           Arrière      │
+│  (loin ennemi)   (face ennemi) →→              ←← (face joueur)   (loin joueur)   │
+│  ┌──────┐        ┌──────┐                       ┌──────┐          ┌──────┐        │
+│  │  AG  │        │  FG  │                       │  E   │          │  E   │        │
+│  └──────┘        └──────┘                       └──────┘          └──────┘        │
+│  ┌────────────────────┐                         ┌──────┐          ┌──────┐        │
+│  │        BASE         │                         │  E   │          │  E   │        │
+│  └────────────────────┘                         └──────┘          └──────┘        │
+│  ┌──────┐        ┌──────┐                       ┌──────┐          ┌──────┐        │
+│  │  AD  │        │  FD  │                       │  E   │          │  E   │        │
+│  └──────┘        └──────┘                       └──────┘          └──────┘        │
+│                                                                                    │
+│                                                     ┌─────────┐ ┌─────────┐        │
+│                                                     │ Pioche  │ │Défausse │        │
+│                                                     │  (24)   │ │  (5)    │        │
+│                                                     └─────────┘ └─────────┘        │
+│         ┌───────┐ ┌───────┐ ┌───────┐ ┌───────┐ ┌───────┐                        │
+│         │ Carte │ │ Carte │ │ Carte │ │ Carte │ │ Carte │  ← main, alignée        │
+│         │  1⚡   │ │  2⚡   │ │  1⚡   │ │  0⚡   │ │  3⚡   │   (pas en éventail)     │
+│         └───────┘ └───────┘ └───────┘ └───────┘ └───────┘                        │
+└──────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-- **Vaisseau du joueur** (haut gauche) : grille 2 lignes (avant/arrière) x 3 colonnes (gauche/mid/droite), sur un **fond commun** qui regroupe visuellement les 5 emplacements. Le **module de base** occupe la colonne mid en entier (avant-mid + arrière-mid fusionnés) ; les 4 autres modules équipés prennent FG/FD/AG/AD
-- **Flotte ennemie** (haut droite) : grille 2x3, 6 emplacements libres (pas de base adverse). Le rang avant (proche du joueur) est celui exposé au corps à corps (voir 3.1)
+- **Vaisseau du joueur** (haut gauche) : grille de **2 colonnes (arrière/avant) x 3 rangées (gauche/mid/droite)**. La colonne **avant est tournée vers l'ennemi** (la plus proche du centre de l'écran), la colonne arrière est la plus éloignée. Le tout repose sur un **fond commun** qui regroupe visuellement les 5 emplacements. Le **module de base** occupe la rangée mid en entier (arrière-mid + avant-mid fusionnés) ; les 4 autres modules équipés prennent FG/FD/AG/AD
+- **Flotte ennemie** (haut droite) : grille symétrique 2x3, 6 emplacements libres (pas de base adverse). La colonne **avant est tournée vers le joueur** (la plus proche du centre de l'écran) et c'est elle qui est exposée au corps à corps (voir 3.1) ; la colonne arrière est la plus éloignée
 - **Compteur d'électricité** restante affiché en haut de l'écran
 - **Main de cartes** : alignée en bas de l'écran (pas en éventail, pour la lisibilité)
 - **Pioche et défausse** : regroupées ensemble dans un coin de l'écran (compteurs de nombre de cartes), séparées de la main
@@ -211,7 +212,6 @@ Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fi
 
 ## 9. Points encore à trancher
 
-- Thème définitif (vaisseau spatial est la piste actuelle, mais pas encore 100% figé)
 - Contenu exact de la Planète commerciale et de l'Aventure
 - Logique d'apparition de la Station Service : toujours disponible, liée aux PV du vaisseau, ou garantie après un combat difficile (voir §2)
 - Fréquence exacte des Boss (valeur de *n* étapes)
