@@ -48,11 +48,16 @@ Un deckbuilder roguelike inspiré de Slay the Spire, où le joueur incarne un va
 - **Électricité** = ressource commune à tout le vaisseau (pas un pool par module)
 - Le joueur pioche une main et joue ses cartes **librement, dans l'ordre de son choix** (comme dans Slay the Spire)
 - Force des choix de répartition : concentrer l'électricité sur un module ce tour, ou répartir
+- **Ordre de jeu** : tour classique façon StS — le joueur joue librement toutes les cartes qu'il souhaite durant son tour, puis le tour ennemi se déroule. Pas de système d'initiative/vitesse par module
+- **Main** : capacité maximale de 10 cartes ; le joueur pioche 5 cartes par tour. Cartes jouées partent en défausse ; quand la pioche est vide, la défausse est mélangée pour reformer la pioche
 
 ### 3.4 Destruction de module
 - Un module à **0 PV est détruit**, même si le combat est gagné (perte permanente)
 - Le **module de base** est la condition de game over : sa destruction termine la run
 - **Récupération entre combats** : aucune régénération automatique des PV — seule la Réparation (module dédié, voir 4.2) permet d'en restaurer. Le vaisseau garde ses dégâts d'un combat à l'autre, sauf passage par une Station Service (voir §2)
+
+### 3.5 Bouclier
+- Le Bouclier absorbe les dégâts subis **avant** les PV. Exemple : un module protégé par 5 Bouclier subit une attaque de 7 dégâts → le Bouclier absorbe 5, les **2 dégâts restants** sont retirés des PV
 
 ---
 
@@ -135,24 +140,52 @@ Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fi
 
 ## 6. Progression des modules / cartes
 
-- Après un combat gagné, le joueur reçoit une nouvelle carte
+- Après un combat gagné, le joueur choisit **1 carte parmi 3 propositions**, pondérées par rareté (voir 7.3)
 - Possibilité de choisir (ou non) **quel module** reçoit cette carte
 
 ---
 
 ## 7. Types de cartes
 
-| Type | Portée | Persistance |
-|---|---|---|
-| **Attaque** | Cible ennemie | Le combat en cours |
-| **Compétence** | Soi/allié/ennemi | Le combat en cours |
-| **Pouvoir** | Le vaisseau entier | Le combat en cours (comme StS) |
-| **Installation** *(à trancher)* | Un module spécifique | Toute la run |
+### 7.1 Types (par effet)
 
-**Installation vs Relique classique** — point encore ouvert :
-- **Relique classique (façon StS)** : effet global sur le vaisseau/la run (ex : +1⚡/tour), indépendant des cartes
-- **Installation** : effet passif attaché à **un module précis**, qui modifie ses cartes (ex : "les cartes de ce module coûtent 1⚡ de moins")
-- Question non tranchée : garder les deux systèmes séparés (deux couches de personnalisation : run globale + spécialisation par module), ou fusionner en un seul concept de relique (globale ou ciblée) pour éviter la redondance
+Classification par nature de l'effet — remplace l'ancien découpage par portée/persistance.
+
+| Type | Description | Sous-catégories |
+|---|---|---|
+| **Attaque** | Inflige des dégâts | Direct / décalé (dégâts différés) / poison (dégâts sur la durée) |
+| **Défense** | Protège un ou plusieurs modules | Bouclier absolu (x tours), réduction de dégâts en %, régénération de Bouclier sur la durée |
+| **Contrôle** | Neutralise ou limite un ennemi | Stun, restriction d'action (ex : pas d'attaque ce tour) |
+| **Debuff** | Affaiblit une cible ennemie | Plafond de dégâts infligés, réduction en %, réduction de Bouclier |
+| **Buff** | Renforce le vaisseau ou un module | Augmentation de dégâts, augmentation de Bouclier |
+| **Soin** | Répare les PV d'un module | (voir aussi module Réparation, §4.2) |
+| **Outils** | Manipule la pioche/défausse ou l'électricité | Piocher, défausser, recycler... ; gagner/convertir de l'électricité |
+
+### 7.2 Cible
+
+Troisième axe, indépendant du type — n'importe quel type (pas seulement Attaque) peut cibler différents camps/motifs : une Défense peut protéger un allié unique ou tout le vaisseau, un Debuff peut viser un ennemi unique ou tout un rang, etc.
+
+| Cible | Description |
+|---|---|
+| **Soi** | Le module qui joue la carte |
+| **Allié unique** | Un module ami au choix (parfois avec contrainte : adjacent, à portée...) |
+| **Alliés multiples / vaisseau entier** | Plusieurs modules ciblés, ou tout le vaisseau |
+| **Ennemi unique** | Une cible ennemie, avec contraintes de rang possibles (rang avant uniquement, n'importe quel rang...) |
+| **Ennemis multiples** | Motif fixe (ligne, colonne, rang entier) ou aléatoire, jusqu'à tous les ennemis |
+
+### 7.3 Rareté
+
+Axe indépendant du type et de la cible — une carte a un type, une cible **et** une rareté.
+
+| Palier | Fréquence | Puissance |
+|---|---|---|
+| **Commune** | Fréquente | Effets simples et fiables, cœur du deck |
+| **Rare** | Peu fréquente | Meilleur ratio effet/électricité, ou mécanique inédite |
+| **Légendaire** | Très peu de cartes | Effets exceptionnels, peuvent changer la façon de jouer un module (ex : Reconstruction, §4.2) |
+
+- La rareté pondère le tirage des **3 propositions** offertes après un combat gagné (§6) : plus une carte est rare, moins elle a de chances d'apparaître dans les propositions
+- Le tag "rare" déjà présent sur *Reconstruction* (§4.2) sera à réévaluer : son effet (résurrection d'un module) correspond plutôt au palier **Légendaire**
+- Rareté et attribution précise par carte (§4.1-4.3) : à faire dans une passe dédiée (voir §9.1 "compléter le jeu de cartes")
 
 ---
 
@@ -212,12 +245,18 @@ Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fi
 
 ## 9. Points encore à trancher
 
+### 9.1 Design / gameplay
+
 - Contenu exact de la Planète commerciale et de l'Aventure
 - Logique d'apparition de la Station Service : toujours disponible, liée aux PV du vaisseau, ou garantie après un combat difficile (voir §2)
 - Fréquence exacte des Boss (valeur de *n* étapes)
 - Cartes de base fournies avec un nouveau module choisi après un Boss : deck de départ fixe par module, à définir une fois le système de cartes approfondi (voir §7)
-- Ordre de jeu en combat : libre (comme StS) ou basé sur une initiative/vitesse par module ?
 - Plafond exact de slots équipables (proposition actuelle : 5, base incluse) et autorisation ou non des doublons de modules
-- Installation vs Relique classique : systèmes séparés ou fusionnés ?
 - Représentation visuelle d'un ennemi L occupant 2 emplacements (§3.2, §8.1) : rectangle fusionné sur les 2 cases, ou deux images liées logiquement ?
 - Comportement exact des cartes sans cible unique lors du clic (§8.3) : à détailler carte par carte
+- Compléter le jeu de cartes de chaque module : les archétypes de §4.3 (Bouclier énergétique, Radar, Propulseur, IA de combat, Générateur, Sabotage, Soute/Fret) n'ont pas encore de decks détaillés comme ceux de §4.1-4.2 ; les cartes déjà écrites en §4.1-4.2 n'ont pas encore de type/cible/rareté assignés (§7)
+
+### 9.2 Technique / développement
+
+- Organisation du code dans le dépôt (arborescence, séparation moteur de jeu / affichage / contenu des cartes...)
+- Choix techniques : langage, framework et librairies à utiliser
