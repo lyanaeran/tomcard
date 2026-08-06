@@ -135,32 +135,42 @@ Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fi
 
 ## 6. Progression des modules / cartes
 
-- Après un combat gagné, le joueur choisit **1 carte parmi 3 propositions**, pondérées par rareté (voir 7.2)
+- Après un combat gagné, le joueur choisit **1 carte parmi 3 propositions**, pondérées par rareté (voir 7.3)
 - Possibilité de choisir (ou non) **quel module** reçoit cette carte
 
 ---
 
 ## 7. Types de cartes
 
-### 7.1 Types (portée / persistance)
+### 7.1 Types (par effet)
 
-| Type | Portée | Persistance |
+Classification par nature de l'effet — remplace l'ancien découpage par portée/persistance.
+
+| Type | Description | Sous-catégories |
 |---|---|---|
-| **Attaque** | Cible ennemie | Le combat en cours |
-| **Compétence** | Soi/allié/ennemi | Le combat en cours |
-| **Pouvoir** | Le vaisseau entier | Le combat en cours (comme StS) |
-| **Installation** *(à trancher)* | Un module spécifique | Toute la run |
+| **Attaque** | Inflige des dégâts | Direct / décalé (dégâts différés) / poison (dégâts sur la durée) ; cible unique (avec contraintes de rang) ou multiple (ligne, colonne, tout) |
+| **Défense** | Protège un ou plusieurs modules | Bouclier absolu (x tours), réduction de dégâts en %, régénération de Bouclier sur la durée |
+| **Contrôle** | Neutralise ou limite un ennemi | Stun, restriction d'action (ex : pas d'attaque ce tour) |
+| **Debuff** | Affaiblit une cible ennemie | Plafond de dégâts infligés, réduction en %, réduction de Bouclier |
+| **Buff** | Renforce le vaisseau ou un module | Augmentation de dégâts, augmentation de Bouclier |
+| **Soin** | Répare les PV d'un module | (voir aussi module Réparation, §4.2) |
+| **Deck** | Manipule pioche/défausse | Piocher, défausser, recycler... |
+
+### 7.2 Persistance (axe indépendant du type)
+
+N'importe quel type ci-dessus peut avoir l'une de ces 3 persistances :
+- **Ponctuelle** (par défaut) : effet appliqué immédiatement, dure au plus le combat en cours (ex : Bouclier qui dure x tours)
+- **Pouvoir** : effet récurrent qui s'applique automatiquement chaque tour, dure tout le combat en cours (comme StS)
+- **Installation** *(à trancher)* : effet passif attaché à un module précis, persiste toute la run
 
 **Installation vs Relique classique** — point encore ouvert :
 - **Relique classique (façon StS)** : effet global sur le vaisseau/la run (ex : +1⚡/tour), indépendant des cartes
 - **Installation** : effet passif attaché à **un module précis**, qui modifie ses cartes (ex : "les cartes de ce module coûtent 1⚡ de moins")
 - Question non tranchée : garder les deux systèmes séparés (deux couches de personnalisation : run globale + spécialisation par module), ou fusionner en un seul concept de relique (globale ou ciblée) pour éviter la redondance
 
-**Types additionnels à définir** — au-delà des 4 ci-dessus, d'autres types sont à formaliser (ex : distinguer les cartes déjà informellement taguées "signature" dans §4.2). Axe indépendant de la rareté (§7.2) : un type comme Pouvoir peut exister à n'importe quel palier de rareté.
+### 7.3 Rareté
 
-### 7.2 Rareté
-
-Axe indépendant du type — une carte a un type **et** une rareté.
+Axe indépendant du type et de la persistance — une carte a un type, une persistance **et** une rareté.
 
 | Palier | Fréquence | Puissance |
 |---|---|---|
@@ -241,8 +251,7 @@ Axe indépendant du type — une carte a un type **et** une rareté.
 - Installation vs Relique classique : systèmes séparés ou fusionnés ?
 - Représentation visuelle d'un ennemi L occupant 2 emplacements (§3.2, §8.1) : rectangle fusionné sur les 2 cases, ou deux images liées logiquement ?
 - Comportement exact des cartes sans cible unique lors du clic (§8.3) : à détailler carte par carte
-- Types de cartes additionnels à formaliser, au-delà des 4 déjà listés en §7.1 (ex : type pour les cartes "signature") — la rareté, elle, est tranchée (voir §7.2)
-- Compléter le jeu de cartes de chaque module : les archétypes de §4.3 (Bouclier énergétique, Radar, Propulseur, IA de combat, Générateur, Sabotage, Soute/Fret) n'ont pas encore de decks détaillés comme ceux de §4.1-4.2
+- Compléter le jeu de cartes de chaque module : les archétypes de §4.3 (Bouclier énergétique, Radar, Propulseur, IA de combat, Générateur, Sabotage, Soute/Fret) n'ont pas encore de decks détaillés comme ceux de §4.1-4.2 ; les cartes déjà écrites en §4.1-4.2 n'ont pas encore de type/persistance/rareté assignés (§7)
 
 ### 9.2 Technique / développement
 
