@@ -17,7 +17,7 @@ Simplifications par rapport à `specs.md` : pas de grille de rangs (2x3), pas d'
 - **Module de base** : 15 PV
 - Pas d'autre module équipé pour ce POC
 - **Électricité** : 3 par tour (ressource pleine à chaque début de tour, ne se cumule pas d'un tour à l'autre)
-- **Main** : 5 cartes piochées à chaque tour
+- **Main** : capacité maximale de **10 cartes** ; le joueur pioche **5 cartes par tour** (le deck ne contenant que 9 cartes au total, ce plafond de 10 n'est jamais atteint dans ce POC)
 - Cartes jouées partent en défausse ; quand la pioche est vide, la défausse est mélangée pour reformer la pioche (comme Slay the Spire, cf. specs.md §3.3)
 
 ---
@@ -37,7 +37,7 @@ Simplifications par rapport à `specs.md` : pas de grille de rangs (2x3), pas d'
 | **Bouclier** | Défense | Soi (unique) | 1⚡ | Donne **5 Bouclier** au module de base |
 | **Soin** | Soin | Soi (unique) | 1⚡ | Répare **4 PV** au module de base |
 
-Le Bouclier absorbe les dégâts subis avant les PV (règle standard façon StS, à confirmer si un comportement différent est voulu).
+Le Bouclier absorbe les dégâts subis avant les PV. Exemple : un module protégé par 5 Bouclier subit une attaque de 7 dégâts → le Bouclier absorbe 5, les **2 dégâts restants** sont retirés des PV.
 
 ---
 
@@ -52,7 +52,7 @@ Le Bouclier absorbe les dégâts subis avant les PV (règle standard façon StS,
 
 ## 6. Déroulé d'un tour
 
-1. **Tour du joueur** : la main se remplit à 5 cartes, l'électricité est remise à 3. Le joueur joue librement les cartes de son choix, dans l'ordre qu'il veut, tant qu'il a assez d'électricité (voir specs.md §3.3)
+1. **Tour du joueur** : le joueur pioche 5 cartes, l'électricité est remise à 3. Le joueur joue librement les cartes de son choix, dans l'ordre qu'il veut, tant qu'il a assez d'électricité (voir specs.md §3.3)
 2. **Tour de l'ennemi** : l'ennemi attaque automatiquement pour 7 dégâts
 
 Ce cycle se répète jusqu'à la fin du combat.
@@ -63,10 +63,3 @@ Ce cycle se répète jusqu'à la fin du combat.
 
 - **Victoire** : l'ennemi atteint 0 PV
 - **Défaite** : le module de base atteint 0 PV (cf. specs.md §3.4 : la destruction du module de base termine la run)
-
----
-
-## 8. Points laissés à l'appréciation de l'implémentation
-
-- Taille de main (5 cartes) et non-cumul de l'électricité entre tours : valeurs choisies pour ce POC, à ajuster après tests
-- Comportement du Bouclier (absorbe avant les PV, expire en fin de combat) : à confirmer si besoin d'un comportement différent
