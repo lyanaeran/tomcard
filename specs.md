@@ -49,11 +49,15 @@ Un deckbuilder roguelike inspiré de Slay the Spire, où le joueur incarne un va
 - Le joueur pioche une main et joue ses cartes **librement, dans l'ordre de son choix** (comme dans Slay the Spire)
 - Force des choix de répartition : concentrer l'électricité sur un module ce tour, ou répartir
 - **Ordre de jeu** : tour classique façon StS — le joueur joue librement toutes les cartes qu'il souhaite durant son tour, puis le tour ennemi se déroule. Pas de système d'initiative/vitesse par module
+- **Main** : capacité maximale de 10 cartes ; le joueur pioche 5 cartes par tour. Cartes jouées partent en défausse ; quand la pioche est vide, la défausse est mélangée pour reformer la pioche
 
 ### 3.4 Destruction de module
 - Un module à **0 PV est détruit**, même si le combat est gagné (perte permanente)
 - Le **module de base** est la condition de game over : sa destruction termine la run
 - **Récupération entre combats** : aucune régénération automatique des PV — seule la Réparation (module dédié, voir 4.2) permet d'en restaurer. Le vaisseau garde ses dégâts d'un combat à l'autre, sauf passage par une Station Service (voir §2)
+
+### 3.5 Bouclier
+- Le Bouclier absorbe les dégâts subis **avant** les PV. Exemple : un module protégé par 5 Bouclier subit une attaque de 7 dégâts → le Bouclier absorbe 5, les **2 dégâts restants** sont retirés des PV
 
 ---
 
