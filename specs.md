@@ -154,7 +154,7 @@ Classification par nature de l'effet — remplace l'ancien découpage par porté
 | **Debuff** | Affaiblit une cible ennemie | Plafond de dégâts infligés, réduction en %, réduction de Bouclier |
 | **Buff** | Renforce le vaisseau ou un module | Augmentation de dégâts, augmentation de Bouclier |
 | **Soin** | Répare les PV d'un module | (voir aussi module Réparation, §4.2) |
-| **Deck** | Manipule pioche/défausse | Piocher, défausser, recycler... |
+| **Outils** | Manipule la pioche/défausse ou l'électricité | Piocher, défausser, recycler... ; gagner/convertir de l'électricité |
 
 ### 7.2 Cible
 
