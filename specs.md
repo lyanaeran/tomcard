@@ -135,7 +135,7 @@ Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fi
 
 ## 6. Progression des modules / cartes
 
-- Après un combat gagné, le joueur choisit **1 carte parmi 3 propositions**, pondérées par rareté (voir 7.2)
+- Après un combat gagné, le joueur choisit **1 carte parmi 3 propositions**, pondérées par rareté (voir 7.3)
 - Possibilité de choisir (ou non) **quel module** reçoit cette carte
 
 ---
@@ -148,7 +148,7 @@ Classification par nature de l'effet — remplace l'ancien découpage par porté
 
 | Type | Description | Sous-catégories |
 |---|---|---|
-| **Attaque** | Inflige des dégâts | Direct / décalé (dégâts différés) / poison (dégâts sur la durée) ; cible unique (avec contraintes de rang) ou multiple (ligne, colonne, tout) |
+| **Attaque** | Inflige des dégâts | Direct / décalé (dégâts différés) / poison (dégâts sur la durée) |
 | **Défense** | Protège un ou plusieurs modules | Bouclier absolu (x tours), réduction de dégâts en %, régénération de Bouclier sur la durée |
 | **Contrôle** | Neutralise ou limite un ennemi | Stun, restriction d'action (ex : pas d'attaque ce tour) |
 | **Debuff** | Affaiblit une cible ennemie | Plafond de dégâts infligés, réduction en %, réduction de Bouclier |
@@ -156,9 +156,21 @@ Classification par nature de l'effet — remplace l'ancien découpage par porté
 | **Soin** | Répare les PV d'un module | (voir aussi module Réparation, §4.2) |
 | **Deck** | Manipule pioche/défausse | Piocher, défausser, recycler... |
 
-### 7.2 Rareté
+### 7.2 Cible
 
-Axe indépendant du type — une carte a un type **et** une rareté.
+Troisième axe, indépendant du type — n'importe quel type (pas seulement Attaque) peut cibler différents camps/motifs : une Défense peut protéger un allié unique ou tout le vaisseau, un Debuff peut viser un ennemi unique ou tout un rang, etc.
+
+| Cible | Description |
+|---|---|
+| **Soi** | Le module qui joue la carte |
+| **Allié unique** | Un module ami au choix (parfois avec contrainte : adjacent, à portée...) |
+| **Alliés multiples / vaisseau entier** | Plusieurs modules ciblés, ou tout le vaisseau |
+| **Ennemi unique** | Une cible ennemie, avec contraintes de rang possibles (rang avant uniquement, n'importe quel rang...) |
+| **Ennemis multiples** | Motif fixe (ligne, colonne, rang entier) ou aléatoire, jusqu'à tous les ennemis |
+
+### 7.3 Rareté
+
+Axe indépendant du type et de la cible — une carte a un type, une cible **et** une rareté.
 
 | Palier | Fréquence | Puissance |
 |---|---|---|
@@ -238,7 +250,7 @@ Axe indépendant du type — une carte a un type **et** une rareté.
 - Plafond exact de slots équipables (proposition actuelle : 5, base incluse) et autorisation ou non des doublons de modules
 - Représentation visuelle d'un ennemi L occupant 2 emplacements (§3.2, §8.1) : rectangle fusionné sur les 2 cases, ou deux images liées logiquement ?
 - Comportement exact des cartes sans cible unique lors du clic (§8.3) : à détailler carte par carte
-- Compléter le jeu de cartes de chaque module : les archétypes de §4.3 (Bouclier énergétique, Radar, Propulseur, IA de combat, Générateur, Sabotage, Soute/Fret) n'ont pas encore de decks détaillés comme ceux de §4.1-4.2 ; les cartes déjà écrites en §4.1-4.2 n'ont pas encore de type/rareté assignés (§7)
+- Compléter le jeu de cartes de chaque module : les archétypes de §4.3 (Bouclier énergétique, Radar, Propulseur, IA de combat, Générateur, Sabotage, Soute/Fret) n'ont pas encore de decks détaillés comme ceux de §4.1-4.2 ; les cartes déjà écrites en §4.1-4.2 n'ont pas encore de type/cible/rareté assignés (§7)
 
 ### 9.2 Technique / développement
 
