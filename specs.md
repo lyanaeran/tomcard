@@ -48,6 +48,7 @@ Un deckbuilder roguelike inspiré de Slay the Spire, où le joueur incarne un va
 - **Électricité** = ressource commune à tout le vaisseau (pas un pool par module)
 - Le joueur pioche une main et joue ses cartes **librement, dans l'ordre de son choix** (comme dans Slay the Spire)
 - Force des choix de répartition : concentrer l'électricité sur un module ce tour, ou répartir
+- **Ordre de jeu** : tour classique façon StS — le joueur joue librement toutes les cartes qu'il souhaite durant son tour, puis le tour ennemi se déroule. Pas de système d'initiative/vitesse par module
 
 ### 3.4 Destruction de module
 - Un module à **0 PV est détruit**, même si le combat est gagné (perte permanente)
@@ -246,7 +247,6 @@ Axe indépendant du type et de la cible — une carte a un type, une cible **et*
 - Logique d'apparition de la Station Service : toujours disponible, liée aux PV du vaisseau, ou garantie après un combat difficile (voir §2)
 - Fréquence exacte des Boss (valeur de *n* étapes)
 - Cartes de base fournies avec un nouveau module choisi après un Boss : deck de départ fixe par module, à définir une fois le système de cartes approfondi (voir §7)
-- Ordre de jeu en combat : libre (comme StS) ou basé sur une initiative/vitesse par module ?
 - Plafond exact de slots équipables (proposition actuelle : 5, base incluse) et autorisation ou non des doublons de modules
 - Représentation visuelle d'un ennemi L occupant 2 emplacements (§3.2, §8.1) : rectangle fusionné sur les 2 cases, ou deux images liées logiquement ?
 - Comportement exact des cartes sans cible unique lors du clic (§8.3) : à détailler carte par carte
