@@ -12,12 +12,18 @@ Un deckbuilder roguelike inspiré de Slay the Spire, où le joueur incarne un va
 
 ## 2. Boucle de jeu (structure de run)
 
-- Pas de carte de progression classique : **un choix à faire à chaque tour**
-- Options possibles à chaque étape :
-  - **Combat** — contrat de chasseur de primes, plusieurs types de rencontres possibles
-  - **Auberge** — fonction à définir (repos, achat, amélioration ?)
-  - **Camper** — fonction à définir
+- Pas de carte de progression classique : à chaque étape, le joueur ne voit que **la prochaine étape** (aucune visibilité au-delà)
+- Types d'étapes possibles :
+  - **PRIME** — combat, contrat de chasseur de primes. Affiche un niveau de difficulté / la composition annoncée des ennemis (tailles S/M/L, cf. 3.2) sans révéler le détail exact
+  - **STATION SERVICE** — réparation du vaisseau (remonte les PV des modules). Logique d'apparition encore ouverte (voir §8), pistes à l'étude :
+    - toujours disponible en alternative à chaque étape, ou
+    - probabilité liée aux PV du vaisseau (voire garantie sous un seuil de dégâts), ou
+    - garantie après un combat difficile (Prime dure ou Boss)
+  - **PLANÈTE COMMERCIALE** — achat de cartes ou d'autres bonus
+  - **AVENTURE** — événement inconnu, façon "?" de Slay the Spire
   - *(autres types d'étapes à imaginer)*
+- **Boss** : revient toutes les *n* étapes (n à ajuster en playtest, indicatif 8-10)
+  - Victoire sur un boss → le joueur choisit **1 nouveau module parmi 2 propositions**, avec ses cartes de base associées (deck de départ propre au module — détail à trancher une fois le système de cartes approfondi, voir §7)
 
 ---
 
@@ -46,6 +52,7 @@ Un deckbuilder roguelike inspiré de Slay the Spire, où le joueur incarne un va
 ### 3.4 Destruction de module
 - Un module à **0 PV est détruit**, même si le combat est gagné (perte permanente)
 - Le **module de base** est la condition de game over : sa destruction termine la run
+- **Récupération entre combats** : aucune régénération automatique des PV — seule la Réparation (module dédié, voir 4.2) permet d'en restaurer. Le vaisseau garde ses dégâts d'un combat à l'autre, sauf passage par une Station Service (voir §2)
 
 ---
 
@@ -118,10 +125,10 @@ Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fi
 
 ## 5. Slots de modules équipables
 
-- **Proposition : 4 à 6 slots actifs**, plafond à 6
-  - Début de run : module de base + 1 module (2 slots)
-  - +1 slot débloqué tous les 2-3 combats/événements, jusqu'à 6
-  - Le module de base occupe toujours un slot et reste équipé
+- Début de run : module de base + 1 module (2 slots)
+- +1 slot débloqué à chaque victoire de boss (rythme lié à la fréquence des boss, voir §2)
+- **Plafond proposé : 5 slots** (module de base inclus) — valeur provisoire, encore susceptible de changer
+- Le module de base occupe toujours un slot et reste équipé
 - **Doublons de modules** : à trancher — proposition initiale : **interdire les doublons** (un archétype par run) pour forcer la diversité et simplifier l'équilibrage en v1
 
 ---
@@ -152,9 +159,10 @@ Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fi
 ## 8. Points encore à trancher
 
 - Thème définitif (vaisseau spatial est la piste actuelle, mais pas encore 100% figé)
-- Contenu exact de l'Auberge et du Camp
-- Mécanique précise du "choix à chaque tour" (aléatoire ? révélé à l'avance ? jauge ?)
+- Contenu exact de la Planète commerciale et de l'Aventure
+- Logique d'apparition de la Station Service : toujours disponible, liée aux PV du vaisseau, ou garantie après un combat difficile (voir §2)
+- Fréquence exacte des Boss (valeur de *n* étapes)
+- Cartes de base fournies avec un nouveau module choisi après un Boss : deck de départ fixe par module, à définir une fois le système de cartes approfondi (voir §7)
 - Ordre de jeu en combat : libre (comme StS) ou basé sur une initiative/vitesse par module ?
-- Régénération des PV de module entre combats : automatique ou uniquement via Réparation ?
-- Nombre de slots équipables (proposition : 4-6) et autorisation ou non des doublons de modules
+- Plafond exact de slots équipables (proposition actuelle : 5, base incluse) et autorisation ou non des doublons de modules
 - Installation vs Relique classique : systèmes séparés ou fusionnés ?
