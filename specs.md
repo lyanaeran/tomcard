@@ -156,7 +156,60 @@ Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fi
 
 ---
 
-## 8. Points encore à trancher
+## 8. Interface / écran de combat
+
+### 8.1 Disposition générale (wireframe)
+
+```
+┌────────────────────────────────────────────────────────────────────────────────┐
+│  ÉCRAN DE COMBAT                                              ⚡ Électricité: 3 │
+│                                                                                  │
+│  VAISSEAU DU JOUEUR                              FLOTTE ENNEMIE (6 emplacements)│
+│  ┌───────────────────────────────┐               ┌────────┬────────┬────────┐  │
+│  │        (fond du vaisseau,      │               │   E    │   E    │   E    │  │
+│  │      regroupe les 5 places)    │               │ AVANT  │ AVANT  │ AVANT  │  │
+│  │                                 │               ├────────┼────────┼────────┤  │
+│  │   Gauche    Mid      Droite     │               │   E    │   E    │   E    │  │
+│  │  ┌──────┐ ┌──────┐ ┌──────┐    │               │ARRIÈRE │ARRIÈRE │ARRIÈRE │  │
+│  │  │  FG  │ │      │ │  FD  │    │ ← Avant        └────────┴────────┴────────┘  │
+│  │  └──────┘ │ BASE │ └──────┘    │                                              │
+│  │  ┌──────┐ │      │ ┌──────┐    │ ← Arrière                                    │
+│  │  │  AG  │ │      │ │  AD  │    │                                              │
+│  │  └──────┘ └──────┘ └──────┘    │                                              │
+│  └───────────────────────────────┘                                              │
+│                                                                                  │
+│                                                    ┌─────────┐ ┌─────────┐       │
+│                                                    │ Pioche  │ │Défausse │       │
+│                                                    │  (24)   │ │  (5)    │       │
+│                                                    └─────────┘ └─────────┘       │
+│         ┌───────┐ ┌───────┐ ┌───────┐ ┌───────┐ ┌───────┐                      │
+│         │ Carte │ │ Carte │ │ Carte │ │ Carte │ │ Carte │  ← main, alignée      │
+│         │  1⚡   │ │  2⚡   │ │  1⚡   │ │  0⚡   │ │  3⚡   │   (pas en éventail)   │
+│         └───────┘ └───────┘ └───────┘ └───────┘ └───────┘                      │
+└────────────────────────────────────────────────────────────────────────────────┘
+```
+
+- **Vaisseau du joueur** (haut gauche) : grille 2 lignes (avant/arrière) x 3 colonnes (gauche/mid/droite), sur un **fond commun** qui regroupe visuellement les 5 emplacements. Le **module de base** occupe la colonne mid en entier (avant-mid + arrière-mid fusionnés) ; les 4 autres modules équipés prennent FG/FD/AG/AD
+- **Flotte ennemie** (haut droite) : grille 2x3, 6 emplacements libres (pas de base adverse). Le rang avant (proche du joueur) est celui exposé au corps à corps (voir 3.1)
+- **Compteur d'électricité** restante affiché en haut de l'écran
+- **Main de cartes** : alignée en bas de l'écran (pas en éventail, pour la lisibilité)
+- **Pioche et défausse** : regroupées ensemble dans un coin de l'écran (compteurs de nombre de cartes), séparées de la main
+
+### 8.2 Formes visuelles
+
+- **Modules du joueur et ennemis** : images **carrées**
+- **Module de base** : exception, forme différente (plus grande, fond dédié qui englobe les 5 emplacements)
+- **Cartes** : format **rectangulaire**
+
+### 8.3 Interaction de jeu d'une carte
+
+1. Clic sur une carte de la main → la carte se **surligne** (état "armée")
+2. Clic sur une **cible valide** → la carte se résout, part en défausse, la surbrillance disparaît
+3. Pour les cartes sans cible unique (Pouvoir, effet sur tout le vaisseau...) : le comportement exact (résolution automatique dès le clic vs. confirmation par un clic supplémentaire) **dépend du type de carte** — à détailler carte par carte lors de l'approfondissement du système de cartes (§7)
+
+---
+
+## 9. Points encore à trancher
 
 - Thème définitif (vaisseau spatial est la piste actuelle, mais pas encore 100% figé)
 - Contenu exact de la Planète commerciale et de l'Aventure
@@ -166,3 +219,5 @@ Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fi
 - Ordre de jeu en combat : libre (comme StS) ou basé sur une initiative/vitesse par module ?
 - Plafond exact de slots équipables (proposition actuelle : 5, base incluse) et autorisation ou non des doublons de modules
 - Installation vs Relique classique : systèmes séparés ou fusionnés ?
+- Représentation visuelle d'un ennemi L occupant 2 emplacements (§3.2, §8.1) : rectangle fusionné sur les 2 cases, ou deux images liées logiquement ?
+- Comportement exact des cartes sans cible unique lors du clic (§8.3) : à détailler carte par carte
