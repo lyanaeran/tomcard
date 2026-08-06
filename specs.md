@@ -212,6 +212,8 @@ Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fi
 
 ## 9. Points encore à trancher
 
+### 9.1 Design / gameplay
+
 - Contenu exact de la Planète commerciale et de l'Aventure
 - Logique d'apparition de la Station Service : toujours disponible, liée aux PV du vaisseau, ou garantie après un combat difficile (voir §2)
 - Fréquence exacte des Boss (valeur de *n* étapes)
@@ -221,3 +223,10 @@ Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fi
 - Installation vs Relique classique : systèmes séparés ou fusionnés ?
 - Représentation visuelle d'un ennemi L occupant 2 emplacements (§3.2, §8.1) : rectangle fusionné sur les 2 cases, ou deux images liées logiquement ?
 - Comportement exact des cartes sans cible unique lors du clic (§8.3) : à détailler carte par carte
+- Types de cartes et rareté (commune/peu commune/rare...) : système de rareté encore à définir, au-delà des 4 types déjà listés en §7
+- Compléter le jeu de cartes de chaque module : les archétypes de §4.3 (Bouclier énergétique, Radar, Propulseur, IA de combat, Générateur, Sabotage, Soute/Fret) n'ont pas encore de decks détaillés comme ceux de §4.1-4.2
+
+### 9.2 Technique / développement
+
+- Organisation du code dans le dépôt (arborescence, séparation moteur de jeu / affichage / contenu des cartes...)
+- Choix techniques : langage, framework et librairies à utiliser
