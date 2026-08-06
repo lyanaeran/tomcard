@@ -1,6 +1,6 @@
-# Doc de force — Jeu de deckbuilding roguelike (thème vaisseau spatial)
+# Space Fight
 
-*Document de conception — v0.1*
+*Deckbuilder roguelike (vaisseaux spatiaux) — Document de conception — v0.1*
 
 ---
 
@@ -12,12 +12,18 @@ Un deckbuilder roguelike inspiré de Slay the Spire, où le joueur incarne un va
 
 ## 2. Boucle de jeu (structure de run)
 
-- Pas de carte de progression classique : **un choix à faire à chaque tour**
-- Options possibles à chaque étape :
-  - **Combat** — contrat de chasseur de primes, plusieurs types de rencontres possibles
-  - **Auberge** — fonction à définir (repos, achat, amélioration ?)
-  - **Camper** — fonction à définir
+- Pas de carte de progression classique : à chaque étape, le joueur ne voit que **la prochaine étape** (aucune visibilité au-delà)
+- Types d'étapes possibles :
+  - **PRIME** — combat, contrat de chasseur de primes. Affiche un niveau de difficulté / la composition annoncée des ennemis (tailles S/M/L, cf. 3.2) sans révéler le détail exact
+  - **STATION SERVICE** — réparation du vaisseau (remonte les PV des modules). Logique d'apparition encore ouverte (voir §8), pistes à l'étude :
+    - toujours disponible en alternative à chaque étape, ou
+    - probabilité liée aux PV du vaisseau (voire garantie sous un seuil de dégâts), ou
+    - garantie après un combat difficile (Prime dure ou Boss)
+  - **PLANÈTE COMMERCIALE** — achat de cartes ou d'autres bonus
+  - **AVENTURE** — événement inconnu, façon "?" de Slay the Spire
   - *(autres types d'étapes à imaginer)*
+- **Boss** : revient toutes les *n* étapes (n à ajuster en playtest, indicatif 8-10)
+  - Victoire sur un boss → le joueur choisit **1 nouveau module parmi 2 propositions**, avec ses cartes de base associées (deck de départ propre au module — détail à trancher une fois le système de cartes approfondi, voir §7)
 
 ---
 
@@ -46,6 +52,7 @@ Un deckbuilder roguelike inspiré de Slay the Spire, où le joueur incarne un va
 ### 3.4 Destruction de module
 - Un module à **0 PV est détruit**, même si le combat est gagné (perte permanente)
 - Le **module de base** est la condition de game over : sa destruction termine la run
+- **Récupération entre combats** : aucune régénération automatique des PV — seule la Réparation (module dédié, voir 4.2) permet d'en restaurer. Le vaisseau garde ses dégâts d'un combat à l'autre, sauf passage par une Station Service (voir §2)
 
 ---
 
@@ -118,10 +125,10 @@ Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fi
 
 ## 5. Slots de modules équipables
 
-- **Proposition : 4 à 6 slots actifs**, plafond à 6
-  - Début de run : module de base + 1 module (2 slots)
-  - +1 slot débloqué tous les 2-3 combats/événements, jusqu'à 6
-  - Le module de base occupe toujours un slot et reste équipé
+- Début de run : module de base + 1 module (2 slots)
+- +1 slot débloqué à chaque victoire de boss (rythme lié à la fréquence des boss, voir §2)
+- **Plafond proposé : 5 slots** (module de base inclus) — valeur provisoire, encore susceptible de changer
+- Le module de base occupe toujours un slot et reste équipé
 - **Doublons de modules** : à trancher — proposition initiale : **interdire les doublons** (un archétype par run) pour forcer la diversité et simplifier l'équilibrage en v1
 
 ---
@@ -149,12 +156,68 @@ Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fi
 
 ---
 
-## 8. Points encore à trancher
+## 8. Interface / écran de combat
 
-- Thème définitif (vaisseau spatial est la piste actuelle, mais pas encore 100% figé)
-- Contenu exact de l'Auberge et du Camp
-- Mécanique précise du "choix à chaque tour" (aléatoire ? révélé à l'avance ? jauge ?)
+### 8.1 Disposition générale (wireframe)
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│  SPACE FIGHT — ÉCRAN DE COMBAT                                  ⚡ Électricité: 3 │
+│                                                                                    │
+│  VAISSEAU DU JOUEUR                                FLOTTE ENNEMIE (6 emplacements)│
+│  (fond commun aux 5 emplacements)                                                 │
+│                                                                                    │
+│   Arrière          Avant                            Avant           Arrière      │
+│  (loin ennemi)   (face ennemi) →→              ←← (face joueur)   (loin joueur)   │
+│  ┌──────┐        ┌──────┐                       ┌──────┐          ┌──────┐        │
+│  │  AG  │        │  FG  │                       │  E   │          │  E   │        │
+│  └──────┘        └──────┘                       └──────┘          └──────┘        │
+│  ┌────────────────────┐                         ┌──────┐          ┌──────┐        │
+│  │        BASE         │                         │  E   │          │  E   │        │
+│  └────────────────────┘                         └──────┘          └──────┘        │
+│  ┌──────┐        ┌──────┐                       ┌──────┐          ┌──────┐        │
+│  │  AD  │        │  FD  │                       │  E   │          │  E   │        │
+│  └──────┘        └──────┘                       └──────┘          └──────┘        │
+│                                                                                    │
+│                                                     ┌─────────┐ ┌─────────┐        │
+│                                                     │ Pioche  │ │Défausse │        │
+│                                                     │  (24)   │ │  (5)    │        │
+│                                                     └─────────┘ └─────────┘        │
+│         ┌───────┐ ┌───────┐ ┌───────┐ ┌───────┐ ┌───────┐                        │
+│         │ Carte │ │ Carte │ │ Carte │ │ Carte │ │ Carte │  ← main, alignée        │
+│         │  1⚡   │ │  2⚡   │ │  1⚡   │ │  0⚡   │ │  3⚡   │   (pas en éventail)     │
+│         └───────┘ └───────┘ └───────┘ └───────┘ └───────┘                        │
+└──────────────────────────────────────────────────────────────────────────────────┘
+```
+
+- **Vaisseau du joueur** (haut gauche) : grille de **2 colonnes (arrière/avant) x 3 rangées (gauche/mid/droite)**. La colonne **avant est tournée vers l'ennemi** (la plus proche du centre de l'écran), la colonne arrière est la plus éloignée. Le tout repose sur un **fond commun** qui regroupe visuellement les 5 emplacements. Le **module de base** occupe la rangée mid en entier (arrière-mid + avant-mid fusionnés) ; les 4 autres modules équipés prennent FG/FD/AG/AD
+- **Flotte ennemie** (haut droite) : grille symétrique 2x3, 6 emplacements libres (pas de base adverse). La colonne **avant est tournée vers le joueur** (la plus proche du centre de l'écran) et c'est elle qui est exposée au corps à corps (voir 3.1) ; la colonne arrière est la plus éloignée
+- **Compteur d'électricité** restante affiché en haut de l'écran
+- **Main de cartes** : alignée en bas de l'écran (pas en éventail, pour la lisibilité)
+- **Pioche et défausse** : regroupées ensemble dans un coin de l'écran (compteurs de nombre de cartes), séparées de la main
+
+### 8.2 Formes visuelles
+
+- **Modules du joueur et ennemis** : images **carrées**
+- **Module de base** : exception, forme différente (plus grande, fond dédié qui englobe les 5 emplacements)
+- **Cartes** : format **rectangulaire**
+
+### 8.3 Interaction de jeu d'une carte
+
+1. Clic sur une carte de la main → la carte se **surligne** (état "armée")
+2. Clic sur une **cible valide** → la carte se résout, part en défausse, la surbrillance disparaît
+3. Pour les cartes sans cible unique (Pouvoir, effet sur tout le vaisseau...) : le comportement exact (résolution automatique dès le clic vs. confirmation par un clic supplémentaire) **dépend du type de carte** — à détailler carte par carte lors de l'approfondissement du système de cartes (§7)
+
+---
+
+## 9. Points encore à trancher
+
+- Contenu exact de la Planète commerciale et de l'Aventure
+- Logique d'apparition de la Station Service : toujours disponible, liée aux PV du vaisseau, ou garantie après un combat difficile (voir §2)
+- Fréquence exacte des Boss (valeur de *n* étapes)
+- Cartes de base fournies avec un nouveau module choisi après un Boss : deck de départ fixe par module, à définir une fois le système de cartes approfondi (voir §7)
 - Ordre de jeu en combat : libre (comme StS) ou basé sur une initiative/vitesse par module ?
-- Régénération des PV de module entre combats : automatique ou uniquement via Réparation ?
-- Nombre de slots équipables (proposition : 4-6) et autorisation ou non des doublons de modules
+- Plafond exact de slots équipables (proposition actuelle : 5, base incluse) et autorisation ou non des doublons de modules
 - Installation vs Relique classique : systèmes séparés ou fusionnés ?
+- Représentation visuelle d'un ennemi L occupant 2 emplacements (§3.2, §8.1) : rectangle fusionné sur les 2 cases, ou deux images liées logiquement ?
+- Comportement exact des cartes sans cible unique lors du clic (§8.3) : à détailler carte par carte
