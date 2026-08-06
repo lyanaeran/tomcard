@@ -135,7 +135,7 @@ Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fi
 
 ## 6. Progression des modules / cartes
 
-- Après un combat gagné, le joueur choisit **1 carte parmi 3 propositions**, pondérées par rareté (voir 7.3)
+- Après un combat gagné, le joueur choisit **1 carte parmi 3 propositions**, pondérées par rareté (voir 7.2)
 - Possibilité de choisir (ou non) **quel module** reçoit cette carte
 
 ---
@@ -156,21 +156,9 @@ Classification par nature de l'effet — remplace l'ancien découpage par porté
 | **Soin** | Répare les PV d'un module | (voir aussi module Réparation, §4.2) |
 | **Deck** | Manipule pioche/défausse | Piocher, défausser, recycler... |
 
-### 7.2 Persistance (axe indépendant du type)
+### 7.2 Rareté
 
-N'importe quel type ci-dessus peut avoir l'une de ces 3 persistances :
-- **Ponctuelle** (par défaut) : effet appliqué immédiatement, dure au plus le combat en cours (ex : Bouclier qui dure x tours)
-- **Pouvoir** : effet récurrent qui s'applique automatiquement chaque tour, dure tout le combat en cours (comme StS)
-- **Installation** *(à trancher)* : effet passif attaché à un module précis, persiste toute la run
-
-**Installation vs Relique classique** — point encore ouvert :
-- **Relique classique (façon StS)** : effet global sur le vaisseau/la run (ex : +1⚡/tour), indépendant des cartes
-- **Installation** : effet passif attaché à **un module précis**, qui modifie ses cartes (ex : "les cartes de ce module coûtent 1⚡ de moins")
-- Question non tranchée : garder les deux systèmes séparés (deux couches de personnalisation : run globale + spécialisation par module), ou fusionner en un seul concept de relique (globale ou ciblée) pour éviter la redondance
-
-### 7.3 Rareté
-
-Axe indépendant du type et de la persistance — une carte a un type, une persistance **et** une rareté.
+Axe indépendant du type — une carte a un type **et** une rareté.
 
 | Palier | Fréquence | Puissance |
 |---|---|---|
@@ -248,10 +236,9 @@ Axe indépendant du type et de la persistance — une carte a un type, une persi
 - Cartes de base fournies avec un nouveau module choisi après un Boss : deck de départ fixe par module, à définir une fois le système de cartes approfondi (voir §7)
 - Ordre de jeu en combat : libre (comme StS) ou basé sur une initiative/vitesse par module ?
 - Plafond exact de slots équipables (proposition actuelle : 5, base incluse) et autorisation ou non des doublons de modules
-- Installation vs Relique classique : systèmes séparés ou fusionnés ?
 - Représentation visuelle d'un ennemi L occupant 2 emplacements (§3.2, §8.1) : rectangle fusionné sur les 2 cases, ou deux images liées logiquement ?
 - Comportement exact des cartes sans cible unique lors du clic (§8.3) : à détailler carte par carte
-- Compléter le jeu de cartes de chaque module : les archétypes de §4.3 (Bouclier énergétique, Radar, Propulseur, IA de combat, Générateur, Sabotage, Soute/Fret) n'ont pas encore de decks détaillés comme ceux de §4.1-4.2 ; les cartes déjà écrites en §4.1-4.2 n'ont pas encore de type/persistance/rareté assignés (§7)
+- Compléter le jeu de cartes de chaque module : les archétypes de §4.3 (Bouclier énergétique, Radar, Propulseur, IA de combat, Générateur, Sabotage, Soute/Fret) n'ont pas encore de decks détaillés comme ceux de §4.1-4.2 ; les cartes déjà écrites en §4.1-4.2 n'ont pas encore de type/rareté assignés (§7)
 
 ### 9.2 Technique / développement
 
