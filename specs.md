@@ -135,12 +135,14 @@ Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fi
 
 ## 6. Progression des modules / cartes
 
-- Après un combat gagné, le joueur reçoit une nouvelle carte
+- Après un combat gagné, le joueur choisit **1 carte parmi 3 propositions**, pondérées par rareté (voir 7.2)
 - Possibilité de choisir (ou non) **quel module** reçoit cette carte
 
 ---
 
 ## 7. Types de cartes
+
+### 7.1 Types (portée / persistance)
 
 | Type | Portée | Persistance |
 |---|---|---|
@@ -153,6 +155,22 @@ Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fi
 - **Relique classique (façon StS)** : effet global sur le vaisseau/la run (ex : +1⚡/tour), indépendant des cartes
 - **Installation** : effet passif attaché à **un module précis**, qui modifie ses cartes (ex : "les cartes de ce module coûtent 1⚡ de moins")
 - Question non tranchée : garder les deux systèmes séparés (deux couches de personnalisation : run globale + spécialisation par module), ou fusionner en un seul concept de relique (globale ou ciblée) pour éviter la redondance
+
+**Types additionnels à définir** — au-delà des 4 ci-dessus, d'autres types sont à formaliser (ex : distinguer les cartes déjà informellement taguées "signature" dans §4.2). Axe indépendant de la rareté (§7.2) : un type comme Pouvoir peut exister à n'importe quel palier de rareté.
+
+### 7.2 Rareté
+
+Axe indépendant du type — une carte a un type **et** une rareté.
+
+| Palier | Fréquence | Puissance |
+|---|---|---|
+| **Commune** | Fréquente | Effets simples et fiables, cœur du deck |
+| **Rare** | Peu fréquente | Meilleur ratio effet/électricité, ou mécanique inédite |
+| **Légendaire** | Très peu de cartes | Effets exceptionnels, peuvent changer la façon de jouer un module (ex : Reconstruction, §4.2) |
+
+- La rareté pondère le tirage des **3 propositions** offertes après un combat gagné (§6) : plus une carte est rare, moins elle a de chances d'apparaître dans les propositions
+- Le tag "rare" déjà présent sur *Reconstruction* (§4.2) sera à réévaluer : son effet (résurrection d'un module) correspond plutôt au palier **Légendaire**
+- Rareté et attribution précise par carte (§4.1-4.3) : à faire dans une passe dédiée (voir §9.1 "compléter le jeu de cartes")
 
 ---
 
@@ -223,7 +241,7 @@ Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fi
 - Installation vs Relique classique : systèmes séparés ou fusionnés ?
 - Représentation visuelle d'un ennemi L occupant 2 emplacements (§3.2, §8.1) : rectangle fusionné sur les 2 cases, ou deux images liées logiquement ?
 - Comportement exact des cartes sans cible unique lors du clic (§8.3) : à détailler carte par carte
-- Types de cartes et rareté (commune/peu commune/rare...) : système de rareté encore à définir, au-delà des 4 types déjà listés en §7
+- Types de cartes additionnels à formaliser, au-delà des 4 déjà listés en §7.1 (ex : type pour les cartes "signature") — la rareté, elle, est tranchée (voir §7.2)
 - Compléter le jeu de cartes de chaque module : les archétypes de §4.3 (Bouclier énergétique, Radar, Propulseur, IA de combat, Générateur, Sabotage, Soute/Fret) n'ont pas encore de decks détaillés comme ceux de §4.1-4.2
 
 ### 9.2 Technique / développement
