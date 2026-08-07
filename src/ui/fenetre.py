@@ -1,6 +1,6 @@
 """
-Fenetre pyglet du combat du POC (version simplifiee du paragraphe 8 de specs.md :
-un seul module, un seul ennemi, pas de grille de rangs).
+Fenetre pyglet du combat du POC (grille 2x3, plusieurs modules et ennemis,
+cf. poc.md et specs.md paragraphe 8, version simplifiee).
 """
 
 import pyglet
@@ -9,16 +9,39 @@ from pyglet import shapes
 from src.gameplay.carte import CibleCarte
 from src.gameplay.combat import Combat, EtatCombat
 from src.gameplay.config_poc import creer_combat_poc
+from src.gameplay.ennemi import Ennemi
+from src.gameplay.module import Module
+from src.gameplay.position import Colonne, Position, Rangee
 from src.ui.animation import AnimationRayon
 
-LARGEUR_FENETRE = 960
-HAUTEUR_FENETRE = 600
+LARGEUR_FENETRE = 1280
+HAUTEUR_FENETRE = 760
 
-# Zone du module du joueur, en haut a gauche
-MODULE_X, MODULE_Y, MODULE_TAILLE = 120, 380, 150
+# Cases de la grille (modules et ennemis), cf. specs.md paragraphe 8.1
+CELLULE_LARGEUR, CELLULE_HAUTEUR = 110, 90
+ESPACEMENT_CELLULE = 14
+FOND_PADDING = 16
 
-# Zone de l'ennemi, en haut a droite
-ENNEMI_X, ENNEMI_Y, ENNEMI_TAILLE = 690, 380, 150
+JOUEUR_ARRIERE_X = 60
+JOUEUR_AVANT_X = JOUEUR_ARRIERE_X + CELLULE_LARGEUR + ESPACEMENT_CELLULE
+
+ENNEMI_AVANT_X = 900
+ENNEMI_ARRIERE_X = ENNEMI_AVANT_X + CELLULE_LARGEUR + ESPACEMENT_CELLULE
+
+RANGEE_Y = {
+    Rangee.GAUCHE: 620,
+    Rangee.MID: 620 - (CELLULE_HAUTEUR + ESPACEMENT_CELLULE),
+    Rangee.DROITE: 620 - 2 * (CELLULE_HAUTEUR + ESPACEMENT_CELLULE),
+}
+
+POSITION_BASE = Position(Colonne.AVANT, Rangee.MID)
+
+LABEL_POSITION_MODULE = {
+    Position(Colonne.AVANT, Rangee.GAUCHE): "Avant-Gauche",
+    Position(Colonne.AVANT, Rangee.DROITE): "Avant-Droite",
+    Position(Colonne.ARRIERE, Rangee.GAUCHE): "Arriere-Gauche",
+    Position(Colonne.ARRIERE, Rangee.DROITE): "Arriere-Droite",
+}
 
 # Main de cartes, alignee en bas (specs.md paragraphe 8.1)
 CARTE_LARGEUR, CARTE_HAUTEUR = 100, 140
@@ -27,15 +50,19 @@ CARTE_ESPACEMENT = 120
 CARTE_X_DEPART = 180
 
 # Bouton de fin de tour
-BOUTON_X, BOUTON_Y = 800, 40
+BOUTON_X, BOUTON_Y = 1080, 40
 BOUTON_LARGEUR, BOUTON_HAUTEUR = 140, 50
 
 COULEUR_MODULE = (70, 130, 200)
+COULEUR_MODULE_DETRUIT = (60, 60, 65)
 COULEUR_ENNEMI = (190, 70, 70)
+COULEUR_ENNEMI_DETRUIT = (60, 60, 65)
+COULEUR_FOND_VAISSEAU = (30, 40, 55)
 COULEUR_CARTE = (55, 55, 60)
 COULEUR_CARTE_SURLIGNEE = (210, 180, 40)
 COULEUR_BOUTON = (90, 90, 95)
 COULEUR_RAYON = (255, 210, 60)
+COULEUR_SURVOL = (255, 255, 255)
 EPAISSEUR_RAYON = 6
 
 
@@ -44,19 +71,50 @@ def _point_dans_rectangle(x: float, y: float, rx: float, ry: float, largeur: flo
     return rx <= x <= rx + largeur and ry <= y <= ry + hauteur
 
 
+def _rect_module(position: Position) -> tuple[float, float, float, float]:
+    """Rectangle (x, y, largeur, hauteur) d'une case du vaisseau du joueur.
+
+    La rangee Mid est occupee par la base en entier (les deux colonnes reunies),
+    quelle que soit la colonne demandee.
+    """
+    if position.rangee == Rangee.MID:
+        largeur = 2 * CELLULE_LARGEUR + ESPACEMENT_CELLULE
+        return JOUEUR_ARRIERE_X, RANGEE_Y[Rangee.MID], largeur, CELLULE_HAUTEUR
+    x = JOUEUR_AVANT_X if position.colonne == Colonne.AVANT else JOUEUR_ARRIERE_X
+    return x, RANGEE_Y[position.rangee], CELLULE_LARGEUR, CELLULE_HAUTEUR
+
+
+def _rect_ennemi(position: Position) -> tuple[float, float, float, float]:
+    """Rectangle (x, y, largeur, hauteur) d'une case de la flotte ennemie."""
+    x = ENNEMI_AVANT_X if position.colonne == Colonne.AVANT else ENNEMI_ARRIERE_X
+    return x, RANGEE_Y[position.rangee], CELLULE_LARGEUR, CELLULE_HAUTEUR
+
+
+def _rect_fond_vaisseau() -> tuple[float, float, float, float]:
+    """Rectangle du fond commun derriere les 5 cases du vaisseau (specs.md paragraphe 8.1)."""
+    x = JOUEUR_ARRIERE_X - FOND_PADDING
+    y = RANGEE_Y[Rangee.DROITE] - FOND_PADDING
+    largeur = (JOUEUR_AVANT_X + CELLULE_LARGEUR) - JOUEUR_ARRIERE_X + 2 * FOND_PADDING
+    hauteur = (RANGEE_Y[Rangee.GAUCHE] + CELLULE_HAUTEUR) - RANGEE_Y[Rangee.DROITE] + 2 * FOND_PADDING
+    return x, y, largeur, hauteur
+
+
 class FenetreCombat(pyglet.window.Window):
-    """Fenetre principale : affiche le combat du POC et gere les clics de souris."""
+    """Fenetre principale : affiche le combat du POC et gere les clics/survols de souris."""
 
     def __init__(self, combat: Combat | None = None):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight - POC")
         self.combat = combat if combat is not None else creer_combat_poc()
         self.index_carte_selectionnee: int | None = None
-        self.animation_rayon = AnimationRayon()
+        self.ennemi_survole: Ennemi | None = None
+        self.rayons: list[tuple[AnimationRayon, tuple, tuple]] = []
         pyglet.clock.schedule_interval(self.update, 1 / 60.0)
 
     def update(self, dt: float) -> None:
         """Fait avancer les animations en cours (appele a chaque frame)."""
-        self.animation_rayon.mettre_a_jour(dt)
+        for animation, _depart, _arrivee in self.rayons:
+            animation.mettre_a_jour(dt)
+        self.rayons = [(a, d, ar) for a, d, ar in self.rayons if a.est_active()]
 
     def on_draw(self) -> None:
         """Redessine entierement la fenetre a chaque frame."""
@@ -65,68 +123,86 @@ class FenetreCombat(pyglet.window.Window):
         # references gardees le temps du dessin, pyglet ne garde pas de reference forte tout seul
         elements = []
 
-        elements.extend(self._dessiner_module(lot))
-        elements.extend(self._dessiner_ennemi(lot))
-        elements.extend(self._dessiner_rayon(lot))
+        elements.extend(self._dessiner_vaisseau(lot))
+        elements.extend(self._dessiner_flotte(lot))
+        elements.extend(self._dessiner_rayons(lot))
         elements.extend(self._dessiner_main(lot))
         elements.extend(self._dessiner_bouton_fin_tour(lot))
         elements.extend(self._dessiner_entete(lot))
+        elements.extend(self._dessiner_survol(lot))
 
         if self.combat.etat != EtatCombat.EN_COURS:
             elements.extend(self._dessiner_message_fin(lot))
 
         lot.draw()
 
-    def _dessiner_module(self, lot: pyglet.graphics.Batch) -> list:
-        """Dessine le module de base du joueur avec ses PV et son bouclier."""
-        module = self.combat.joueur.module
-        rectangle = shapes.Rectangle(MODULE_X, MODULE_Y, MODULE_TAILLE, MODULE_TAILLE, color=COULEUR_MODULE, batch=lot)
+    def _dessiner_vaisseau(self, lot: pyglet.graphics.Batch) -> list:
+        """Dessine le fond commun, la base et les modules equipes du joueur."""
+        elements = []
+        fx, fy, fl, fh = _rect_fond_vaisseau()
+        elements.append(shapes.Rectangle(fx, fy, fl, fh, color=COULEUR_FOND_VAISSEAU, batch=lot))
+
+        elements.extend(self._dessiner_module_case(lot, POSITION_BASE, self.combat.joueur.vaisseau.base, "Base"))
+        for position, module in self.combat.joueur.vaisseau.modules_equipes().items():
+            label = LABEL_POSITION_MODULE[position]
+            elements.extend(self._dessiner_module_case(lot, position, module, label))
+        return elements
+
+    def _dessiner_module_case(self, lot: pyglet.graphics.Batch, position: Position, module: Module, label: str) -> list:
+        """Dessine une case module (rectangle + texte), grisee si detruite."""
+        x, y, largeur, hauteur = _rect_module(position)
+        detruit = module.est_detruit()
+        couleur = COULEUR_MODULE_DETRUIT if detruit else COULEUR_MODULE
+        rectangle = shapes.Rectangle(x, y, largeur, hauteur, color=couleur, batch=lot)
+        etat = "Detruit" if detruit else f"PV {module.pv}/{module.pv_max}\nBouclier {module.bouclier}"
         texte = pyglet.text.Label(
-            f"Module\nPV {module.pv}/{module.pv_max}\nBouclier {module.bouclier}",
-            x=MODULE_X + MODULE_TAILLE / 2,
-            y=MODULE_Y + MODULE_TAILLE / 2,
+            f"{label}\n{etat}",
+            x=x + largeur / 2,
+            y=y + hauteur / 2,
             anchor_x="center",
             anchor_y="center",
             multiline=True,
-            width=MODULE_TAILLE,
+            width=largeur,
             align="center",
             batch=lot,
         )
         return [rectangle, texte]
 
-    def _dessiner_ennemi(self, lot: pyglet.graphics.Batch) -> list:
-        """Dessine l'ennemi avec ses PV."""
-        ennemi = self.combat.ennemi
-        rectangle = shapes.Rectangle(ENNEMI_X, ENNEMI_Y, ENNEMI_TAILLE, ENNEMI_TAILLE, color=COULEUR_ENNEMI, batch=lot)
+    def _dessiner_flotte(self, lot: pyglet.graphics.Batch) -> list:
+        """Dessine chaque case ennemie declaree (grisee si detruite, absente si jamais occupee)."""
+        elements = []
+        for position, ennemi in self.combat.flotte.positions().items():
+            elements.extend(self._dessiner_ennemi_case(lot, position, ennemi))
+        return elements
+
+    def _dessiner_ennemi_case(self, lot: pyglet.graphics.Batch, position: Position, ennemi: Ennemi) -> list:
+        """Dessine une case ennemie (rectangle + texte), grisee si detruite."""
+        x, y, largeur, hauteur = _rect_ennemi(position)
+        detruit = ennemi.est_detruit()
+        couleur = COULEUR_ENNEMI_DETRUIT if detruit else COULEUR_ENNEMI
+        rectangle = shapes.Rectangle(x, y, largeur, hauteur, color=couleur, batch=lot)
+        etat = "Detruit" if detruit else f"PV {ennemi.pv}/{ennemi.pv_max}"
         texte = pyglet.text.Label(
-            f"Ennemi\nPV {ennemi.pv}/{ennemi.pv_max}",
-            x=ENNEMI_X + ENNEMI_TAILLE / 2,
-            y=ENNEMI_Y + ENNEMI_TAILLE / 2,
+            f"{ennemi.nom}\n{etat}",
+            x=x + largeur / 2,
+            y=y + hauteur / 2,
             anchor_x="center",
             anchor_y="center",
             multiline=True,
-            width=ENNEMI_TAILLE,
+            width=largeur,
             align="center",
             batch=lot,
         )
         return [rectangle, texte]
 
-    def _dessiner_rayon(self, lot: pyglet.graphics.Batch) -> list:
-        """Dessine le rayon d'attaque entre l'ennemi et le module, s'il est actif."""
-        if not self.animation_rayon.est_active():
-            return []
-        y_rayon = MODULE_Y + MODULE_TAILLE / 2
-        ligne = shapes.Line(
-            MODULE_X + MODULE_TAILLE,
-            y_rayon,
-            ENNEMI_X,
-            y_rayon,
-            thickness=EPAISSEUR_RAYON,
-            color=COULEUR_RAYON,
-            batch=lot,
-        )
-        ligne.opacity = int(255 * self.animation_rayon.progression())
-        return [ligne]
+    def _dessiner_rayons(self, lot: pyglet.graphics.Batch) -> list:
+        """Dessine chaque rayon d'attaque encore actif entre un ennemi et sa cible."""
+        elements = []
+        for animation, (x1, y1), (x2, y2) in self.rayons:
+            ligne = shapes.Line(x1, y1, x2, y2, thickness=EPAISSEUR_RAYON, color=COULEUR_RAYON, batch=lot)
+            ligne.opacity = int(255 * animation.progression())
+            elements.append(ligne)
+        return elements
 
     def _dessiner_main(self, lot: pyglet.graphics.Batch) -> list:
         """Dessine les cartes de la main du joueur, alignees en bas de l'ecran (specs.md paragraphe 8.1)."""
@@ -175,6 +251,31 @@ class FenetreCombat(pyglet.window.Window):
         )
         return [texte]
 
+    def _dessiner_survol(self, lot: pyglet.graphics.Batch) -> list:
+        """Affiche l'intention de l'ennemi survole (cible visee et degats), cf. poc.md paragraphe 3."""
+        if self.combat.etat != EtatCombat.EN_COURS:
+            return []
+        if self.ennemi_survole is None or self.ennemi_survole.est_detruit():
+            return []
+        cible = self.combat.previsualiser_cible(self.ennemi_survole)
+        if cible is None:
+            return []
+        position = self._position_ennemi(self.ennemi_survole)
+        if position is None:
+            return []
+        x, y, largeur, hauteur = _rect_ennemi(position)
+        nom_cible = self._label_module(cible)
+        texte = pyglet.text.Label(
+            f"Vise : {nom_cible} ({self.ennemi_survole.degats_attaque} degats)",
+            x=x + largeur / 2,
+            y=y + hauteur + 16,
+            anchor_x="center",
+            anchor_y="bottom",
+            color=(*COULEUR_SURVOL, 255),
+            batch=lot,
+        )
+        return [texte]
+
     def _dessiner_message_fin(self, lot: pyglet.graphics.Batch) -> list:
         """Affiche le message de fin de combat (victoire ou defaite)."""
         message = "Victoire !" if self.combat.etat == EtatCombat.VICTOIRE else "Defaite"
@@ -195,8 +296,8 @@ class FenetreCombat(pyglet.window.Window):
             return
 
         if _point_dans_rectangle(x, y, BOUTON_X, BOUTON_Y, BOUTON_LARGEUR, BOUTON_HAUTEUR):
-            self.combat.finir_tour_joueur()
-            self.animation_rayon.demarrer()
+            attaques = self.combat.finir_tour_joueur()
+            self._demarrer_rayons(attaques)
             self.index_carte_selectionnee = None
             return
 
@@ -208,6 +309,10 @@ class FenetreCombat(pyglet.window.Window):
 
         if self.index_carte_selectionnee is not None:
             self._essayer_de_cibler(x, y)
+
+    def on_mouse_motion(self, x: int, y: int, dx: int, dy: int) -> None:
+        """Met a jour l'ennemi actuellement survole par la souris, pour l'affichage de son intention."""
+        self.ennemi_survole = self._ennemi_a(x, y)
 
     def _trouver_carte_cliquee(self, x: int, y: int) -> int | None:
         """Renvoie l'index de la carte de la main cliquee, ou None si aucune."""
@@ -226,12 +331,68 @@ class FenetreCombat(pyglet.window.Window):
             return
         carte = main[self.index_carte_selectionnee]
 
-        cible_module = _point_dans_rectangle(x, y, MODULE_X, MODULE_Y, MODULE_TAILLE, MODULE_TAILLE)
-        cible_ennemi = _point_dans_rectangle(x, y, ENNEMI_X, ENNEMI_Y, ENNEMI_TAILLE, ENNEMI_TAILLE)
+        if carte.cible == CibleCarte.ALLIE:
+            cible = self._module_a(x, y)
+        elif carte.cible == CibleCarte.ENNEMI:
+            cible = self._ennemi_a(x, y)
+        else:
+            cible = None
 
-        if carte.cible == CibleCarte.SOI and cible_module:
-            self.combat.jouer_carte(carte)
+        if cible is not None:
+            self.combat.jouer_carte(carte, cible)
             self.index_carte_selectionnee = None
-        elif carte.cible == CibleCarte.ENNEMI and cible_ennemi:
-            self.combat.jouer_carte(carte)
-            self.index_carte_selectionnee = None
+
+    def _module_a(self, x: int, y: int) -> Module | None:
+        """Renvoie le module vivant du joueur sous ce point, ou None."""
+        vaisseau = self.combat.joueur.vaisseau
+        bx, by, bl, bh = _rect_module(POSITION_BASE)
+        if _point_dans_rectangle(x, y, bx, by, bl, bh) and not vaisseau.base.est_detruit():
+            return vaisseau.base
+        for position, module in vaisseau.modules_equipes().items():
+            mx, my, ml, mh = _rect_module(position)
+            if _point_dans_rectangle(x, y, mx, my, ml, mh) and not module.est_detruit():
+                return module
+        return None
+
+    def _ennemi_a(self, x: int, y: int) -> Ennemi | None:
+        """Renvoie l'ennemi vivant sous ce point, ou None."""
+        for position, ennemi in self.combat.flotte.positions().items():
+            ex, ey, el, eh = _rect_ennemi(position)
+            if _point_dans_rectangle(x, y, ex, ey, el, eh) and not ennemi.est_detruit():
+                return ennemi
+        return None
+
+    def _position_ennemi(self, ennemi: Ennemi) -> Position | None:
+        """Retrouve la position d'un ennemi dans la flotte affichee, ou None."""
+        for position, occupant in self.combat.flotte.positions().items():
+            if occupant is ennemi:
+                return position
+        return None
+
+    def _label_module(self, module: Module) -> str:
+        """Renvoie le libelle affichable d'un module (pour l'etiquette de survol)."""
+        if module is self.combat.joueur.vaisseau.base:
+            return "Base"
+        for position, occupant in self.combat.joueur.vaisseau.modules_equipes().items():
+            if occupant is module:
+                return LABEL_POSITION_MODULE[position]
+        return "?"
+
+    def _demarrer_rayons(self, attaques: list[tuple[Position, Ennemi, Module]]) -> None:
+        """Demarre un rayon anime par attaque resolue ce tour (poc.md paragraphe 8)."""
+        for position_ennemi, _ennemi, module_cible in attaques:
+            ex, ey, el, eh = _rect_ennemi(position_ennemi)
+            position_module = self._position_module(module_cible)
+            mx, my, ml, mh = _rect_module(position_module)
+            depart = (ex, ey + eh / 2)
+            arrivee = (mx + ml, my + mh / 2)
+            animation = AnimationRayon()
+            animation.demarrer()
+            self.rayons.append((animation, depart, arrivee))
+
+    def _position_module(self, module: Module) -> Position:
+        """Retrouve la position d'un module dans le vaisseau (la base si aucune autre ne correspond)."""
+        for position, occupant in self.combat.joueur.vaisseau.modules_equipes().items():
+            if occupant is module:
+                return position
+        return POSITION_BASE

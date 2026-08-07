@@ -6,36 +6,70 @@
 
 ## 1. Objectif
 
-Un seul combat 1 contre 1 (module de base du joueur contre un ennemi unique), avec 3 cartes, pour valider la boucle de combat de base : jouer des cartes, dépenser de l'électricité, infliger des dégâts, encaisser une attaque ennemie.
+Un combat sur la grille complète (module de base + 4 modules équipés du joueur, contre plusieurs ennemis), pour valider le placement 2x3, le ciblage à cible multiple et le ciblage automatique des ennemis — en plus de la boucle de combat déjà validée dans la version précédente du POC (jouer des cartes, dépenser de l'électricité, infliger des dégâts, encaisser une attaque).
 
-Simplifications par rapport à `specs.md` : pas de grille de rangs (2x3), pas d'autres modules équipables, pas de boucle de run (pas d'étapes, pas de boss, pas de récompense de cartes). Un seul combat, une seule fois.
+Simplifications restantes par rapport à `specs.md` : pas de boucle de run (pas d'étapes, pas de boss, pas de récompense de cartes), pas d'ennemis de taille L (point encore ouvert en specs.md §9.1, volontairement évité ici). Un seul combat, une seule fois.
+
+**⚠️ Toutes les valeurs numériques de ce document (PV, dégâts, coûts) sont inventées faute d'être spécifiées ailleurs — à ajuster après test.**
 
 ---
 
 ## 2. Vaisseau du joueur
 
-- **Module de base** : 15 PV
-- Pas d'autre module équipé pour ce POC
+Grille **2 colonnes (Avant / Arrière) x 3 rangées (Gauche / Mid / Droite)**, comme décrit en specs.md §3.1/§5. La colonne Avant fait face à l'ennemi. Le module de base occupe la rangée Mid en entier (les deux colonnes) ; les 4 autres modules équipés occupent chacun une case.
+
+| Module | Position | PV | Attaque | Bouclier | Soin |
+|---|---|---|---|---|---|
+| Base | Mid | 15 | 7 | 5 | 4 |
+| Avant-Gauche | avant / gauche | 12 | 9 | 4 | 3 |
+| Avant-Droite | avant / droite | 18 | 5 | 7 | 3 |
+| Arrière-Gauche | arrière / gauche | 10 | 4 | 3 | 6 |
+| Arrière-Droite | arrière / droite | 9 | 10 | 2 | 2 |
+
+Chaque module a son propre jeu des 3 cartes déjà utilisées (Attaque/Bouclier/Soin, cf. §4), avec ses propres valeurs — toutes les cartes coûtent 1⚡.
+
 - **Électricité** : 3 par tour (ressource pleine à chaque début de tour, ne se cumule pas d'un tour à l'autre)
-- **Main** : capacité maximale de **10 cartes** ; le joueur pioche **5 cartes par tour** (le deck ne contenant que 9 cartes au total, ce plafond de 10 n'est jamais atteint dans ce POC)
+- **Main** : capacité maximale de **10 cartes** ; le joueur pioche **5 cartes par tour**
 - Cartes jouées partent en défausse ; quand la pioche est vide, la défausse est mélangée pour reformer la pioche (comme Slay the Spire, cf. specs.md §3.3)
+- Un module (autre que la base) à 0 PV est détruit mais **ne met pas fin au combat** ; seule la destruction de la base termine la run (specs.md §3.4)
 
 ---
 
-## 3. Ennemi
+## 3. Ennemis
 
-- **Un seul ennemi**, 15 PV
-- **Attaque à chaque tour ennemi** : inflige **7 dégâts** au module de base (attaque fixe, pas de pattern ni de variation pour ce POC)
+Grille miroir **2 colonnes (Avant / Arrière) x 3 rangées (Gauche / Mid / Droite)**, la colonne Avant faisant face au joueur. Pas de base côté ennemi : les 6 cases sont indépendantes, certaines peuvent rester vides.
+
+| Ennemi | Taille | Position | PV | Dégâts |
+|---|---|---|---|---|
+| S1 | S | avant / gauche | 8 | 4 |
+| M1 | M | avant / droite | 16 | 8 |
+| S2 | S | arrière / gauche | 8 | 4 |
+| M2 | M | arrière / mid | 16 | 8 |
+
+(avant/mid et arrière/droite restent vides dans ce POC)
+
+**Ciblage automatique** : chaque ennemi attaque un seul module du joueur par tour, choisi ainsi :
+1. Regarder sa **propre rangée** (celle où il se trouve) : d'abord la case Avant de cette rangée, puis la case Arrière de cette même rangée si l'Avant est vide/détruite
+2. Si sa rangée entière est vide, passer à la **rangée la plus proche** (même règle avant-puis-arrière), et ainsi de suite
+3. La rangée Mid contient toujours la base (tant qu'elle est vivante)
+
+**Important** : la base ne protège pas les modules Arrière des autres rangées — un ennemi peut attaquer directement le module Arrière de sa propre rangée si l'Avant de cette rangée est vide, même si la base (Mid) est toujours en vie.
+
+Un rayon (voir §6) matérialise chaque attaque. Au survol de la souris sur un ennemi vivant, une étiquette affiche la cible qu'il vise et les dégâts qu'il infligera ce tour, calculés avec la même règle.
 
 ---
 
 ## 4. Cartes
 
-| Carte | Type | Cible | Coût | Effet |
-|---|---|---|---|---|
-| **Attaque** | Attaque | Ennemi (unique) | 1⚡ | Inflige **7 dégâts** |
-| **Bouclier** | Défense | Soi (unique) | 1⚡ | Donne **5 Bouclier** au module de base |
-| **Soin** | Soin | Soi (unique) | 1⚡ | Répare **4 PV** au module de base |
+Chaque module a 3 cartes (Attaque/Défense/Soin), avec ses propres valeurs (tableau en §2) :
+
+| Type | Cible | Effet |
+|---|---|---|
+| **Attaque** | Ennemi (au choix parmi les ennemis vivants) | Inflige des dégâts |
+| **Bouclier** (Défense) | Allié (au choix parmi les modules vivants) | Donne du Bouclier |
+| **Soin** | Allié (au choix parmi les modules vivants) | Répare des PV |
+
+Contrairement à la version précédente du POC, une carte Bouclier/Soin peut désormais cibler **n'importe quel module allié vivant**, pas seulement celui dont elle provient.
 
 Le Bouclier absorbe les dégâts subis avant les PV. Exemple : un module protégé par 5 Bouclier subit une attaque de 7 dégâts → le Bouclier absorbe 5, les **2 dégâts restants** sont retirés des PV.
 
@@ -43,28 +77,28 @@ Le Bouclier absorbe les dégâts subis avant les PV. Exemple : un module protég
 
 ## 5. Composition du deck
 
-9 cartes au total :
-- **5x Attaque**
-- **3x Bouclier**
-- **1x Soin**
+Un seul deck partagé pour tout le vaisseau, assemblé à partir des 5 kits de modules (même ratio que la version précédente, dupliqué x5) :
+
+**45 cartes au total** : pour chacun des 5 modules, 5x Attaque + 3x Bouclier + 1x Soin (= 9 cartes/module)
 
 ---
 
 ## 6. Déroulé d'un tour
 
-1. **Tour du joueur** : le joueur pioche 5 cartes, l'électricité est remise à 3. Le joueur joue librement les cartes de son choix, dans l'ordre qu'il veut, tant qu'il a assez d'électricité (voir specs.md §3.3), puis clique sur le bouton **"Fin de tour"** pour passer la main
+1. **Tour du joueur** : le joueur pioche 5 cartes, l'électricité est remise à 3. Le joueur joue librement les cartes de son choix (en choisissant la cible parmi les modules/ennemis vivants), dans l'ordre qu'il veut, tant qu'il a assez d'électricité (voir specs.md §3.3), puis clique sur le bouton **"Fin de tour"** pour passer la main
 2. **Fin du tour joueur** : les cartes non jouées restant en main sont défaussées (voir specs.md §3.3)
-3. **Tour de l'ennemi** : l'ennemi attaque automatiquement pour 7 dégâts. Un **rayon** apparaît brièvement entre l'ennemi et le module pour visualiser l'attaque, puis disparaît
+3. **Tour de l'ennemi** : chaque ennemi vivant attaque automatiquement le module qu'il vise (règle de ciblage en §3), dans l'ordre de la grille. Un **rayon** apparaît brièvement entre chaque ennemi attaquant et sa cible pour visualiser l'attaque, puis disparaît. Si la base est détruite en cours de tour, les ennemis suivants n'agissent plus (la run est terminée)
 
-Ce cycle se répète jusqu'à la fin du combat. Le jeu se joue entièrement à la souris (voir specs.md §8.3) : clic sur une carte pour la sélectionner, clic sur la cible pour la jouer, clic sur "Fin de tour" pour passer la main.
+Ce cycle se répète jusqu'à la fin du combat. Le jeu se joue entièrement à la souris (voir specs.md §8.3) : clic sur une carte pour la sélectionner, clic sur la cible (module ou ennemi) pour la jouer, survol d'un ennemi pour voir son intention, clic sur "Fin de tour" pour passer la main.
 
 ---
 
 ## 7. Fin de combat
 
-- **Victoire** : l'ennemi atteint 0 PV
-- **Défaite** : le module de base atteint 0 PV (cf. specs.md §3.4 : la destruction du module de base termine la run)
+- **Victoire** : tous les ennemis sont détruits
+- **Défaite** : le module de base atteint 0 PV (cf. specs.md §3.4 : la destruction du module de base termine la run — la destruction d'un autre module n'y met pas fin)
 - À la fin du combat, un message fixe ("Victoire" ou "Défaite") s'affiche à l'écran et le combat se fige (plus aucune interaction possible)
+- Un module ou un ennemi détruit reste affiché en grisé avec la mention "Détruit" (la grille garde sa forme), plutôt que de disparaître
 
 ---
 
@@ -74,21 +108,25 @@ Stack et arborescence définies en specs.md §10. Pour ce POC :
 
 ```
 assets/
-  cartes/      → images des 3 cartes (Attaque, Bouclier, Soin) — vide pour ce POC
-  modules/     → image du module de base — vide pour ce POC
-  ennemis/     → image de l'ennemi — vide pour ce POC
+  cartes/      → images des cartes — vide pour ce POC
+  modules/     → images des modules — vide pour ce POC
+  ennemis/     → images des ennemis — vide pour ce POC
 src/
   ui/          → affichage pyglet de l'écran de combat (§8 de specs.md)
-  gameplay/    → logique du combat 1v1 (cartes, PV, Bouclier, tour de jeu)
-tests/         → tests unitaires pytest (ex : effets des 3 cartes, absorption du Bouclier, fin de combat)
+  gameplay/    → logique du combat (grille, cartes, PV, Bouclier, ciblage, tour de jeu)
+tests/         → tests unitaires pytest
 ```
 
-Aucune image fournie pour ce POC : le module, l'ennemi et les cartes sont dessinés directement en formes simples (rectangles) avec le nom/les valeurs en texte par-dessus, plutôt que de charger des textures.
+Aucune image fournie pour ce POC : les modules, les ennemis et les cartes sont dessinés directement en formes simples (rectangles) avec le nom/les valeurs en texte par-dessus, plutôt que de charger des textures.
 
 Conventions : classes claires par responsabilité, commentaires en français sans accents ni cédilles (cf. specs.md §10.3).
 
 ### Animation d'attaque
 
-Quand l'ennemi attaque (à la fin du tour du joueur), un rayon (ligne colorée) relie brièvement l'ennemi et le module de base, pour donner un retour visuel sur l'attaque. Le rayon s'estompe puis disparaît après une courte durée (~0.4 seconde).
+Quand un ennemi attaque, un rayon (ligne colorée) relie brièvement cet ennemi et le module qu'il vise, pour donner un retour visuel sur l'attaque. Le rayon s'estompe puis disparaît après une courte durée (~0.4 seconde). Plusieurs ennemis pouvant attaquer au même tour, plusieurs rayons peuvent apparaître simultanément (un par attaque résolue).
 
 Cette animation est gérée entièrement côté `src/ui` (minuterie + dessin) : elle n'a aucun impact sur le moteur de jeu (`src/gameplay`), qui reste inchangé.
+
+### Survol de la souris (intention ennemie)
+
+Survoler un ennemi vivant avec la souris affiche une étiquette indiquant quel module il vise et les dégâts qu'il infligerait s'il attaquait maintenant. Calculé avec la même fonction de ciblage que celle utilisée pour la résolution réelle de l'attaque (pas de logique dupliquée), donc toujours cohérent avec ce qui va effectivement se passer.

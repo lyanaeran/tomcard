@@ -4,12 +4,13 @@ L'ennemi unique affronte dans le combat du POC.
 
 
 class Ennemi:
-    """Represente l'ennemi affronte dans le combat du POC."""
+    """Represente un ennemi affronte en combat."""
 
-    def __init__(self, pv_max: int, degats_attaque: int):
+    def __init__(self, pv_max: int, degats_attaque: int, nom: str = "Ennemi"):
         self.pv_max = pv_max
         self.pv = pv_max
         self.degats_attaque = degats_attaque
+        self.nom = nom
 
     def est_detruit(self) -> bool:
         """Renvoie True si l'ennemi n'a plus de points de vie."""
