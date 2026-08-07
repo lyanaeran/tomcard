@@ -54,7 +54,7 @@ Le Bouclier absorbe les dégâts subis avant les PV. Exemple : un module protég
 
 1. **Tour du joueur** : le joueur pioche 5 cartes, l'électricité est remise à 3. Le joueur joue librement les cartes de son choix, dans l'ordre qu'il veut, tant qu'il a assez d'électricité (voir specs.md §3.3), puis clique sur le bouton **"Fin de tour"** pour passer la main
 2. **Fin du tour joueur** : les cartes non jouées restant en main sont défaussées (voir specs.md §3.3)
-3. **Tour de l'ennemi** : l'ennemi attaque automatiquement pour 7 dégâts
+3. **Tour de l'ennemi** : l'ennemi attaque automatiquement pour 7 dégâts. Un **rayon** apparaît brièvement entre l'ennemi et le module pour visualiser l'attaque, puis disparaît
 
 Ce cycle se répète jusqu'à la fin du combat. Le jeu se joue entièrement à la souris (voir specs.md §8.3) : clic sur une carte pour la sélectionner, clic sur la cible pour la jouer, clic sur "Fin de tour" pour passer la main.
 
@@ -86,3 +86,9 @@ tests/         → tests unitaires pytest (ex : effets des 3 cartes, absorption 
 Aucune image fournie pour ce POC : le module, l'ennemi et les cartes sont dessinés directement en formes simples (rectangles) avec le nom/les valeurs en texte par-dessus, plutôt que de charger des textures.
 
 Conventions : classes claires par responsabilité, commentaires en français sans accents ni cédilles (cf. specs.md §10.3).
+
+### Animation d'attaque
+
+Quand l'ennemi attaque (à la fin du tour du joueur), un rayon (ligne colorée) relie brièvement l'ennemi et le module de base, pour donner un retour visuel sur l'attaque. Le rayon s'estompe puis disparaît après une courte durée (~0.4 seconde).
+
+Cette animation est gérée entièrement côté `src/ui` (minuterie + dessin) : elle n'a aucun impact sur le moteur de jeu (`src/gameplay`), qui reste inchangé.

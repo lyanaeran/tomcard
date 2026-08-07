@@ -9,6 +9,7 @@ from pyglet import shapes
 from src.gameplay.carte import CibleCarte
 from src.gameplay.combat import Combat, EtatCombat
 from src.gameplay.config_poc import creer_combat_poc
+from src.ui.animation import AnimationRayon
 
 LARGEUR_FENETRE = 960
 HAUTEUR_FENETRE = 600
@@ -34,6 +35,8 @@ COULEUR_ENNEMI = (190, 70, 70)
 COULEUR_CARTE = (55, 55, 60)
 COULEUR_CARTE_SURLIGNEE = (210, 180, 40)
 COULEUR_BOUTON = (90, 90, 95)
+COULEUR_RAYON = (255, 210, 60)
+EPAISSEUR_RAYON = 6
 
 
 def _point_dans_rectangle(x: float, y: float, rx: float, ry: float, largeur: float, hauteur: float) -> bool:
@@ -48,6 +51,12 @@ class FenetreCombat(pyglet.window.Window):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight - POC")
         self.combat = combat if combat is not None else creer_combat_poc()
         self.index_carte_selectionnee: int | None = None
+        self.animation_rayon = AnimationRayon()
+        pyglet.clock.schedule_interval(self.update, 1 / 60.0)
+
+    def update(self, dt: float) -> None:
+        """Fait avancer les animations en cours (appele a chaque frame)."""
+        self.animation_rayon.mettre_a_jour(dt)
 
     def on_draw(self) -> None:
         """Redessine entierement la fenetre a chaque frame."""
@@ -58,6 +67,7 @@ class FenetreCombat(pyglet.window.Window):
 
         elements.extend(self._dessiner_module(lot))
         elements.extend(self._dessiner_ennemi(lot))
+        elements.extend(self._dessiner_rayon(lot))
         elements.extend(self._dessiner_main(lot))
         elements.extend(self._dessiner_bouton_fin_tour(lot))
         elements.extend(self._dessiner_entete(lot))
@@ -100,6 +110,23 @@ class FenetreCombat(pyglet.window.Window):
             batch=lot,
         )
         return [rectangle, texte]
+
+    def _dessiner_rayon(self, lot: pyglet.graphics.Batch) -> list:
+        """Dessine le rayon d'attaque entre l'ennemi et le module, s'il est actif."""
+        if not self.animation_rayon.est_active():
+            return []
+        y_rayon = MODULE_Y + MODULE_TAILLE / 2
+        ligne = shapes.Line(
+            MODULE_X + MODULE_TAILLE,
+            y_rayon,
+            ENNEMI_X,
+            y_rayon,
+            thickness=EPAISSEUR_RAYON,
+            color=COULEUR_RAYON,
+            batch=lot,
+        )
+        ligne.opacity = int(255 * self.animation_rayon.progression())
+        return [ligne]
 
     def _dessiner_main(self, lot: pyglet.graphics.Batch) -> list:
         """Dessine les cartes de la main du joueur, alignees en bas de l'ecran (specs.md paragraphe 8.1)."""
@@ -169,6 +196,7 @@ class FenetreCombat(pyglet.window.Window):
 
         if _point_dans_rectangle(x, y, BOUTON_X, BOUTON_Y, BOUTON_LARGEUR, BOUTON_HAUTEUR):
             self.combat.finir_tour_joueur()
+            self.animation_rayon.demarrer()
             self.index_carte_selectionnee = None
             return
 
