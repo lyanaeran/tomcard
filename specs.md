@@ -50,6 +50,7 @@ Un deckbuilder roguelike inspiré de Slay the Spire, où le joueur incarne un va
 - Force des choix de répartition : concentrer l'électricité sur un module ce tour, ou répartir
 - **Ordre de jeu** : tour classique façon StS — le joueur joue librement toutes les cartes qu'il souhaite durant son tour, puis le tour ennemi se déroule. Pas de système d'initiative/vitesse par module
 - **Main** : capacité maximale de 10 cartes ; le joueur pioche 5 cartes par tour. Cartes jouées partent en défausse ; quand la pioche est vide, la défausse est mélangée pour reformer la pioche
+- **Fin de tour** : les cartes non jouées restant en main sont défaussées à la fin du tour du joueur (comme dans Slay the Spire), avant la pioche de la main suivante
 
 ### 3.4 Destruction de module
 - Un module à **0 PV est détruit**, même si le combat est gagné (perte permanente)
@@ -237,9 +238,12 @@ Axe indépendant du type et de la cible — une carte a un type, une cible **et*
 
 ### 8.3 Interaction de jeu d'une carte
 
+**Le jeu se joue entièrement à la souris.**
+
 1. Clic sur une carte de la main → la carte se **surligne** (état "armée")
 2. Clic sur une **cible valide** → la carte se résout, part en défausse, la surbrillance disparaît
 3. Pour les cartes sans cible unique (Pouvoir, effet sur tout le vaisseau...) : le comportement exact (résolution automatique dès le clic vs. confirmation par un clic supplémentaire) **dépend du type de carte** — à détailler carte par carte lors de l'approfondissement du système de cartes (§7)
+4. **Fin de tour** : un bouton cliquable "Fin de tour" permet au joueur de terminer son tour à tout moment, même s'il lui reste de l'électricité ou des cartes jouables
 
 ---
 
