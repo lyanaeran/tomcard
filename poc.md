@@ -63,3 +63,22 @@ Ce cycle se répète jusqu'à la fin du combat.
 
 - **Victoire** : l'ennemi atteint 0 PV
 - **Défaite** : le module de base atteint 0 PV (cf. specs.md §3.4 : la destruction du module de base termine la run)
+
+---
+
+## 8. Implémentation
+
+Stack et arborescence définies en specs.md §10. Pour ce POC :
+
+```
+assets/
+  cartes/      → images des 3 cartes (Attaque, Bouclier, Soin)
+  modules/     → image du module de base
+  ennemis/     → image de l'ennemi
+src/
+  ui/          → affichage pyglet de l'écran de combat (§8 de specs.md)
+  gameplay/    → logique du combat 1v1 (cartes, PV, Bouclier, tour de jeu)
+tests/         → tests unitaires pytest (ex : effets des 3 cartes, absorption du Bouclier, fin de combat)
+```
+
+Conventions : classes claires par responsabilité, commentaires en français sans accents ni cédilles (cf. specs.md §10.3).

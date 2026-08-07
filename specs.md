@@ -258,5 +258,38 @@ Axe indépendant du type et de la cible — une carte a un type, une cible **et*
 
 ### 9.2 Technique / développement
 
-- Organisation du code dans le dépôt (arborescence, séparation moteur de jeu / affichage / contenu des cartes...)
-- Choix techniques : langage, framework et librairies à utiliser
+*(voir §10 pour les choix techniques déjà tranchés)*
+
+---
+
+## 10. Architecture technique
+
+### 10.1 Stack
+
+- **Langage** : Python 3.11+
+- **Affichage** : pyglet
+- **Tests** : pytest
+- **Dépendances / packaging** : `pyproject.toml`
+
+### 10.2 Arborescence du dépôt
+
+```
+assets/
+  cartes/      → images des cartes
+  modules/     → images des modules
+  ennemis/     → images des ennemis
+src/
+  ui/          → tout ce qui concerne l'affichage avec pyglet
+  gameplay/    → logique de jeu
+tests/
+pyproject.toml
+```
+
+- `assets/` : uniquement des images pour le moment ; le son sera ajouté plus tard si besoin
+- Séparation stricte entre `src/ui` (affichage) et `src/gameplay` (logique de jeu)
+
+### 10.3 Conventions de code
+
+- Classes claires et bien définies, une responsabilité par classe
+- Commentaires en français, **sans accents ni cédilles** (ASCII uniquement)
+- Tests unitaires (pytest) dans `tests/`
