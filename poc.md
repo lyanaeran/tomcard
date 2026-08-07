@@ -52,10 +52,11 @@ Le Bouclier absorbe les dégâts subis avant les PV. Exemple : un module protég
 
 ## 6. Déroulé d'un tour
 
-1. **Tour du joueur** : le joueur pioche 5 cartes, l'électricité est remise à 3. Le joueur joue librement les cartes de son choix, dans l'ordre qu'il veut, tant qu'il a assez d'électricité (voir specs.md §3.3)
-2. **Tour de l'ennemi** : l'ennemi attaque automatiquement pour 7 dégâts
+1. **Tour du joueur** : le joueur pioche 5 cartes, l'électricité est remise à 3. Le joueur joue librement les cartes de son choix, dans l'ordre qu'il veut, tant qu'il a assez d'électricité (voir specs.md §3.3), puis clique sur le bouton **"Fin de tour"** pour passer la main
+2. **Fin du tour joueur** : les cartes non jouées restant en main sont défaussées (voir specs.md §3.3)
+3. **Tour de l'ennemi** : l'ennemi attaque automatiquement pour 7 dégâts
 
-Ce cycle se répète jusqu'à la fin du combat.
+Ce cycle se répète jusqu'à la fin du combat. Le jeu se joue entièrement à la souris (voir specs.md §8.3) : clic sur une carte pour la sélectionner, clic sur la cible pour la jouer, clic sur "Fin de tour" pour passer la main.
 
 ---
 
@@ -63,6 +64,7 @@ Ce cycle se répète jusqu'à la fin du combat.
 
 - **Victoire** : l'ennemi atteint 0 PV
 - **Défaite** : le module de base atteint 0 PV (cf. specs.md §3.4 : la destruction du module de base termine la run)
+- À la fin du combat, un message fixe ("Victoire" ou "Défaite") s'affiche à l'écran et le combat se fige (plus aucune interaction possible)
 
 ---
 
@@ -72,13 +74,15 @@ Stack et arborescence définies en specs.md §10. Pour ce POC :
 
 ```
 assets/
-  cartes/      → images des 3 cartes (Attaque, Bouclier, Soin)
-  modules/     → image du module de base
-  ennemis/     → image de l'ennemi
+  cartes/      → images des 3 cartes (Attaque, Bouclier, Soin) — vide pour ce POC
+  modules/     → image du module de base — vide pour ce POC
+  ennemis/     → image de l'ennemi — vide pour ce POC
 src/
   ui/          → affichage pyglet de l'écran de combat (§8 de specs.md)
   gameplay/    → logique du combat 1v1 (cartes, PV, Bouclier, tour de jeu)
 tests/         → tests unitaires pytest (ex : effets des 3 cartes, absorption du Bouclier, fin de combat)
 ```
+
+Aucune image fournie pour ce POC : le module, l'ennemi et les cartes sont dessinés directement en formes simples (rectangles) avec le nom/les valeurs en texte par-dessus, plutôt que de charger des textures.
 
 Conventions : classes claires par responsabilité, commentaires en français sans accents ni cédilles (cf. specs.md §10.3).
