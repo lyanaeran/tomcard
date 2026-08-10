@@ -1,12 +1,12 @@
 """
 Fenetre pyglet du combat du POC (grille 2x3, plusieurs modules et ennemis,
-cf. poc.md et specs.md paragraphe 8, version simplifiee).
+cf. poc.md et specs.md paragraphe 8). Utilise les images de assets/.
 """
 
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.carte import CibleCarte
+from src.gameplay.carte import CIBLES_SANS_CLIC, CibleCarte
 from src.gameplay.combat import Combat, EtatCombat
 from src.gameplay.config_poc import creer_combat_poc
 from src.gameplay.ennemi import Ennemi
@@ -21,6 +21,7 @@ HAUTEUR_FENETRE = 760
 CELLULE_LARGEUR, CELLULE_HAUTEUR = 110, 90
 ESPACEMENT_CELLULE = 14
 FOND_PADDING = 16
+HAUTEUR_BANDEAU_CASE = 42
 
 JOUEUR_ARRIERE_X = 60
 JOUEUR_AVANT_X = JOUEUR_ARRIERE_X + CELLULE_LARGEUR + ESPACEMENT_CELLULE
@@ -36,34 +37,54 @@ RANGEE_Y = {
 
 POSITION_BASE = Position(Colonne.AVANT, Rangee.MID)
 
-LABEL_POSITION_MODULE = {
-    Position(Colonne.AVANT, Rangee.GAUCHE): "Avant-Gauche",
-    Position(Colonne.AVANT, Rangee.DROITE): "Avant-Droite",
-    Position(Colonne.ARRIERE, Rangee.GAUCHE): "Arriere-Gauche",
-    Position(Colonne.ARRIERE, Rangee.DROITE): "Arriere-Droite",
-}
-
 # Main de cartes, alignee en bas (specs.md paragraphe 8.1)
 CARTE_LARGEUR, CARTE_HAUTEUR = 100, 140
 CARTE_Y = 40
 CARTE_ESPACEMENT = 120
 CARTE_X_DEPART = 180
+HAUTEUR_BANDEAU_CARTE = 46
 
 # Bouton de fin de tour
 BOUTON_X, BOUTON_Y = 1080, 40
 BOUTON_LARGEUR, BOUTON_HAUTEUR = 140, 50
 
-COULEUR_MODULE = (70, 130, 200)
-COULEUR_MODULE_DETRUIT = (60, 60, 65)
-COULEUR_ENNEMI = (190, 70, 70)
-COULEUR_ENNEMI_DETRUIT = (60, 60, 65)
 COULEUR_FOND_VAISSEAU = (30, 40, 55)
-COULEUR_CARTE = (55, 55, 60)
+COULEUR_BANDEAU = (10, 10, 12)
+OPACITE_BANDEAU = 190
 COULEUR_CARTE_SURLIGNEE = (210, 180, 40)
 COULEUR_BOUTON = (90, 90, 95)
 COULEUR_RAYON = (255, 210, 60)
 COULEUR_SURVOL = (255, 255, 255)
+OPACITE_DETRUIT = 70
 EPAISSEUR_RAYON = 6
+
+_cache_images: dict[str, pyglet.image.AbstractImage] = {}
+
+
+def _image(chemin: str) -> pyglet.image.AbstractImage:
+    """Charge une image depuis son chemin absolu, avec mise en cache."""
+    if chemin not in _cache_images:
+        _cache_images[chemin] = pyglet.image.load(chemin)
+    return _cache_images[chemin]
+
+
+def _sprite_ajuste(
+    chemin: str, x: float, y: float, largeur: float, hauteur: float, lot: pyglet.graphics.Batch
+) -> pyglet.sprite.Sprite:
+    """Cree un sprite pour cette image, mis a l'echelle pour tenir dans le rectangle sans deformation."""
+    sprite = pyglet.sprite.Sprite(_image(chemin), batch=lot)
+    echelle = min(largeur / sprite.width, hauteur / sprite.height)
+    sprite.scale = echelle
+    sprite.x = x + (largeur - sprite.width) / 2
+    sprite.y = y + (hauteur - sprite.height) / 2
+    return sprite
+
+
+def _bandeau(x: float, y: float, largeur: float, hauteur: float, lot: pyglet.graphics.Batch) -> shapes.Rectangle:
+    """Bandeau semi-transparent pour poser du texte lisible par-dessus une image."""
+    rectangle = shapes.Rectangle(x, y, largeur, hauteur, color=COULEUR_BANDEAU, batch=lot)
+    rectangle.opacity = OPACITE_BANDEAU
+    return rectangle
 
 
 def _point_dans_rectangle(x: float, y: float, rx: float, ry: float, largeur: float, hauteur: float) -> bool:
@@ -142,31 +163,33 @@ class FenetreCombat(pyglet.window.Window):
         fx, fy, fl, fh = _rect_fond_vaisseau()
         elements.append(shapes.Rectangle(fx, fy, fl, fh, color=COULEUR_FOND_VAISSEAU, batch=lot))
 
-        elements.extend(self._dessiner_module_case(lot, POSITION_BASE, self.combat.joueur.vaisseau.base, "Base"))
+        elements.extend(self._dessiner_module_case(lot, POSITION_BASE, self.combat.joueur.vaisseau.base))
         for position, module in self.combat.joueur.vaisseau.modules_equipes().items():
-            label = LABEL_POSITION_MODULE[position]
-            elements.extend(self._dessiner_module_case(lot, position, module, label))
+            elements.extend(self._dessiner_module_case(lot, position, module))
         return elements
 
-    def _dessiner_module_case(self, lot: pyglet.graphics.Batch, position: Position, module: Module, label: str) -> list:
-        """Dessine une case module (rectangle + texte), grisee si detruite."""
+    def _dessiner_module_case(self, lot: pyglet.graphics.Batch, position: Position, module: Module) -> list:
+        """Dessine une case module (image + bandeau d'etat), grisee si detruite."""
         x, y, largeur, hauteur = _rect_module(position)
         detruit = module.est_detruit()
-        couleur = COULEUR_MODULE_DETRUIT if detruit else COULEUR_MODULE
-        rectangle = shapes.Rectangle(x, y, largeur, hauteur, color=couleur, batch=lot)
-        etat = "Detruit" if detruit else f"PV {module.pv}/{module.pv_max}\nBouclier {module.bouclier}"
+        sprite = _sprite_ajuste(module.image, x, y, largeur, hauteur, lot)
+        if detruit:
+            sprite.opacity = OPACITE_DETRUIT
+        bandeau = _bandeau(x, y, largeur, HAUTEUR_BANDEAU_CASE, lot)
+        etat = "Detruit" if detruit else f"PV {module.pv}/{module.pv_max}  Bouclier {module.bouclier}"
         texte = pyglet.text.Label(
-            f"{label}\n{etat}",
+            f"{module.nom}\n{etat}",
             x=x + largeur / 2,
-            y=y + hauteur / 2,
+            y=y + HAUTEUR_BANDEAU_CASE / 2,
             anchor_x="center",
             anchor_y="center",
+            font_size=7,
             multiline=True,
-            width=largeur,
+            width=largeur - 4,
             align="center",
             batch=lot,
         )
-        return [rectangle, texte]
+        return [sprite, bandeau, texte]
 
     def _dessiner_flotte(self, lot: pyglet.graphics.Batch) -> list:
         """Dessine chaque case ennemie declaree (grisee si detruite, absente si jamais occupee)."""
@@ -176,24 +199,27 @@ class FenetreCombat(pyglet.window.Window):
         return elements
 
     def _dessiner_ennemi_case(self, lot: pyglet.graphics.Batch, position: Position, ennemi: Ennemi) -> list:
-        """Dessine une case ennemie (rectangle + texte), grisee si detruite."""
+        """Dessine une case ennemie (image + bandeau d'etat), grisee si detruite."""
         x, y, largeur, hauteur = _rect_ennemi(position)
         detruit = ennemi.est_detruit()
-        couleur = COULEUR_ENNEMI_DETRUIT if detruit else COULEUR_ENNEMI
-        rectangle = shapes.Rectangle(x, y, largeur, hauteur, color=couleur, batch=lot)
+        sprite = _sprite_ajuste(ennemi.image, x, y, largeur, hauteur, lot)
+        if detruit:
+            sprite.opacity = OPACITE_DETRUIT
+        bandeau = _bandeau(x, y, largeur, HAUTEUR_BANDEAU_CASE, lot)
         etat = "Detruit" if detruit else f"PV {ennemi.pv}/{ennemi.pv_max}"
         texte = pyglet.text.Label(
             f"{ennemi.nom}\n{etat}",
             x=x + largeur / 2,
-            y=y + hauteur / 2,
+            y=y + HAUTEUR_BANDEAU_CASE / 2,
             anchor_x="center",
             anchor_y="center",
+            font_size=7,
             multiline=True,
-            width=largeur,
+            width=largeur - 4,
             align="center",
             batch=lot,
         )
-        return [rectangle, texte]
+        return [sprite, bandeau, texte]
 
     def _dessiner_rayons(self, lot: pyglet.graphics.Batch) -> list:
         """Dessine chaque rayon d'attaque encore actif entre un ennemi et sa cible."""
@@ -210,20 +236,25 @@ class FenetreCombat(pyglet.window.Window):
         main = self.combat.joueur.deck.main
         for index, carte in enumerate(main):
             x = CARTE_X_DEPART + index * CARTE_ESPACEMENT
-            couleur = COULEUR_CARTE_SURLIGNEE if index == self.index_carte_selectionnee else COULEUR_CARTE
-            rectangle = shapes.Rectangle(x, CARTE_Y, CARTE_LARGEUR, CARTE_HAUTEUR, color=couleur, batch=lot)
+            if index == self.index_carte_selectionnee:
+                bordure = shapes.Rectangle(
+                    x - 4, CARTE_Y - 4, CARTE_LARGEUR + 8, CARTE_HAUTEUR + 8, color=COULEUR_CARTE_SURLIGNEE, batch=lot
+                )
+                elements.append(bordure)
+            elements.append(_sprite_ajuste(carte.image, x, CARTE_Y, CARTE_LARGEUR, CARTE_HAUTEUR, lot))
+            elements.append(_bandeau(x, CARTE_Y, CARTE_LARGEUR, HAUTEUR_BANDEAU_CARTE, lot))
             texte = pyglet.text.Label(
-                f"{carte.nom}\n{carte.valeur}\nCout {carte.cout}",
+                f"{carte.nom}\n{carte.valeur}  Cout {carte.cout}",
                 x=x + CARTE_LARGEUR / 2,
-                y=CARTE_Y + CARTE_HAUTEUR / 2,
+                y=CARTE_Y + HAUTEUR_BANDEAU_CARTE / 2,
                 anchor_x="center",
                 anchor_y="center",
+                font_size=9,
                 multiline=True,
-                width=CARTE_LARGEUR,
+                width=CARTE_LARGEUR - 4,
                 align="center",
                 batch=lot,
             )
-            elements.append(rectangle)
             elements.append(texte)
         return elements
 
@@ -264,9 +295,8 @@ class FenetreCombat(pyglet.window.Window):
         if position is None:
             return []
         x, y, largeur, hauteur = _rect_ennemi(position)
-        nom_cible = self._label_module(cible)
         texte = pyglet.text.Label(
-            f"Vise : {nom_cible} ({self.ennemi_survole.degats_attaque} degats)",
+            f"Vise : {cible.nom} ({self.ennemi_survole.degats_attaque} degats)",
             x=x + largeur / 2,
             y=y + hauteur + 16,
             anchor_x="center",
@@ -303,8 +333,13 @@ class FenetreCombat(pyglet.window.Window):
 
         index_carte_cliquee = self._trouver_carte_cliquee(x, y)
         if index_carte_cliquee is not None:
-            deja_selectionnee = self.index_carte_selectionnee == index_carte_cliquee
-            self.index_carte_selectionnee = None if deja_selectionnee else index_carte_cliquee
+            carte = self.combat.joueur.deck.main[index_carte_cliquee]
+            if carte.cible in CIBLES_SANS_CLIC:
+                self.combat.jouer_carte(carte, None)
+                self.index_carte_selectionnee = None
+            else:
+                deja_selectionnee = self.index_carte_selectionnee == index_carte_cliquee
+                self.index_carte_selectionnee = None if deja_selectionnee else index_carte_cliquee
             return
 
         if self.index_carte_selectionnee is not None:
@@ -331,9 +366,9 @@ class FenetreCombat(pyglet.window.Window):
             return
         carte = main[self.index_carte_selectionnee]
 
-        if carte.cible == CibleCarte.ALLIE:
+        if carte.cible == CibleCarte.ALLIE_UNIQUE:
             cible = self._module_a(x, y)
-        elif carte.cible == CibleCarte.ENNEMI:
+        elif carte.cible in (CibleCarte.ENNEMI_UNIQUE, CibleCarte.LIGNE_ENNEMIE):
             cible = self._ennemi_a(x, y)
         else:
             cible = None
@@ -368,15 +403,6 @@ class FenetreCombat(pyglet.window.Window):
             if occupant is ennemi:
                 return position
         return None
-
-    def _label_module(self, module: Module) -> str:
-        """Renvoie le libelle affichable d'un module (pour l'etiquette de survol)."""
-        if module is self.combat.joueur.vaisseau.base:
-            return "Base"
-        for position, occupant in self.combat.joueur.vaisseau.modules_equipes().items():
-            if occupant is module:
-                return LABEL_POSITION_MODULE[position]
-        return "?"
 
     def _demarrer_rayons(self, attaques: list[tuple[Position, Ennemi, Module]]) -> None:
         """Demarre un rayon anime par attaque resolue ce tour (poc.md paragraphe 8)."""

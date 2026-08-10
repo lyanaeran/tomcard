@@ -4,13 +4,13 @@ Moteur du combat entre le vaisseau du joueur et une flotte d'ennemis (cf. poc.md
 
 from enum import Enum, auto
 
-from src.gameplay.carte import Carte, CibleCarte, TypeCarte
+from src.gameplay.carte import CIBLES_SANS_CLIC, Carte, CibleCarte, TypeCarte
 from src.gameplay.ciblage import module_cible_par_ennemi
 from src.gameplay.ennemi import Ennemi
 from src.gameplay.flotte import Flotte
 from src.gameplay.joueur import Joueur
 from src.gameplay.module import Module
-from src.gameplay.position import Position
+from src.gameplay.position import Colonne, Position
 
 
 class EtatCombat(Enum):
@@ -30,8 +30,12 @@ class Combat:
         self.etat = EtatCombat.EN_COURS
         self.joueur.debut_de_tour()
 
-    def jouer_carte(self, carte: Carte, cible: Module | Ennemi) -> None:
-        """Applique l'effet d'une carte jouee par le joueur sur la cible choisie."""
+    def jouer_carte(self, carte: Carte, cible: Module | Ennemi | None = None) -> None:
+        """Applique l'effet d'une carte jouee par le joueur.
+
+        cible est ignoree pour les cartes de CIBLES_SANS_CLIC (elles touchent tout
+        un camp) et obligatoire sinon.
+        """
         if self.etat != EtatCombat.EN_COURS:
             return
         if not self.joueur.peut_jouer(carte):
@@ -59,22 +63,47 @@ class Combat:
 
     def previsualiser_cible(self, ennemi: Ennemi) -> Module | None:
         """Renvoie le module que cet ennemi attaquerait s'il agissait maintenant (pour le survol UI)."""
-        position = self._position_de(ennemi)
+        position = self._position_de_ennemi(ennemi)
         if position is None:
             return None
         return module_cible_par_ennemi(self.joueur.vaisseau, position.rangee)
 
-    def _cible_valide(self, carte: Carte, cible: Module | Ennemi) -> bool:
+    def _modules_vivants(self) -> list[Module]:
+        """Tous les modules du joueur encore en vie (base incluse)."""
+        modules = [self.joueur.vaisseau.base, *self.joueur.vaisseau.modules_equipes().values()]
+        return [m for m in modules if not m.est_detruit()]
+
+    def _cible_valide(self, carte: Carte, cible: Module | Ennemi | None) -> bool:
         """Verifie que la cible correspond au type de carte et est bien vivante dans ce combat."""
-        if carte.cible == CibleCarte.ENNEMI:
+        if carte.cible in CIBLES_SANS_CLIC:
+            return cible is None
+        if carte.cible == CibleCarte.ENNEMI_UNIQUE:
             return isinstance(cible, Ennemi) and cible in self.flotte.ennemis_vivants()
-        if carte.cible == CibleCarte.ALLIE:
-            modules_vivants = [self.joueur.vaisseau.base, *self.joueur.vaisseau.modules_equipes().values()]
-            return isinstance(cible, Module) and cible in modules_vivants and not cible.est_detruit()
+        if carte.cible == CibleCarte.ALLIE_UNIQUE:
+            return isinstance(cible, Module) and cible in self._modules_vivants()
+        if carte.cible == CibleCarte.LIGNE_ENNEMIE:
+            return isinstance(cible, Ennemi) and cible in self.flotte.ennemis_vivants()
         return False
 
-    def _appliquer_effet(self, carte: Carte, cible: Module | Ennemi) -> None:
-        """Applique l'effet d'une carte sur la cible choisie, selon son type (specs.md 7.1)."""
+    def _appliquer_effet(self, carte: Carte, cible: Module | Ennemi | None) -> None:
+        """Applique l'effet d'une carte selon sa cible (specs.md 7.1/7.2)."""
+        if carte.cible == CibleCarte.ALLIES_MULTIPLES:
+            for module in self._modules_vivants():
+                self._appliquer_effet_simple(carte, module)
+        elif carte.cible == CibleCarte.ENNEMIS_MULTIPLES:
+            for ennemi in self.flotte.ennemis_vivants():
+                self._appliquer_effet_simple(carte, ennemi)
+        elif carte.cible == CibleCarte.LIGNE_ENNEMIE:
+            position = self._position_de_ennemi(cible)
+            for colonne in (Colonne.AVANT, Colonne.ARRIERE):
+                occupant = self.flotte.ennemi_en(colonne, position.rangee)
+                if occupant is not None:
+                    self._appliquer_effet_simple(carte, occupant)
+        else:
+            self._appliquer_effet_simple(carte, cible)
+
+    def _appliquer_effet_simple(self, carte: Carte, cible: Module | Ennemi) -> None:
+        """Applique l'effet d'une carte a une seule cible, selon son type (specs.md 7.1)."""
         if carte.type == TypeCarte.ATTAQUE:
             cible.subir_degats(carte.valeur)
         elif carte.type == TypeCarte.DEFENSE:
@@ -97,7 +126,7 @@ class Combat:
                 break
         return attaques
 
-    def _position_de(self, ennemi: Ennemi) -> Position | None:
+    def _position_de_ennemi(self, ennemi: Ennemi) -> Position | None:
         """Retrouve la position d'un ennemi dans la flotte, ou None s'il n'y est pas."""
         for position, occupant in self.flotte.positions().items():
             if occupant is ennemi:

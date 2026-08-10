@@ -4,7 +4,7 @@ Tests unitaires pour le moteur de combat (src/gameplay/combat.py).
 
 import random
 
-from src.gameplay.carte import CARTE_ATTAQUE, CARTE_BOUCLIER, CARTE_SOIN, CibleCarte
+from src.gameplay.carte import Carte, CibleCarte, TypeCarte
 from src.gameplay.combat import Combat, EtatCombat
 from src.gameplay.deck import Deck
 from src.gameplay.ennemi import Ennemi
@@ -13,6 +13,14 @@ from src.gameplay.joueur import Joueur
 from src.gameplay.module import Module
 from src.gameplay.position import Colonne, Position, Rangee
 from src.gameplay.vaisseau import Vaisseau
+
+IMG = "test.png"
+CARTE_ATTAQUE = Carte(nom="Attaque", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMI_UNIQUE, cout=1, valeur=7)
+CARTE_BOUCLIER = Carte(nom="Bouclier", image=IMG, type=TypeCarte.DEFENSE, cible=CibleCarte.ALLIE_UNIQUE, cout=1, valeur=5)
+CARTE_SOIN = Carte(nom="Soin", image=IMG, type=TypeCarte.SOIN, cible=CibleCarte.ALLIE_UNIQUE, cout=1, valeur=4)
+CARTE_PERCER = Carte(nom="Percer", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.LIGNE_ENNEMIE, cout=2, valeur=5)
+CARTE_PROTEGER = Carte(nom="Proteger", image=IMG, type=TypeCarte.DEFENSE, cible=CibleCarte.ALLIES_MULTIPLES, cout=2, valeur=4)
+CARTE_MITRAILLER = Carte(nom="Mitrailler", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMIS_MULTIPLES, cout=2, valeur=3)
 
 POSITION_ENNEMI = Position(Colonne.AVANT, Rangee.GAUCHE)
 
@@ -29,9 +37,11 @@ def _nouveau_combat(pv_base: int = 15, pv_ennemi: int = 15, degats_ennemi: int =
     return combat, vaisseau, flotte
 
 
-def _cible_valide_pour(combat: Combat, carte) -> Module | Ennemi:
+def _cible_valide_pour(combat: Combat, carte) -> Module | Ennemi | None:
     """Aide de test : cible valide pour cette carte, peu importe laquelle exactement."""
-    if carte.cible == CibleCarte.ENNEMI:
+    if carte.cible in (CibleCarte.ALLIES_MULTIPLES, CibleCarte.ENNEMIS_MULTIPLES):
+        return None
+    if carte.cible in (CibleCarte.ENNEMI_UNIQUE, CibleCarte.LIGNE_ENNEMIE):
         return combat.flotte.ennemis_vivants()[0]
     return combat.joueur.vaisseau.base
 
@@ -221,3 +231,83 @@ def test_arret_immediat_si_la_base_est_detruite_en_cours_de_tour():
 
     assert combat.etat == EtatCombat.DEFAITE
     assert attaques == [(position_e1, e1, vaisseau.base)]  # e2 n'a pas agi
+
+
+# --- Cibles multiples (LIGNE_ENNEMIE, ALLIES_MULTIPLES, ENNEMIS_MULTIPLES) ---
+
+
+def test_ligne_ennemie_touche_l_avant_et_l_arriere_de_la_rangee():
+    avant = Ennemi(pv_max=10, degats_attaque=4)
+    arriere = Ennemi(pv_max=10, degats_attaque=4)
+    autre_rangee = Ennemi(pv_max=10, degats_attaque=4)
+    ennemis = {
+        Position(Colonne.AVANT, Rangee.GAUCHE): avant,
+        Position(Colonne.ARRIERE, Rangee.GAUCHE): arriere,
+        Position(Colonne.AVANT, Rangee.DROITE): autre_rangee,
+    }
+    combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
+    combat.joueur.deck.main = [CARTE_PERCER]
+    combat.joueur.electricite = 2
+
+    combat.jouer_carte(CARTE_PERCER, avant)  # clic sur l'avant de la rangee gauche
+
+    assert avant.pv == 10 - 5
+    assert arriere.pv == 10 - 5  # touche aussi, meme rangee
+    assert autre_rangee.pv == 10  # rangee differente, pas touchee
+
+
+def test_ligne_ennemie_ne_plante_pas_si_l_arriere_est_absent():
+    seul = Ennemi(pv_max=10, degats_attaque=4)
+    combat, _vaisseau, _flotte = _nouveau_combat(ennemis={Position(Colonne.AVANT, Rangee.GAUCHE): seul})
+    combat.joueur.deck.main = [CARTE_PERCER]
+    combat.joueur.electricite = 2
+
+    combat.jouer_carte(CARTE_PERCER, seul)
+
+    assert seul.pv == 10 - 5
+
+
+def test_proteger_donne_du_bouclier_a_tous_les_modules_vivants():
+    module_equipe = Module(pv_max=10)
+    module_detruit = Module(pv_max=5)
+    module_detruit.subir_degats(100)  # detruit, ne doit pas etre affecte
+    vaisseau = Vaisseau(base=Module(pv_max=15), avant_gauche=module_equipe, arriere_gauche=module_detruit)
+    deck = Deck(cartes=[CARTE_PROTEGER], generateur_aleatoire=random.Random(0))
+    joueur = Joueur(vaisseau=vaisseau, deck=deck, electricite_par_tour=3)
+    flotte = Flotte({POSITION_ENNEMI: Ennemi(pv_max=15, degats_attaque=7)})
+    combat = Combat(joueur=joueur, flotte=flotte)
+    combat.joueur.deck.main = [CARTE_PROTEGER]
+    combat.joueur.electricite = 2
+
+    combat.jouer_carte(CARTE_PROTEGER)  # pas de cible a fournir
+
+    assert vaisseau.base.bouclier == 4
+    assert module_equipe.bouclier == 4
+    assert module_detruit.bouclier == 0
+
+
+def test_mitrailler_touche_tous_les_ennemis_vivants():
+    e1 = Ennemi(pv_max=15, degats_attaque=4)
+    e2 = Ennemi(pv_max=15, degats_attaque=4)
+    ennemis = {
+        Position(Colonne.AVANT, Rangee.GAUCHE): e1,
+        Position(Colonne.AVANT, Rangee.DROITE): e2,
+    }
+    combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
+    combat.joueur.deck.main = [CARTE_MITRAILLER]
+    combat.joueur.electricite = 2
+
+    combat.jouer_carte(CARTE_MITRAILLER)  # pas de cible a fournir
+
+    assert e1.pv == 15 - 3
+    assert e2.pv == 15 - 3
+
+
+def test_cible_sans_clic_refusee_si_une_cible_est_quand_meme_fournie():
+    combat, vaisseau, _flotte = _nouveau_combat()
+    combat.joueur.deck.main = [CARTE_PROTEGER]
+    combat.joueur.electricite = 2
+
+    combat.jouer_carte(CARTE_PROTEGER, vaisseau.base)  # cible superflue -> refuse
+
+    assert vaisseau.base.bouclier == 0

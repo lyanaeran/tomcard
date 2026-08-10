@@ -6,10 +6,12 @@ Le module de base du vaisseau du joueur : points de vie et bouclier.
 class Module:
     """Represente le module de base du vaisseau du joueur."""
 
-    def __init__(self, pv_max: int):
+    def __init__(self, pv_max: int, nom: str = "Module", image: str | None = None):
         self.pv_max = pv_max
         self.pv = pv_max
         self.bouclier = 0
+        self.nom = nom
+        self.image = image
 
     def est_detruit(self) -> bool:
         """Renvoie True si le module n'a plus de points de vie."""

@@ -15,36 +15,33 @@ class TypeCarte(Enum):
 
 
 class CibleCarte(Enum):
-    """Cible visee par une carte, cf. specs.md paragraphe 7.2.
+    """Cible visee par une carte, cf. specs.md paragraphe 7.2 et config/cartes.json.
 
-    ALLIE : n'importe quel module allie vivant, au choix du joueur (pas seulement
-    le module dont la carte provient).
+    ALLIE_UNIQUE / ENNEMI_UNIQUE : un module/ennemi vivant, au choix du joueur.
+    ALLIES_MULTIPLES / ENNEMIS_MULTIPLES : tous les modules/ennemis vivants, pas de
+    choix a faire (la carte se resout des sa selection).
+    LIGNE_ENNEMIE : l'avant et l'arriere de la rangee de l'ennemi clique (2 ennemis
+    au plus), pour les cartes percantes (specs.md paragraphe 3.1).
     """
 
-    ENNEMI = auto()
-    ALLIE = auto()
+    ENNEMI_UNIQUE = auto()
+    ALLIE_UNIQUE = auto()
+    ALLIES_MULTIPLES = auto()
+    ENNEMIS_MULTIPLES = auto()
+    LIGNE_ENNEMIE = auto()
+
+
+# Cibles qui se resolvent sans clic de ciblage (pas de choix individuel possible)
+CIBLES_SANS_CLIC = (CibleCarte.ALLIES_MULTIPLES, CibleCarte.ENNEMIS_MULTIPLES)
 
 
 @dataclass(frozen=True)
 class Carte:
-    """Une carte jouable, avec son cout et son effet."""
+    """Une carte jouable, avec son cout, son effet et son image."""
 
     nom: str
+    image: str
     type: TypeCarte
     cible: CibleCarte
     cout: int
     valeur: int
-
-
-def fabriquer_kit(suffixe: str, cout: int, degats: int, bouclier: int, soin: int) -> tuple[Carte, Carte, Carte]:
-    """Fabrique le trio Attaque/Bouclier/Soin d'un module (poc.md paragraphe 2)."""
-    attaque = Carte(nom=f"Attaque {suffixe}", type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMI, cout=cout, valeur=degats)
-    bouclier_carte = Carte(nom=f"Bouclier {suffixe}", type=TypeCarte.DEFENSE, cible=CibleCarte.ALLIE, cout=cout, valeur=bouclier)
-    soin_carte = Carte(nom=f"Soin {suffixe}", type=TypeCarte.SOIN, cible=CibleCarte.ALLIE, cout=cout, valeur=soin)
-    return attaque, bouclier_carte, soin_carte
-
-
-# Le kit de la base, cf. poc.md paragraphe 2 (inchange depuis la premiere version du POC)
-CARTE_ATTAQUE = Carte(nom="Attaque", type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMI, cout=1, valeur=7)
-CARTE_BOUCLIER = Carte(nom="Bouclier", type=TypeCarte.DEFENSE, cible=CibleCarte.ALLIE, cout=1, valeur=5)
-CARTE_SOIN = Carte(nom="Soin", type=TypeCarte.SOIN, cible=CibleCarte.ALLIE, cout=1, valeur=4)

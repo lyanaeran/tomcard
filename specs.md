@@ -173,6 +173,7 @@ Troisième axe, indépendant du type — n'importe quel type (pas seulement Atta
 | **Alliés multiples / vaisseau entier** | Plusieurs modules ciblés, ou tout le vaisseau |
 | **Ennemi unique** | Une cible ennemie, avec contraintes de rang possibles (rang avant uniquement, n'importe quel rang...) |
 | **Ennemis multiples** | Motif fixe (ligne, colonne, rang entier) ou aléatoire, jusqu'à tous les ennemis |
+| **Ligne ennemie** | Cas particulier d'"ennemis multiples" pour les cartes perçantes (§3.1) : touche l'avant et l'arrière de la rangée de la cible cliquée (2 ennemis au plus), cf. poc.md §4 |
 
 ### 7.3 Rareté
 
@@ -242,7 +243,7 @@ Axe indépendant du type et de la cible — une carte a un type, une cible **et*
 
 1. Clic sur une carte de la main → la carte se **surligne** (état "armée")
 2. Clic sur une **cible valide** → la carte se résout, part en défausse, la surbrillance disparaît
-3. Pour les cartes sans cible unique (Pouvoir, effet sur tout le vaisseau...) : le comportement exact (résolution automatique dès le clic vs. confirmation par un clic supplémentaire) **dépend du type de carte** — à détailler carte par carte lors de l'approfondissement du système de cartes (§7)
+3. Pour les cartes sans cible unique (Alliés multiples, Ennemis multiples, effet sur tout un camp) : **résolution automatique dès le clic sur la carte**, sans clic de ciblage supplémentaire (validé dans le POC, voir poc.md §4)
 4. **Fin de tour** : un bouton cliquable "Fin de tour" permet au joueur de terminer son tour à tout moment, même s'il lui reste de l'électricité ou des cartes jouables
 
 ---
@@ -257,7 +258,6 @@ Axe indépendant du type et de la cible — une carte a un type, une cible **et*
 - Cartes de base fournies avec un nouveau module choisi après un Boss : deck de départ fixe par module, à définir une fois le système de cartes approfondi (voir §7)
 - Plafond exact de slots équipables (proposition actuelle : 5, base incluse) et autorisation ou non des doublons de modules
 - Représentation visuelle d'un ennemi L occupant 2 emplacements (§3.2, §8.1) : rectangle fusionné sur les 2 cases, ou deux images liées logiquement ?
-- Comportement exact des cartes sans cible unique lors du clic (§8.3) : à détailler carte par carte
 - Compléter le jeu de cartes de chaque module : les archétypes de §4.3 (Bouclier énergétique, Radar, Propulseur, IA de combat, Générateur, Sabotage, Soute/Fret) n'ont pas encore de decks détaillés comme ceux de §4.1-4.2 ; les cartes déjà écrites en §4.1-4.2 n'ont pas encore de type/cible/rareté assignés (§7)
 
 ### 9.2 Technique / développement

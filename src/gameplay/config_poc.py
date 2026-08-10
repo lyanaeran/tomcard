@@ -1,13 +1,19 @@
 """
-Configuration du combat du POC (cf. poc.md).
+Generation aleatoire du combat du POC a partir des fichiers de config/ (cf. poc.md).
 
-Toutes les valeurs numeriques (PV, degats, cout des cartes) sont inventees faute
-d'etre specifiees ailleurs - a ajuster apres test (poc.md paragraphe 1).
+A chaque combat : le module principal est fixe, 4 modules differents sont tires au
+sort parmi les autres et places sur les 4 emplacements, les 6 cases ennemies sont
+tirees au sort (avec remise), et le deck (20 cartes) est tire au sort a partir des
+jeux de cartes des modules retenus. Une fois dans le deck, une carte n'est plus
+liee au module dont elle provient.
 """
 
-from src.gameplay.carte import CARTE_ATTAQUE, CARTE_BOUCLIER, CARTE_SOIN, fabriquer_kit
+import random
+
+from src.gameplay.carte import Carte
 from src.gameplay.combat import Combat
 from src.gameplay.deck import Deck
+from src.gameplay.donnees import SpecEnnemi, SpecModule, charger_cartes, charger_ennemis, charger_modules
 from src.gameplay.ennemi import Ennemi
 from src.gameplay.flotte import Flotte
 from src.gameplay.joueur import Joueur
@@ -16,66 +22,85 @@ from src.gameplay.position import Colonne, Position, Rangee
 from src.gameplay.vaisseau import Vaisseau
 
 ELECTRICITE_PAR_TOUR = 3
+ID_MODULE_PRINCIPAL = "MOD_1"
+NOMBRE_MODULES_EQUIPES = 4
+CARTES_PAR_MODULE_PRINCIPAL = 8
+CARTES_PAR_MODULE_EQUIPE = 3
 
-# Modules du joueur, cf. poc.md paragraphe 2
-PV_BASE = 15
-PV_AVANT_GAUCHE = 12
-PV_AVANT_DROITE = 18
-PV_ARRIERE_GAUCHE = 10
-PV_ARRIERE_DROITE = 9
+POSITIONS_MODULES_EQUIPES = (
+    Position(Colonne.AVANT, Rangee.GAUCHE),
+    Position(Colonne.AVANT, Rangee.DROITE),
+    Position(Colonne.ARRIERE, Rangee.GAUCHE),
+    Position(Colonne.ARRIERE, Rangee.DROITE),
+)
 
-KIT_AVANT_GAUCHE = fabriquer_kit("Avant-Gauche", cout=1, degats=9, bouclier=4, soin=3)
-KIT_AVANT_DROITE = fabriquer_kit("Avant-Droite", cout=1, degats=5, bouclier=7, soin=3)
-KIT_ARRIERE_GAUCHE = fabriquer_kit("Arriere-Gauche", cout=1, degats=4, bouclier=3, soin=6)
-KIT_ARRIERE_DROITE = fabriquer_kit("Arriere-Droite", cout=1, degats=10, bouclier=2, soin=2)
-
-# Ennemis, cf. poc.md paragraphe 3 (mix S/M, 2 cases laissees vides)
-# Stockes comme donnees brutes (pas des instances Ennemi partagees, qui sont mutables :
-# chaque combat doit repartir avec des ennemis frais, pas ceux d'un combat precedent).
-_CONFIG_ENNEMIS = [
-    (Position(Colonne.AVANT, Rangee.GAUCHE), 8, 4, "Ennemi S"),
-    (Position(Colonne.AVANT, Rangee.DROITE), 16, 8, "Ennemi M"),
-    (Position(Colonne.ARRIERE, Rangee.GAUCHE), 8, 4, "Ennemi S"),
-    (Position(Colonne.ARRIERE, Rangee.MID), 16, 8, "Ennemi M"),
-]
+POSITIONS_ENNEMIES = (
+    Position(Colonne.AVANT, Rangee.GAUCHE),
+    Position(Colonne.AVANT, Rangee.MID),
+    Position(Colonne.AVANT, Rangee.DROITE),
+    Position(Colonne.ARRIERE, Rangee.GAUCHE),
+    Position(Colonne.ARRIERE, Rangee.MID),
+    Position(Colonne.ARRIERE, Rangee.DROITE),
+)
 
 
-def _nouvelle_flotte() -> Flotte:
-    """Construit une flotte fraiche (nouvelles instances Ennemi) pour un nouveau combat."""
+def _module_depuis_spec(spec: SpecModule) -> Module:
+    return Module(pv_max=spec.points_de_vie, nom=spec.nom, image=spec.image)
+
+
+def _ennemi_depuis_spec(spec: SpecEnnemi) -> Ennemi:
+    return Ennemi(pv_max=spec.points_de_vie, degats_attaque=spec.degats_attaque, nom=spec.nom, image=spec.image)
+
+
+def tirer_cartes(pool_ids: tuple, quantite: int, cartes: dict[str, Carte], aleatoire: random.Random) -> list[Carte]:
+    """Tire `quantite` cartes au hasard, avec remise, parmi les ids de la pool donnee."""
+    return [cartes[aleatoire.choice(pool_ids)] for _ in range(quantite)]
+
+
+def creer_vaisseau(specs_modules: list[SpecModule], aleatoire: random.Random) -> tuple[Vaisseau, list[SpecModule]]:
+    """Place le module principal et tire au sort 4 modules differents sur les 4 emplacements."""
+    spec_principal = next(spec for spec in specs_modules if spec.id == ID_MODULE_PRINCIPAL)
+    specs_equipables = [spec for spec in specs_modules if spec.id != ID_MODULE_PRINCIPAL]
+    specs_choisies = aleatoire.sample(specs_equipables, NOMBRE_MODULES_EQUIPES)
+
+    modules_par_position = dict(zip(POSITIONS_MODULES_EQUIPES, (_module_depuis_spec(spec) for spec in specs_choisies)))
+    vaisseau = Vaisseau(
+        base=_module_depuis_spec(spec_principal),
+        avant_gauche=modules_par_position[Position(Colonne.AVANT, Rangee.GAUCHE)],
+        avant_droite=modules_par_position[Position(Colonne.AVANT, Rangee.DROITE)],
+        arriere_gauche=modules_par_position[Position(Colonne.ARRIERE, Rangee.GAUCHE)],
+        arriere_droite=modules_par_position[Position(Colonne.ARRIERE, Rangee.DROITE)],
+    )
+    return vaisseau, [spec_principal, *specs_choisies]
+
+
+def creer_deck(specs_utilisees: list[SpecModule], cartes: dict[str, Carte], aleatoire: random.Random) -> Deck:
+    """Tire au sort 8 cartes du module principal (le premier de la liste) et 3 de chaque autre."""
+    spec_principal, *specs_equipes = specs_utilisees
+    deck_cartes = tirer_cartes(spec_principal.cartes, CARTES_PAR_MODULE_PRINCIPAL, cartes, aleatoire)
+    for spec in specs_equipes:
+        deck_cartes += tirer_cartes(spec.cartes, CARTES_PAR_MODULE_EQUIPE, cartes, aleatoire)
+    return Deck(cartes=deck_cartes, generateur_aleatoire=aleatoire)
+
+
+def creer_flotte(specs_ennemis: list[SpecEnnemi], aleatoire: random.Random) -> Flotte:
+    """Tire au sort un ennemi (avec remise) pour chacune des 6 cases de la grille ennemie."""
     ennemis = {
-        position: Ennemi(pv_max=pv_max, degats_attaque=degats, nom=nom)
-        for position, pv_max, degats, nom in _CONFIG_ENNEMIS
+        position: _ennemi_depuis_spec(aleatoire.choice(specs_ennemis)) for position in POSITIONS_ENNEMIES
     }
     return Flotte(ennemis)
 
 
-def _kit_de_base() -> tuple:
-    return CARTE_ATTAQUE, CARTE_BOUCLIER, CARTE_SOIN
+def creer_combat_poc(generateur_aleatoire: random.Random | None = None) -> Combat:
+    """Genere un combat aleatoire (modules, ennemis, deck) a partir de config/ (poc.md)."""
+    aleatoire = generateur_aleatoire or random.Random()
+    cartes = charger_cartes()
+    specs_modules = charger_modules()
+    specs_ennemis = charger_ennemis()
 
-
-def _composition_deck() -> list:
-    """5x Attaque + 3x Bouclier + 1x Soin pour chacun des 5 kits (poc.md paragraphe 5)."""
-    cartes = []
-    for attaque, bouclier, soin in (
-        _kit_de_base(),
-        KIT_AVANT_GAUCHE,
-        KIT_AVANT_DROITE,
-        KIT_ARRIERE_GAUCHE,
-        KIT_ARRIERE_DROITE,
-    ):
-        cartes += [attaque] * 5 + [bouclier] * 3 + [soin] * 1
-    return cartes
-
-
-def creer_combat_poc() -> Combat:
-    """Cree un combat pret a l'emploi avec les valeurs du POC (poc.md)."""
-    vaisseau = Vaisseau(
-        base=Module(pv_max=PV_BASE),
-        avant_gauche=Module(pv_max=PV_AVANT_GAUCHE),
-        avant_droite=Module(pv_max=PV_AVANT_DROITE),
-        arriere_gauche=Module(pv_max=PV_ARRIERE_GAUCHE),
-        arriere_droite=Module(pv_max=PV_ARRIERE_DROITE),
-    )
-    deck = Deck(cartes=_composition_deck())
+    vaisseau, specs_utilisees = creer_vaisseau(specs_modules, aleatoire)
+    deck = creer_deck(specs_utilisees, cartes, aleatoire)
     joueur = Joueur(vaisseau=vaisseau, deck=deck, electricite_par_tour=ELECTRICITE_PAR_TOUR)
-    return Combat(joueur=joueur, flotte=_nouvelle_flotte())
+    flotte = creer_flotte(specs_ennemis, aleatoire)
+
+    return Combat(joueur=joueur, flotte=flotte)

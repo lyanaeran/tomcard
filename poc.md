@@ -6,9 +6,9 @@
 
 ## 1. Objectif
 
-Un combat sur la grille complète (module de base + 4 modules équipés du joueur, contre plusieurs ennemis), pour valider le placement 2x3, le ciblage à cible multiple et le ciblage automatique des ennemis — en plus de la boucle de combat déjà validée dans la version précédente du POC (jouer des cartes, dépenser de l'électricité, infliger des dégâts, encaisser une attaque).
+Un combat sur la grille complète, avec un vaisseau et une flotte ennemie **tirés au sort à chaque lancement** à partir des fichiers de `config/` (modules, ennemis, cartes), pour valider le placement 2x3, le ciblage à cible multiple, le ciblage automatique des ennemis et l'affichage avec les vraies images — en plus de la boucle de combat déjà validée dans les versions précédentes du POC (jouer des cartes, dépenser de l'électricité, infliger des dégâts, encaisser une attaque).
 
-Simplifications restantes par rapport à `specs.md` : pas de boucle de run (pas d'étapes, pas de boss, pas de récompense de cartes), pas d'ennemis de taille L (point encore ouvert en specs.md §9.1, volontairement évité ici). Un seul combat, une seule fois.
+Simplifications restantes par rapport à `specs.md` : pas de boucle de run (pas d'étapes, pas de boss, pas de récompense de cartes), pas d'ennemis de taille L (point encore ouvert en specs.md §9.1, volontairement évité ici). Un seul combat, une seule fois — mais différent (et rejouable) à chaque lancement grâce au tirage aléatoire.
 
 **⚠️ Toutes les valeurs numériques de ce document (PV, dégâts, coûts) sont inventées faute d'être spécifiées ailleurs — à ajuster après test.**
 
@@ -18,15 +18,10 @@ Simplifications restantes par rapport à `specs.md` : pas de boucle de run (pas 
 
 Grille **2 colonnes (Avant / Arrière) x 3 rangées (Gauche / Mid / Droite)**, comme décrit en specs.md §3.1/§5. La colonne Avant fait face à l'ennemi. Le module de base occupe la rangée Mid en entier (les deux colonnes) ; les 4 autres modules équipés occupent chacun une case.
 
-| Module | Position | PV | Attaque | Bouclier | Soin |
-|---|---|---|---|---|---|
-| Base | Mid | 15 | 7 | 5 | 4 |
-| Avant-Gauche | avant / gauche | 12 | 9 | 4 | 3 |
-| Avant-Droite | avant / droite | 18 | 5 | 7 | 3 |
-| Arrière-Gauche | arrière / gauche | 10 | 4 | 3 | 6 |
-| Arrière-Droite | arrière / droite | 9 | 10 | 2 | 2 |
-
-Chaque module a son propre jeu des 3 cartes déjà utilisées (Attaque/Bouclier/Soin, cf. §4), avec ses propres valeurs — toutes les cartes coûtent 1⚡.
+**Composition tirée au sort à chaque combat**, à partir de `config/modules.json` (6 modules définis : Principal + 5 autres) :
+- Le module **Principal** (`MOD_1`) est toujours la base
+- **4 modules différents** sont tirés au sort parmi les 5 autres (Laser, Missiles, Mitrailleuse, Bouclier, Soin) et placés aléatoirement sur les 4 cases équipables — un des 5 modules ne sera donc **pas** du tout présent dans le combat
+- PV et cartes jouables de chaque module : voir `config/modules.json`
 
 - **Électricité** : 3 par tour (ressource pleine à chaque début de tour, ne se cumule pas d'un tour à l'autre)
 - **Main** : capacité maximale de **10 cartes** ; le joueur pioche **5 cartes par tour**
@@ -37,16 +32,9 @@ Chaque module a son propre jeu des 3 cartes déjà utilisées (Attaque/Bouclier/
 
 ## 3. Ennemis
 
-Grille miroir **2 colonnes (Avant / Arrière) x 3 rangées (Gauche / Mid / Droite)**, la colonne Avant faisant face au joueur. Pas de base côté ennemi : les 6 cases sont indépendantes, certaines peuvent rester vides.
+Grille miroir **2 colonnes (Avant / Arrière) x 3 rangées (Gauche / Mid / Droite)**, la colonne Avant faisant face au joueur. Pas de base côté ennemi : les 6 cases sont indépendantes.
 
-| Ennemi | Taille | Position | PV | Dégâts |
-|---|---|---|---|---|
-| S1 | S | avant / gauche | 8 | 4 |
-| M1 | M | avant / droite | 16 | 8 |
-| S2 | S | arrière / gauche | 8 | 4 |
-| M2 | M | arrière / mid | 16 | 8 |
-
-(avant/mid et arrière/droite restent vides dans ce POC)
+**Composition tirée au sort à chaque combat**, à partir de `config/ennemis.json` (3 ennemis définis) : un ennemi est tiré au sort **avec remise** pour chacune des 6 cases — les 6 cases sont donc toujours remplies, avec des doublons possibles (voire un ennemi absent du tirage). PV et dégâts de chaque ennemi : voir `config/ennemis.json`.
 
 **Ciblage automatique** : chaque ennemi attaque un seul module du joueur par tour, choisi ainsi :
 1. Regarder sa **propre rangée** (celle où il se trouve) : d'abord la case Avant de cette rangée, puis la case Arrière de cette même rangée si l'Avant est vide/détruite
@@ -61,15 +49,17 @@ Un rayon (voir §6) matérialise chaque attaque. Au survol de la souris sur un e
 
 ## 4. Cartes
 
-Chaque module a 3 cartes (Attaque/Défense/Soin), avec ses propres valeurs (tableau en §2) :
+6 cartes définies dans `config/cartes.json` (Attaquer, Mitrailler, Percer, Défendre, Protéger, Soigner), chacune avec un type, un coût et une cible parmi :
 
-| Type | Cible | Effet |
-|---|---|---|
-| **Attaque** | Ennemi (au choix parmi les ennemis vivants) | Inflige des dégâts |
-| **Bouclier** (Défense) | Allié (au choix parmi les modules vivants) | Donne du Bouclier |
-| **Soin** | Allié (au choix parmi les modules vivants) | Répare des PV |
+| Cible | Comportement au clic |
+|---|---|
+| **Ennemi unique** | Sélectionner la carte, puis cliquer un ennemi vivant |
+| **Allié unique** | Sélectionner la carte, puis cliquer un module vivant |
+| **Ligne ennemie** | Sélectionner la carte, puis cliquer un ennemi vivant — touche aussi l'autre case (Avant ↔ Arrière) de la **même rangée**, si elle est occupée |
+| **Alliés multiples** | Se résout **dès la sélection** de la carte (pas de clic de ciblage) — touche tous les modules vivants du joueur |
+| **Ennemis multiples** | Se résout **dès la sélection** de la carte (pas de clic de ciblage) — touche tous les ennemis vivants |
 
-Contrairement à la version précédente du POC, une carte Bouclier/Soin peut désormais cibler **n'importe quel module allié vivant**, pas seulement celui dont elle provient.
+Une carte est associée à un ou plusieurs modules dans `config/modules.json` (qui peuvent la piocher dans leur deck, cf. §5), mais **son effet ne dépend jamais du module dont elle provient** : une fois dans le deck, elle est jouable sur n'importe quelle cible valide, comme les autres.
 
 Le Bouclier absorbe les dégâts subis avant les PV. Exemple : un module protégé par 5 Bouclier subit une attaque de 7 dégâts → le Bouclier absorbe 5, les **2 dégâts restants** sont retirés des PV.
 
@@ -77,15 +67,17 @@ Le Bouclier absorbe les dégâts subis avant les PV. Exemple : un module protég
 
 ## 5. Composition du deck
 
-Un seul deck partagé pour tout le vaisseau, assemblé à partir des 5 kits de modules (même ratio que la version précédente, dupliqué x5) :
+**20 cartes tirées au sort à chaque combat**, à partir des jeux de cartes des modules retenus (§2) :
+- **8 cartes** tirées au sort (avec remise) parmi les cartes jouables par le module **Principal**
+- **3 cartes** tirées au sort (avec remise) parmi les cartes jouables par **chacun** des 4 modules équipés (4 x 3 = 12)
 
-**45 cartes au total** : pour chacun des 5 modules, 5x Attaque + 3x Bouclier + 1x Soin (= 9 cartes/module)
+Une fois tirée, une carte perd tout lien avec le module qui l'a fournie (§4) : le deck n'est qu'une liste de 20 cartes, indifférenciées par leur origine.
 
 ---
 
 ## 6. Déroulé d'un tour
 
-1. **Tour du joueur** : le joueur pioche 5 cartes, l'électricité est remise à 3. Le joueur joue librement les cartes de son choix (en choisissant la cible parmi les modules/ennemis vivants), dans l'ordre qu'il veut, tant qu'il a assez d'électricité (voir specs.md §3.3), puis clique sur le bouton **"Fin de tour"** pour passer la main
+1. **Tour du joueur** : le joueur pioche 5 cartes, l'électricité est remise à 3. Le joueur joue librement les cartes de son choix (en choisissant la cible parmi les modules/ennemis vivants — ou sans cible à choisir pour les cartes "Alliés multiples"/"Ennemis multiples", cf. §4), dans l'ordre qu'il veut, tant qu'il a assez d'électricité (voir specs.md §3.3), puis clique sur le bouton **"Fin de tour"** pour passer la main
 2. **Fin du tour joueur** : les cartes non jouées restant en main sont défaussées (voir specs.md §3.3)
 3. **Tour de l'ennemi** : chaque ennemi vivant attaque automatiquement le module qu'il vise (règle de ciblage en §3), dans l'ordre de la grille. Un **rayon** apparaît brièvement entre chaque ennemi attaquant et sa cible pour visualiser l'attaque, puis disparaît. Si la base est détruite en cours de tour, les ennemis suivants n'agissent plus (la run est terminée)
 
@@ -118,7 +110,7 @@ src/
 tests/         → tests unitaires pytest
 ```
 
-Le rendu actuel (formes simples/rectangles, cf. §6-7) n'utilise pas encore les images disponibles dans `assets/` ni les fichiers de `config/` (voir ci-dessous) : c'est la prochaine étape d'intégration.
+Le rendu utilise les vraies images d'`assets/` (module/ennemi/carte affichés comme des sprites, mis à l'échelle sans déformation dans leur case), avec un bandeau semi-transparent en bas de chaque case pour garder le texte d'état (PV, Bouclier, coût...) lisible par-dessus l'image.
 
 Conventions : classes claires par responsabilité, commentaires en français sans accents ni cédilles (cf. specs.md §10.3).
 
@@ -134,7 +126,7 @@ Survoler un ennemi vivant avec la souris affiche une étiquette indiquant quel m
 
 ### Fichiers de configuration (`config/`)
 
-Trois fichiers JSON décrivent le contenu du jeu (modules, ennemis, cartes) de façon déclarative, référençant les images de `assets/`. **Préparation seulement pour l'instant : ces fichiers ne sont pas encore chargés par le moteur** (`src/gameplay/config_poc.py` continue d'utiliser des valeurs codées en dur). Ce sera une étape d'intégration ultérieure.
+Trois fichiers JSON décrivent le contenu du jeu (modules, ennemis, cartes) de façon déclarative, référençant les images de `assets/`. **Chargés par le moteur** (`src/gameplay/donnees.py`) à chaque combat : `config_poc.py` s'en sert pour tirer au sort le vaisseau, la flotte et le deck (§2-3-5).
 
 **`config/modules.json`** — un module par entrée :
 - `id` : identifiant unique, format `MOD_N`
