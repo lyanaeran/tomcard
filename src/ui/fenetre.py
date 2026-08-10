@@ -54,12 +54,13 @@ _EMPLACEMENTS_MODULES_IMAGE = {
     Position(Colonne.AVANT, Rangee.DROITE): (633, 25, 187, 178),
 }
 
-# Centre horizontal de la colonne Avant (le nez du vaisseau), pour placer la
-# pastille PV/Bouclier de la base au-dessus de l'avant plutot qu'au hasard.
-_CENTRE_AVANT_IMAGE = sum(
-    ex + el / 2 for position, (ex, _ey, el, _eh) in _EMPLACEMENTS_MODULES_IMAGE.items() if position.colonne == Colonne.AVANT
-) / 2
-CENTRE_AVANT_VAISSEAU = VAISSEAU_X + _CENTRE_AVANT_IMAGE * _ECHELLE_VAISSEAU
+# Repere du pare-brise mesure sur l'image source (coordonnees locales,
+# origine bas-gauche : centre horizontal, bord superieur), pour placer la
+# pastille PV/Bouclier de la base juste au-dessus de lui.
+_CENTRE_PARE_BRISE_IMAGE = 853
+_HAUT_PARE_BRISE_IMAGE = 360
+CENTRE_PARE_BRISE_VAISSEAU_X = VAISSEAU_X + _CENTRE_PARE_BRISE_IMAGE * _ECHELLE_VAISSEAU
+HAUT_PARE_BRISE_VAISSEAU_Y = VAISSEAU_Y + _HAUT_PARE_BRISE_IMAGE * _ECHELLE_VAISSEAU
 
 # Main de cartes, alignee en bas (specs.md paragraphe 8.1)
 CARTE_LARGEUR, CARTE_HAUTEUR = 100, 140
@@ -123,6 +124,21 @@ def _sprite_ajuste(
     return sprite
 
 
+def _sprite_couvrant(
+    chemin: str, x: float, y: float, largeur: float, hauteur: float, lot: pyglet.graphics.Batch
+) -> pyglet.sprite.Sprite:
+    """Cree un sprite pour cette image, mis a l'echelle pour recouvrir entierement le
+    rectangle (quitte a legerement deborder), contrairement a `_sprite_ajuste` qui evite
+    tout depassement au prix de bandes vides quand le ratio de l'image ne correspond pas
+    exactement a celui du cadre."""
+    sprite = pyglet.sprite.Sprite(_image(chemin), batch=lot)
+    echelle = max(largeur / sprite.width, hauteur / sprite.height)
+    sprite.scale = echelle
+    sprite.x = x + (largeur - sprite.width) / 2
+    sprite.y = y + (hauteur - sprite.height) / 2
+    return sprite
+
+
 def _bandeau(x: float, y: float, largeur: float, hauteur: float, lot: pyglet.graphics.Batch) -> shapes.Rectangle:
     """Bandeau semi-transparent pour poser du texte lisible par-dessus une image."""
     rectangle = shapes.Rectangle(x, y, largeur, hauteur, color=COULEUR_BANDEAU, batch=lot, group=GROUPE_SUPERPOSITION)
@@ -162,11 +178,14 @@ def _pastilles_pv_bouclier(
     bouclier: int | None,
     lot: pyglet.graphics.Batch,
     centre_x: float | None = None,
+    haut: float | None = None,
 ) -> list:
     """Pastilles PV (rouge) et Bouclier (bleu, si applicable), flottant au-dessus d'une case
-    (pour ne pas cacher son image). Par defaut alignees vers le bord droit ; `centre_x` permet
-    de les recentrer ailleurs (ex. au-dessus de l'avant du vaisseau)."""
-    cy = y + hauteur + MARGE_PASTILLE_HAUT + _RAYON_TOTAL_PASTILLE
+    (pour ne pas cacher son image). Par defaut positionnees a partir du rectangle (x, y,
+    largeur, hauteur) de la case ; `centre_x`/`haut` permettent de les ancrer ailleurs
+    (ex. au-dessus du pare-brise pour la base, plutot qu'au-dessus de tout le vaisseau)."""
+    haut_reference = haut if haut is not None else y + hauteur
+    cy = haut_reference + MARGE_PASTILLE_HAUT + _RAYON_TOTAL_PASTILLE
     cx_pv = centre_x if centre_x is not None else x + largeur - RAYON_PASTILLE - MARGE_PASTILLE
     elements = _pastille(cx_pv, cy, COULEUR_PASTILLE_PV, pv, lot)
     if bouclier is not None:
@@ -254,7 +273,17 @@ class FenetreCombat(pyglet.window.Window):
             elements.extend(self._texte_detruit(vx, vy, vl, vh, lot))
         else:
             elements.extend(
-                _pastilles_pv_bouclier(vx, vy, vl, vh, base.pv, base.bouclier, lot, centre_x=CENTRE_AVANT_VAISSEAU)
+                _pastilles_pv_bouclier(
+                    vx,
+                    vy,
+                    vl,
+                    vh,
+                    base.pv,
+                    base.bouclier,
+                    lot,
+                    centre_x=CENTRE_PARE_BRISE_VAISSEAU_X,
+                    haut=HAUT_PARE_BRISE_VAISSEAU_Y,
+                )
             )
 
         for position, module in self.combat.joueur.vaisseau.modules_equipes().items():
@@ -265,7 +294,7 @@ class FenetreCombat(pyglet.window.Window):
         """Dessine une case module (image + pastilles PV/Bouclier), grisee si detruite."""
         x, y, largeur, hauteur = _rect_module(position)
         detruit = module.est_detruit()
-        sprite = _sprite_ajuste(module.image, x, y, largeur, hauteur, lot)
+        sprite = _sprite_couvrant(module.image, x, y, largeur, hauteur, lot)
         if detruit:
             sprite.opacity = OPACITE_DETRUIT
             return [sprite, *self._texte_detruit(x, y, largeur, hauteur, lot)]
