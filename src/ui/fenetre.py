@@ -17,14 +17,10 @@ from src.ui.animation import AnimationRayon
 LARGEUR_FENETRE = 1280
 HAUTEUR_FENETRE = 760
 
-# Cases de la grille (modules et ennemis), cf. specs.md paragraphe 8.1
+# Cases de la flotte ennemie, cf. specs.md paragraphe 8.1
 CELLULE_LARGEUR, CELLULE_HAUTEUR = 110, 90
 ESPACEMENT_CELLULE = 14
-FOND_PADDING = 16
 HAUTEUR_BANDEAU_CASE = 42
-
-JOUEUR_ARRIERE_X = 60
-JOUEUR_AVANT_X = JOUEUR_ARRIERE_X + CELLULE_LARGEUR + ESPACEMENT_CELLULE
 
 ENNEMI_AVANT_X = 900
 ENNEMI_ARRIERE_X = ENNEMI_AVANT_X + CELLULE_LARGEUR + ESPACEMENT_CELLULE
@@ -35,7 +31,24 @@ RANGEE_Y = {
     Rangee.DROITE: 620 - 2 * (CELLULE_HAUTEUR + ESPACEMENT_CELLULE),
 }
 
-POSITION_BASE = Position(Colonne.AVANT, Rangee.MID)
+# Vaisseau du joueur : le module de base (assets/modules/principal.png) est
+# affiche en grand, et les modules equipes se placent dans les emplacements
+# vides visibles sur cette image (mesures directement sur l'image source).
+VAISSEAU_X = 40
+VAISSEAU_Y = 340
+VAISSEAU_LARGEUR = 640
+_TAILLE_IMAGE_PRINCIPAL = (1205, 651)  # largeur, hauteur de assets/modules/principal.png
+VAISSEAU_HAUTEUR = VAISSEAU_LARGEUR * _TAILLE_IMAGE_PRINCIPAL[1] / _TAILLE_IMAGE_PRINCIPAL[0]
+_ECHELLE_VAISSEAU = VAISSEAU_LARGEUR / _TAILLE_IMAGE_PRINCIPAL[0]
+
+# Emplacements des modules mesures sur l'image (coordonnees locales, origine
+# bas-gauche de l'image, avant la mise a l'echelle)
+_EMPLACEMENTS_MODULES_IMAGE = {
+    Position(Colonne.ARRIERE, Rangee.GAUCHE): (372, 415, 189, 179),
+    Position(Colonne.AVANT, Rangee.GAUCHE): (632, 415, 188, 179),
+    Position(Colonne.ARRIERE, Rangee.DROITE): (374, 25, 187, 178),
+    Position(Colonne.AVANT, Rangee.DROITE): (633, 25, 187, 178),
+}
 
 # Main de cartes, alignee en bas (specs.md paragraphe 8.1)
 CARTE_LARGEUR, CARTE_HAUTEUR = 100, 140
@@ -48,7 +61,6 @@ HAUTEUR_BANDEAU_CARTE = 46
 BOUTON_X, BOUTON_Y = 1080, 40
 BOUTON_LARGEUR, BOUTON_HAUTEUR = 140, 50
 
-COULEUR_FOND_VAISSEAU = (30, 40, 55)
 COULEUR_BANDEAU = (10, 10, 12)
 OPACITE_BANDEAU = 190
 COULEUR_CARTE_SURLIGNEE = (210, 180, 40)
@@ -92,32 +104,27 @@ def _point_dans_rectangle(x: float, y: float, rx: float, ry: float, largeur: flo
     return rx <= x <= rx + largeur and ry <= y <= ry + hauteur
 
 
-def _rect_module(position: Position) -> tuple[float, float, float, float]:
-    """Rectangle (x, y, largeur, hauteur) d'une case du vaisseau du joueur.
+def _rect_vaisseau() -> tuple[float, float, float, float]:
+    """Rectangle englobant le grand sprite du vaisseau du joueur (module de base)."""
+    return VAISSEAU_X, VAISSEAU_Y, VAISSEAU_LARGEUR, VAISSEAU_HAUTEUR
 
-    La rangee Mid est occupee par la base en entier (les deux colonnes reunies),
-    quelle que soit la colonne demandee.
-    """
-    if position.rangee == Rangee.MID:
-        largeur = 2 * CELLULE_LARGEUR + ESPACEMENT_CELLULE
-        return JOUEUR_ARRIERE_X, RANGEE_Y[Rangee.MID], largeur, CELLULE_HAUTEUR
-    x = JOUEUR_AVANT_X if position.colonne == Colonne.AVANT else JOUEUR_ARRIERE_X
-    return x, RANGEE_Y[position.rangee], CELLULE_LARGEUR, CELLULE_HAUTEUR
+
+def _rect_module(position: Position) -> tuple[float, float, float, float]:
+    """Rectangle (x, y, largeur, hauteur) d'un emplacement de module equipe,
+    positionne dans l'emplacement vide correspondant sur l'image du vaisseau."""
+    ex, ey, el, eh = _EMPLACEMENTS_MODULES_IMAGE[position]
+    return (
+        VAISSEAU_X + ex * _ECHELLE_VAISSEAU,
+        VAISSEAU_Y + ey * _ECHELLE_VAISSEAU,
+        el * _ECHELLE_VAISSEAU,
+        eh * _ECHELLE_VAISSEAU,
+    )
 
 
 def _rect_ennemi(position: Position) -> tuple[float, float, float, float]:
     """Rectangle (x, y, largeur, hauteur) d'une case de la flotte ennemie."""
     x = ENNEMI_AVANT_X if position.colonne == Colonne.AVANT else ENNEMI_ARRIERE_X
     return x, RANGEE_Y[position.rangee], CELLULE_LARGEUR, CELLULE_HAUTEUR
-
-
-def _rect_fond_vaisseau() -> tuple[float, float, float, float]:
-    """Rectangle du fond commun derriere les 5 cases du vaisseau (specs.md paragraphe 8.1)."""
-    x = JOUEUR_ARRIERE_X - FOND_PADDING
-    y = RANGEE_Y[Rangee.DROITE] - FOND_PADDING
-    largeur = (JOUEUR_AVANT_X + CELLULE_LARGEUR) - JOUEUR_ARRIERE_X + 2 * FOND_PADDING
-    hauteur = (RANGEE_Y[Rangee.GAUCHE] + CELLULE_HAUTEUR) - RANGEE_Y[Rangee.DROITE] + 2 * FOND_PADDING
-    return x, y, largeur, hauteur
 
 
 class FenetreCombat(pyglet.window.Window):
@@ -158,12 +165,26 @@ class FenetreCombat(pyglet.window.Window):
         lot.draw()
 
     def _dessiner_vaisseau(self, lot: pyglet.graphics.Batch) -> list:
-        """Dessine le fond commun, la base et les modules equipes du joueur."""
+        """Dessine le grand sprite du vaisseau (base) et les modules equipes dans leurs emplacements."""
         elements = []
-        fx, fy, fl, fh = _rect_fond_vaisseau()
-        elements.append(shapes.Rectangle(fx, fy, fl, fh, color=COULEUR_FOND_VAISSEAU, batch=lot))
+        base = self.combat.joueur.vaisseau.base
+        vx, vy, vl, vh = _rect_vaisseau()
+        sprite = _sprite_ajuste(base.image, vx, vy, vl, vh, lot)
+        if base.est_detruit():
+            sprite.opacity = OPACITE_DETRUIT
+        elements.append(sprite)
 
-        elements.extend(self._dessiner_module_case(lot, POSITION_BASE, self.combat.joueur.vaisseau.base))
+        etat = "Detruit" if base.est_detruit() else f"PV {base.pv}/{base.pv_max}  Bouclier {base.bouclier}"
+        texte = pyglet.text.Label(
+            f"{base.nom} - {etat}",
+            x=vx + vl / 2,
+            y=vy + vh + 14,
+            anchor_x="center",
+            anchor_y="bottom",
+            batch=lot,
+        )
+        elements.append(texte)
+
         for position, module in self.combat.joueur.vaisseau.modules_equipes().items():
             elements.extend(self._dessiner_module_case(lot, position, module))
         return elements
@@ -378,15 +399,20 @@ class FenetreCombat(pyglet.window.Window):
             self.index_carte_selectionnee = None
 
     def _module_a(self, x: int, y: int) -> Module | None:
-        """Renvoie le module vivant du joueur sous ce point, ou None."""
+        """Renvoie le module vivant du joueur sous ce point, ou None.
+
+        Les emplacements de modules equipes sont testes en premier (ils sont
+        inclus dans le rectangle du vaisseau) ; sinon un clic sur le reste du
+        vaisseau vise la base.
+        """
         vaisseau = self.combat.joueur.vaisseau
-        bx, by, bl, bh = _rect_module(POSITION_BASE)
-        if _point_dans_rectangle(x, y, bx, by, bl, bh) and not vaisseau.base.est_detruit():
-            return vaisseau.base
         for position, module in vaisseau.modules_equipes().items():
             mx, my, ml, mh = _rect_module(position)
             if _point_dans_rectangle(x, y, mx, my, ml, mh) and not module.est_detruit():
                 return module
+        vx, vy, vl, vh = _rect_vaisseau()
+        if _point_dans_rectangle(x, y, vx, vy, vl, vh) and not vaisseau.base.est_detruit():
+            return vaisseau.base
         return None
 
     def _ennemi_a(self, x: int, y: int) -> Ennemi | None:
@@ -408,17 +434,16 @@ class FenetreCombat(pyglet.window.Window):
         """Demarre un rayon anime par attaque resolue ce tour (poc.md paragraphe 8)."""
         for position_ennemi, _ennemi, module_cible in attaques:
             ex, ey, el, eh = _rect_ennemi(position_ennemi)
-            position_module = self._position_module(module_cible)
-            mx, my, ml, mh = _rect_module(position_module)
+            mx, my, ml, mh = self._rect_du_module(module_cible)
             depart = (ex, ey + eh / 2)
             arrivee = (mx + ml, my + mh / 2)
             animation = AnimationRayon()
             animation.demarrer()
             self.rayons.append((animation, depart, arrivee))
 
-    def _position_module(self, module: Module) -> Position:
-        """Retrouve la position d'un module dans le vaisseau (la base si aucune autre ne correspond)."""
+    def _rect_du_module(self, module: Module) -> tuple[float, float, float, float]:
+        """Rectangle d'un module du joueur (son emplacement equipe, ou tout le vaisseau si c'est la base)."""
         for position, occupant in self.combat.joueur.vaisseau.modules_equipes().items():
             if occupant is module:
-                return position
-        return POSITION_BASE
+                return _rect_module(position)
+        return _rect_vaisseau()
