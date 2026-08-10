@@ -1,42 +1,42 @@
 {
   "modules": [
     {
-      "id": "mod_1",
+      "id": "MOD_1",
       "nom": "Principal",
       "image": "assets/modules/principal.png",
       "points_de_vie": 15,
       "cartes": ["CRT_1", "CRT_4", "CRT_6"]
     },
     {
-      "id": "mod_2",
+      "id": "MOD_2",
       "nom": "Laser",
       "image": "assets/modules/laser.png",
       "points_de_vie": 10,
       "cartes": ["CRT_1", "CRT_3"]
     },
     {
-      "id": "mod_3",
+      "id": "MOD_3",
       "nom": "Missiles",
       "image": "assets/modules/missiles.png",
       "points_de_vie": 9,
       "cartes": ["CRT_1", "CRT_3"]
     },
     {
-      "id": "mod_4",
+      "id": "MOD_4",
       "nom": "Mitrailleuse",
       "image": "assets/modules/mitrailleuse.png",
       "points_de_vie": 11,
       "cartes": ["CRT_1", "CRT_2"]
     },
     {
-      "id": "mod_5",
+      "id": "MOD_5",
       "nom": "Bouclier",
       "image": "assets/modules/bouclier.png",
       "points_de_vie": 18,
       "cartes": ["CRT_4", "CRT_5"]
     },
     {
-      "id": "mod_6",
+      "id": "MOD_6",
       "nom": "Soin",
       "image": "assets/modules/soin.png",
       "points_de_vie": 10,

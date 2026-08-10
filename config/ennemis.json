@@ -1,21 +1,21 @@
 {
   "ennemis": [
     {
-      "id": "enm_1",
+      "id": "ENM_1",
       "nom": "Ennemi 1",
       "image": "assets/ennemis/ennemi1.png",
       "points_de_vie": 8,
       "action": "ATK,4,AUTO"
     },
     {
-      "id": "enm_2",
+      "id": "ENM_2",
       "nom": "Ennemi 2",
       "image": "assets/ennemis/ennemi2.png",
       "points_de_vie": 16,
       "action": "ATK,8,AUTO"
     },
     {
-      "id": "enm_3",
+      "id": "ENM_3",
       "nom": "Ennemi 3",
       "image": "assets/ennemis/ennemi3.png",
       "points_de_vie": 22,

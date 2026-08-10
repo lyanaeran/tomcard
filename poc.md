@@ -137,13 +137,13 @@ Survoler un ennemi vivant avec la souris affiche une étiquette indiquant quel m
 Trois fichiers JSON décrivent le contenu du jeu (modules, ennemis, cartes) de façon déclarative, référençant les images de `assets/`. **Préparation seulement pour l'instant : ces fichiers ne sont pas encore chargés par le moteur** (`src/gameplay/config_poc.py` continue d'utiliser des valeurs codées en dur). Ce sera une étape d'intégration ultérieure.
 
 **`config/modules.json`** — un module par entrée :
-- `id` : identifiant unique, format `mod_N`
+- `id` : identifiant unique, format `MOD_N`
 - `nom`, `image` (chemin vers `assets/modules/`)
 - `points_de_vie`
 - `cartes` : liste d'identifiants de cartes (`CRT_N`) que ce module peut jouer
 
 **`config/ennemis.json`** — un ennemi par entrée :
-- `id` : identifiant unique, format `enm_N`
+- `id` : identifiant unique, format `ENM_N`
 - `nom`, `image` (chemin vers `assets/ennemis/`)
 - `points_de_vie`
 - `action` : une chaîne `TYPE,valeur,cible` décrivant ce que l'ennemi fait à son tour
@@ -155,8 +155,10 @@ Trois fichiers JSON décrivent le contenu du jeu (modules, ennemis, cartes) de f
 - `id` : identifiant unique, format `CRT_N`
 - `nom`, `image` (chemin vers `assets/cartes/`)
 - `cout` (en électricité)
-- `effet` : objet `{ type, cible, valeur }` où `type` et `cible` reprennent les valeurs de specs.md §7.1/§7.2 (`ATTAQUE`/`DEFENSE`/`SOIN`, `SOI`/`ALLIE_UNIQUE`/`ENNEMI_UNIQUE`/`ENNEMIS_MULTIPLES`)
+- `effet` : objet `{ type, cible, valeur }` où `type` et `cible` reprennent les valeurs de specs.md §7.1/§7.2 :
+  - `type` : `ATTAQUE` / `DEFENSE` / `SOIN`
+  - `cible` : `ALLIE_UNIQUE` / `ALLIES_MULTIPLES` / `ENNEMI_UNIQUE` / `ENNEMIS_MULTIPLES` / **`LIGNE_ENNEMIE`** (nouveau : touche l'avant et l'arrière de la rangée visée, soit 2 ennemis — pour les cartes perçantes de specs.md §3.1, ex. Percer)
 
-Les 6 cartes actuelles couvrent les 6 images disponibles : Attaquer, Mitrailler (dégâts répartis sur plusieurs ennemis), Percer (perçant), Défendre (Bouclier sur soi), Protéger (Bouclier sur un allié au choix), Soigner. Les modules leur sont associés par thème (ex. Bouclier → Défendre/Protéger, Soin → Protéger/Soigner) — répartition à ajuster librement, ce n'est qu'une première proposition.
+Les 6 cartes actuelles couvrent les 6 images disponibles : Attaquer (cible unique), Mitrailler (dégâts répartis sur plusieurs ennemis), Percer (perçant, toute la rangée visée), Défendre (Bouclier sur un allié au choix), Protéger (Bouclier sur tous les alliés), Soigner (PV sur un allié au choix). Les modules leur sont associés par thème (ex. Bouclier → Défendre/Protéger, Soin → Protéger/Soigner) — répartition à ajuster librement, ce n'est qu'une première proposition.
 
 **Toutes les valeurs (PV, dégâts, coûts) sont inventées**, comme le reste des données numériques de ce POC (§1).

@@ -19,21 +19,21 @@
       "nom": "Percer",
       "image": "assets/cartes/percer.png",
       "cout": 2,
-      "effet": { "type": "ATTAQUE", "cible": "ENNEMI_UNIQUE", "valeur": 5, "note": "touche aussi le rang derriere la cible, cf. specs.md 3.1" }
+      "effet": { "type": "ATTAQUE", "cible": "LIGNE_ENNEMIE", "valeur": 5, "note": "touche l'avant et l'arriere de la rangee visee (2 ennemis), cf. specs.md 3.1" }
     },
     {
       "id": "CRT_4",
       "nom": "Defendre",
       "image": "assets/cartes/defendre.png",
       "cout": 1,
-      "effet": { "type": "DEFENSE", "cible": "SOI", "valeur": 5 }
+      "effet": { "type": "DEFENSE", "cible": "ALLIE_UNIQUE", "valeur": 5 }
     },
     {
       "id": "CRT_5",
       "nom": "Proteger",
       "image": "assets/cartes/proteger.png",
       "cout": 1,
-      "effet": { "type": "DEFENSE", "cible": "ALLIE_UNIQUE", "valeur": 4 }
+      "effet": { "type": "DEFENSE", "cible": "ALLIES_MULTIPLES", "valeur": 4 }
     },
     {
       "id": "CRT_6",
