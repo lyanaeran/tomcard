@@ -30,22 +30,25 @@ class Combat:
         self.etat = EtatCombat.EN_COURS
         self.joueur.debut_de_tour()
 
-    def jouer_carte(self, carte: Carte, cible: Module | Ennemi | None = None) -> None:
+    def jouer_carte(self, carte: Carte, cible: Module | Ennemi | None = None) -> list[Module | Ennemi]:
         """Applique l'effet d'une carte jouee par le joueur.
 
         cible est ignoree pour les cartes de CIBLES_SANS_CLIC (elles touchent tout
-        un camp) et obligatoire sinon.
+        un camp) et obligatoire sinon. Renvoie la liste des cibles effectivement
+        touchees (pour que l'UI puisse y afficher un popup +/-), vide si la carte
+        n'a pas ete jouee.
         """
         if self.etat != EtatCombat.EN_COURS:
-            return
+            return []
         if not self.joueur.peut_jouer(carte):
-            return
+            return []
         if not self._cible_valide(carte, cible):
-            return
+            return []
         self.joueur.depenser_electricite(carte.cout)
         self.joueur.deck.jouer(carte)
-        self._appliquer_effet(carte, cible)
+        cibles_touchees = self._appliquer_effet(carte, cible)
         self._verifier_fin_de_combat()
+        return cibles_touchees
 
     def finir_tour_joueur(self) -> list[tuple[Position, Ennemi, Module]]:
         """Termine le tour du joueur (defausse la main restante) et enchaine sur le tour ennemi.
@@ -85,22 +88,24 @@ class Combat:
             return isinstance(cible, Ennemi) and cible in self.flotte.ennemis_vivants()
         return False
 
-    def _appliquer_effet(self, carte: Carte, cible: Module | Ennemi | None) -> None:
-        """Applique l'effet d'une carte selon sa cible (specs.md 7.1/7.2)."""
+    def _appliquer_effet(self, carte: Carte, cible: Module | Ennemi | None) -> list[Module | Ennemi]:
+        """Applique l'effet d'une carte selon sa cible (specs.md 7.1/7.2).
+
+        Renvoie la liste des cibles effectivement touchees.
+        """
         if carte.cible == CibleCarte.ALLIES_MULTIPLES:
-            for module in self._modules_vivants():
-                self._appliquer_effet_simple(carte, module)
+            cibles = self._modules_vivants()
         elif carte.cible == CibleCarte.ENNEMIS_MULTIPLES:
-            for ennemi in self.flotte.ennemis_vivants():
-                self._appliquer_effet_simple(carte, ennemi)
+            cibles = self.flotte.ennemis_vivants()
         elif carte.cible == CibleCarte.LIGNE_ENNEMIE:
             position = self._position_de_ennemi(cible)
-            for colonne in (Colonne.AVANT, Colonne.ARRIERE):
-                occupant = self.flotte.ennemi_en(colonne, position.rangee)
-                if occupant is not None:
-                    self._appliquer_effet_simple(carte, occupant)
+            occupants = (self.flotte.ennemi_en(colonne, position.rangee) for colonne in (Colonne.AVANT, Colonne.ARRIERE))
+            cibles = [occupant for occupant in occupants if occupant is not None]
         else:
-            self._appliquer_effet_simple(carte, cible)
+            cibles = [cible]
+        for une_cible in cibles:
+            self._appliquer_effet_simple(carte, une_cible)
+        return cibles
 
     def _appliquer_effet_simple(self, carte: Carte, cible: Module | Ennemi) -> None:
         """Applique l'effet d'une carte a une seule cible, selon son type (specs.md 7.1)."""

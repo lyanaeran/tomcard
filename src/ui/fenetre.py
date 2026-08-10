@@ -6,13 +6,13 @@ cf. poc.md et specs.md paragraphe 8). Utilise les images de assets/.
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.carte import CIBLES_SANS_CLIC, CibleCarte
+from src.gameplay.carte import CIBLES_SANS_CLIC, Carte, CibleCarte, TypeCarte
 from src.gameplay.combat import Combat, EtatCombat
 from src.gameplay.config_poc import creer_combat_poc
 from src.gameplay.ennemi import Ennemi
 from src.gameplay.module import Module
 from src.gameplay.position import Colonne, Position, Rangee
-from src.ui.animation import AnimationRayon
+from src.ui.animation import AnimationPopup
 
 LARGEUR_FENETRE = 1280
 HAUTEUR_FENETRE = 800
@@ -79,10 +79,8 @@ COULEUR_BANDEAU = (10, 10, 12)
 OPACITE_BANDEAU = 190
 COULEUR_CARTE_SURLIGNEE = (210, 180, 40)
 COULEUR_BOUTON = (90, 90, 95)
-COULEUR_RAYON = (255, 210, 60)
 COULEUR_SURVOL = (255, 255, 255)
 OPACITE_DETRUIT = 70
-EPAISSEUR_RAYON = 6
 
 # Pastilles PV (rouge) / Bouclier (bleu), flottant au-dessus de chaque case
 # (et non par-dessus l'image, pour ne pas la cacher)
@@ -94,6 +92,15 @@ COULEUR_PASTILLE_PV = (190, 40, 40)
 COULEUR_PASTILLE_BOUCLIER = (50, 110, 200)
 _RAYON_TOTAL_PASTILLE = RAYON_PASTILLE + EPAISSEUR_CONTOUR_PASTILLE
 HAUTEUR_ZONE_PASTILLES = MARGE_PASTILLE_HAUT + 2 * _RAYON_TOTAL_PASTILLE
+
+# Popups +/-N affiches 2 secondes sur une cible touchee par une carte ou une
+# attaque ennemie (degats en rouge, bouclier pose en bleu, soin en vert)
+TAILLE_POLICE_POPUP = 22
+COULEUR_POPUP_DEGATS = COULEUR_PASTILLE_PV
+COULEUR_POPUP_BOUCLIER = COULEUR_PASTILLE_BOUCLIER
+COULEUR_POPUP_SOIN = (70, 200, 90)
+COULEUR_OMBRE_POPUP = (0, 0, 0)
+DECALAGE_OMBRE_POPUP = 2
 
 # Infobulle au survol
 LARGEUR_INFOBULLE = 190
@@ -224,6 +231,15 @@ def _rect_ennemi(position: Position) -> tuple[float, float, float, float]:
     return x, RANGEE_Y[position.rangee], CELLULE_LARGEUR, CELLULE_HAUTEUR
 
 
+def _texte_et_couleur_effet(carte: Carte) -> tuple[str, tuple[int, int, int]]:
+    """Texte (+/-valeur) et couleur du popup associe a l'effet d'une carte jouee."""
+    if carte.type == TypeCarte.ATTAQUE:
+        return f"-{carte.valeur}", COULEUR_POPUP_DEGATS
+    if carte.type == TypeCarte.DEFENSE:
+        return f"+{carte.valeur}", COULEUR_POPUP_BOUCLIER
+    return f"+{carte.valeur}", COULEUR_POPUP_SOIN
+
+
 class FenetreCombat(pyglet.window.Window):
     """Fenetre principale : affiche le combat du POC et gere les clics/survols de souris."""
 
@@ -232,14 +248,14 @@ class FenetreCombat(pyglet.window.Window):
         self.combat = combat if combat is not None else creer_combat_poc()
         self.index_carte_selectionnee: int | None = None
         self.entite_survolee: Module | Ennemi | None = None
-        self.rayons: list[tuple[AnimationRayon, tuple, tuple]] = []
+        self.popups: list[tuple[AnimationPopup, str, tuple[int, int, int], float, float]] = []
         pyglet.clock.schedule_interval(self.update, 1 / 60.0)
 
     def update(self, dt: float) -> None:
         """Fait avancer les animations en cours (appele a chaque frame)."""
-        for animation, _depart, _arrivee in self.rayons:
+        for animation, _texte, _couleur, _x, _y in self.popups:
             animation.mettre_a_jour(dt)
-        self.rayons = [(a, d, ar) for a, d, ar in self.rayons if a.est_active()]
+        self.popups = [popup for popup in self.popups if popup[0].est_active()]
 
     def on_draw(self) -> None:
         """Redessine entierement la fenetre a chaque frame."""
@@ -250,7 +266,7 @@ class FenetreCombat(pyglet.window.Window):
 
         elements.extend(self._dessiner_vaisseau(lot))
         elements.extend(self._dessiner_flotte(lot))
-        elements.extend(self._dessiner_rayons(lot))
+        elements.extend(self._dessiner_popups(lot))
         elements.extend(self._dessiner_main(lot))
         elements.extend(self._dessiner_bouton_fin_tour(lot))
         elements.extend(self._dessiner_entete(lot))
@@ -335,15 +351,34 @@ class FenetreCombat(pyglet.window.Window):
         )
         return [bandeau, texte]
 
-    def _dessiner_rayons(self, lot: pyglet.graphics.Batch) -> list:
-        """Dessine chaque rayon d'attaque encore actif entre un ennemi et sa cible."""
+    def _dessiner_popups(self, lot: pyglet.graphics.Batch) -> list:
+        """Dessine chaque popup +/-N encore actif sur sa cible (une ombre noire derriere
+        le texte colore, pour rester lisible par-dessus n'importe quelle image)."""
         elements = []
-        for animation, (x1, y1), (x2, y2) in self.rayons:
-            ligne = shapes.Line(
-                x1, y1, x2, y2, thickness=EPAISSEUR_RAYON, color=COULEUR_RAYON, batch=lot, group=GROUPE_SUPERPOSITION
+        for _animation, texte, couleur, x, y in self.popups:
+            ombre = pyglet.text.Label(
+                texte,
+                x=x + DECALAGE_OMBRE_POPUP,
+                y=y - DECALAGE_OMBRE_POPUP,
+                anchor_x="center",
+                anchor_y="center",
+                font_size=TAILLE_POLICE_POPUP,
+                color=(*COULEUR_OMBRE_POPUP, 255),
+                batch=lot,
+                group=GROUPE_SUPERPOSITION,
             )
-            ligne.opacity = int(255 * animation.progression())
-            elements.append(ligne)
+            avant_plan = pyglet.text.Label(
+                texte,
+                x=x,
+                y=y,
+                anchor_x="center",
+                anchor_y="center",
+                font_size=TAILLE_POLICE_POPUP,
+                color=(*couleur, 255),
+                batch=lot,
+                group=GROUPE_SUPERPOSITION,
+            )
+            elements.extend([ombre, avant_plan])
         return elements
 
     def _dessiner_main(self, lot: pyglet.graphics.Batch) -> list:
@@ -470,7 +505,7 @@ class FenetreCombat(pyglet.window.Window):
 
         if _point_dans_rectangle(x, y, BOUTON_X, BOUTON_Y, BOUTON_LARGEUR, BOUTON_HAUTEUR):
             attaques = self.combat.finir_tour_joueur()
-            self._demarrer_rayons(attaques)
+            self._afficher_popups_attaques_ennemi(attaques)
             self.index_carte_selectionnee = None
             return
 
@@ -478,7 +513,8 @@ class FenetreCombat(pyglet.window.Window):
         if index_carte_cliquee is not None:
             carte = self.combat.joueur.deck.main[index_carte_cliquee]
             if carte.cible in CIBLES_SANS_CLIC:
-                self.combat.jouer_carte(carte, None)
+                cibles_touchees = self.combat.jouer_carte(carte, None)
+                self._afficher_popups_carte(carte, cibles_touchees)
                 self.index_carte_selectionnee = None
             else:
                 deja_selectionnee = self.index_carte_selectionnee == index_carte_cliquee
@@ -517,7 +553,8 @@ class FenetreCombat(pyglet.window.Window):
             cible = None
 
         if cible is not None:
-            self.combat.jouer_carte(carte, cible)
+            cibles_touchees = self.combat.jouer_carte(carte, cible)
+            self._afficher_popups_carte(carte, cibles_touchees)
             self.index_carte_selectionnee = None
 
     def _module_a(self, x: int, y: int) -> Module | None:
@@ -552,16 +589,30 @@ class FenetreCombat(pyglet.window.Window):
                 return position
         return None
 
-    def _demarrer_rayons(self, attaques: list[tuple[Position, Ennemi, Module]]) -> None:
-        """Demarre un rayon anime par attaque resolue ce tour (poc.md paragraphe 8)."""
-        for position_ennemi, _ennemi, module_cible in attaques:
-            ex, ey, el, eh = _rect_ennemi(position_ennemi)
-            mx, my, ml, mh = self._rect_du_module(module_cible)
-            depart = (ex, ey + eh / 2)
-            arrivee = (mx + ml, my + mh / 2)
-            animation = AnimationRayon()
-            animation.demarrer()
-            self.rayons.append((animation, depart, arrivee))
+    def _afficher_popups_carte(self, carte: Carte, cibles: list[Module | Ennemi]) -> None:
+        """Affiche un popup +/-N sur chaque cible touchee par une carte jouee."""
+        texte, couleur = _texte_et_couleur_effet(carte)
+        for cible in cibles:
+            self._ajouter_popup(cible, texte, couleur)
+
+    def _afficher_popups_attaques_ennemi(self, attaques: list[tuple[Position, Ennemi, Module]]) -> None:
+        """Affiche un popup -N sur chaque module touche par une attaque ennemie resolue ce tour."""
+        for _position, ennemi, module_cible in attaques:
+            self._ajouter_popup(module_cible, f"-{ennemi.degats_attaque}", COULEUR_POPUP_DEGATS)
+
+    def _ajouter_popup(self, cible: Module | Ennemi, texte: str, couleur: tuple[int, int, int]) -> None:
+        """Demarre l'affichage d'un popup +/-N centre sur la case de cette cible, pour 2 secondes."""
+        x, y, largeur, hauteur = self._rect_de_cible(cible)
+        animation = AnimationPopup()
+        animation.demarrer()
+        self.popups.append((animation, texte, couleur, x + largeur / 2, y + hauteur / 2))
+
+    def _rect_de_cible(self, cible: Module | Ennemi) -> tuple[float, float, float, float]:
+        """Rectangle (x, y, largeur, hauteur) de la case d'un module ou d'un ennemi."""
+        if isinstance(cible, Ennemi):
+            position = self._position_ennemi(cible)
+            return _rect_ennemi(position) if position is not None else (0, 0, 0, 0)
+        return self._rect_du_module(cible)
 
     def _rect_du_module(self, module: Module) -> tuple[float, float, float, float]:
         """Rectangle d'un module du joueur (son emplacement equipe, ou tout le vaisseau si c'est la base)."""
