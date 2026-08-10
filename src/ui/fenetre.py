@@ -15,27 +15,31 @@ from src.gameplay.position import Colonne, Position, Rangee
 from src.ui.animation import AnimationRayon
 
 LARGEUR_FENETRE = 1280
-HAUTEUR_FENETRE = 760
+HAUTEUR_FENETRE = 800
 
 # Cases de la flotte ennemie, cf. specs.md paragraphe 8.1
 CELLULE_LARGEUR, CELLULE_HAUTEUR = 110, 90
 ESPACEMENT_CELLULE = 14
+# Espacement vertical entre rangees : plus grand que l'espacement horizontal
+# pour laisser la place aux pastilles PV/Bouclier flottant au-dessus de
+# chaque case sans chevaucher la case de la rangee suivante.
+ESPACEMENT_LIGNE = 44
 HAUTEUR_BANDEAU_CASE = 42
 
 ENNEMI_AVANT_X = 900
 ENNEMI_ARRIERE_X = ENNEMI_AVANT_X + CELLULE_LARGEUR + ESPACEMENT_CELLULE
 
 RANGEE_Y = {
-    Rangee.GAUCHE: 620,
-    Rangee.MID: 620 - (CELLULE_HAUTEUR + ESPACEMENT_CELLULE),
-    Rangee.DROITE: 620 - 2 * (CELLULE_HAUTEUR + ESPACEMENT_CELLULE),
+    Rangee.GAUCHE: 580,
+    Rangee.MID: 580 - (CELLULE_HAUTEUR + ESPACEMENT_LIGNE),
+    Rangee.DROITE: 580 - 2 * (CELLULE_HAUTEUR + ESPACEMENT_LIGNE),
 }
 
 # Vaisseau du joueur : le module de base (assets/modules/principal.png) est
 # affiche en grand, et les modules equipes se placent dans les emplacements
 # vides visibles sur cette image (mesures directement sur l'image source).
 VAISSEAU_X = 40
-VAISSEAU_Y = 340
+VAISSEAU_Y = 300
 VAISSEAU_LARGEUR = 640
 _TAILLE_IMAGE_PRINCIPAL = (1205, 651)  # largeur, hauteur de assets/modules/principal.png
 VAISSEAU_HAUTEUR = VAISSEAU_LARGEUR * _TAILLE_IMAGE_PRINCIPAL[1] / _TAILLE_IMAGE_PRINCIPAL[0]
@@ -49,6 +53,13 @@ _EMPLACEMENTS_MODULES_IMAGE = {
     Position(Colonne.ARRIERE, Rangee.DROITE): (374, 25, 187, 178),
     Position(Colonne.AVANT, Rangee.DROITE): (633, 25, 187, 178),
 }
+
+# Centre horizontal de la colonne Avant (le nez du vaisseau), pour placer la
+# pastille PV/Bouclier de la base au-dessus de l'avant plutot qu'au hasard.
+_CENTRE_AVANT_IMAGE = sum(
+    ex + el / 2 for position, (ex, _ey, el, _eh) in _EMPLACEMENTS_MODULES_IMAGE.items() if position.colonne == Colonne.AVANT
+) / 2
+CENTRE_AVANT_VAISSEAU = VAISSEAU_X + _CENTRE_AVANT_IMAGE * _ECHELLE_VAISSEAU
 
 # Main de cartes, alignee en bas (specs.md paragraphe 8.1)
 CARTE_LARGEUR, CARTE_HAUTEUR = 100, 140
@@ -70,11 +81,16 @@ COULEUR_SURVOL = (255, 255, 255)
 OPACITE_DETRUIT = 70
 EPAISSEUR_RAYON = 6
 
-# Pastilles PV (rouge) / Bouclier (bleu) en haut a droite de chaque case
+# Pastilles PV (rouge) / Bouclier (bleu), flottant au-dessus de chaque case
+# (et non par-dessus l'image, pour ne pas la cacher)
 RAYON_PASTILLE = 14
-MARGE_PASTILLE = 6
+EPAISSEUR_CONTOUR_PASTILLE = 3
+MARGE_PASTILLE = 6  # espace horizontal entre les deux pastilles / bord de case
+MARGE_PASTILLE_HAUT = 4  # espace vertical entre le haut de la case et la pastille
 COULEUR_PASTILLE_PV = (190, 40, 40)
 COULEUR_PASTILLE_BOUCLIER = (50, 110, 200)
+_RAYON_TOTAL_PASTILLE = RAYON_PASTILLE + EPAISSEUR_CONTOUR_PASTILLE
+HAUTEUR_ZONE_PASTILLES = MARGE_PASTILLE_HAUT + 2 * _RAYON_TOTAL_PASTILLE
 
 # Infobulle au survol
 LARGEUR_INFOBULLE = 190
@@ -120,7 +136,9 @@ def _pastille(x_centre: float, y_centre: float, couleur: tuple, valeur: int, lot
     Un contour sombre est dessine derriere pour rester lisible par-dessus des
     images de fond claires ou colorees.
     """
-    contour = shapes.Circle(x_centre, y_centre, RAYON_PASTILLE + 3, color=(0, 0, 0), batch=lot, group=GROUPE_SUPERPOSITION)
+    contour = shapes.Circle(
+        x_centre, y_centre, _RAYON_TOTAL_PASTILLE, color=(0, 0, 0), batch=lot, group=GROUPE_SUPERPOSITION
+    )
     cercle = shapes.Circle(x_centre, y_centre, RAYON_PASTILLE, color=couleur, batch=lot, group=GROUPE_SUPERPOSITION)
     texte = pyglet.text.Label(
         str(valeur),
@@ -136,11 +154,20 @@ def _pastille(x_centre: float, y_centre: float, couleur: tuple, valeur: int, lot
 
 
 def _pastilles_pv_bouclier(
-    x: float, y: float, largeur: float, hauteur: float, pv: int, bouclier: int | None, lot: pyglet.graphics.Batch
+    x: float,
+    y: float,
+    largeur: float,
+    hauteur: float,
+    pv: int,
+    bouclier: int | None,
+    lot: pyglet.graphics.Batch,
+    centre_x: float | None = None,
 ) -> list:
-    """Pastilles PV (rouge) et Bouclier (bleu, si applicable) en haut a droite d'une case."""
-    cy = y + hauteur - RAYON_PASTILLE - MARGE_PASTILLE
-    cx_pv = x + largeur - RAYON_PASTILLE - MARGE_PASTILLE
+    """Pastilles PV (rouge) et Bouclier (bleu, si applicable), flottant au-dessus d'une case
+    (pour ne pas cacher son image). Par defaut alignees vers le bord droit ; `centre_x` permet
+    de les recentrer ailleurs (ex. au-dessus de l'avant du vaisseau)."""
+    cy = y + hauteur + MARGE_PASTILLE_HAUT + _RAYON_TOTAL_PASTILLE
+    cx_pv = centre_x if centre_x is not None else x + largeur - RAYON_PASTILLE - MARGE_PASTILLE
     elements = _pastille(cx_pv, cy, COULEUR_PASTILLE_PV, pv, lot)
     if bouclier is not None:
         cx_bouclier = cx_pv - RAYON_PASTILLE * 2 - MARGE_PASTILLE
@@ -226,7 +253,9 @@ class FenetreCombat(pyglet.window.Window):
         if detruit:
             elements.extend(self._texte_detruit(vx, vy, vl, vh, lot))
         else:
-            elements.extend(_pastilles_pv_bouclier(vx, vy, vl, vh, base.pv, base.bouclier, lot))
+            elements.extend(
+                _pastilles_pv_bouclier(vx, vy, vl, vh, base.pv, base.bouclier, lot, centre_x=CENTRE_AVANT_VAISSEAU)
+            )
 
         for position, module in self.combat.joueur.vaisseau.modules_equipes().items():
             elements.extend(self._dessiner_module_case(lot, position, module))
@@ -369,7 +398,7 @@ class FenetreCombat(pyglet.window.Window):
         x, y, largeur, hauteur = rect
         hauteur_infobulle = HAUTEUR_INFOBULLE_LIGNE * len(lignes) + 8
         bx = x + largeur / 2 - LARGEUR_INFOBULLE / 2
-        by = y + hauteur + 8
+        by = y + hauteur + HAUTEUR_ZONE_PASTILLES + 8
         elements = [_bandeau(bx, by, LARGEUR_INFOBULLE, hauteur_infobulle, lot)]
         texte = pyglet.text.Label(
             "\n".join(lignes),
