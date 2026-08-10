@@ -70,6 +70,21 @@ COULEUR_SURVOL = (255, 255, 255)
 OPACITE_DETRUIT = 70
 EPAISSEUR_RAYON = 6
 
+# Pastilles PV (rouge) / Bouclier (bleu) en haut a droite de chaque case
+RAYON_PASTILLE = 14
+MARGE_PASTILLE = 6
+COULEUR_PASTILLE_PV = (190, 40, 40)
+COULEUR_PASTILLE_BOUCLIER = (50, 110, 200)
+
+# Infobulle au survol
+LARGEUR_INFOBULLE = 190
+HAUTEUR_INFOBULLE_LIGNE = 18
+
+# Groupe de rendu pour tout ce qui doit rester visible par-dessus les sprites
+# (pastilles, bandeaux, textes, rayons...) : l'ordre entre sprites et formes
+# n'est pas garanti par pyglet sans groupe explicite.
+GROUPE_SUPERPOSITION = pyglet.graphics.Group(order=1)
+
 _cache_images: dict[str, pyglet.image.AbstractImage] = {}
 
 
@@ -94,9 +109,43 @@ def _sprite_ajuste(
 
 def _bandeau(x: float, y: float, largeur: float, hauteur: float, lot: pyglet.graphics.Batch) -> shapes.Rectangle:
     """Bandeau semi-transparent pour poser du texte lisible par-dessus une image."""
-    rectangle = shapes.Rectangle(x, y, largeur, hauteur, color=COULEUR_BANDEAU, batch=lot)
+    rectangle = shapes.Rectangle(x, y, largeur, hauteur, color=COULEUR_BANDEAU, batch=lot, group=GROUPE_SUPERPOSITION)
     rectangle.opacity = OPACITE_BANDEAU
     return rectangle
+
+
+def _pastille(x_centre: float, y_centre: float, couleur: tuple, valeur: int, lot: pyglet.graphics.Batch) -> list:
+    """Petit cercle colore avec une valeur numerique au centre (PV ou Bouclier).
+
+    Un contour sombre est dessine derriere pour rester lisible par-dessus des
+    images de fond claires ou colorees.
+    """
+    contour = shapes.Circle(x_centre, y_centre, RAYON_PASTILLE + 3, color=(0, 0, 0), batch=lot, group=GROUPE_SUPERPOSITION)
+    cercle = shapes.Circle(x_centre, y_centre, RAYON_PASTILLE, color=couleur, batch=lot, group=GROUPE_SUPERPOSITION)
+    texte = pyglet.text.Label(
+        str(valeur),
+        x=x_centre,
+        y=y_centre,
+        anchor_x="center",
+        anchor_y="center",
+        font_size=9,
+        batch=lot,
+        group=GROUPE_SUPERPOSITION,
+    )
+    return [contour, cercle, texte]
+
+
+def _pastilles_pv_bouclier(
+    x: float, y: float, largeur: float, hauteur: float, pv: int, bouclier: int | None, lot: pyglet.graphics.Batch
+) -> list:
+    """Pastilles PV (rouge) et Bouclier (bleu, si applicable) en haut a droite d'une case."""
+    cy = y + hauteur - RAYON_PASTILLE - MARGE_PASTILLE
+    cx_pv = x + largeur - RAYON_PASTILLE - MARGE_PASTILLE
+    elements = _pastille(cx_pv, cy, COULEUR_PASTILLE_PV, pv, lot)
+    if bouclier is not None:
+        cx_bouclier = cx_pv - RAYON_PASTILLE * 2 - MARGE_PASTILLE
+        elements += _pastille(cx_bouclier, cy, COULEUR_PASTILLE_BOUCLIER, bouclier, lot)
+    return elements
 
 
 def _point_dans_rectangle(x: float, y: float, rx: float, ry: float, largeur: float, hauteur: float) -> bool:
@@ -134,7 +183,7 @@ class FenetreCombat(pyglet.window.Window):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight - POC")
         self.combat = combat if combat is not None else creer_combat_poc()
         self.index_carte_selectionnee: int | None = None
-        self.ennemi_survole: Ennemi | None = None
+        self.entite_survolee: Module | Ennemi | None = None
         self.rayons: list[tuple[AnimationRayon, tuple, tuple]] = []
         pyglet.clock.schedule_interval(self.update, 1 / 60.0)
 
@@ -169,48 +218,29 @@ class FenetreCombat(pyglet.window.Window):
         elements = []
         base = self.combat.joueur.vaisseau.base
         vx, vy, vl, vh = _rect_vaisseau()
+        detruit = base.est_detruit()
         sprite = _sprite_ajuste(base.image, vx, vy, vl, vh, lot)
-        if base.est_detruit():
+        if detruit:
             sprite.opacity = OPACITE_DETRUIT
         elements.append(sprite)
-
-        etat = "Detruit" if base.est_detruit() else f"PV {base.pv}/{base.pv_max}  Bouclier {base.bouclier}"
-        texte = pyglet.text.Label(
-            f"{base.nom} - {etat}",
-            x=vx + vl / 2,
-            y=vy + vh + 14,
-            anchor_x="center",
-            anchor_y="bottom",
-            batch=lot,
-        )
-        elements.append(texte)
+        if detruit:
+            elements.extend(self._texte_detruit(vx, vy, vl, vh, lot))
+        else:
+            elements.extend(_pastilles_pv_bouclier(vx, vy, vl, vh, base.pv, base.bouclier, lot))
 
         for position, module in self.combat.joueur.vaisseau.modules_equipes().items():
             elements.extend(self._dessiner_module_case(lot, position, module))
         return elements
 
     def _dessiner_module_case(self, lot: pyglet.graphics.Batch, position: Position, module: Module) -> list:
-        """Dessine une case module (image + bandeau d'etat), grisee si detruite."""
+        """Dessine une case module (image + pastilles PV/Bouclier), grisee si detruite."""
         x, y, largeur, hauteur = _rect_module(position)
         detruit = module.est_detruit()
         sprite = _sprite_ajuste(module.image, x, y, largeur, hauteur, lot)
         if detruit:
             sprite.opacity = OPACITE_DETRUIT
-        bandeau = _bandeau(x, y, largeur, HAUTEUR_BANDEAU_CASE, lot)
-        etat = "Detruit" if detruit else f"PV {module.pv}/{module.pv_max}  Bouclier {module.bouclier}"
-        texte = pyglet.text.Label(
-            f"{module.nom}\n{etat}",
-            x=x + largeur / 2,
-            y=y + HAUTEUR_BANDEAU_CASE / 2,
-            anchor_x="center",
-            anchor_y="center",
-            font_size=7,
-            multiline=True,
-            width=largeur - 4,
-            align="center",
-            batch=lot,
-        )
-        return [sprite, bandeau, texte]
+            return [sprite, *self._texte_detruit(x, y, largeur, hauteur, lot)]
+        return [sprite, *_pastilles_pv_bouclier(x, y, largeur, hauteur, module.pv, module.bouclier, lot)]
 
     def _dessiner_flotte(self, lot: pyglet.graphics.Batch) -> list:
         """Dessine chaque case ennemie declaree (grisee si detruite, absente si jamais occupee)."""
@@ -220,33 +250,38 @@ class FenetreCombat(pyglet.window.Window):
         return elements
 
     def _dessiner_ennemi_case(self, lot: pyglet.graphics.Batch, position: Position, ennemi: Ennemi) -> list:
-        """Dessine une case ennemie (image + bandeau d'etat), grisee si detruite."""
+        """Dessine une case ennemie (image + pastille PV), grisee si detruite."""
         x, y, largeur, hauteur = _rect_ennemi(position)
         detruit = ennemi.est_detruit()
         sprite = _sprite_ajuste(ennemi.image, x, y, largeur, hauteur, lot)
         if detruit:
             sprite.opacity = OPACITE_DETRUIT
-        bandeau = _bandeau(x, y, largeur, HAUTEUR_BANDEAU_CASE, lot)
-        etat = "Detruit" if detruit else f"PV {ennemi.pv}/{ennemi.pv_max}"
+            return [sprite, *self._texte_detruit(x, y, largeur, hauteur, lot)]
+        return [sprite, *_pastilles_pv_bouclier(x, y, largeur, hauteur, ennemi.pv, None, lot)]
+
+    def _texte_detruit(self, x: float, y: float, largeur: float, hauteur: float, lot: pyglet.graphics.Batch) -> list:
+        """Bandeau + texte "Detruit" centre sur une case."""
+        hauteur_bandeau = min(HAUTEUR_BANDEAU_CASE, hauteur)
+        bandeau = _bandeau(x, y + hauteur / 2 - hauteur_bandeau / 2, largeur, hauteur_bandeau, lot)
         texte = pyglet.text.Label(
-            f"{ennemi.nom}\n{etat}",
+            "Detruit",
             x=x + largeur / 2,
-            y=y + HAUTEUR_BANDEAU_CASE / 2,
+            y=y + hauteur / 2,
             anchor_x="center",
             anchor_y="center",
-            font_size=7,
-            multiline=True,
-            width=largeur - 4,
-            align="center",
+            font_size=9,
             batch=lot,
+            group=GROUPE_SUPERPOSITION,
         )
-        return [sprite, bandeau, texte]
+        return [bandeau, texte]
 
     def _dessiner_rayons(self, lot: pyglet.graphics.Batch) -> list:
         """Dessine chaque rayon d'attaque encore actif entre un ennemi et sa cible."""
         elements = []
         for animation, (x1, y1), (x2, y2) in self.rayons:
-            ligne = shapes.Line(x1, y1, x2, y2, thickness=EPAISSEUR_RAYON, color=COULEUR_RAYON, batch=lot)
+            ligne = shapes.Line(
+                x1, y1, x2, y2, thickness=EPAISSEUR_RAYON, color=COULEUR_RAYON, batch=lot, group=GROUPE_SUPERPOSITION
+            )
             ligne.opacity = int(255 * animation.progression())
             elements.append(ligne)
         return elements
@@ -304,28 +339,54 @@ class FenetreCombat(pyglet.window.Window):
         return [texte]
 
     def _dessiner_survol(self, lot: pyglet.graphics.Batch) -> list:
-        """Affiche l'intention de l'ennemi survole (cible visee et degats), cf. poc.md paragraphe 3."""
+        """Affiche une infobulle (nom, PV/PV max, Bouclier) sur le module/ennemi survole.
+
+        Pour un ennemi, ajoute aussi son intention (cible visee et degats), cf. poc.md paragraphe 3.
+        """
         if self.combat.etat != EtatCombat.EN_COURS:
             return []
-        if self.ennemi_survole is None or self.ennemi_survole.est_detruit():
+        entite = self.entite_survolee
+        if entite is None or entite.est_detruit():
             return []
-        cible = self.combat.previsualiser_cible(self.ennemi_survole)
-        if cible is None:
-            return []
-        position = self._position_ennemi(self.ennemi_survole)
-        if position is None:
-            return []
-        x, y, largeur, hauteur = _rect_ennemi(position)
+
+        if isinstance(entite, Ennemi):
+            position = self._position_ennemi(entite)
+            if position is None:
+                return []
+            rect = _rect_ennemi(position)
+            lignes = [entite.nom, f"PV {entite.pv}/{entite.pv_max}"]
+            cible = self.combat.previsualiser_cible(entite)
+            if cible is not None:
+                lignes.append(f"Vise : {cible.nom} ({entite.degats_attaque} degats)")
+        else:
+            rect = self._rect_du_module(entite)
+            lignes = [entite.nom, f"PV {entite.pv}/{entite.pv_max}", f"Bouclier {entite.bouclier}"]
+
+        return self._infobulle(rect, lignes, lot)
+
+    def _infobulle(self, rect: tuple, lignes: list, lot: pyglet.graphics.Batch) -> list:
+        """Dessine une infobulle (fond + texte) au-dessus du rectangle donne."""
+        x, y, largeur, hauteur = rect
+        hauteur_infobulle = HAUTEUR_INFOBULLE_LIGNE * len(lignes) + 8
+        bx = x + largeur / 2 - LARGEUR_INFOBULLE / 2
+        by = y + hauteur + 8
+        elements = [_bandeau(bx, by, LARGEUR_INFOBULLE, hauteur_infobulle, lot)]
         texte = pyglet.text.Label(
-            f"Vise : {cible.nom} ({self.ennemi_survole.degats_attaque} degats)",
+            "\n".join(lignes),
             x=x + largeur / 2,
-            y=y + hauteur + 16,
+            y=by + hauteur_infobulle / 2,
             anchor_x="center",
-            anchor_y="bottom",
+            anchor_y="center",
+            multiline=True,
+            width=LARGEUR_INFOBULLE - 8,
+            align="center",
+            font_size=9,
             color=(*COULEUR_SURVOL, 255),
             batch=lot,
+            group=GROUPE_SUPERPOSITION,
         )
-        return [texte]
+        elements.append(texte)
+        return elements
 
     def _dessiner_message_fin(self, lot: pyglet.graphics.Batch) -> list:
         """Affiche le message de fin de combat (victoire ou defaite)."""
@@ -338,6 +399,7 @@ class FenetreCombat(pyglet.window.Window):
             anchor_y="center",
             font_size=36,
             batch=lot,
+            group=GROUPE_SUPERPOSITION,
         )
         return [texte]
 
@@ -367,8 +429,8 @@ class FenetreCombat(pyglet.window.Window):
             self._essayer_de_cibler(x, y)
 
     def on_mouse_motion(self, x: int, y: int, dx: int, dy: int) -> None:
-        """Met a jour l'ennemi actuellement survole par la souris, pour l'affichage de son intention."""
-        self.ennemi_survole = self._ennemi_a(x, y)
+        """Met a jour le module/ennemi actuellement survole par la souris, pour l'infobulle."""
+        self.entite_survolee = self._ennemi_a(x, y) or self._module_a(x, y)
 
     def _trouver_carte_cliquee(self, x: int, y: int) -> int | None:
         """Renvoie l'index de la carte de la main cliquee, ou None si aucune."""
