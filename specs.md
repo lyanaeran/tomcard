@@ -236,6 +236,7 @@ Axe indépendant du type et de la cible — une carte a un type, une cible **et*
 - **Modules du joueur et ennemis** : images **carrées**
 - **Module de base** : exception, forme différente (plus grande, fond dédié qui englobe les 5 emplacements)
 - **Cartes** : format **rectangulaire**
+- **PV / Bouclier** : affichés par de petites pastilles rondes (rouge pour les PV, bleue pour le Bouclier) flottant juste au-dessus de chaque case, jamais superposées à l'image (validé en POC, voir poc.md §8)
 
 ### 8.3 Interaction de jeu d'une carte
 
@@ -245,6 +246,7 @@ Axe indépendant du type et de la cible — une carte a un type, une cible **et*
 2. Clic sur une **cible valide** → la carte se résout, part en défausse, la surbrillance disparaît
 3. Pour les cartes sans cible unique (Alliés multiples, Ennemis multiples, effet sur tout un camp) : **résolution automatique dès le clic sur la carte**, sans clic de ciblage supplémentaire (validé dans le POC, voir poc.md §4)
 4. **Fin de tour** : un bouton cliquable "Fin de tour" permet au joueur de terminer son tour à tout moment, même s'il lui reste de l'électricité ou des cartes jouables
+5. **Retour visuel des effets** : chaque effet résolu (carte jouée ou attaque ennemie) affiche un popup `+N`/`-N` pendant quelques secondes sur la ou les cases touchées, avec le montant **réellement appliqué** (plafonné par les PV+Bouclier restants pour les dégâts, par le PV max pour le soin) plutôt que la valeur nominale de la carte — validé en POC, voir poc.md §8
 
 ---
 

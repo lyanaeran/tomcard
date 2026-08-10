@@ -43,7 +43,7 @@ Grille miroir **2 colonnes (Avant / Arrière) x 3 rangées (Gauche / Mid / Droit
 
 **Important** : la base ne protège pas les modules Arrière des autres rangées — un ennemi peut attaquer directement le module Arrière de sa propre rangée si l'Avant de cette rangée est vide, même si la base (Mid) est toujours en vie.
 
-Un rayon (voir §6) matérialise chaque attaque. Au survol de la souris sur un ennemi vivant, une étiquette affiche la cible qu'il vise et les dégâts qu'il infligera ce tour, calculés avec la même règle.
+Chaque attaque résolue affiche un popup `-N` (dégâts réellement infligés, voir §8) sur le module touché. Au survol de la souris sur un ennemi vivant, une infobulle affiche la cible qu'il vise et les dégâts qu'il infligerait ce tour, calculés avec la même règle (voir §8).
 
 ---
 
@@ -77,9 +77,9 @@ Une fois tirée, une carte perd tout lien avec le module qui l'a fournie (§4) :
 
 ## 6. Déroulé d'un tour
 
-1. **Tour du joueur** : le joueur pioche 5 cartes, l'électricité est remise à 3. Le joueur joue librement les cartes de son choix (en choisissant la cible parmi les modules/ennemis vivants — ou sans cible à choisir pour les cartes "Alliés multiples"/"Ennemis multiples", cf. §4), dans l'ordre qu'il veut, tant qu'il a assez d'électricité (voir specs.md §3.3), puis clique sur le bouton **"Fin de tour"** pour passer la main
+1. **Tour du joueur** : le joueur pioche 5 cartes, l'électricité est remise à 3. Le joueur joue librement les cartes de son choix (en choisissant la cible parmi les modules/ennemis vivants — ou sans cible à choisir pour les cartes "Alliés multiples"/"Ennemis multiples", cf. §4), dans l'ordre qu'il veut, tant qu'il a assez d'électricité (voir specs.md §3.3), puis clique sur le bouton **"Fin de tour"** pour passer la main. Chaque carte jouée affiche un popup `+N`/`-N` sur sa ou ses cibles (voir §8)
 2. **Fin du tour joueur** : les cartes non jouées restant en main sont défaussées (voir specs.md §3.3)
-3. **Tour de l'ennemi** : chaque ennemi vivant attaque automatiquement le module qu'il vise (règle de ciblage en §3), dans l'ordre de la grille. Un **rayon** apparaît brièvement entre chaque ennemi attaquant et sa cible pour visualiser l'attaque, puis disparaît. Si la base est détruite en cours de tour, les ennemis suivants n'agissent plus (la run est terminée)
+3. **Tour de l'ennemi** : chaque ennemi vivant attaque automatiquement le module qu'il vise (règle de ciblage en §3), dans l'ordre de la grille. Un popup `-N` apparaît sur chaque module touché (voir §8). Si la base est détruite en cours de tour, les ennemis suivants n'agissent plus (la run est terminée)
 
 Ce cycle se répète jusqu'à la fin du combat. Le jeu se joue entièrement à la souris (voir specs.md §8.3) : clic sur une carte pour la sélectionner, clic sur la cible (module ou ennemi) pour la jouer, survol d'un ennemi pour voir son intention, clic sur "Fin de tour" pour passer la main.
 
@@ -110,19 +110,30 @@ src/
 tests/         → tests unitaires pytest
 ```
 
-Le rendu utilise les vraies images d'`assets/` (module/ennemi/carte affichés comme des sprites, mis à l'échelle sans déformation dans leur case), avec un bandeau semi-transparent en bas de chaque case pour garder le texte d'état (PV, Bouclier, coût...) lisible par-dessus l'image.
+Le rendu utilise les vraies images d'`assets/` (module/ennemi/carte affichés comme des sprites). Cartes, ennemis et le module de base sont mis à l'échelle **sans déformation** dans leur case (ratio préservé). Exception volontaire : les **modules équipés** sur le vaisseau sont **étirés** (largeur et hauteur mises à l'échelle indépendamment) pour que leur propre cadre décoratif recouvre exactement le cadre correspondant sur l'image du vaisseau, plutôt que de laisser un espace vide entre les deux cadres — une légère déformation de l'image est jugée préférable à ce défaut visuel. Un bandeau semi-transparent reste utilisé pour le nom/coût des cartes et pour la mention "Détruit" ; en revanche les PV et le Bouclier ne sont plus affichés dans un bandeau mais par des **pastilles** rondes (rouge pour les PV, bleue pour le Bouclier) flottant juste au-dessus de chaque case, jamais par-dessus l'image (pour ne pas la cacher).
 
 Conventions : classes claires par responsabilité, commentaires en français sans accents ni cédilles (cf. specs.md §10.3).
 
-### Animation d'attaque
+### Vaisseau du joueur : emplacements mesurés sur l'image
 
-Quand un ennemi attaque, un rayon (ligne colorée) relie brièvement cet ennemi et le module qu'il vise, pour donner un retour visuel sur l'attaque. Le rayon s'estompe puis disparaît après une courte durée (~0.4 seconde). Plusieurs ennemis pouvant attaquer au même tour, plusieurs rayons peuvent apparaître simultanément (un par attaque résolue).
+Le module de base (`assets/modules/principal.png`) est affiché en grand ; les 4 modules équipés se positionnent dans les emplacements vides visibles sur cette image, mesurés directement dessus (coordonnées du cadre métallique complet de chaque emplacement, pas seulement du trou noir intérieur, pour que le cadre du module vienne bien recouvrir celui du vaisseau une fois étiré comme décrit ci-dessus). Les pastilles PV/Bouclier de la base sont positionnées au-dessus du pare-brise du vaisseau (repère mesuré sur l'image), plutôt qu'au hasard au-dessus de toute l'image.
 
-Cette animation est gérée entièrement côté `src/ui` (minuterie + dessin) : elle n'a aucun impact sur le moteur de jeu (`src/gameplay`), qui reste inchangé.
+### Retour visuel des effets (popups +/-N)
 
-### Survol de la souris (intention ennemie)
+Chaque effet résolu — carte jouée par le joueur ou attaque ennemie — affiche un popup pendant 2 secondes sur la ou les cases touchées, puis disparaît :
+- Dégâts (carte d'attaque ou attaque ennemie) : `-N` en rouge
+- Bouclier posé (carte de défense) : `+N` en bleu
+- Soin (carte de soin) : `+N` en vert
 
-Survoler un ennemi vivant avec la souris affiche une étiquette indiquant quel module il vise et les dégâts qu'il infligerait s'il attaquait maintenant. Calculé avec la même fonction de ciblage que celle utilisée pour la résolution réelle de l'attaque (pas de logique dupliquée), donc toujours cohérent avec ce qui va effectivement se passer.
+`N` est le montant **réellement appliqué**, pas la valeur nominale de la carte : les dégâts sont plafonnés par les PV + Bouclier restants de la cible, le soin par son PV max (le Bouclier, lui, n'est jamais plafonné, cf. §4). Une carte à cibles multiples (Alliés multiples, Ennemis multiples, Ligne ennemie) affiche un popup indépendant sur chacune de ses cibles.
+
+Il n'y a pas d'animation de rayon entre l'attaquant et sa cible : ce retour par popup a été préféré, plus lisible quand plusieurs attaques se résolvent au même tour.
+
+### Survol de la souris (infobulle)
+
+Survoler un module (du joueur) ou un ennemi vivant avec la souris affiche une infobulle au-dessus de sa case :
+- **Module** : nom, PV/PV max, Bouclier
+- **Ennemi** : nom, PV/PV max, et son intention — quel module il vise et les dégâts qu'il infligerait s'il attaquait maintenant, calculés avec la même fonction de ciblage que celle utilisée pour la résolution réelle de l'attaque (pas de logique dupliquée), donc toujours cohérent avec ce qui va effectivement se passer.
 
 ### Fichiers de configuration (`config/`)
 
