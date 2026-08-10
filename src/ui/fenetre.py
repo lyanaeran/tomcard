@@ -126,18 +126,18 @@ def _sprite_ajuste(
     return sprite
 
 
-def _sprite_couvrant(
+def _sprite_etire(
     chemin: str, x: float, y: float, largeur: float, hauteur: float, lot: pyglet.graphics.Batch
 ) -> pyglet.sprite.Sprite:
-    """Cree un sprite pour cette image, mis a l'echelle pour recouvrir entierement le
-    rectangle (quitte a legerement deborder), contrairement a `_sprite_ajuste` qui evite
-    tout depassement au prix de bandes vides quand le ratio de l'image ne correspond pas
-    exactement a celui du cadre."""
+    """Cree un sprite pour cette image, etire independamment en largeur et en hauteur
+    pour remplir exactement le rectangle sur ses 4 cotes (le cadre de l'image du module
+    doit se superposer pile a celui du vaisseau). Contrairement a `_sprite_ajuste`, le
+    ratio de l'image n'est pas preserve : une legere deformation est acceptee."""
     sprite = pyglet.sprite.Sprite(_image(chemin), batch=lot)
-    echelle = max(largeur / sprite.width, hauteur / sprite.height)
-    sprite.scale = echelle
-    sprite.x = x + (largeur - sprite.width) / 2
-    sprite.y = y + (hauteur - sprite.height) / 2
+    sprite.scale_x = largeur / sprite.width
+    sprite.scale_y = hauteur / sprite.height
+    sprite.x = x
+    sprite.y = y
     return sprite
 
 
@@ -296,7 +296,7 @@ class FenetreCombat(pyglet.window.Window):
         """Dessine une case module (image + pastilles PV/Bouclier), grisee si detruite."""
         x, y, largeur, hauteur = _rect_module(position)
         detruit = module.est_detruit()
-        sprite = _sprite_couvrant(module.image, x, y, largeur, hauteur, lot)
+        sprite = _sprite_etire(module.image, x, y, largeur, hauteur, lot)
         if detruit:
             sprite.opacity = OPACITE_DETRUIT
             return [sprite, *self._texte_detruit(x, y, largeur, hauteur, lot)]
