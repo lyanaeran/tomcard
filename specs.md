@@ -282,6 +282,7 @@ assets/
   cartes/      → images des cartes
   modules/     → images des modules
   ennemis/     → images des ennemis
+config/        → fichiers de donnees JSON (modules, ennemis, cartes)
 src/
   ui/          → tout ce qui concerne l'affichage avec pyglet
   gameplay/    → logique de jeu
@@ -290,6 +291,7 @@ pyproject.toml
 ```
 
 - `assets/` : uniquement des images pour le moment ; le son sera ajouté plus tard si besoin
+- `config/` : contenu du jeu décrit en JSON (modules, ennemis, cartes), référençant les images d'`assets/` — détail du format en poc.md
 - Séparation stricte entre `src/ui` (affichage) et `src/gameplay` (logique de jeu)
 
 ### 10.3 Conventions de code

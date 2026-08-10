@@ -108,16 +108,17 @@ Stack et arborescence définies en specs.md §10. Pour ce POC :
 
 ```
 assets/
-  cartes/      → images des cartes — vide pour ce POC
-  modules/     → images des modules — vide pour ce POC
-  ennemis/     → images des ennemis — vide pour ce POC
+  cartes/      → images des cartes
+  modules/     → images des modules
+  ennemis/     → images des ennemis
+config/        → fichiers de donnees JSON (modules, ennemis, cartes) - voir ci-dessous
 src/
   ui/          → affichage pyglet de l'écran de combat (§8 de specs.md)
   gameplay/    → logique du combat (grille, cartes, PV, Bouclier, ciblage, tour de jeu)
 tests/         → tests unitaires pytest
 ```
 
-Aucune image fournie pour ce POC : les modules, les ennemis et les cartes sont dessinés directement en formes simples (rectangles) avec le nom/les valeurs en texte par-dessus, plutôt que de charger des textures.
+Le rendu actuel (formes simples/rectangles, cf. §6-7) n'utilise pas encore les images disponibles dans `assets/` ni les fichiers de `config/` (voir ci-dessous) : c'est la prochaine étape d'intégration.
 
 Conventions : classes claires par responsabilité, commentaires en français sans accents ni cédilles (cf. specs.md §10.3).
 
@@ -130,3 +131,32 @@ Cette animation est gérée entièrement côté `src/ui` (minuterie + dessin) : 
 ### Survol de la souris (intention ennemie)
 
 Survoler un ennemi vivant avec la souris affiche une étiquette indiquant quel module il vise et les dégâts qu'il infligerait s'il attaquait maintenant. Calculé avec la même fonction de ciblage que celle utilisée pour la résolution réelle de l'attaque (pas de logique dupliquée), donc toujours cohérent avec ce qui va effectivement se passer.
+
+### Fichiers de configuration (`config/`)
+
+Trois fichiers JSON décrivent le contenu du jeu (modules, ennemis, cartes) de façon déclarative, référençant les images de `assets/`. **Préparation seulement pour l'instant : ces fichiers ne sont pas encore chargés par le moteur** (`src/gameplay/config_poc.py` continue d'utiliser des valeurs codées en dur). Ce sera une étape d'intégration ultérieure.
+
+**`config/modules.json`** — un module par entrée :
+- `id` : identifiant unique, format `mod_N`
+- `nom`, `image` (chemin vers `assets/modules/`)
+- `points_de_vie`
+- `cartes` : liste d'identifiants de cartes (`CRT_N`) que ce module peut jouer
+
+**`config/ennemis.json`** — un ennemi par entrée :
+- `id` : identifiant unique, format `enm_N`
+- `nom`, `image` (chemin vers `assets/ennemis/`)
+- `points_de_vie`
+- `action` : une chaîne `TYPE,valeur,cible` décrivant ce que l'ennemi fait à son tour
+  - `TYPE` : `ATK` (attaque) ou `SOIN` (soin) — mêmes types que les cartes (§4), d'autres pourront s'ajouter
+  - `valeur` : dégâts infligés ou PV réparés
+  - `cible` : toujours `AUTO` pour l'instant — délègue au ciblage automatique déjà implémenté (§3 : propre rangée d'abord, repli sur la plus proche). Prévu pour accueillir d'autres modes plus tard si besoin (ex. cible aléatoire, PV le plus bas)
+
+**`config/cartes.json`** — une carte par entrée :
+- `id` : identifiant unique, format `CRT_N`
+- `nom`, `image` (chemin vers `assets/cartes/`)
+- `cout` (en électricité)
+- `effet` : objet `{ type, cible, valeur }` où `type` et `cible` reprennent les valeurs de specs.md §7.1/§7.2 (`ATTAQUE`/`DEFENSE`/`SOIN`, `SOI`/`ALLIE_UNIQUE`/`ENNEMI_UNIQUE`/`ENNEMIS_MULTIPLES`)
+
+Les 6 cartes actuelles couvrent les 6 images disponibles : Attaquer, Mitrailler (dégâts répartis sur plusieurs ennemis), Percer (perçant), Défendre (Bouclier sur soi), Protéger (Bouclier sur un allié au choix), Soigner. Les modules leur sont associés par thème (ex. Bouclier → Défendre/Protéger, Soin → Protéger/Soigner) — répartition à ajuster librement, ce n'est qu'une première proposition.
+
+**Toutes les valeurs (PV, dégâts, coûts) sont inventées**, comme le reste des données numériques de ce POC (§1).

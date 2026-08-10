@@ -1,0 +1,46 @@
+{
+  "cartes": [
+    {
+      "id": "CRT_1",
+      "nom": "Attaquer",
+      "image": "assets/cartes/attaquer.png",
+      "cout": 1,
+      "effet": { "type": "ATTAQUE", "cible": "ENNEMI_UNIQUE", "valeur": 7 }
+    },
+    {
+      "id": "CRT_2",
+      "nom": "Mitrailler",
+      "image": "assets/cartes/mitrailler.png",
+      "cout": 2,
+      "effet": { "type": "ATTAQUE", "cible": "ENNEMIS_MULTIPLES", "valeur": 3 }
+    },
+    {
+      "id": "CRT_3",
+      "nom": "Percer",
+      "image": "assets/cartes/percer.png",
+      "cout": 2,
+      "effet": { "type": "ATTAQUE", "cible": "ENNEMI_UNIQUE", "valeur": 5, "note": "touche aussi le rang derriere la cible, cf. specs.md 3.1" }
+    },
+    {
+      "id": "CRT_4",
+      "nom": "Defendre",
+      "image": "assets/cartes/defendre.png",
+      "cout": 1,
+      "effet": { "type": "DEFENSE", "cible": "SOI", "valeur": 5 }
+    },
+    {
+      "id": "CRT_5",
+      "nom": "Proteger",
+      "image": "assets/cartes/proteger.png",
+      "cout": 1,
+      "effet": { "type": "DEFENSE", "cible": "ALLIE_UNIQUE", "valeur": 4 }
+    },
+    {
+      "id": "CRT_6",
+      "nom": "Soigner",
+      "image": "assets/cartes/soigner.png",
+      "cout": 1,
+      "effet": { "type": "SOIN", "cible": "ALLIE_UNIQUE", "valeur": 4 }
+    }
+  ]
+}
