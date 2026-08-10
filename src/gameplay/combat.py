@@ -21,6 +21,12 @@ class EtatCombat(Enum):
     DEFAITE = auto()
 
 
+def _degats_effectifs(cible: Module | Ennemi, degats: int) -> int:
+    """Combien de PV+bouclier une cible va reellement perdre pour ces degats, sans
+    depasser ce qu'il lui reste (specs.md paragraphe 3.5 : le bouclier absorbe en premier)."""
+    return min(degats, cible.pv + getattr(cible, "bouclier", 0))
+
+
 class Combat:
     """Orchestre le deroulement du combat entre le joueur et la flotte ennemie."""
 
@@ -30,13 +36,14 @@ class Combat:
         self.etat = EtatCombat.EN_COURS
         self.joueur.debut_de_tour()
 
-    def jouer_carte(self, carte: Carte, cible: Module | Ennemi | None = None) -> list[Module | Ennemi]:
+    def jouer_carte(self, carte: Carte, cible: Module | Ennemi | None = None) -> list[tuple[Module | Ennemi, int]]:
         """Applique l'effet d'une carte jouee par le joueur.
 
         cible est ignoree pour les cartes de CIBLES_SANS_CLIC (elles touchent tout
-        un camp) et obligatoire sinon. Renvoie la liste des cibles effectivement
-        touchees (pour que l'UI puisse y afficher un popup +/-), vide si la carte
-        n'a pas ete jouee.
+        un camp) et obligatoire sinon. Renvoie, pour chaque cible effectivement
+        touchee, le montant reellement applique (degats/bouclier/soin, qui peut etre
+        inferieur a carte.valeur : cf. `_appliquer_effet_simple`) ; liste vide si la
+        carte n'a pas ete jouee.
         """
         if self.etat != EtatCombat.EN_COURS:
             return []
@@ -50,11 +57,11 @@ class Combat:
         self._verifier_fin_de_combat()
         return cibles_touchees
 
-    def finir_tour_joueur(self) -> list[tuple[Position, Ennemi, Module]]:
+    def finir_tour_joueur(self) -> list[tuple[Position, Ennemi, Module, int]]:
         """Termine le tour du joueur (defausse la main restante) et enchaine sur le tour ennemi.
 
-        Renvoie la liste des attaques resolues (position et ennemi attaquant, module cible),
-        pour permettre a l'UI d'animer chaque attaque.
+        Renvoie la liste des attaques resolues (position et ennemi attaquant, module cible,
+        degats reellement infliges), pour permettre a l'UI d'animer chaque attaque.
         """
         if self.etat != EtatCombat.EN_COURS:
             return []
@@ -88,10 +95,10 @@ class Combat:
             return isinstance(cible, Ennemi) and cible in self.flotte.ennemis_vivants()
         return False
 
-    def _appliquer_effet(self, carte: Carte, cible: Module | Ennemi | None) -> list[Module | Ennemi]:
+    def _appliquer_effet(self, carte: Carte, cible: Module | Ennemi | None) -> list[tuple[Module | Ennemi, int]]:
         """Applique l'effet d'une carte selon sa cible (specs.md 7.1/7.2).
 
-        Renvoie la liste des cibles effectivement touchees.
+        Renvoie, pour chaque cible effectivement touchee, le montant reellement applique.
         """
         if carte.cible == CibleCarte.ALLIES_MULTIPLES:
             cibles = self._modules_vivants()
@@ -103,20 +110,27 @@ class Combat:
             cibles = [occupant for occupant in occupants if occupant is not None]
         else:
             cibles = [cible]
-        for une_cible in cibles:
-            self._appliquer_effet_simple(carte, une_cible)
-        return cibles
+        return [(une_cible, self._appliquer_effet_simple(carte, une_cible)) for une_cible in cibles]
 
-    def _appliquer_effet_simple(self, carte: Carte, cible: Module | Ennemi) -> None:
-        """Applique l'effet d'une carte a une seule cible, selon son type (specs.md 7.1)."""
+    def _appliquer_effet_simple(self, carte: Carte, cible: Module | Ennemi) -> int:
+        """Applique l'effet d'une carte a une seule cible, selon son type (specs.md 7.1).
+
+        Renvoie le montant reellement applique, qui peut etre inferieur a carte.valeur :
+        les degats sont plafonnes par les PV+bouclier restants de la cible, le soin par
+        son PV max (le bouclier, lui, n'est jamais plafonne).
+        """
         if carte.type == TypeCarte.ATTAQUE:
+            valeur_effective = _degats_effectifs(cible, carte.valeur)
             cible.subir_degats(carte.valeur)
         elif carte.type == TypeCarte.DEFENSE:
+            valeur_effective = carte.valeur
             cible.ajouter_bouclier(carte.valeur)
-        elif carte.type == TypeCarte.SOIN:
+        else:
+            valeur_effective = min(carte.valeur, cible.pv_max - cible.pv)
             cible.soigner(carte.valeur)
+        return valeur_effective
 
-    def _tour_ennemi(self) -> list[tuple[Position, Ennemi, Module]]:
+    def _tour_ennemi(self) -> list[tuple[Position, Ennemi, Module, int]]:
         """Chaque ennemi vivant attaque sa cible, dans l'ordre de la grille (poc.md paragraphe 3)."""
         attaques = []
         for position, ennemi in self.flotte.positions().items():
@@ -124,8 +138,9 @@ class Combat:
                 continue
             cible = module_cible_par_ennemi(self.joueur.vaisseau, position.rangee)
             if cible is not None:
+                degats_effectifs = _degats_effectifs(cible, ennemi.degats_attaque)
                 cible.subir_degats(ennemi.degats_attaque)
-                attaques.append((position, ennemi, cible))
+                attaques.append((position, ennemi, cible, degats_effectifs))
             self._verifier_fin_de_combat()
             if self.etat != EtatCombat.EN_COURS:
                 break

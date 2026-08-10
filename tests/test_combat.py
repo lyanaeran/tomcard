@@ -84,6 +84,40 @@ def test_jouer_une_carte_soin_repare_le_module_choisi():
     assert vaisseau.base.pv == 15 - 10 + CARTE_SOIN.valeur
 
 
+def test_jouer_carte_renvoie_le_montant_effectif_applique():
+    combat, vaisseau, flotte = _nouveau_combat()
+    ennemi = flotte.ennemis_vivants()[0]
+    combat.joueur.deck.main = [CARTE_ATTAQUE, CARTE_BOUCLIER]
+
+    resultat_attaque = combat.jouer_carte(CARTE_ATTAQUE, ennemi)
+    resultat_bouclier = combat.jouer_carte(CARTE_BOUCLIER, vaisseau.base)
+
+    assert resultat_attaque == [(ennemi, CARTE_ATTAQUE.valeur)]
+    assert resultat_bouclier == [(vaisseau.base, CARTE_BOUCLIER.valeur)]
+
+
+def test_jouer_une_carte_soin_renvoie_le_montant_effectif_plafonne_au_pv_max():
+    combat, vaisseau, _flotte = _nouveau_combat()
+    combat.joueur.deck.main = [CARTE_SOIN]
+    vaisseau.base.subir_degats(2)  # il ne manque que 2 PV, la carte en soigne 4
+
+    resultat = combat.jouer_carte(CARTE_SOIN, vaisseau.base)
+
+    assert resultat == [(vaisseau.base, 2)]
+    assert vaisseau.base.pv == vaisseau.base.pv_max
+
+
+def test_jouer_une_carte_attaque_renvoie_le_montant_effectif_plafonne_aux_pv_restants():
+    combat, _vaisseau, flotte = _nouveau_combat(pv_ennemi=3)  # l'ennemi n'a que 3 PV, la carte fait 7 degats
+    ennemi = flotte.ennemis_vivants()[0]
+    combat.joueur.deck.main = [CARTE_ATTAQUE]
+
+    resultat = combat.jouer_carte(CARTE_ATTAQUE, ennemi)
+
+    assert resultat == [(ennemi, 3)]
+    assert ennemi.pv == 0
+
+
 def test_impossible_de_jouer_une_carte_sans_assez_d_electricite():
     combat, _vaisseau, flotte = _nouveau_combat()
     ennemi = flotte.ennemis_vivants()[0]
@@ -205,7 +239,7 @@ def test_finir_tour_joueur_renvoie_les_attaques_resolues():
 
     attaques = combat.finir_tour_joueur()
 
-    assert attaques == [(POSITION_ENNEMI, ennemi, vaisseau.base)]
+    assert attaques == [(POSITION_ENNEMI, ennemi, vaisseau.base, 7)]
 
 
 def test_plusieurs_ennemis_attaquent_dans_le_meme_tour():
@@ -230,7 +264,7 @@ def test_arret_immediat_si_la_base_est_detruite_en_cours_de_tour():
     attaques = combat.finir_tour_joueur()
 
     assert combat.etat == EtatCombat.DEFAITE
-    assert attaques == [(position_e1, e1, vaisseau.base)]  # e2 n'a pas agi
+    assert attaques == [(position_e1, e1, vaisseau.base, 10)]  # e2 n'a pas agi, degats plafonnes aux 10 PV restants
 
 
 # --- Cibles multiples (LIGNE_ENNEMIE, ALLIES_MULTIPLES, ENNEMIS_MULTIPLES) ---

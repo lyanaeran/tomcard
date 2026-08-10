@@ -231,13 +231,13 @@ def _rect_ennemi(position: Position) -> tuple[float, float, float, float]:
     return x, RANGEE_Y[position.rangee], CELLULE_LARGEUR, CELLULE_HAUTEUR
 
 
-def _texte_et_couleur_effet(carte: Carte) -> tuple[str, tuple[int, int, int]]:
-    """Texte (+/-valeur) et couleur du popup associe a l'effet d'une carte jouee."""
+def _texte_et_couleur_effet(carte: Carte, valeur_effective: int) -> tuple[str, tuple[int, int, int]]:
+    """Texte (+/-valeur reellement appliquee) et couleur du popup associe a l'effet d'une carte jouee."""
     if carte.type == TypeCarte.ATTAQUE:
-        return f"-{carte.valeur}", COULEUR_POPUP_DEGATS
+        return f"-{valeur_effective}", COULEUR_POPUP_DEGATS
     if carte.type == TypeCarte.DEFENSE:
-        return f"+{carte.valeur}", COULEUR_POPUP_BOUCLIER
-    return f"+{carte.valeur}", COULEUR_POPUP_SOIN
+        return f"+{valeur_effective}", COULEUR_POPUP_BOUCLIER
+    return f"+{valeur_effective}", COULEUR_POPUP_SOIN
 
 
 class FenetreCombat(pyglet.window.Window):
@@ -589,16 +589,16 @@ class FenetreCombat(pyglet.window.Window):
                 return position
         return None
 
-    def _afficher_popups_carte(self, carte: Carte, cibles: list[Module | Ennemi]) -> None:
-        """Affiche un popup +/-N sur chaque cible touchee par une carte jouee."""
-        texte, couleur = _texte_et_couleur_effet(carte)
-        for cible in cibles:
+    def _afficher_popups_carte(self, carte: Carte, cibles: list[tuple[Module | Ennemi, int]]) -> None:
+        """Affiche un popup +/-N (montant reellement applique) sur chaque cible touchee par une carte jouee."""
+        for cible, valeur_effective in cibles:
+            texte, couleur = _texte_et_couleur_effet(carte, valeur_effective)
             self._ajouter_popup(cible, texte, couleur)
 
-    def _afficher_popups_attaques_ennemi(self, attaques: list[tuple[Position, Ennemi, Module]]) -> None:
-        """Affiche un popup -N sur chaque module touche par une attaque ennemie resolue ce tour."""
-        for _position, ennemi, module_cible in attaques:
-            self._ajouter_popup(module_cible, f"-{ennemi.degats_attaque}", COULEUR_POPUP_DEGATS)
+    def _afficher_popups_attaques_ennemi(self, attaques: list[tuple[Position, Ennemi, Module, int]]) -> None:
+        """Affiche un popup -N (degats reellement infliges) sur chaque module touche par une attaque ennemie."""
+        for _position, _ennemi, module_cible, degats_effectifs in attaques:
+            self._ajouter_popup(module_cible, f"-{degats_effectifs}", COULEUR_POPUP_DEGATS)
 
     def _ajouter_popup(self, cible: Module | Ennemi, texte: str, couleur: tuple[int, int, int]) -> None:
         """Demarre l'affichage d'un popup +/-N centre sur la case de cette cible, pour 2 secondes."""
