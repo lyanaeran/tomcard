@@ -46,12 +46,14 @@ VAISSEAU_HAUTEUR = VAISSEAU_LARGEUR * _TAILLE_IMAGE_PRINCIPAL[1] / _TAILLE_IMAGE
 _ECHELLE_VAISSEAU = VAISSEAU_LARGEUR / _TAILLE_IMAGE_PRINCIPAL[0]
 
 # Emplacements des modules mesures sur l'image (coordonnees locales, origine
-# bas-gauche de l'image, avant la mise a l'echelle)
+# bas-gauche de l'image, avant la mise a l'echelle). Mesures sur le cadre
+# metallique complet du vaisseau (pas seulement le trou noir interieur), pour
+# que le cadre du module equipe vienne recouvrir celui du vaisseau.
 _EMPLACEMENTS_MODULES_IMAGE = {
-    Position(Colonne.ARRIERE, Rangee.GAUCHE): (372, 415, 189, 179),
-    Position(Colonne.AVANT, Rangee.GAUCHE): (632, 415, 188, 179),
-    Position(Colonne.ARRIERE, Rangee.DROITE): (374, 25, 187, 178),
-    Position(Colonne.AVANT, Rangee.DROITE): (633, 25, 187, 178),
+    Position(Colonne.ARRIERE, Rangee.GAUCHE): (350, 407, 223, 216),
+    Position(Colonne.AVANT, Rangee.GAUCHE): (606, 407, 223, 216),
+    Position(Colonne.ARRIERE, Rangee.DROITE): (349, 29, 223, 215),
+    Position(Colonne.AVANT, Rangee.DROITE): (607, 29, 223, 215),
 }
 
 # Repere du pare-brise mesure sur l'image source (coordonnees locales,
