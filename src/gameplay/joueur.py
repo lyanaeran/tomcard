@@ -1,17 +1,17 @@
 """
-Le joueur : son module de base, son deck de cartes et son electricite.
+Le joueur : son vaisseau (grille de modules), son deck de cartes et son electricite.
 """
 
 from src.gameplay.carte import Carte
 from src.gameplay.deck import Deck
-from src.gameplay.module import Module
+from src.gameplay.vaisseau import Vaisseau
 
 
 class Joueur:
-    """Regroupe le module de base, le deck de cartes et l'electricite du joueur."""
+    """Regroupe le vaisseau, le deck de cartes et l'electricite du joueur."""
 
-    def __init__(self, module: Module, deck: Deck, electricite_par_tour: int):
-        self.module = module
+    def __init__(self, vaisseau: Vaisseau, deck: Deck, electricite_par_tour: int):
+        self.vaisseau = vaisseau
         self.deck = deck
         self.electricite_par_tour = electricite_par_tour
         self.electricite = 0

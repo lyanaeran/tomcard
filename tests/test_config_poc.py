@@ -1,37 +1,113 @@
 """
-Tests unitaires pour la configuration du combat du POC (src/gameplay/config_poc.py).
+Tests unitaires pour la generation aleatoire du combat du POC (src/gameplay/config_poc.py).
 """
+
+import random
 
 from src.gameplay.combat import EtatCombat
 from src.gameplay.config_poc import (
-    DEGATS_ENNEMI,
+    CARTES_PAR_MODULE_EQUIPE,
+    CARTES_PAR_MODULE_PRINCIPAL,
     ELECTRICITE_PAR_TOUR,
-    PV_ENNEMI,
-    PV_MODULE_BASE,
+    ID_MODULE_PRINCIPAL,
+    NOMBRE_MODULES_EQUIPES,
     creer_combat_poc,
+    creer_deck,
+    creer_flotte,
+    creer_vaisseau,
+    tirer_cartes,
 )
+from src.gameplay.donnees import charger_cartes, charger_ennemis, charger_modules
 
 
-def test_creer_combat_poc_initialise_les_valeurs_du_poc():
-    combat = creer_combat_poc()
+def test_charger_modules_contient_le_module_principal():
+    specs = charger_modules()
 
-    assert combat.joueur.module.pv == PV_MODULE_BASE
-    assert combat.ennemi.pv == PV_ENNEMI
-    assert combat.ennemi.degats_attaque == DEGATS_ENNEMI
+    principal = next(spec for spec in specs if spec.id == ID_MODULE_PRINCIPAL)
+
+    assert principal.nom == "Principal"
+    assert len(specs) >= NOMBRE_MODULES_EQUIPES + 1  # le principal + au moins 4 equipables
+
+
+def test_creer_vaisseau_place_le_principal_et_4_modules_differents():
+    specs = charger_modules()
+    aleatoire = random.Random(42)
+
+    vaisseau, specs_utilisees = creer_vaisseau(specs, aleatoire)
+
+    assert vaisseau.base.nom == "Principal"
+    equipes = vaisseau.modules_equipes()
+    assert len(equipes) == NOMBRE_MODULES_EQUIPES
+    noms = [module.nom for module in equipes.values()]
+    assert len(set(noms)) == NOMBRE_MODULES_EQUIPES  # tous differents
+    assert len(specs_utilisees) == NOMBRE_MODULES_EQUIPES + 1
+    assert specs_utilisees[0].id == ID_MODULE_PRINCIPAL
+
+
+def test_creer_vaisseau_est_deterministe_pour_une_meme_graine():
+    specs = charger_modules()
+
+    vaisseau_1, _ = creer_vaisseau(specs, random.Random(7))
+    vaisseau_2, _ = creer_vaisseau(specs, random.Random(7))
+
+    noms_1 = sorted(m.nom for m in vaisseau_1.modules_equipes().values())
+    noms_2 = sorted(m.nom for m in vaisseau_2.modules_equipes().values())
+    assert noms_1 == noms_2
+
+
+def test_creer_flotte_remplit_les_6_cases():
+    specs = charger_ennemis()
+    aleatoire = random.Random(1)
+
+    flotte = creer_flotte(specs, aleatoire)
+
+    assert len(flotte.positions()) == 6
+    assert len(flotte.ennemis_vivants()) == 6
+    ids_connus = {spec.nom for spec in specs}
+    for ennemi in flotte.ennemis_vivants():
+        assert ennemi.nom in ids_connus
+
+
+def test_tirer_cartes_pioche_la_bonne_quantite_dans_la_pool():
+    cartes = charger_cartes()
+    pool = ("CRT_1", "CRT_4", "CRT_6")
+    aleatoire = random.Random(3)
+
+    tirees = tirer_cartes(pool, 8, cartes, aleatoire)
+
+    assert len(tirees) == 8
+    noms_pool = {cartes[cid].nom for cid in pool}
+    assert all(carte.nom in noms_pool for carte in tirees)
+
+
+def test_creer_deck_contient_20_cartes():
+    specs_modules = charger_modules()
+    cartes = charger_cartes()
+    aleatoire = random.Random(5)
+    _vaisseau, specs_utilisees = creer_vaisseau(specs_modules, aleatoire)
+
+    deck = creer_deck(specs_utilisees, cartes, aleatoire)
+
+    total = len(deck.pioche) + len(deck.main) + len(deck.defausse)
+    attendu = CARTES_PAR_MODULE_PRINCIPAL + CARTES_PAR_MODULE_EQUIPE * (NOMBRE_MODULES_EQUIPES)
+    assert total == attendu == 20
+
+
+def test_creer_combat_poc_initialise_un_combat_complet():
+    combat = creer_combat_poc(random.Random(99))
+
     assert combat.etat == EtatCombat.EN_COURS
-
-
-def test_creer_combat_poc_pioche_la_main_de_depart():
-    combat = creer_combat_poc()
-
-    assert len(combat.joueur.deck.main) == 5
+    assert combat.joueur.vaisseau.base.nom == "Principal"
+    assert len(combat.joueur.vaisseau.modules_equipes()) == NOMBRE_MODULES_EQUIPES
+    assert len(combat.flotte.positions()) == 6
     assert combat.joueur.electricite == ELECTRICITE_PAR_TOUR
+    assert len(combat.joueur.deck.main) == 5
 
 
-def test_le_deck_du_poc_contient_les_bonnes_cartes():
-    combat = creer_combat_poc()
+def test_deux_combats_successifs_ont_des_ennemis_independants():
+    combat_1 = creer_combat_poc(random.Random(1))
+    combat_2 = creer_combat_poc(random.Random(1))
 
-    toutes_les_cartes = combat.joueur.deck.pioche + combat.joueur.deck.main + combat.joueur.deck.defausse
-    noms = sorted(carte.nom for carte in toutes_les_cartes)
+    combat_1.flotte.ennemis_vivants()[0].subir_degats(1000)
 
-    assert noms == sorted(["Attaque"] * 5 + ["Bouclier"] * 3 + ["Soin"])
+    assert combat_2.flotte.ennemis_vivants()[0].pv > 0
