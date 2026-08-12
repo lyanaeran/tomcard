@@ -3,11 +3,21 @@
 }
 
 :root {
-    /* Taille partagee des cases ennemies et des emplacements de module sur le
-       vaisseau, pour qu'ils soient bien de la meme taille. La largeur du
-       vaisseau en decoule (18.51% de sa largeur = un emplacement de module,
-       cf. EMPLACEMENTS_MODULES dans app.js). */
-    --taille-case: 48px;
+    /* Taille des cases (modules du vaisseau et cases ennemies), pilotee par la
+       hauteur d'ecran disponible pour que vaisseau/flotte remplissent le
+       maximum de hauteur (3 rangees de cases dans la grille ennemie, la plus
+       haute des deux grilles pour un --taille-case donne - le vaisseau,
+       proportionnellement plus large que haut, reste plus court : centre
+       verticalement via align-items sur #grilles plutot que force a la meme
+       hauteur, cf. #grilles). ~150px = entete + compteurs-deck + paddings.
+       Bornee aussi par la largeur (vaisseau + main + flotte cote a cote font
+       environ 11.6x --taille-case, cf. #main/.grille-joueur) pour eviter que
+       la flotte ennemie soit repoussee hors champ sur un ecran large et court. */
+    --taille-case: clamp(30px, min(calc((100vh - 150px) / 3), calc((100vw - 60px) / 12.2)), 180px);
+    --taille-pastille: calc(var(--taille-case) * 0.34);
+    /* Hauteur de la grille ennemie (3 rangees + gaps + padding), reutilisee
+       pour aligner la hauteur de la main de cartes (#main). */
+    --hauteur-grille: calc(3 * var(--taille-case) + 1.8rem);
 }
 
 body {
@@ -37,7 +47,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.75rem 1rem;
+    padding: 0.6rem 1rem;
     padding-left: max(1rem, env(safe-area-inset-left));
     padding-right: max(1rem, env(safe-area-inset-right));
     background: #141b33;
@@ -95,8 +105,8 @@ body {
 }
 
 #compteurs-deck {
-    padding: 0.4rem 1rem;
-    font-size: 0.85rem;
+    padding: 0.3rem 1rem;
+    font-size: 0.8rem;
     opacity: 0.7;
 }
 
@@ -108,7 +118,10 @@ body {
     padding-left: max(0.75rem, env(safe-area-inset-left));
     padding-right: max(0.75rem, env(safe-area-inset-right));
     justify-content: center;
-    align-items: flex-start;
+    /* centre : le vaisseau (large mais proportionnellement moins haut que la
+       grille ennemie a --taille-case egal) reste aligne au milieu plutot que
+       colle en haut avec un vide dessous. */
+    align-items: center;
 }
 
 /* Les deux conteneurs de grilles sont "transparents" pour la mise en page :
@@ -137,9 +150,8 @@ body {
 .grille.grille-joueur {
     display: block;
     /* Pas de padding (specificite .grille.grille-joueur pour l'emporter sur le
-       padding de .grille, y compris en paysage compact) : les pourcentages
-       d'EMPLACEMENTS_MODULES (app.js) sont mesures relativement a l'image du
-       vaisseau elle-meme, sans marge. */
+       padding de .grille) : les pourcentages d'EMPLACEMENTS_MODULES (app.js)
+       sont mesures relativement a l'image du vaisseau elle-meme, sans marge. */
     padding: 0;
     width: calc(var(--taille-case) / 0.1851);
 }
@@ -222,8 +234,47 @@ body {
     display: block;
 }
 
-/* Infobulle affichee pendant un appui long de 3s (equivalent tactile du survol
-   souris de poc.md 8 : nom, PV/PV max, Bouclier ou Attaque). */
+/* Pastilles PV (rouge) / Bouclier (bleu) flottant dans le coin superieur de
+   chaque case, comme sur pc (COULEUR_PASTILLE_PV/COULEUR_PASTILLE_BOUCLIER
+   dans src/ui/fenetre.py). Restent a l'interieur de la case (pas au-dessus,
+   contrairement au pc) pour eviter le rognage des cases avec overflow:hidden. */
+.pastille {
+    position: absolute;
+    top: 3px;
+    min-width: var(--taille-pastille);
+    height: var(--taille-pastille);
+    padding: 0 3px;
+    border-radius: 999px;
+    border: 2px solid rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: white;
+    font-size: calc(var(--taille-pastille) * 0.44);
+    line-height: 1;
+    z-index: 4;
+}
+
+.pastille-pv {
+    right: 3px;
+    background: rgb(190, 40, 40);
+}
+
+.pastille-bouclier {
+    right: calc(var(--taille-pastille) + 9px);
+    background: rgb(50, 110, 200);
+}
+
+.pastille-cout {
+    top: 3px;
+    left: 3px;
+    background: #ffd43b;
+    color: #1c2547;
+}
+
+/* Infobulle affichee au tap sur une case sans carte selectionnee (equivalent
+   tactile du survol souris de poc.md 8 : nom, PV/PV max, Bouclier ou Attaque). */
 .infobulle {
     position: absolute;
     inset: 0;
@@ -236,7 +287,7 @@ body {
     justify-content: center;
     gap: 0.15rem;
     padding: 0.3rem;
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     text-align: center;
     z-index: 6;
     pointer-events: none;
@@ -244,7 +295,7 @@ body {
 
 .infobulle-nom {
     font-weight: bold;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
 }
 
 .etiquette-detruite {
@@ -304,7 +355,8 @@ body {
 }
 
 /* La main de cartes est un item du flex row de #grilles, entre le vaisseau et
-   la flotte ennemie, plutot qu'une barre figee en bas de l'ecran. */
+   la flotte ennemie, bornee a la hauteur de la grille ennemie (scroll vertical
+   au-dela) plutot que de deborder en bas de l'ecran. */
 #main {
     display: flex;
     flex-direction: row;
@@ -312,34 +364,28 @@ body {
     align-content: flex-start;
     justify-content: center;
     gap: 0.5rem;
-    width: 200px;
-    padding: 0.5rem 0;
+    width: calc(var(--taille-case) * 4.2);
+    max-height: var(--hauteur-grille);
+    overflow-y: auto;
+    padding: 0.25rem;
 }
 
 .carte {
     flex: 0 0 auto;
-    width: 90px;
+    position: relative;
+    width: calc(var(--taille-case) * 1.9);
     background: #1c2547;
     border: 2px solid transparent;
     border-radius: 8px;
-    padding: 0.4rem;
-    color: white;
-    text-align: center;
+    padding: 0;
+    overflow: hidden;
 }
 
 .carte img {
+    display: block;
     width: 100%;
     aspect-ratio: 3/4;
     object-fit: contain;
-}
-
-.carte .cout {
-    font-weight: bold;
-    color: #ffd43b;
-}
-
-.carte .nom {
-    font-size: 0.75rem;
 }
 
 .carte.selectionnee {
@@ -382,13 +428,9 @@ body {
     color: white;
 }
 
-/* Ecran court en paysage (iPhone) : tout doit tenir sans trop scroller, comme le
-   wireframe pc de specs.md 8.1 (vaisseau/flotte cote a cote, main au milieu). */
+/* Ecran court en paysage (iPhone) : entete/compteurs plus compacts pour
+   laisser le maximum de hauteur a --taille-case (deja fluide, cf. :root). */
 @media (orientation: landscape) and (max-height: 550px) {
-    :root {
-        --taille-case: 35px;
-    }
-
     #entete {
         padding-top: 0.35rem;
         padding-bottom: 0.35rem;
@@ -422,33 +464,6 @@ body {
     .grille {
         gap: 0.25rem;
         padding: 0.3rem;
-    }
-
-    .case {
-        padding: 0.2rem;
-    }
-
-    .infobulle {
-        font-size: 0.55rem;
-    }
-
-    .infobulle-nom {
-        font-size: 0.6rem;
-    }
-
-    #main {
-        width: 130px;
-        padding: 0.3rem 0;
-        gap: 0.3rem;
-    }
-
-    .carte {
-        width: 56px;
-        padding: 0.25rem;
-    }
-
-    .carte .nom {
-        font-size: 0.55rem;
     }
 
     .popup {

@@ -1,22 +1,22 @@
 // Prototype web du POC Space Fight (branche web-ui-poc).
 // Fait tourner src/gameplay/ tel quel dans le navigateur via Pyodide ; ce fichier
 // ne fait que fetcher les sources Python, les monter dans la FS virtuelle, et
-// dessiner l'etat renvoye par web/bridge.py en HTML/CSS. Layout simplifie par
-// rapport a specs.md/poc.md (pas de pastilles PV/Bouclier flottantes) : objectif
-// ici est de valider la jouabilite au doigt, pas la fidelite visuelle pixel pres.
-// Popups +/-N, appui long pour l'infobulle (equivalent tactile du survol souris,
-// poc.md paragraphe 8), modules positionnes sur l'image du vaisseau (memes
-// reperes que src/ui/fenetre.py _EMPLACEMENTS_MODULES_IMAGE) et layout paysage
-// (specs.md 8.1) repris.
+// dessiner l'etat renvoye par web/bridge.py en HTML/CSS. Popups +/-N, pastilles
+// PV/Bouclier flottantes (memes couleurs que RAYON_PASTILLE/COULEUR_PASTILLE_*
+// dans src/ui/fenetre.py), infobulle au tap (equivalent tactile du survol
+// souris, poc.md paragraphe 8), modules positionnes sur l'image du vaisseau
+// (memes reperes que _EMPLACEMENTS_MODULES_IMAGE) et layout paysage (specs.md
+// 8.1) repris. Simplification assumee : taille des cases pilotee par la
+// hauteur d'ecran plutot que mesuree pixel pres comme sur pc.
 
 const DUREE_POPUP_MS = 2000;
-const DUREE_APPUI_LONG_MS = 3000;
+const DUREE_INFOBULLE_MS = 2500;
 
 // Casse-cache manuel : GitHub Pages ne permet pas de fixer les en-tetes
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "4";
+const VERSION_CACHE = "5";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -205,6 +205,7 @@ function trouverObjetCase(idCase, typeCase) {
 function afficherInfobulle(element, idCase, typeCase) {
     const objet = trouverObjetCase(idCase, typeCase);
     if (!objet) return;
+    document.querySelectorAll(".infobulle").forEach((el) => el.remove());
     const ligneSecondaire =
         typeCase === "allie" ? `Bouclier ${objet.bouclier}` : `Attaque ${objet.degats_attaque}`;
     const infobulle = document.createElement("div");
@@ -214,46 +215,31 @@ function afficherInfobulle(element, idCase, typeCase) {
         <div>PV ${objet.pv}/${objet.pv_max}</div>
         <div>${ligneSecondaire}</div>`;
     element.appendChild(infobulle);
+    setTimeout(() => infobulle.remove(), DUREE_INFOBULLE_MS);
 }
 
-function masquerInfobulle(element) {
-    const existante = element.querySelector(":scope > .infobulle");
-    if (existante) existante.remove();
-}
-
-// Appui long (3s, equivalent tactile du survol souris de poc.md) pour afficher
-// le nom/PV/Bouclier-ou-Attaque d'une case ; un relachement avant ce delai
-// declenche l'action normale (ciblage d'une carte selectionnee).
+// Tap sur une case : si aucune carte n'est selectionnee, affiche son infobulle
+// (equivalent tactile du survol souris de poc.md) ; sinon, cible la carte
+// selectionnee normalement.
 function attacherPressionCase(element, idCase, typeCase) {
-    let minuteur = null;
-    let pressionLongue = false;
-
-    const demarrer = (evenement) => {
+    element.addEventListener("click", (evenement) => {
         evenement.stopPropagation();
-        pressionLongue = false;
-        minuteur = setTimeout(() => {
-            pressionLongue = true;
+        if (indexCarteSelectionnee === null) {
             afficherInfobulle(element, idCase, typeCase);
-        }, DUREE_APPUI_LONG_MS);
-    };
-    const relacher = (evenement) => {
-        evenement.stopPropagation();
-        clearTimeout(minuteur);
-        masquerInfobulle(element);
-        if (!pressionLongue) {
+        } else {
             cliquerCase(idCase, typeCase);
         }
-    };
-    const annuler = (evenement) => {
-        evenement.stopPropagation();
-        clearTimeout(minuteur);
-        masquerInfobulle(element);
-    };
+    });
+}
 
-    element.addEventListener("pointerdown", demarrer);
-    element.addEventListener("pointerup", relacher);
-    element.addEventListener("pointerleave", annuler);
-    element.addEventListener("pointercancel", annuler);
+// Pastilles PV (rouge) / Bouclier (bleu, allies uniquement) : memes couleurs
+// que COULEUR_PASTILLE_PV/COULEUR_PASTILLE_BOUCLIER dans src/ui/fenetre.py.
+// Masquees si detruit, comme sur pc (le bandeau "Detruit" les remplace).
+function rendrePastilles(objet, typeCase) {
+    if (objet.detruit) return "";
+    const bouclier =
+        typeCase === "allie" ? `<span class="pastille pastille-bouclier">${objet.bouclier}</span>` : "";
+    return `${bouclier}<span class="pastille pastille-pv">${objet.pv}</span>`;
 }
 
 function rendreCaseEnnemi(objet) {
@@ -265,6 +251,7 @@ function rendreCaseEnnemi(objet) {
     return `
         <div class="${classes.join(" ")}" data-id="${objet.id}" data-type="ennemi">
             <img src="${objet.image}" alt="${objet.nom}">
+            ${rendrePastilles(objet, "ennemi")}
             ${objet.detruit ? '<div class="etiquette-detruite">Detruit</div>' : ""}
         </div>`;
 }
@@ -283,6 +270,7 @@ function rendreGrilleJoueur() {
             return `
                 <div class="${classes.join(" ")}" style="${style}" data-id="${module.id}" data-type="allie">
                     <img src="${module.image}" alt="${module.nom}">
+                    ${rendrePastilles(module, "allie")}
                     ${module.detruit ? '<div class="etiquette-detruite">Detruit</div>' : ""}
                 </div>`;
         })
@@ -295,6 +283,7 @@ function rendreGrilleJoueur() {
             <div class="${classesBase.join(" ")}" data-id="base" data-type="allie">
                 <img class="image-vaisseau" src="${base.image}" alt="${base.nom}">
                 ${emplacements}
+                ${rendrePastilles(base, "allie")}
                 ${base.detruit ? '<div class="etiquette-detruite">Detruit</div>' : ""}
             </div>
         </div>`;
@@ -315,10 +304,9 @@ function rendreMain() {
             const classes = ["carte"];
             if (carte.index === indexCarteSelectionnee) classes.push("selectionnee");
             return `
-            <button class="${classes.join(" ")}" data-index="${carte.index}">
+            <button class="${classes.join(" ")}" data-index="${carte.index}" title="${carte.nom}">
                 <img src="${carte.image}" alt="${carte.nom}">
-                <div class="cout">${carte.cout}</div>
-                <div class="nom">${carte.nom}</div>
+                <span class="pastille pastille-cout">${carte.cout}</span>
             </button>`;
         })
         .join("");
