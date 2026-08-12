@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "6";
+const VERSION_CACHE = "7";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -242,6 +242,18 @@ function rendrePastilles(objet, typeCase) {
     return `${bouclier}<span class="pastille pastille-pv">${objet.pv}</span>`;
 }
 
+// Pastilles du module de base : centrees en haut de l'image du vaisseau
+// (equivalent du repere pare-brise de src/ui/fenetre.py), pas dans un coin
+// comme les autres cases (poc.md paragraphe 8).
+function rendrePastillesBase(base) {
+    if (base.detruit) return "";
+    return `
+        <div class="pastilles-base">
+            <span class="pastille pastille-bouclier">${base.bouclier}</span>
+            <span class="pastille pastille-pv">${base.pv}</span>
+        </div>`;
+}
+
 function rendreCaseEnnemi(objet) {
     if (objet === null) {
         return `<div class="case case-vide"></div>`;
@@ -283,7 +295,7 @@ function rendreGrilleJoueur() {
             <div class="${classesBase.join(" ")}" data-id="base" data-type="allie">
                 <img class="image-vaisseau" src="${base.image}" alt="${base.nom}">
                 ${emplacements}
-                ${rendrePastilles(base, "allie")}
+                ${rendrePastillesBase(base)}
                 ${base.detruit ? '<div class="etiquette-detruite">Detruit</div>' : ""}
             </div>
         </div>`;

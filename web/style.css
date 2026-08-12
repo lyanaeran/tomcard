@@ -9,11 +9,12 @@
        haute des deux grilles pour un --taille-case donne - le vaisseau,
        proportionnellement plus large que haut, reste plus court : centre
        verticalement via align-items sur #grilles plutot que force a la meme
-       hauteur, cf. #grilles). ~150px = entete + compteurs-deck + paddings.
+       hauteur, cf. #grilles). ~280px = entete + compteurs-deck + #main (la main
+       de cartes, sous #grilles, cf. plus bas) + paddings/marges de securite.
        Bornee aussi par la largeur (vaisseau + flotte cote a cote font environ
        7.4x --taille-case, cf. .grille-joueur/.grille-ennemis) pour eviter que
        la flotte ennemie soit repoussee hors champ sur un ecran large et court. */
-    --taille-case: clamp(30px, min(calc((100vh - 150px) / 3), calc((100vw - 100px) / 7.4)), 180px);
+    --taille-case: clamp(30px, min(calc((100vh - 280px) / 3), calc((100vw - 100px) / 7.4)), 180px);
     --taille-pastille: calc(var(--taille-case) * 0.34);
 }
 
@@ -132,9 +133,11 @@ body {
 .grille {
     display: grid;
     grid-template-columns: repeat(2, var(--taille-case));
-    gap: 0.4rem;
+    /* Assez d'ecart pour que les pastilles PV/Bouclier (qui debordent au-dessus
+       de chaque case, cf. .pastille) ne chevauchent pas la rangee du dessus. */
+    gap: calc(var(--taille-pastille) * 0.7);
     background: #10162c;
-    padding: 0.5rem;
+    padding: calc(0.5rem + var(--taille-pastille) * 0.5) 0.5rem 0.5rem;
     border-radius: 10px;
 }
 
@@ -206,7 +209,10 @@ body {
     width: 100%;
     aspect-ratio: 1205 / 651;
     border-radius: 8px;
-    overflow: hidden;
+    /* Pas d'overflow:hidden (contrairement a la version precedente) : les
+       pastilles de la base (.pastilles-base) doivent pouvoir deborder
+       au-dessus de l'image, comme sur pc. Sans risque pour l'image elle-meme,
+       deja dimensionnee exactement a la taille du conteneur. */
 }
 
 .case.vaisseau-base > img {
@@ -220,7 +226,8 @@ body {
 .case.emplacement-module {
     position: absolute;
     border-radius: 4px;
-    overflow: hidden;
+    /* Pas d'overflow:hidden : meme raison que .case.vaisseau-base, pour que sa
+       pastille PV/Bouclier deborde au-dessus sans etre rognee. */
 }
 
 .case.emplacement-module img {
@@ -231,13 +238,13 @@ body {
     display: block;
 }
 
-/* Pastilles PV (rouge) / Bouclier (bleu) flottant dans le coin superieur de
-   chaque case, comme sur pc (COULEUR_PASTILLE_PV/COULEUR_PASTILLE_BOUCLIER
-   dans src/ui/fenetre.py). Restent a l'interieur de la case (pas au-dessus,
-   contrairement au pc) pour eviter le rognage des cases avec overflow:hidden. */
+/* Pastilles PV (rouge) / Bouclier (bleu) flottant juste au-dessus de chaque
+   case (memes couleurs que COULEUR_PASTILLE_PV/COULEUR_PASTILLE_BOUCLIER dans
+   src/ui/fenetre.py). Debordent en haut de la case (top negatif) plutot que
+   de recouvrir l'image, comme sur pc. */
 .pastille {
     position: absolute;
-    top: 3px;
+    top: calc(var(--taille-pastille) * -0.55);
     min-width: var(--taille-pastille);
     height: var(--taille-pastille);
     padding: 0 3px;
@@ -268,6 +275,24 @@ body {
     left: 3px;
     background: #ffd43b;
     color: #1c2547;
+}
+
+/* Pastilles PV/Bouclier du module de base : centrees en haut de l'image du
+   vaisseau (equivalent du repere pare-brise CENTRE_PARE_BRISE_VAISSEAU_X /
+   HAUT_PARE_BRISE_VAISSEAU_Y de src/ui/fenetre.py), plutot que dans un coin
+   comme les autres cases. */
+.pastilles-base {
+    position: absolute;
+    top: calc(var(--taille-pastille) * -0.55);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+    z-index: 4;
+}
+
+.pastilles-base .pastille {
+    position: static;
 }
 
 /* Infobulle affichee au tap sur une case sans carte selectionnee (equivalent
