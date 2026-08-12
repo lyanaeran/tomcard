@@ -10,14 +10,11 @@
        proportionnellement plus large que haut, reste plus court : centre
        verticalement via align-items sur #grilles plutot que force a la meme
        hauteur, cf. #grilles). ~150px = entete + compteurs-deck + paddings.
-       Bornee aussi par la largeur (vaisseau + main + flotte cote a cote font
-       environ 11.6x --taille-case, cf. #main/.grille-joueur) pour eviter que
+       Bornee aussi par la largeur (vaisseau + flotte cote a cote font environ
+       7.4x --taille-case, cf. .grille-joueur/.grille-ennemis) pour eviter que
        la flotte ennemie soit repoussee hors champ sur un ecran large et court. */
-    --taille-case: clamp(30px, min(calc((100vh - 150px) / 3), calc((100vw - 60px) / 12.2)), 180px);
+    --taille-case: clamp(30px, min(calc((100vh - 150px) / 3), calc((100vw - 100px) / 7.4)), 180px);
     --taille-pastille: calc(var(--taille-case) * 0.34);
-    /* Hauteur de la grille ennemie (3 rangees + gaps + padding), reutilisee
-       pour aligner la hauteur de la main de cartes (#main). */
-    --hauteur-grille: calc(3 * var(--taille-case) + 1.8rem);
 }
 
 body {
@@ -124,9 +121,9 @@ body {
     align-items: center;
 }
 
-/* Les deux conteneurs de grilles sont "transparents" pour la mise en page :
-   #main (la main de cartes) se retrouve ainsi entre le vaisseau et la flotte
-   ennemie dans le flex row de #grilles, sans dupliquer le rendu JS. */
+/* Conteneurs "transparents" pour la mise en page : le vaisseau et la grille
+   ennemie deviennent directement des items du flex row de #grilles, sans
+   dupliquer le rendu JS. */
 #grille-joueur-conteneur,
 #grille-ennemis-conteneur {
     display: contents;
@@ -354,26 +351,29 @@ body {
     }
 }
 
-/* La main de cartes est un item du flex row de #grilles, entre le vaisseau et
-   la flotte ennemie, bornee a la hauteur de la grille ennemie (scroll vertical
-   au-dela) plutot que de deborder en bas de l'ecran. */
+/* Main de cartes : une seule ligne, centree en bas de l'ecran (specs.md 8.1 :
+   "alignee en bas de l'ecran, pas en eventail"). margin-top:auto la colle au
+   bas du flex column #app quand il reste de la place sous #grilles. Largeur
+   des cartes independante de --taille-case (barre du bas, pas liee aux
+   dimensions du vaisseau/de la flotte). */
 #main {
     display: flex;
     flex-direction: row;
-    flex-wrap: wrap;
-    align-content: flex-start;
+    flex-wrap: nowrap;
     justify-content: center;
     gap: 0.5rem;
-    width: calc(var(--taille-case) * 4.2);
-    max-height: var(--hauteur-grille);
-    overflow-y: auto;
-    padding: 0.25rem;
+    overflow-x: auto;
+    padding: 0.5rem 1rem;
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+    margin-top: auto;
 }
 
 .carte {
     flex: 0 0 auto;
     position: relative;
-    width: calc(var(--taille-case) * 1.9);
+    width: clamp(56px, 8vw, 96px);
     background: #1c2547;
     border: 2px solid transparent;
     border-radius: 8px;
