@@ -56,17 +56,33 @@ body {
     font-size: 1.1rem;
 }
 
-#fin-tour {
+#boutons-entete {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+#fin-tour,
+#plein-ecran {
     padding: 0.6rem 1.2rem;
     font-size: 1rem;
     border: none;
     border-radius: 8px;
-    background: #4c6ef5;
     color: white;
+}
+
+#fin-tour {
+    background: #4c6ef5;
 }
 
 #fin-tour:disabled {
     background: #3a3f5c;
+}
+
+#plein-ecran {
+    background: #2e3866;
+    font-size: 0.85rem;
+    padding: 0.5rem 0.9rem;
 }
 
 #compteurs-deck {
@@ -95,12 +111,14 @@ body {
     border-radius: 10px;
 }
 
+/* Grille joueur : le module de base (assets/modules/principal.png) est affiche
+   en grand, les 4 modules equipes sont positionnes par-dessus dans les
+   emplacements mesures sur cette image (EMPLACEMENTS_MODULES dans app.js,
+   memes reperes que src/ui/fenetre.py), comme dans la version pc (poc.md 8). */
 .grille-joueur {
-    grid-template-rows: auto auto auto;
-}
-
-.case-base {
-    grid-column: span 2;
+    display: block;
+    width: 260px;
+    padding: 0.5rem;
 }
 
 .case {
@@ -111,6 +129,7 @@ body {
     text-align: center;
     cursor: pointer;
     border: 2px solid transparent;
+    touch-action: manipulation;
 }
 
 .case-vide {
@@ -136,26 +155,66 @@ body {
     opacity: 0.4;
 }
 
-.case .nom {
-    font-size: 0.75rem;
-    font-weight: bold;
-    margin-top: 0.2rem;
+.case.vaisseau-base,
+.case.emplacement-module {
+    background: transparent;
+    padding: 0;
+    border: none;
+    text-align: left;
 }
 
-.case .stat {
+.case.vaisseau-base {
+    width: 100%;
+    aspect-ratio: 1205 / 651;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.case.vaisseau-base > img {
+    width: 100%;
+    height: 100%;
+    aspect-ratio: unset;
+    object-fit: fill;
+    display: block;
+}
+
+.case.emplacement-module {
+    position: absolute;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.case.emplacement-module img {
+    width: 100%;
+    height: 100%;
+    aspect-ratio: unset;
+    object-fit: fill;
+    display: block;
+}
+
+/* Infobulle affichee pendant un appui long de 3s (equivalent tactile du survol
+   souris de poc.md 8 : nom, PV/PV max, Bouclier ou Attaque). */
+.infobulle {
+    position: absolute;
+    inset: 0;
+    background: rgba(10, 14, 30, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.15rem;
+    padding: 0.3rem;
     font-size: 0.7rem;
+    text-align: center;
+    z-index: 6;
+    pointer-events: none;
 }
 
-.stat-pv {
-    color: #ff6b6b;
-}
-
-.stat-bouclier {
-    color: #4dabf7;
-}
-
-.stat-degats {
-    color: #ffa94d;
+.infobulle-nom {
+    font-weight: bold;
+    font-size: 0.75rem;
 }
 
 .etiquette-detruite {
@@ -309,6 +368,11 @@ body {
         font-size: 0.85rem;
     }
 
+    #plein-ecran {
+        padding: 0.4rem 0.7rem;
+        font-size: 0.7rem;
+    }
+
     #compteurs-deck {
         padding: 0.15rem 1rem;
         font-size: 0.65rem;
@@ -326,17 +390,21 @@ body {
         padding: 0.3rem;
     }
 
+    .grille-joueur {
+        width: 190px;
+        padding: 0.3rem;
+    }
+
     .case {
         padding: 0.2rem;
     }
 
-    .case .nom {
+    .infobulle {
         font-size: 0.55rem;
-        margin-top: 0.1rem;
     }
 
-    .case .stat {
-        font-size: 0.5rem;
+    .infobulle-nom {
+        font-size: 0.6rem;
     }
 
     #main {

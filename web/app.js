@@ -2,18 +2,32 @@
 // Fait tourner src/gameplay/ tel quel dans le navigateur via Pyodide ; ce fichier
 // ne fait que fetcher les sources Python, les monter dans la FS virtuelle, et
 // dessiner l'etat renvoye par web/bridge.py en HTML/CSS. Layout simplifie par
-// rapport a specs.md/poc.md (pas d'infobulles au survol, pas de survol tactile) :
-// objectif ici est de valider la jouabilite au doigt, pas la fidelite visuelle
-// pixel pres. Popups +/-N (poc.md paragraphe 8) et layout paysage (specs.md 8.1)
-// repris.
+// rapport a specs.md/poc.md (pas de pastilles PV/Bouclier flottantes) : objectif
+// ici est de valider la jouabilite au doigt, pas la fidelite visuelle pixel pres.
+// Popups +/-N, appui long pour l'infobulle (equivalent tactile du survol souris,
+// poc.md paragraphe 8), modules positionnes sur l'image du vaisseau (memes
+// reperes que src/ui/fenetre.py _EMPLACEMENTS_MODULES_IMAGE) et layout paysage
+// (specs.md 8.1) repris.
 
 const DUREE_POPUP_MS = 2000;
+const DUREE_APPUI_LONG_MS = 3000;
 
 // Casse-cache manuel : GitHub Pages ne permet pas de fixer les en-tetes
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "2";
+const VERSION_CACHE = "3";
+
+// Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
+// (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
+// src/ui/fenetre.py, convertis en pourcentages CSS (origine haut-gauche) pour
+// un positionnement absolu independant de la taille d'affichage.
+const EMPLACEMENTS_MODULES = {
+    AR_G: { left: 29.05, top: 4.3, width: 18.51, height: 33.18 },
+    AV_G: { left: 50.29, top: 4.3, width: 18.51, height: 33.18 },
+    AR_D: { left: 28.96, top: 62.52, width: 18.51, height: 33.03 },
+    AV_D: { left: 50.37, top: 62.52, width: 18.51, height: 33.03 },
+};
 
 const RACINE_PYODIDE = "/repo/";
 
@@ -80,6 +94,7 @@ async function demarrer() {
         statut.remove();
         document.getElementById("app").classList.remove("cachee");
         tenterVerrouillagePaysage();
+        configurerPleinEcran();
     } catch (erreur) {
         statut.textContent = `Erreur de chargement : ${erreur.message}`;
         console.error(erreur);
@@ -93,6 +108,39 @@ function tenterVerrouillagePaysage() {
     // paysage (media query) prend le relais visuellement dans tous les cas.
     if (screen.orientation && screen.orientation.lock) {
         screen.orientation.lock("landscape").catch(() => {});
+    }
+}
+
+function estAutonome() {
+    // "Ajoutee a l'ecran d'accueil" sur iOS (navigator.standalone) ou PWA
+    // installee ailleurs (display-mode: standalone) : dans les deux cas, les
+    // barres Safari sont deja masquees, pas besoin de bouton plein ecran.
+    return window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
+}
+
+function configurerPleinEcran() {
+    const bouton = document.getElementById("plein-ecran");
+    if (estAutonome()) {
+        bouton.remove();
+        return;
+    }
+    if (document.documentElement.requestFullscreen) {
+        // Marche sur desktop/Android Chrome ; iOS Safari n'implemente pas
+        // l'API Fullscreen pour un element autre qu'une video, ce bouton n'y
+        // fera donc rien de visible (branche ci-dessous prise a la place).
+        bouton.textContent = "Plein ecran";
+        bouton.addEventListener("click", () => {
+            document.documentElement.requestFullscreen().catch(() => {});
+        });
+    } else {
+        bouton.textContent = "Masquer Safari";
+        bouton.addEventListener("click", () => {
+            alert(
+                "iOS ne permet pas de passer en plein ecran depuis un onglet Safari. " +
+                    "Pour jouer sans les barres Safari : bouton Partager -> " +
+                    "'Sur l'ecran d'accueil', puis relance depuis cette icone."
+            );
+        });
     }
 }
 
@@ -146,34 +194,109 @@ function cliquerCase(idCase, typeCase) {
     jouerCarte(carte.index, idCase);
 }
 
-function rendreCase(objet, typeCase) {
+function trouverObjetCase(idCase, typeCase) {
+    if (typeCase === "allie") {
+        if (idCase === "base") return etatCourant.vaisseau.base;
+        return etatCourant.vaisseau.modules.find((m) => m && m.id === idCase) ?? null;
+    }
+    return etatCourant.ennemis.find((e) => e && e.id === idCase) ?? null;
+}
+
+function afficherInfobulle(element, idCase, typeCase) {
+    const objet = trouverObjetCase(idCase, typeCase);
+    if (!objet) return;
+    const ligneSecondaire =
+        typeCase === "allie" ? `Bouclier ${objet.bouclier}` : `Attaque ${objet.degats_attaque}`;
+    const infobulle = document.createElement("div");
+    infobulle.className = "infobulle";
+    infobulle.innerHTML = `
+        <div class="infobulle-nom">${objet.nom}</div>
+        <div>PV ${objet.pv}/${objet.pv_max}</div>
+        <div>${ligneSecondaire}</div>`;
+    element.appendChild(infobulle);
+}
+
+function masquerInfobulle(element) {
+    const existante = element.querySelector(":scope > .infobulle");
+    if (existante) existante.remove();
+}
+
+// Appui long (3s, equivalent tactile du survol souris de poc.md) pour afficher
+// le nom/PV/Bouclier-ou-Attaque d'une case ; un relachement avant ce delai
+// declenche l'action normale (ciblage d'une carte selectionnee).
+function attacherPressionCase(element, idCase, typeCase) {
+    let minuteur = null;
+    let pressionLongue = false;
+
+    const demarrer = (evenement) => {
+        evenement.stopPropagation();
+        pressionLongue = false;
+        minuteur = setTimeout(() => {
+            pressionLongue = true;
+            afficherInfobulle(element, idCase, typeCase);
+        }, DUREE_APPUI_LONG_MS);
+    };
+    const relacher = (evenement) => {
+        evenement.stopPropagation();
+        clearTimeout(minuteur);
+        masquerInfobulle(element);
+        if (!pressionLongue) {
+            cliquerCase(idCase, typeCase);
+        }
+    };
+    const annuler = (evenement) => {
+        evenement.stopPropagation();
+        clearTimeout(minuteur);
+        masquerInfobulle(element);
+    };
+
+    element.addEventListener("pointerdown", demarrer);
+    element.addEventListener("pointerup", relacher);
+    element.addEventListener("pointerleave", annuler);
+    element.addEventListener("pointercancel", annuler);
+}
+
+function rendreCaseEnnemi(objet) {
     if (objet === null) {
         return `<div class="case case-vide"></div>`;
     }
-    const classes = ["case", typeCase];
+    const classes = ["case", "ennemi"];
     if (objet.detruit) classes.push("detruit");
-    const barreSecondaire =
-        typeCase === "allie"
-            ? `<div class="stat stat-bouclier">Bouclier ${objet.bouclier}</div>`
-            : `<div class="stat stat-degats">Attaque ${objet.degats_attaque}</div>`;
     return `
-        <div class="${classes.join(" ")}" data-id="${objet.id}" data-type="${typeCase}">
+        <div class="${classes.join(" ")}" data-id="${objet.id}" data-type="ennemi">
             <img src="${objet.image}" alt="${objet.nom}">
-            <div class="nom">${objet.nom}</div>
-            <div class="stat stat-pv">PV ${objet.pv}/${objet.pv_max}</div>
-            ${barreSecondaire}
             ${objet.detruit ? '<div class="etiquette-detruite">Detruit</div>' : ""}
         </div>`;
 }
 
 function rendreGrilleJoueur() {
+    const base = etatCourant.vaisseau.base;
     const parIndex = Object.fromEntries(etatCourant.vaisseau.modules.map((m) => [m && m.id, m]));
-    const cellule = (id) => rendreCase(parIndex[id] ?? null, "allie");
+
+    const emplacements = Object.entries(EMPLACEMENTS_MODULES)
+        .map(([id, rect]) => {
+            const module = parIndex[id];
+            if (!module) return "";
+            const classes = ["case", "allie", "emplacement-module"];
+            if (module.detruit) classes.push("detruit");
+            const style = `left:${rect.left}%; top:${rect.top}%; width:${rect.width}%; height:${rect.height}%;`;
+            return `
+                <div class="${classes.join(" ")}" style="${style}" data-id="${module.id}" data-type="allie">
+                    <img src="${module.image}" alt="${module.nom}">
+                    ${module.detruit ? '<div class="etiquette-detruite">Detruit</div>' : ""}
+                </div>`;
+        })
+        .join("");
+
+    const classesBase = ["case", "allie", "vaisseau-base"];
+    if (base.detruit) classesBase.push("detruit");
     return `
         <div class="grille grille-joueur">
-            ${cellule("AR_G")}${cellule("AV_G")}
-            <div class="case-base">${rendreCase(etatCourant.vaisseau.base, "allie")}</div>
-            ${cellule("AR_D")}${cellule("AV_D")}
+            <div class="${classesBase.join(" ")}" data-id="base" data-type="allie">
+                <img class="image-vaisseau" src="${base.image}" alt="${base.nom}">
+                ${emplacements}
+                ${base.detruit ? '<div class="etiquette-detruite">Detruit</div>' : ""}
+            </div>
         </div>`;
 }
 
@@ -182,7 +305,7 @@ function rendreGrilleEnnemis() {
     const parIndex = Object.fromEntries(etatCourant.ennemis.map((e) => [e && e.id, e]));
     return `
         <div class="grille grille-ennemis">
-            ${ids.map((id) => rendreCase(parIndex[id] ?? null, "ennemi")).join("")}
+            ${ids.map((id) => rendreCaseEnnemi(parIndex[id] ?? null)).join("")}
         </div>`;
 }
 
@@ -224,7 +347,7 @@ function rendre() {
     boutonFinTour.disabled = etatCourant.etat !== "EN_COURS";
 
     document.querySelectorAll(".case[data-id]").forEach((element) => {
-        element.addEventListener("click", () => cliquerCase(element.dataset.id, element.dataset.type));
+        attacherPressionCase(element, element.dataset.id, element.dataset.type);
     });
     document.querySelectorAll(".carte").forEach((element) => {
         const carte = etatCourant.main.find((c) => c.index === Number(element.dataset.index));
