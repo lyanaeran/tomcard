@@ -9,6 +9,12 @@
 
 const DUREE_POPUP_MS = 2000;
 
+// Casse-cache manuel : GitHub Pages ne permet pas de fixer les en-tetes
+// Cache-Control, et Safari iOS garde volontiers une vieille version de ces
+// fichiers en cache malgre un rechargement simple. A incrementer a chaque
+// modification de app.js/bridge.py qui change le contrat entre les deux.
+const VERSION_CACHE = "2";
+
 const RACINE_PYODIDE = "/repo/";
 
 const FICHIERS_A_MONTER = [
@@ -35,18 +41,22 @@ let pyodide = null;
 let etatCourant = null;
 let indexCarteSelectionnee = null;
 
+async function chargerSansCache(cheminRelatif) {
+    const reponse = await fetch(`${cheminRelatif}?v=${VERSION_CACHE}`, { cache: "no-cache" });
+    if (!reponse.ok) {
+        throw new Error(`Impossible de charger ${cheminRelatif} (HTTP ${reponse.status})`);
+    }
+    return reponse.text();
+}
+
 async function monterDepot(instancePyodide) {
     for (const cheminRelatif of FICHIERS_A_MONTER) {
-        const reponse = await fetch(cheminRelatif);
-        if (!reponse.ok) {
-            throw new Error(`Impossible de charger ${cheminRelatif} (HTTP ${reponse.status})`);
-        }
-        const contenu = await reponse.text();
+        const contenu = await chargerSansCache(cheminRelatif);
         const cheminFs = RACINE_PYODIDE + cheminRelatif;
         instancePyodide.FS.mkdirTree(cheminFs.substring(0, cheminFs.lastIndexOf("/")));
         instancePyodide.FS.writeFile(cheminFs, contenu);
     }
-    const sourceBridge = await (await fetch("web/bridge.py")).text();
+    const sourceBridge = await chargerSansCache("web/bridge.py");
     instancePyodide.runPython(sourceBridge);
 }
 
