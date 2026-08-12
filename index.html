@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>Space Fight - prototype web</title>
+    <link rel="stylesheet" href="web/style.css">
+</head>
+<body>
+    <div id="statut-chargement">Chargement...</div>
+    <div id="app" class="cachee">
+        <div id="entete">
+            <span id="electricite"></span>
+            <button id="fin-tour">Fin de tour</button>
+        </div>
+        <div id="compteurs-deck"></div>
+        <div id="grilles"></div>
+        <div id="main"></div>
+        <div id="banniere"></div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+    <script src="web/app.js"></script>
+</body>
+</html>
