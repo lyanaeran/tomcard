@@ -16,7 +16,7 @@ const DUREE_APPUI_LONG_MS = 3000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "3";
+const VERSION_CACHE = "4";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -339,7 +339,8 @@ function rendre() {
         `Electricite : ${etatCourant.electricite}/${etatCourant.electricite_max}`;
     document.getElementById("compteurs-deck").textContent =
         `Pioche : ${etatCourant.pioche} - Defausse : ${etatCourant.defausse}`;
-    document.getElementById("grilles").innerHTML = rendreGrilleJoueur() + rendreGrilleEnnemis();
+    document.getElementById("grille-joueur-conteneur").innerHTML = rendreGrilleJoueur();
+    document.getElementById("grille-ennemis-conteneur").innerHTML = rendreGrilleEnnemis();
     document.getElementById("main").innerHTML = rendreMain();
     document.getElementById("banniere").innerHTML = rendreBanniereFin();
 

@@ -2,6 +2,14 @@
     box-sizing: border-box;
 }
 
+:root {
+    /* Taille partagee des cases ennemies et des emplacements de module sur le
+       vaisseau, pour qu'ils soient bien de la meme taille. La largeur du
+       vaisseau en decoule (18.51% de sa largeur = un emplacement de module,
+       cf. EMPLACEMENTS_MODULES dans app.js). */
+    --taille-case: 48px;
+}
+
 body {
     margin: 0;
     font-family: -apple-system, system-ui, sans-serif;
@@ -22,6 +30,7 @@ body {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
+    padding-bottom: env(safe-area-inset-bottom);
 }
 
 #entete {
@@ -102,9 +111,17 @@ body {
     align-items: flex-start;
 }
 
+/* Les deux conteneurs de grilles sont "transparents" pour la mise en page :
+   #main (la main de cartes) se retrouve ainsi entre le vaisseau et la flotte
+   ennemie dans le flex row de #grilles, sans dupliquer le rendu JS. */
+#grille-joueur-conteneur,
+#grille-ennemis-conteneur {
+    display: contents;
+}
+
 .grille {
     display: grid;
-    grid-template-columns: repeat(2, minmax(70px, 100px));
+    grid-template-columns: repeat(2, var(--taille-case));
     gap: 0.4rem;
     background: #10162c;
     padding: 0.5rem;
@@ -114,11 +131,17 @@ body {
 /* Grille joueur : le module de base (assets/modules/principal.png) est affiche
    en grand, les 4 modules equipes sont positionnes par-dessus dans les
    emplacements mesures sur cette image (EMPLACEMENTS_MODULES dans app.js,
-   memes reperes que src/ui/fenetre.py), comme dans la version pc (poc.md 8). */
-.grille-joueur {
+   memes reperes que src/ui/fenetre.py), comme dans la version pc (poc.md 8).
+   Largeur derivee de --taille-case pour qu'un emplacement de module (18.51%
+   de cette largeur) fasse la meme taille qu'une case ennemie. */
+.grille.grille-joueur {
     display: block;
-    width: 260px;
-    padding: 0.5rem;
+    /* Pas de padding (specificite .grille.grille-joueur pour l'emporter sur le
+       padding de .grille, y compris en paysage compact) : les pourcentages
+       d'EMPLACEMENTS_MODULES (app.js) sont mesures relativement a l'image du
+       vaisseau elle-meme, sans marge. */
+    padding: 0;
+    width: calc(var(--taille-case) / 0.1851);
 }
 
 .case {
@@ -149,6 +172,13 @@ body {
 
 .case.ennemi {
     border-color: #5c2a3a;
+    padding: 0;
+    height: var(--taille-case);
+}
+
+.case.ennemi img {
+    width: 100%;
+    height: 100%;
 }
 
 .case.detruit {
@@ -273,16 +303,17 @@ body {
     }
 }
 
+/* La main de cartes est un item du flex row de #grilles, entre le vaisseau et
+   la flotte ennemie, plutot qu'une barre figee en bas de l'ecran. */
 #main {
     display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    justify-content: center;
     gap: 0.5rem;
-    overflow-x: auto;
-    padding: 0.75rem;
-    padding-left: max(0.75rem, env(safe-area-inset-left));
-    padding-right: max(0.75rem, env(safe-area-inset-right));
-    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
-    background: #141b33;
-    margin-top: auto;
+    width: 200px;
+    padding: 0.5rem 0;
 }
 
 .carte {
@@ -352,8 +383,12 @@ body {
 }
 
 /* Ecran court en paysage (iPhone) : tout doit tenir sans trop scroller, comme le
-   wireframe pc de specs.md 8.1 (vaisseau/flotte cote a cote, main en bas). */
+   wireframe pc de specs.md 8.1 (vaisseau/flotte cote a cote, main au milieu). */
 @media (orientation: landscape) and (max-height: 550px) {
+    :root {
+        --taille-case: 35px;
+    }
+
     #entete {
         padding-top: 0.35rem;
         padding-bottom: 0.35rem;
@@ -385,13 +420,7 @@ body {
     }
 
     .grille {
-        grid-template-columns: repeat(2, minmax(46px, 60px));
         gap: 0.25rem;
-        padding: 0.3rem;
-    }
-
-    .grille-joueur {
-        width: 190px;
         padding: 0.3rem;
     }
 
@@ -408,7 +437,8 @@ body {
     }
 
     #main {
-        padding: 0.4rem;
+        width: 130px;
+        padding: 0.3rem 0;
         gap: 0.3rem;
     }
 
