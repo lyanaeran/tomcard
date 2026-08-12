@@ -2,8 +2,12 @@
 // Fait tourner src/gameplay/ tel quel dans le navigateur via Pyodide ; ce fichier
 // ne fait que fetcher les sources Python, les monter dans la FS virtuelle, et
 // dessiner l'etat renvoye par web/bridge.py en HTML/CSS. Layout simplifie par
-// rapport a specs.md/poc.md (pas de popups, pas d'infobulles) : objectif ici est
-// de valider la jouabilite au doigt, pas la fidelite visuelle.
+// rapport a specs.md/poc.md (pas d'infobulles au survol, pas de survol tactile) :
+// objectif ici est de valider la jouabilite au doigt, pas la fidelite visuelle
+// pixel pres. Popups +/-N (poc.md paragraphe 8) et layout paysage (specs.md 8.1)
+// repris.
+
+const DUREE_POPUP_MS = 2000;
 
 const RACINE_PYODIDE = "/repo/";
 
@@ -65,28 +69,52 @@ async function demarrer() {
         nouvelleGraine();
         statut.remove();
         document.getElementById("app").classList.remove("cachee");
+        tenterVerrouillagePaysage();
     } catch (erreur) {
         statut.textContent = `Erreur de chargement : ${erreur.message}`;
         console.error(erreur);
     }
 }
 
-function nouvelleGraine() {
-    etatCourant = appelerBridge("nouveau_combat", null);
+function tenterVerrouillagePaysage() {
+    // Best-effort : Safari sur iPhone n'autorise le verrouillage d'orientation que
+    // pour une page installee sur l'ecran d'accueil (PWA). Ignore silencieusement
+    // si l'API est absente ou refuse (onglet Safari normal) - le CSS en mode
+    // paysage (media query) prend le relais visuellement dans tous les cas.
+    if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock("landscape").catch(() => {});
+    }
+}
+
+function appliquerResultat(resultat) {
+    etatCourant = resultat.etat;
     indexCarteSelectionnee = null;
     rendre();
+    afficherPopups(resultat.popups);
+}
+
+function nouvelleGraine() {
+    appliquerResultat(appelerBridge("nouveau_combat", null));
 }
 
 function jouerCarte(index, idCible) {
-    etatCourant = appelerBridge("jouer_carte", index, idCible);
-    indexCarteSelectionnee = null;
-    rendre();
+    appliquerResultat(appelerBridge("jouer_carte", index, idCible));
 }
 
 function finirTour() {
-    etatCourant = appelerBridge("finir_tour");
-    indexCarteSelectionnee = null;
-    rendre();
+    appliquerResultat(appelerBridge("finir_tour"));
+}
+
+function afficherPopups(popups) {
+    popups.forEach((popup) => {
+        const element = document.querySelector(`.case.${popup.camp}[data-id="${popup.id}"]`);
+        if (!element) return;
+        const bulle = document.createElement("div");
+        bulle.className = `popup popup-${popup.couleur}`;
+        bulle.textContent = popup.texte;
+        element.appendChild(bulle);
+        setTimeout(() => bulle.remove(), DUREE_POPUP_MS);
+    });
 }
 
 function selectionnerCarte(carte) {

@@ -29,10 +29,26 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 0.75rem 1rem;
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
     background: #141b33;
     position: sticky;
     top: 0;
     z-index: 2;
+}
+
+#conseil-rotation {
+    display: none;
+}
+
+@media (orientation: portrait) {
+    #conseil-rotation {
+        display: block;
+        text-align: center;
+        padding: 0.4rem;
+        background: #26305c;
+        font-size: 0.85rem;
+    }
 }
 
 #electricite {
@@ -64,7 +80,10 @@ body {
     flex-wrap: wrap;
     gap: 1rem;
     padding: 0.75rem;
+    padding-left: max(0.75rem, env(safe-area-inset-left));
+    padding-right: max(0.75rem, env(safe-area-inset-right));
     justify-content: center;
+    align-items: flex-start;
 }
 
 .grille {
@@ -150,11 +169,59 @@ body {
     border-radius: 8px;
 }
 
+/* Popups +/-N sur une cible touchee, affiches 2 secondes (poc.md paragraphe 8) */
+.popup {
+    position: absolute;
+    left: 50%;
+    top: 25%;
+    transform: translateX(-50%);
+    font-weight: bold;
+    font-size: 1.1rem;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+    pointer-events: none;
+    animation: popup-flottement 2s ease-out forwards;
+    z-index: 5;
+}
+
+.popup-degats {
+    color: #ff6b6b;
+}
+
+.popup-bouclier {
+    color: #4dabf7;
+}
+
+.popup-soin {
+    color: #51cf66;
+}
+
+@keyframes popup-flottement {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, 10px);
+    }
+    15% {
+        opacity: 1;
+        transform: translate(-50%, -6px);
+    }
+    80% {
+        opacity: 1;
+        transform: translate(-50%, -26px);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -36px);
+    }
+}
+
 #main {
     display: flex;
     gap: 0.5rem;
     overflow-x: auto;
     padding: 0.75rem;
+    padding-left: max(0.75rem, env(safe-area-inset-left));
+    padding-right: max(0.75rem, env(safe-area-inset-right));
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
     background: #141b33;
     margin-top: auto;
 }
@@ -223,4 +290,70 @@ body {
     border-radius: 8px;
     background: #4c6ef5;
     color: white;
+}
+
+/* Ecran court en paysage (iPhone) : tout doit tenir sans trop scroller, comme le
+   wireframe pc de specs.md 8.1 (vaisseau/flotte cote a cote, main en bas). */
+@media (orientation: landscape) and (max-height: 550px) {
+    #entete {
+        padding-top: 0.35rem;
+        padding-bottom: 0.35rem;
+    }
+
+    #electricite {
+        font-size: 0.95rem;
+    }
+
+    #fin-tour {
+        padding: 0.4rem 0.9rem;
+        font-size: 0.85rem;
+    }
+
+    #compteurs-deck {
+        padding: 0.15rem 1rem;
+        font-size: 0.65rem;
+        opacity: 0.6;
+    }
+
+    #grilles {
+        padding: 0.4rem;
+        gap: 0.6rem;
+    }
+
+    .grille {
+        grid-template-columns: repeat(2, minmax(46px, 60px));
+        gap: 0.25rem;
+        padding: 0.3rem;
+    }
+
+    .case {
+        padding: 0.2rem;
+    }
+
+    .case .nom {
+        font-size: 0.55rem;
+        margin-top: 0.1rem;
+    }
+
+    .case .stat {
+        font-size: 0.5rem;
+    }
+
+    #main {
+        padding: 0.4rem;
+        gap: 0.3rem;
+    }
+
+    .carte {
+        width: 56px;
+        padding: 0.25rem;
+    }
+
+    .carte .nom {
+        font-size: 0.55rem;
+    }
+
+    .popup {
+        font-size: 0.85rem;
+    }
 }

@@ -3,8 +3,10 @@ Pont entre le JS de la page web et le moteur de combat Python reel (src/gameplay
 execute tel quel dans le navigateur via Pyodide. Aucune modification du gameplay :
 ce fichier ne fait que traduire son etat en JSON et router les actions du joueur.
 
-POC experimental (branche web-ui-poc) : layout simplifie, pas de popups/infobulles,
-juste de quoi valider que le vrai moteur de combat est jouable au doigt sur iPhone.
+POC experimental (branche web-ui-poc) : layout simplifie, pas d'infobulles au survol
+(pas de survol tactile), juste de quoi valider que le vrai moteur de combat est
+jouable au doigt sur iPhone. Les popups +/-N (poc.md paragraphe 8) sont repris a
+partir des montants reellement appliques que combat.py renvoie deja.
 """
 
 import json
@@ -15,6 +17,7 @@ sys.path.insert(0, "/repo")
 
 from src.gameplay.carte import CIBLES_SANS_CLIC, CibleCarte
 from src.gameplay.config_poc import creer_combat_poc
+from src.gameplay.module import Module
 from src.gameplay.position import Colonne, Position, Rangee
 
 RACINE_FS = "/repo/"
@@ -83,8 +86,8 @@ def _carte_json(carte, index: int):
     }
 
 
-def etat() -> str:
-    """Serialise l'etat courant du combat en JSON pour le rendu JS."""
+def _etat_dict() -> dict:
+    """Construit l'etat courant du combat (dict), pour le rendu JS."""
     vaisseau = combat.joueur.vaisseau
     flotte = combat.flotte
     modules_equipes = vaisseau.modules_equipes()
@@ -96,18 +99,54 @@ def etat() -> str:
     ennemis_json = [_ennemi_json(flotte.positions().get(pos), id_case) for id_case, pos in IDS_ENNEMIS.items()]
     main_json = [_carte_json(carte, i) for i, carte in enumerate(combat.joueur.deck.main)]
 
-    return json.dumps(
-        {
-            "etat": combat.etat.name,
-            "electricite": combat.joueur.electricite,
-            "electricite_max": combat.joueur.electricite_par_tour,
-            "vaisseau": vaisseau_json,
-            "ennemis": ennemis_json,
-            "main": main_json,
-            "pioche": len(combat.joueur.deck.pioche),
-            "defausse": len(combat.joueur.deck.defausse),
-        }
-    )
+    return {
+        "etat": combat.etat.name,
+        "electricite": combat.joueur.electricite,
+        "electricite_max": combat.joueur.electricite_par_tour,
+        "vaisseau": vaisseau_json,
+        "ennemis": ennemis_json,
+        "main": main_json,
+        "pioche": len(combat.joueur.deck.pioche),
+        "defausse": len(combat.joueur.deck.defausse),
+    }
+
+
+def _id_module(module) -> str | None:
+    """Retrouve l'id de case ('base' ou une des 4 cases equipees) occupe par ce module."""
+    vaisseau = combat.joueur.vaisseau
+    if module is vaisseau.base:
+        return "base"
+    modules_equipes = vaisseau.modules_equipes()
+    for id_case, position in IDS_MODULES.items():
+        if modules_equipes.get(position) is module:
+            return id_case
+    return None
+
+
+def _id_ennemi(ennemi) -> str | None:
+    """Retrouve l'id de case occupe par cet ennemi dans la flotte."""
+    positions = combat.flotte.positions()
+    for id_case, position in IDS_ENNEMIS.items():
+        if positions.get(position) is ennemi:
+            return id_case
+    return None
+
+
+def _popup(cible, type_carte: str, valeur: int) -> dict | None:
+    """Construit le popup +/-N pour une cible touchee (poc.md paragraphe 8)."""
+    if isinstance(cible, Module):
+        id_case, camp = _id_module(cible), "allie"
+    else:
+        id_case, camp = _id_ennemi(cible), "ennemi"
+    if id_case is None:
+        return None
+    if type_carte == "ATTAQUE":
+        texte, couleur = f"-{valeur}", "degats"
+    elif type_carte == "DEFENSE":
+        texte, couleur = f"+{valeur}", "bouclier"
+    else:
+        texte, couleur = f"+{valeur}", "soin"
+    return {"id": id_case, "camp": camp, "texte": texte, "couleur": couleur}
 
 
 def nouveau_combat(graine) -> str:
@@ -115,7 +154,7 @@ def nouveau_combat(graine) -> str:
     global combat
     aleatoire = random.Random(int(graine)) if graine is not None else random.Random()
     combat = creer_combat_poc(generateur_aleatoire=aleatoire)
-    return etat()
+    return json.dumps({"etat": _etat_dict(), "popups": []})
 
 
 def _resoudre_cible(carte, id_cible):
@@ -134,10 +173,17 @@ def jouer_carte(index_carte: int, id_cible) -> str:
     """Joue la carte en main a cet index sur la cible designee par son id (ou None)."""
     carte = combat.joueur.deck.main[index_carte]
     cible = _resoudre_cible(carte, id_cible)
-    combat.jouer_carte(carte, cible)
-    return etat()
+    resultats = combat.jouer_carte(carte, cible)
+    popups = [popup for cible_touchee, valeur in resultats if (popup := _popup(cible_touchee, carte.type.name, valeur))]
+    return json.dumps({"etat": _etat_dict(), "popups": popups})
 
 
 def finir_tour() -> str:
-    combat.finir_tour_joueur()
-    return etat()
+    """Termine le tour du joueur ; renvoie aussi un popup -N par attaque ennemie resolue."""
+    attaques = combat.finir_tour_joueur()
+    popups = []
+    for _position, _ennemi, module_cible, degats_effectifs in attaques:
+        id_case = _id_module(module_cible)
+        if id_case is not None:
+            popups.append({"id": id_case, "camp": "allie", "texte": f"-{degats_effectifs}", "couleur": "degats"})
+    return json.dumps({"etat": _etat_dict(), "popups": popups})

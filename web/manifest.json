@@ -1,0 +1,9 @@
+{
+    "name": "Space Fight - prototype web",
+    "short_name": "Space Fight",
+    "start_url": "../index.html",
+    "display": "standalone",
+    "orientation": "landscape",
+    "background_color": "#0b1020",
+    "theme_color": "#0b1020"
+}

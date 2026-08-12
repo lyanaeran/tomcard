@@ -2,9 +2,13 @@
 <html lang="fr">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
     <title>Space Fight - prototype web</title>
     <link rel="stylesheet" href="web/style.css">
+    <link rel="manifest" href="web/manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0b1020">
 </head>
 <body>
     <div id="statut-chargement">Chargement...</div>
@@ -13,6 +17,7 @@
             <span id="electricite"></span>
             <button id="fin-tour">Fin de tour</button>
         </div>
+        <div id="conseil-rotation">Tourne ton telephone en mode paysage pour l'affichage complet</div>
         <div id="compteurs-deck"></div>
         <div id="grilles"></div>
         <div id="main"></div>
