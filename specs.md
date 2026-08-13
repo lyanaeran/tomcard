@@ -273,7 +273,10 @@ Axe indépendant du type et de la cible — une carte a un type, une cible **et*
 ### 10.1 Stack
 
 - **Langage** : Python 3.11+
-- **Affichage** : pyglet
+- **Affichage PC** : pyglet
+- **Affichage web/iPhone** : HTML/CSS/JS + [Pyodide](https://pyodide.org/) (exécute `src/gameplay/`
+  tel quel dans le navigateur, sans le modifier) — voir README.md. Les deux façons de jouer doivent
+  rester fonctionnelles en permanence (voir CLAUDE.md)
 - **Tests** : pytest
 - **Dépendances / packaging** : `pyproject.toml`
 
@@ -286,15 +289,17 @@ assets/
   ennemis/     → images des ennemis
 config/        → fichiers de donnees JSON (modules, ennemis, cartes)
 src/
-  ui/          → tout ce qui concerne l'affichage avec pyglet
-  gameplay/    → logique de jeu
+  ui/          → tout ce qui concerne l'affichage avec pyglet (PC)
+  gameplay/    → logique de jeu, partagee par les deux facons de jouer
+index.html, web/ → affichage web/iPhone (Pyodide), voir README.md
 tests/
 pyproject.toml
 ```
 
 - `assets/` : uniquement des images pour le moment ; le son sera ajouté plus tard si besoin
 - `config/` : contenu du jeu décrit en JSON (modules, ennemis, cartes), référençant les images d'`assets/` — détail du format en poc.md
-- Séparation stricte entre `src/ui` (affichage) et `src/gameplay` (logique de jeu)
+- Séparation stricte entre `src/ui` (affichage PC) et `src/gameplay` (logique de jeu, partagée avec la version web)
+- `src/gameplay` reste la seule source de vérité des règles de jeu : la version web ne fait que l'exécuter et l'afficher, elle ne réimplémente aucune règle
 
 ### 10.3 Conventions de code
 

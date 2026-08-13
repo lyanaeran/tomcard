@@ -14,10 +14,36 @@ visuel d'un effet), reporte-la dans `poc.md` (détail POC) et, si c'est une déc
 réutilisable au-delà du POC, dans `specs.md` aussi. Inversement, avant d'implémenter une
 fonctionnalité un peu ambiguë, relis la section concernée de ces deux fichiers.
 
+## Deux façons de jouer (PC et web/iOS) — les deux doivent rester fonctionnelles
+
+Le jeu se lance de deux façons distinctes, qui partagent la même logique (`src/gameplay/`) mais ont
+chacune leur propre couche d'affichage. Voir `README.md` pour les instructions de lancement
+détaillées.
+
+- **PC (pyglet)** : `python main.py`, affichage natif via `src/ui/fenetre.py`. Version de référence,
+  la plus fidèle à `poc.md`/`specs.md`.
+- **Web (navigateur / iPhone)** : `index.html` + `web/` (`app.js`, `style.css`, `bridge.py`).
+  Exécute `src/gameplay/` tel quel dans le navigateur via [Pyodide](https://pyodide.org/) (Python
+  compilé en WebAssembly) ; `web/bridge.py` sérialise l'état du combat en JSON pour l'affichage
+  HTML/CSS/JS. UI volontairement simplifiée par rapport à pyglet (pas d'infobulle au survol, taille
+  des cases pilotée par la hauteur d'écran...) — ces écarts sont documentés dans les commentaires de
+  `web/app.js`/`web/style.css`, pas dans `poc.md`/`specs.md` qui décrivent la version de référence.
+
+**Ces deux façons de jouer doivent rester fonctionnelles en permanence.** En particulier :
+
+- Une modification de `src/gameplay/` (nouvelle fonction, signature changée, nouveau champ sur une
+  entité...) doit rester compatible avec ce que `web/bridge.py` attend de ce module ; vérifier
+  `web/bridge.py` avant de renommer/déplacer quoi que ce soit dans `src/gameplay/`.
+- Une modification de `config/*.json` (nouveau champ, format changé) doit rester chargeable par
+  `src/gameplay/donnees.py` **et** rester interprétable par `web/bridge.py`/`web/app.js` (qui
+  fetchent ces fichiers directement).
+- `src/gameplay` reste la seule source de vérité pour les règles de jeu : ne jamais dupliquer une
+  règle en JS dans `web/app.js`, qui ne doit que lire/afficher l'état renvoyé par `web/bridge.py`.
+
 ## Stack et commandes
 
-- Python 3.11+, [pyglet](https://pyglet.readthedocs.io/) pour l'affichage, pytest pour les tests
-- Lancer le jeu : `python main.py`
+- Python 3.11+, [pyglet](https://pyglet.readthedocs.io/) pour l'affichage PC, pytest pour les tests
+- Lancer le jeu (PC) : `python main.py` — voir `README.md` pour la version web
 - Lancer les tests : `pytest` (config dans `pyproject.toml`, `testpaths = ["tests"]`)
 - Dépendances : `pip install -e .` puis `pip install -e ".[dev]"` pour pytest
 
@@ -32,12 +58,14 @@ Séparation stricte, cf. `specs.md` §10 :
   POC (`config_poc.py`)
 - `src/ui/` — tout ce qui dépend de pyglet (fenêtre, dessin, animations). `fenetre.py` est le seul
   gros fichier ; `animation.py` contient les minuteries pures (testables sans pyglet)
+- `index.html` + `web/` — version web/iPhone (voir "Deux façons de jouer" ci-dessus). `web/bridge.py`
+  importe `src/gameplay/` sans le modifier ; `web/app.js`/`web/style.css` gèrent l'affichage
 - `config/*.json` — contenu du jeu déclaratif (modules, ennemis, cartes), référence les images
-  d'`assets/`. Chargé par `src/gameplay/donnees.py`
+  d'`assets/`. Chargé par `src/gameplay/donnees.py` (PC) et fetché directement par `web/app.js` (web)
 - `assets/{cartes,modules,ennemis}/` — images uniquement pour l'instant
 - `tests/` — un fichier de test par module de `src/gameplay/` (et `test_animation.py` pour la
-  minuterie de `src/ui/`). Les fonctions de `src/ui/fenetre.py` autres que les minuteries ne sont
-  pas couvertes par pytest (voir "Tester l'UI" ci-dessous)
+  minuterie de `src/ui/`). Les fonctions de `src/ui/fenetre.py` autres que les minuteries, et tout
+  `web/`, ne sont pas couverts par pytest (voir "Tester l'UI" ci-dessous)
 
 ## Conventions de code
 

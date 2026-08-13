@@ -108,7 +108,14 @@ src/
   ui/          → affichage pyglet de l'écran de combat (§8 de specs.md)
   gameplay/    → logique du combat (grille, cartes, PV, Bouclier, ciblage, tour de jeu)
 tests/         → tests unitaires pytest
+index.html, web/ → version web/iPhone du meme POC (voir README.md/CLAUDE.md)
 ```
+
+Ce même POC est aussi jouable dans un navigateur (voir `README.md`) : `web/bridge.py` exécute
+`src/gameplay/` tel quel via Pyodide, avec un affichage HTML/CSS/JS volontairement simplifié par
+rapport à ce qui suit (pas d'infobulle au survol, pas de pastilles PV/Bouclier positionnées à
+l'identique...). Les règles ci-dessous décrivent la version de référence (pyglet) ; les écarts de la
+version web sont documentés dans les commentaires de `web/app.js`/`web/style.css`, pas ici.
 
 Le rendu utilise les vraies images d'`assets/` (module/ennemi/carte affichés comme des sprites). Cartes, ennemis et le module de base sont mis à l'échelle **sans déformation** dans leur case (ratio préservé). Exception volontaire : les **modules équipés** sur le vaisseau sont **étirés** (largeur et hauteur mises à l'échelle indépendamment) pour que leur propre cadre décoratif recouvre exactement le cadre correspondant sur l'image du vaisseau, plutôt que de laisser un espace vide entre les deux cadres — une légère déformation de l'image est jugée préférable à ce défaut visuel. Un bandeau semi-transparent reste utilisé pour le nom/coût des cartes et pour la mention "Détruit" ; en revanche les PV et le Bouclier ne sont plus affichés dans un bandeau mais par des **pastilles** rondes (rouge pour les PV, bleue pour le Bouclier) flottant juste au-dessus de chaque case, jamais par-dessus l'image (pour ne pas la cacher).
 
