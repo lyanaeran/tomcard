@@ -3,10 +3,10 @@ Pont entre le JS de la page web et le moteur de combat Python reel (src/gameplay
 execute tel quel dans le navigateur via Pyodide. Aucune modification du gameplay :
 ce fichier ne fait que traduire son etat en JSON et router les actions du joueur.
 
-POC experimental (branche web-ui-poc) : layout simplifie, pas d'infobulles au survol
-(pas de survol tactile), juste de quoi valider que le vrai moteur de combat est
-jouable au doigt sur iPhone. Les popups +/-N (poc.md paragraphe 8) sont repris a
-partir des montants reellement appliques que combat.py renvoie deja.
+POC experimental (branche web-ui-poc) : layout simplifie, pas de survol tactile (une
+infobulle s'affiche au tap a la place). Les popups +/-N et l'intention des ennemis
+(poc.md paragraphe 8) sont repris a partir de ce que combat.py calcule deja, sans
+dupliquer la logique de ciblage/degats.
 """
 
 import json
@@ -16,6 +16,7 @@ import sys
 sys.path.insert(0, "/repo")
 
 from src.gameplay.carte import CIBLES_SANS_CLIC, CibleCarte
+from src.gameplay.combat import _degats_effectifs
 from src.gameplay.config_poc import creer_combat_poc
 from src.gameplay.module import Module
 from src.gameplay.position import Colonne, Position, Rangee
@@ -59,6 +60,22 @@ def _module_json(module, id_case: str):
     }
 
 
+def _intention_json(ennemi):
+    """Intention de cet ennemi (poc.md paragraphe 8) : module vise et degats reellement
+    infliges, calcules avec la meme fonction que la resolution reelle de l'attaque
+    (previsualiser_cible + _degats_effectifs de combat.py, aucune logique dupliquee)."""
+    if ennemi.est_detruit():
+        return None
+    cible = combat.previsualiser_cible(ennemi)
+    if cible is None:
+        return None
+    return {
+        "module_id": _id_module(cible),
+        "module_nom": cible.nom,
+        "degats": _degats_effectifs(cible, ennemi.degats_attaque),
+    }
+
+
 def _ennemi_json(ennemi, id_case: str):
     if ennemi is None:
         return None
@@ -70,6 +87,7 @@ def _ennemi_json(ennemi, id_case: str):
         "detruit": ennemi.est_detruit(),
         "image": _chemin_web(ennemi.image),
         "degats_attaque": ennemi.degats_attaque,
+        "intention": _intention_json(ennemi),
     }
 
 

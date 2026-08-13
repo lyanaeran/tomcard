@@ -328,6 +328,19 @@ body {
     font-size: 0.8rem;
 }
 
+/* Infobulle du module de base : la case elle-meme est toute l'image du
+   vaisseau (.infobulle hérite inset:0 la ferait remplir toute l'image), donc
+   on la borne a la meme taille qu'un emplacement de module (18.51% x 33% de
+   l'image, cf. EMPLACEMENTS_MODULES dans app.js) et on la centre dessus. */
+.infobulle.infobulle-base {
+    inset: auto;
+    left: 50%;
+    top: 50%;
+    width: 18.51%;
+    height: 33%;
+    transform: translate(-50%, -50%);
+}
+
 .etiquette-detruite {
     position: absolute;
     inset: 0;
@@ -424,6 +437,53 @@ body {
 .carte.selectionnee {
     border-color: #4c6ef5;
     background: #26305c;
+}
+
+/* Infobulle de la carte selectionnee, agrandie et centree a l'ecran (le texte
+   imprime sur la carte elle-meme est trop petit pour etre lu confortablement).
+   pointer-events:none pour laisser passer le tap sur une case en-dessous, qui
+   sert a jouer la carte (cf. cliquerCase dans app.js). */
+#info-carte {
+    position: fixed;
+    top: 45%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 8;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(10, 14, 30, 0.94);
+    border: 2px solid #4c6ef5;
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    max-width: min(85vw, 320px);
+    text-align: center;
+}
+
+#info-carte:empty {
+    display: none;
+}
+
+#info-carte img {
+    width: 150px;
+    aspect-ratio: 3 / 4;
+    object-fit: contain;
+}
+
+.info-carte-nom {
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.info-carte-effet {
+    font-size: 0.95rem;
+}
+
+.info-carte-cout {
+    font-weight: bold;
+    color: #ffd43b;
 }
 
 #banniere:empty {
