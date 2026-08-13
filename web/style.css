@@ -1,0 +1,499 @@
+* {
+    box-sizing: border-box;
+}
+
+:root {
+    /* Taille des cases (modules du vaisseau et cases ennemies), pilotee par la
+       hauteur d'ecran disponible pour que vaisseau/flotte remplissent le
+       maximum de hauteur (3 rangees de cases dans la grille ennemie, la plus
+       haute des deux grilles pour un --taille-case donne - le vaisseau,
+       proportionnellement plus large que haut, reste plus court : centre
+       verticalement via align-items sur #grilles plutot que force a la meme
+       hauteur, cf. #grilles). ~150px = entete + compteurs-deck + paddings.
+       Ne reserve PAS de place pour #main (la main de cartes, sous #grilles) :
+       le vaisseau/la flotte gardent leur taille maximale meme si la main ne
+       tient plus dans l'ecran restant, auquel cas la page defile (#app n'a
+       qu'un min-height, pas de overflow:hidden qui l'empecherait).
+       Bornee aussi par la largeur (vaisseau + ecart pour .pastilles-base +
+       flotte cote a cote font environ 7.9x --taille-case, cf. #grilles/
+       .grille-joueur/.grille-ennemis) pour eviter que la flotte ennemie soit
+       repoussee hors champ sur un ecran large et court. */
+    --taille-case: clamp(30px, min(calc((100vh - 150px) / 3), calc((100vw - 100px) / 7.9)), 180px);
+    --taille-pastille: calc(var(--taille-case) * 0.34);
+}
+
+body {
+    margin: 0;
+    font-family: -apple-system, system-ui, sans-serif;
+    background: #0b1020;
+    color: #e8ecff;
+}
+
+.cachee {
+    display: none !important;
+}
+
+#statut-chargement {
+    padding: 2rem;
+    text-align: center;
+}
+
+#app {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+#entete {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 1rem;
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+    background: #141b33;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+#conseil-rotation {
+    display: none;
+}
+
+@media (orientation: portrait) {
+    #conseil-rotation {
+        display: block;
+        text-align: center;
+        padding: 0.4rem;
+        background: #26305c;
+        font-size: 0.85rem;
+    }
+}
+
+#electricite {
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+#boutons-entete {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+#fin-tour,
+#plein-ecran {
+    padding: 0.6rem 1.2rem;
+    font-size: 1rem;
+    border: none;
+    border-radius: 8px;
+    color: white;
+}
+
+#fin-tour {
+    background: #4c6ef5;
+}
+
+#fin-tour:disabled {
+    background: #3a3f5c;
+}
+
+#plein-ecran {
+    background: #2e3866;
+    font-size: 0.85rem;
+    padding: 0.5rem 0.9rem;
+}
+
+#compteurs-deck {
+    padding: 0.3rem 1rem;
+    font-size: 0.8rem;
+    opacity: 0.7;
+}
+
+#grilles {
+    display: flex;
+    flex-wrap: wrap;
+    /* Assez large pour que les pastilles du module de base (.pastilles-base,
+       qui debordent a droite du vaisseau) ne chevauchent pas la grille
+       ennemie. */
+    gap: calc(var(--taille-pastille) + 1.5rem);
+    padding: 0.75rem;
+    padding-left: max(0.75rem, env(safe-area-inset-left));
+    padding-right: max(0.75rem, env(safe-area-inset-right));
+    justify-content: center;
+    /* centre : le vaisseau (large mais proportionnellement moins haut que la
+       grille ennemie a --taille-case egal) reste aligne au milieu plutot que
+       colle en haut avec un vide dessous. */
+    align-items: center;
+}
+
+/* Conteneurs "transparents" pour la mise en page : le vaisseau et la grille
+   ennemie deviennent directement des items du flex row de #grilles, sans
+   dupliquer le rendu JS. */
+#grille-joueur-conteneur,
+#grille-ennemis-conteneur {
+    display: contents;
+}
+
+.grille {
+    display: grid;
+    grid-template-columns: repeat(2, var(--taille-case));
+    /* Assez d'ecart pour que les pastilles PV/Bouclier (qui debordent au-dessus
+       de chaque case, cf. .pastille) ne chevauchent pas la rangee du dessus. */
+    gap: calc(var(--taille-pastille) * 0.7);
+    background: #10162c;
+    padding: calc(0.5rem + var(--taille-pastille) * 0.5) 0.5rem 0.5rem;
+    border-radius: 10px;
+}
+
+/* Grille joueur : le module de base (assets/modules/principal.png) est affiche
+   en grand, les 4 modules equipes sont positionnes par-dessus dans les
+   emplacements mesures sur cette image (EMPLACEMENTS_MODULES dans app.js,
+   memes reperes que src/ui/fenetre.py), comme dans la version pc (poc.md 8).
+   Largeur derivee de --taille-case pour qu'un emplacement de module (18.51%
+   de cette largeur) fasse la meme taille qu'une case ennemie. */
+.grille.grille-joueur {
+    display: block;
+    /* Pas de padding (specificite .grille.grille-joueur pour l'emporter sur le
+       padding de .grille) : les pourcentages d'EMPLACEMENTS_MODULES (app.js)
+       sont mesures relativement a l'image du vaisseau elle-meme, sans marge. */
+    padding: 0;
+    width: calc(var(--taille-case) / 0.1851);
+}
+
+.case {
+    position: relative;
+    background: #1c2547;
+    border-radius: 8px;
+    padding: 0.35rem;
+    text-align: center;
+    cursor: pointer;
+    border: 2px solid transparent;
+    touch-action: manipulation;
+}
+
+.case-vide {
+    cursor: default;
+    background: transparent;
+}
+
+.case img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: contain;
+}
+
+.case.allie {
+    border-color: #2e3866;
+}
+
+.case.ennemi {
+    border-color: #5c2a3a;
+    padding: 0;
+    height: var(--taille-case);
+}
+
+.case.ennemi img {
+    width: 100%;
+    height: 100%;
+}
+
+.case.detruit {
+    opacity: 0.4;
+}
+
+.case.vaisseau-base,
+.case.emplacement-module {
+    background: transparent;
+    padding: 0;
+    border: none;
+    text-align: left;
+}
+
+.case.vaisseau-base {
+    width: 100%;
+    aspect-ratio: 1205 / 651;
+    border-radius: 8px;
+    /* Pas d'overflow:hidden (contrairement a la version precedente) : les
+       pastilles de la base (.pastilles-base) doivent pouvoir deborder
+       au-dessus de l'image, comme sur pc. Sans risque pour l'image elle-meme,
+       deja dimensionnee exactement a la taille du conteneur. */
+}
+
+.case.vaisseau-base > img {
+    width: 100%;
+    height: 100%;
+    aspect-ratio: unset;
+    object-fit: fill;
+    display: block;
+}
+
+.case.emplacement-module {
+    position: absolute;
+    border-radius: 4px;
+    /* Pas d'overflow:hidden : meme raison que .case.vaisseau-base, pour que sa
+       pastille PV/Bouclier deborde au-dessus sans etre rognee. */
+}
+
+.case.emplacement-module img {
+    width: 100%;
+    height: 100%;
+    aspect-ratio: unset;
+    object-fit: fill;
+    display: block;
+}
+
+/* Pastilles PV (rouge) / Bouclier (bleu) flottant juste au-dessus de chaque
+   case (memes couleurs que COULEUR_PASTILLE_PV/COULEUR_PASTILLE_BOUCLIER dans
+   src/ui/fenetre.py). Debordent en haut de la case (top negatif) plutot que
+   de recouvrir l'image, comme sur pc. */
+.pastille {
+    position: absolute;
+    top: calc(var(--taille-pastille) * -0.55);
+    min-width: var(--taille-pastille);
+    height: var(--taille-pastille);
+    padding: 0 3px;
+    border-radius: 999px;
+    border: 2px solid rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: white;
+    font-size: calc(var(--taille-pastille) * 0.44);
+    line-height: 1;
+    z-index: 4;
+}
+
+.pastille-pv {
+    right: 3px;
+    background: rgb(190, 40, 40);
+}
+
+.pastille-bouclier {
+    right: calc(var(--taille-pastille) + 9px);
+    background: rgb(50, 110, 200);
+}
+
+.pastille-cout {
+    top: 3px;
+    left: 3px;
+    background: #ffd43b;
+    color: #1c2547;
+}
+
+/* Pastilles PV/Bouclier du module de base : dans l'espace libre a droite du
+   nez du vaisseau, a hauteur du pare-brise (repere CENTRE_PARE_BRISE_VAISSEAU_X
+   / HAUT_PARE_BRISE_VAISSEAU_Y de src/ui/fenetre.py, ~42% depuis le haut de
+   l'image), plutot qu'un coin comme les autres cases. */
+.pastilles-base {
+    position: absolute;
+    top: 42%;
+    left: 100%;
+    transform: translate(6px, -50%);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 4;
+}
+
+.pastilles-base .pastille {
+    position: static;
+}
+
+/* Infobulle affichee au tap sur une case sans carte selectionnee (equivalent
+   tactile du survol souris de poc.md 8 : nom, PV/PV max, Bouclier ou Attaque). */
+.infobulle {
+    position: absolute;
+    inset: 0;
+    background: rgba(10, 14, 30, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.15rem;
+    padding: 0.3rem;
+    font-size: 0.75rem;
+    text-align: center;
+    z-index: 6;
+    pointer-events: none;
+}
+
+.infobulle-nom {
+    font-weight: bold;
+    font-size: 0.8rem;
+}
+
+.etiquette-detruite {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
+    font-size: 0.75rem;
+    border-radius: 8px;
+}
+
+/* Popups +/-N sur une cible touchee, affiches 2 secondes (poc.md paragraphe 8) */
+.popup {
+    position: absolute;
+    left: 50%;
+    top: 25%;
+    transform: translateX(-50%);
+    font-weight: bold;
+    font-size: 1.1rem;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+    pointer-events: none;
+    animation: popup-flottement 2s ease-out forwards;
+    z-index: 5;
+}
+
+.popup-degats {
+    color: #ff6b6b;
+}
+
+.popup-bouclier {
+    color: #4dabf7;
+}
+
+.popup-soin {
+    color: #51cf66;
+}
+
+@keyframes popup-flottement {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, 10px);
+    }
+    15% {
+        opacity: 1;
+        transform: translate(-50%, -6px);
+    }
+    80% {
+        opacity: 1;
+        transform: translate(-50%, -26px);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -36px);
+    }
+}
+
+/* Main de cartes : une seule ligne, centree en bas de l'ecran (specs.md 8.1 :
+   "alignee en bas de l'ecran, pas en eventail"). margin-top:auto la colle au
+   bas du flex column #app quand il reste de la place sous #grilles. Largeur
+   des cartes independante de --taille-case (barre du bas, pas liee aux
+   dimensions du vaisseau/de la flotte). */
+#main {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: center;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding: 0.5rem 1rem;
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+    margin-top: auto;
+}
+
+.carte {
+    flex: 0 0 auto;
+    position: relative;
+    width: clamp(56px, 8vw, 96px);
+    background: #1c2547;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    padding: 0;
+    overflow: hidden;
+}
+
+.carte img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 3/4;
+    object-fit: contain;
+}
+
+.carte.selectionnee {
+    border-color: #4c6ef5;
+    background: #26305c;
+}
+
+#banniere:empty {
+    display: none;
+}
+
+.banniere-fin {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    font-weight: bold;
+    z-index: 10;
+}
+
+.banniere-fin.victoire span {
+    color: #51cf66;
+}
+
+.banniere-fin.defaite span {
+    color: #ff6b6b;
+}
+
+.banniere-fin button {
+    font-size: 1rem;
+    padding: 0.6rem 1.4rem;
+    border: none;
+    border-radius: 8px;
+    background: #4c6ef5;
+    color: white;
+}
+
+/* Ecran court en paysage (iPhone) : entete/compteurs plus compacts pour
+   laisser le maximum de hauteur a --taille-case (deja fluide, cf. :root). */
+@media (orientation: landscape) and (max-height: 550px) {
+    #entete {
+        padding-top: 0.35rem;
+        padding-bottom: 0.35rem;
+    }
+
+    #electricite {
+        font-size: 0.95rem;
+    }
+
+    #fin-tour {
+        padding: 0.4rem 0.9rem;
+        font-size: 0.85rem;
+    }
+
+    #plein-ecran {
+        padding: 0.4rem 0.7rem;
+        font-size: 0.7rem;
+    }
+
+    #compteurs-deck {
+        padding: 0.15rem 1rem;
+        font-size: 0.65rem;
+        opacity: 0.6;
+    }
+
+    #grilles {
+        padding: 0.4rem;
+    }
+
+    .popup {
+        font-size: 0.85rem;
+    }
+}
