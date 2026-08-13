@@ -14,10 +14,11 @@
        le vaisseau/la flotte gardent leur taille maximale meme si la main ne
        tient plus dans l'ecran restant, auquel cas la page defile (#app n'a
        qu'un min-height, pas de overflow:hidden qui l'empecherait).
-       Bornee aussi par la largeur (vaisseau + flotte cote a cote font environ
-       7.4x --taille-case, cf. .grille-joueur/.grille-ennemis) pour eviter que
-       la flotte ennemie soit repoussee hors champ sur un ecran large et court. */
-    --taille-case: clamp(30px, min(calc((100vh - 150px) / 3), calc((100vw - 100px) / 7.4)), 180px);
+       Bornee aussi par la largeur (vaisseau + ecart pour .pastilles-base +
+       flotte cote a cote font environ 7.9x --taille-case, cf. #grilles/
+       .grille-joueur/.grille-ennemis) pour eviter que la flotte ennemie soit
+       repoussee hors champ sur un ecran large et court. */
+    --taille-case: clamp(30px, min(calc((100vh - 150px) / 3), calc((100vw - 100px) / 7.9)), 180px);
     --taille-pastille: calc(var(--taille-case) * 0.34);
 }
 
@@ -114,7 +115,10 @@ body {
 #grilles {
     display: flex;
     flex-wrap: wrap;
-    gap: 1rem;
+    /* Assez large pour que les pastilles du module de base (.pastilles-base,
+       qui debordent a droite du vaisseau) ne chevauchent pas la grille
+       ennemie. */
+    gap: calc(var(--taille-pastille) + 1.5rem);
     padding: 0.75rem;
     padding-left: max(0.75rem, env(safe-area-inset-left));
     padding-right: max(0.75rem, env(safe-area-inset-right));
@@ -280,16 +284,17 @@ body {
     color: #1c2547;
 }
 
-/* Pastilles PV/Bouclier du module de base : centrees en haut de l'image du
-   vaisseau (equivalent du repere pare-brise CENTRE_PARE_BRISE_VAISSEAU_X /
-   HAUT_PARE_BRISE_VAISSEAU_Y de src/ui/fenetre.py), plutot que dans un coin
-   comme les autres cases. */
+/* Pastilles PV/Bouclier du module de base : dans l'espace libre a droite du
+   nez du vaisseau, a hauteur du pare-brise (repere CENTRE_PARE_BRISE_VAISSEAU_X
+   / HAUT_PARE_BRISE_VAISSEAU_Y de src/ui/fenetre.py, ~42% depuis le haut de
+   l'image), plutot qu'un coin comme les autres cases. */
 .pastilles-base {
     position: absolute;
-    top: calc(var(--taille-pastille) * -0.55);
-    left: 50%;
-    transform: translateX(-50%);
+    top: 42%;
+    left: 100%;
+    transform: translate(6px, -50%);
     display: flex;
+    flex-direction: column;
     gap: 6px;
     z-index: 4;
 }
@@ -486,12 +491,6 @@ body {
 
     #grilles {
         padding: 0.4rem;
-        gap: 0.6rem;
-    }
-
-    .grille {
-        gap: 0.25rem;
-        padding: 0.3rem;
     }
 
     .popup {
