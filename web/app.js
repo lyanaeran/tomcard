@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "10";
+const VERSION_CACHE = "11";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -207,24 +207,29 @@ function trouverObjetCase(idCase, typeCase) {
     return etatCourant.ennemis.find((e) => e && e.id === idCase) ?? null;
 }
 
-function afficherInfobulle(element, idCase, typeCase) {
+let minuteurInfobulle = null;
+
+// Toutes les infobulles (module, ennemi, base) partagent le meme panneau
+// flottant centre a l'ecran que #info-carte (memes coordonnees en CSS),
+// plutot que d'etre ancrees sur la case tapee.
+function afficherInfobulle(idCase, typeCase) {
     const objet = trouverObjetCase(idCase, typeCase);
     if (!objet) return;
-    document.querySelectorAll(".infobulle").forEach((el) => el.remove());
+    clearTimeout(minuteurInfobulle);
     const lignes = [`<div class="infobulle-nom">${objet.nom}</div>`, `<div>❤️ ${objet.pv}/${objet.pv_max}</div>`];
     if (typeCase === "allie") {
         lignes.push(`<div>🔵 ${objet.bouclier}</div>`);
     } else {
-        lignes.push(`<div>Attaque ${objet.degats_attaque}</div>`);
+        lignes.push(`<div>⚔️ ${objet.degats_attaque}</div>`);
         if (objet.intention) {
-            lignes.push(`<div>Vise : ${objet.intention.module_nom} (-${objet.intention.degats})</div>`);
+            lignes.push(`<div>🎯 ${objet.intention.module_nom} (-${objet.intention.degats})</div>`);
         }
     }
-    const infobulle = document.createElement("div");
-    infobulle.className = idCase === "base" ? "infobulle infobulle-base" : "infobulle";
-    infobulle.innerHTML = lignes.join("");
-    element.appendChild(infobulle);
-    setTimeout(() => infobulle.remove(), DUREE_INFOBULLE_MS);
+    const panneau = document.getElementById("info-case");
+    panneau.innerHTML = lignes.join("");
+    minuteurInfobulle = setTimeout(() => {
+        panneau.innerHTML = "";
+    }, DUREE_INFOBULLE_MS);
 }
 
 // Tap sur une case : si aucune carte n'est selectionnee, affiche son infobulle
@@ -234,7 +239,7 @@ function attacherPressionCase(element, idCase, typeCase) {
     element.addEventListener("click", (evenement) => {
         evenement.stopPropagation();
         if (indexCarteSelectionnee === null) {
-            afficherInfobulle(element, idCase, typeCase);
+            afficherInfobulle(idCase, typeCase);
         } else {
             cliquerCase(idCase, typeCase);
         }
