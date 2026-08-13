@@ -9,12 +9,15 @@
        haute des deux grilles pour un --taille-case donne - le vaisseau,
        proportionnellement plus large que haut, reste plus court : centre
        verticalement via align-items sur #grilles plutot que force a la meme
-       hauteur, cf. #grilles). ~280px = entete + compteurs-deck + #main (la main
-       de cartes, sous #grilles, cf. plus bas) + paddings/marges de securite.
+       hauteur, cf. #grilles). ~150px = entete + compteurs-deck + paddings.
+       Ne reserve PAS de place pour #main (la main de cartes, sous #grilles) :
+       le vaisseau/la flotte gardent leur taille maximale meme si la main ne
+       tient plus dans l'ecran restant, auquel cas la page defile (#app n'a
+       qu'un min-height, pas de overflow:hidden qui l'empecherait).
        Bornee aussi par la largeur (vaisseau + flotte cote a cote font environ
        7.4x --taille-case, cf. .grille-joueur/.grille-ennemis) pour eviter que
        la flotte ennemie soit repoussee hors champ sur un ecran large et court. */
-    --taille-case: clamp(30px, min(calc((100vh - 280px) / 3), calc((100vw - 100px) / 7.4)), 180px);
+    --taille-case: clamp(30px, min(calc((100vh - 150px) / 3), calc((100vw - 100px) / 7.4)), 180px);
     --taille-pastille: calc(var(--taille-case) * 0.34);
 }
 
