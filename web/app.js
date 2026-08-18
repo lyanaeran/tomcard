@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "9";
+const VERSION_CACHE = "11";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -175,23 +175,28 @@ function afficherPopups(popups) {
     });
 }
 
+// Un tap sur une carte l'arme et affiche son infobulle (#info-carte) ; il faut
+// ensuite taper une case pour la jouer, meme pour les cartes "sans clic"
+// (ALLIES_MULTIPLES/ENNEMIS_MULTIPLES) qui se resolvaient avant instantanement -
+// desormais n'importe quel module (bouclier/soin) ou ennemi (attaque multi-
+// cible) confirme le jeu de la carte, cf. cliquerCase.
 function selectionnerCarte(carte) {
     if (etatCourant.etat !== "EN_COURS") return;
-    if (carte.sans_clic) {
-        jouerCarte(carte.index, null);
-        return;
-    }
     indexCarteSelectionnee = indexCarteSelectionnee === carte.index ? null : carte.index;
     rendre();
 }
+
+const CIBLES_ALLIEES = new Set(["ALLIE_UNIQUE", "ALLIES_MULTIPLES"]);
 
 function cliquerCase(idCase, typeCase) {
     if (indexCarteSelectionnee === null) return;
     const carte = etatCourant.main.find((c) => c.index === indexCarteSelectionnee);
     if (!carte) return;
-    const attendAllie = carte.cible === "ALLIE_UNIQUE";
-    if ((attendAllie && typeCase !== "allie") || (!attendAllie && typeCase !== "ennemi")) return;
-    jouerCarte(carte.index, idCase);
+    const campAttendu = CIBLES_ALLIEES.has(carte.cible) ? "allie" : "ennemi";
+    if (typeCase !== campAttendu) return;
+    // Pour les cartes sans clic, la cible precise ne compte pas (bridge.py
+    // l'ignore) : n'importe quelle case du bon camp confirme le jeu de la carte.
+    jouerCarte(carte.index, carte.sans_clic ? null : idCase);
 }
 
 function trouverObjetCase(idCase, typeCase) {
@@ -202,20 +207,29 @@ function trouverObjetCase(idCase, typeCase) {
     return etatCourant.ennemis.find((e) => e && e.id === idCase) ?? null;
 }
 
-function afficherInfobulle(element, idCase, typeCase) {
+let minuteurInfobulle = null;
+
+// Toutes les infobulles (module, ennemi, base) partagent le meme panneau
+// flottant centre a l'ecran que #info-carte (memes coordonnees en CSS),
+// plutot que d'etre ancrees sur la case tapee.
+function afficherInfobulle(idCase, typeCase) {
     const objet = trouverObjetCase(idCase, typeCase);
     if (!objet) return;
-    document.querySelectorAll(".infobulle").forEach((el) => el.remove());
-    const ligneSecondaire =
-        typeCase === "allie" ? `Bouclier ${objet.bouclier}` : `Attaque ${objet.degats_attaque}`;
-    const infobulle = document.createElement("div");
-    infobulle.className = "infobulle";
-    infobulle.innerHTML = `
-        <div class="infobulle-nom">${objet.nom}</div>
-        <div>PV ${objet.pv}/${objet.pv_max}</div>
-        <div>${ligneSecondaire}</div>`;
-    element.appendChild(infobulle);
-    setTimeout(() => infobulle.remove(), DUREE_INFOBULLE_MS);
+    clearTimeout(minuteurInfobulle);
+    const lignes = [`<div class="infobulle-nom">${objet.nom}</div>`, `<div>❤️ ${objet.pv}/${objet.pv_max}</div>`];
+    if (typeCase === "allie") {
+        lignes.push(`<div>🔵 ${objet.bouclier}</div>`);
+    } else {
+        lignes.push(`<div>⚔️ ${objet.degats_attaque}</div>`);
+        if (objet.intention) {
+            lignes.push(`<div>🎯 ${objet.intention.module_nom} (-${objet.intention.degats})</div>`);
+        }
+    }
+    const panneau = document.getElementById("info-case");
+    panneau.innerHTML = lignes.join("");
+    minuteurInfobulle = setTimeout(() => {
+        panneau.innerHTML = "";
+    }, DUREE_INFOBULLE_MS);
 }
 
 // Tap sur une case : si aucune carte n'est selectionnee, affiche son infobulle
@@ -225,7 +239,7 @@ function attacherPressionCase(element, idCase, typeCase) {
     element.addEventListener("click", (evenement) => {
         evenement.stopPropagation();
         if (indexCarteSelectionnee === null) {
-            afficherInfobulle(element, idCase, typeCase);
+            afficherInfobulle(idCase, typeCase);
         } else {
             cliquerCase(idCase, typeCase);
         }
@@ -318,10 +332,43 @@ function rendreMain() {
             return `
             <button class="${classes.join(" ")}" data-index="${carte.index}" title="${carte.nom}">
                 <img src="${carte.image}" alt="${carte.nom}">
-                <span class="pastille pastille-cout">${carte.cout}</span>
+                <span class="pastille pastille-cout">⚡${carte.cout}</span>
             </button>`;
         })
         .join("");
+}
+
+// Description generee a partir des donnees deja connues de la carte (type,
+// cible, valeur - config/cartes.json), pas d'un texte fige duplique : reste
+// coherent si les valeurs changent, comme les popups de fenetre.py.
+const LIBELLES_CIBLE = {
+    ENNEMI_UNIQUE: "un ennemi",
+    ENNEMIS_MULTIPLES: "tous les ennemis",
+    LIGNE_ENNEMIE: "la rangee ennemie visee (avant + arriere)",
+    ALLIE_UNIQUE: "un module",
+    ALLIES_MULTIPLES: "tous les modules",
+};
+
+function texteEffetCarte(carte) {
+    const cible = LIBELLES_CIBLE[carte.cible];
+    if (carte.type === "ATTAQUE") return `Inflige ${carte.valeur} degats a ${cible}.`;
+    if (carte.type === "DEFENSE") return `Bouclier de ${carte.valeur} a ${cible}.`;
+    return `Soigne ${carte.valeur} ❤️ a ${cible}.`;
+}
+
+// Infobulle de la carte selectionnee (#info-carte), affichee au centre de
+// l'ecran : agrandit son image et explicite son effet (le texte imprime sur
+// la carte est trop petit pour etre lu confortablement sur iPhone). N'occupe
+// pas les evenements tactiles (cf. pointer-events dans le CSS) pour ne pas
+// bloquer le tap sur une case qui suit pour jouer la carte.
+function rendreInfoCarte() {
+    const carte = etatCourant.main.find((c) => c.index === indexCarteSelectionnee);
+    if (!carte) return "";
+    return `
+        <img src="${carte.image}" alt="${carte.nom}">
+        <div class="info-carte-nom">${carte.nom}</div>
+        <div class="info-carte-effet">${texteEffetCarte(carte)}</div>
+        <div class="info-carte-cout">⚡ ${carte.cout}</div>`;
 }
 
 function rendreBanniereFin() {
@@ -336,12 +383,13 @@ function rendreBanniereFin() {
 
 function rendre() {
     document.getElementById("electricite").textContent =
-        `Electricite : ${etatCourant.electricite}/${etatCourant.electricite_max}`;
+        `⚡ ${etatCourant.electricite}/${etatCourant.electricite_max}`;
     document.getElementById("compteurs-deck").textContent =
         `Pioche : ${etatCourant.pioche} - Defausse : ${etatCourant.defausse}`;
     document.getElementById("grille-joueur-conteneur").innerHTML = rendreGrilleJoueur();
     document.getElementById("grille-ennemis-conteneur").innerHTML = rendreGrilleEnnemis();
     document.getElementById("main").innerHTML = rendreMain();
+    document.getElementById("info-carte").innerHTML = rendreInfoCarte();
     document.getElementById("banniere").innerHTML = rendreBanniereFin();
 
     const boutonFinTour = document.getElementById("fin-tour");

@@ -303,29 +303,9 @@ body {
     position: static;
 }
 
-/* Infobulle affichee au tap sur une case sans carte selectionnee (equivalent
-   tactile du survol souris de poc.md 8 : nom, PV/PV max, Bouclier ou Attaque). */
-.infobulle {
-    position: absolute;
-    inset: 0;
-    background: rgba(10, 14, 30, 0.92);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 6px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.15rem;
-    padding: 0.3rem;
-    font-size: 0.75rem;
-    text-align: center;
-    z-index: 6;
-    pointer-events: none;
-}
-
 .infobulle-nom {
     font-weight: bold;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
 }
 
 .etiquette-detruite {
@@ -424,6 +404,57 @@ body {
 .carte.selectionnee {
     border-color: #4c6ef5;
     background: #26305c;
+}
+
+/* Panneau d'infobulle flottant, centre a l'ecran : partage par #info-carte
+   (carte selectionnee, image + effet en texte lisible - le texte imprime sur
+   la carte elle-meme est trop petit) et #info-case (module/ennemi/base tapes
+   sans carte selectionnee - toutes les infobulles au meme endroit plutot que
+   chacune ancree sur sa case). pointer-events:none pour laisser passer le tap
+   sur une case en-dessous (cible d'une carte armee, cf. cliquerCase). */
+#info-carte,
+#info-case {
+    position: fixed;
+    top: 45%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 8;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    background: rgba(10, 14, 30, 0.94);
+    border: 2px solid #4c6ef5;
+    border-radius: 12px;
+    padding: 0.7rem 1rem;
+    max-width: min(75vw, 240px);
+    text-align: center;
+}
+
+#info-carte:empty,
+#info-case:empty {
+    display: none;
+}
+
+#info-carte img {
+    width: 110px;
+    aspect-ratio: 3 / 4;
+    object-fit: contain;
+}
+
+.info-carte-nom {
+    font-weight: bold;
+    font-size: 1rem;
+}
+
+.info-carte-effet {
+    font-size: 0.85rem;
+}
+
+.info-carte-cout {
+    font-weight: bold;
+    color: #ffd43b;
 }
 
 #banniere:empty {
