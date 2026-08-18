@@ -332,3 +332,19 @@ pyproject.toml
 - Classes claires et bien définies, une responsabilité par classe
 - Commentaires en français, **sans accents ni cédilles** (ASCII uniquement)
 - Tests unitaires (pytest) dans `tests/`
+
+---
+
+## 11. Idées à explorer plus tard
+
+Pistes évoquées mais pas encore approfondies ni décidées — à revisiter une fois le système de
+cartes (§7) et la boucle de récompenses (§2.1, §6) stabilisés.
+
+- **Cartes auto-jouées** : des cartes qui se déclenchent seules, sans action du joueur, en début ou
+  en fin de combat (ex : buff automatique pour toute la durée du combat au démarrage, soin ou gain
+  d'Argent à la fin) — distinct des cartes jouées normalement pendant le tour du joueur (§3, §7)
+- Une carte auto-jouée en fin de combat pourrait aussi offrir une carte candidate supplémentaire, en
+  plus de la récompense normale de combat (§2.1, §6)
+- À trancher plus tard : comment ces cartes s'intègrent au deck existant (pioche normale, zone à
+  part, slot dédié au module...), leur coût (électricité ou gratuites, puisqu'elles ne sont pas
+  jouées manuellement), et si elles ont une rareté (§7.3) comme les autres cartes
