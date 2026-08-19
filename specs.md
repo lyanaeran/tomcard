@@ -379,3 +379,104 @@ cartes (§7) et la boucle de récompenses (§2.1, §6) stabilisés.
 - À trancher plus tard : comment ces cartes s'intègrent au deck existant (pioche normale, zone à
   part, slot dédié au module...), leur coût (électricité ou gratuites, puisqu'elles ne sont pas
   jouées manuellement), et si elles ont une rareté (§7.3) comme les autres cartes
+
+---
+
+## 12. Mécaniques de combat manquantes (constat issu du tableau de cartes)
+
+En important le tableau de conception de cartes de l'utilisateur dans `config/cartes.json` (voir la
+PR "config : import des cartes Module principal, Lanceur de missiles, Blindage"), seules 6 des 38
+cartes du tableau correspondent à ce que le moteur actuel (`src/gameplay/carte.py`, `combat.py`)
+sait exécuter. Les 32 autres restent stockées pour référence (champ `_non_jouable`) mais sont
+inertes en jeu. Cette section recense les mécaniques qui leur manquent, groupées par nature plutôt
+que par carte, pour servir de feuille de route à une future extension du moteur.
+
+### 12.1 Cibles fixes ou par rang
+
+Le `CibleCarte` actuel (§7.2) ne couvre que soi, un allié/ennemi au choix, tous les alliés/ennemis,
+ou la ligne perçante. Il manque :
+
+- **Module Principal** — cible toujours le module de base, sans choix du joueur (*Protéger le
+  vaisseau, Réparation, Blindage maximal*)
+- **Ennemi Avant** / **Ligne avant** ennemie — rang avant adverse uniquement (*Ligne avant*)
+- **Ennemi Arrière** / **Ligne arrière** — rang arrière adverse uniquement (*Ligne arrière*)
+- **Module Avant** — rang avant allié uniquement (*Protéger l'avant poste*)
+
+Ces cibles par rang se résolvent par un **clic sur une case du rang visé**, comme la Ligne ennemie
+perçante aujourd'hui (§3.1, §7.2), et non automatiquement comme Alliés/Ennemis multiples.
+
+### 12.2 Effets à deux valeurs (X et Y) sur une même carte
+
+- Cible unique + splash différencié : X à la cible cliquée, Y à toutes les autres (*Missiles*)
+- Deux zones différentes en une carte : X sur la ligne avant ennemie, Y sur la ligne arrière
+  (*Torpille*)
+
+### 12.3 Effets à durée (plusieurs tours)
+
+- Dégâts répétés pendant Y tours (*Embrasement, Guerre nucléaire*)
+- Debuff actif pendant Y tours (*Boucliers hors service*)
+- Bouclier accordé pendant Y tours (*Blindage maximal*)
+- Bouclier qui grandit chaque tour, persistant (*Bouclier perpétuel*)
+- Pioche bonus pendant Y tours (*Multi fonction*)
+
+### 12.4 Effets en pourcentage
+
+Valeur d'une carte toujours un montant fixe actuellement ; il manque un effet exprimé en % :
+
+- Bouclier = % des PV du module (*Bouclier adaptatif*)
+- Dégâts subis +X% (*Brèche, Ligne avant, Boucliers endommagés, Boucliers hors service*)
+
+### 12.5 Types de carte absents du moteur
+
+Déjà nommés en §7.1 mais aucun n'a de valeur `TypeCarte` ni de logique dans `combat.py` :
+
+- **Debuff** (*Tordre le canon, Brèche, Ligne avant, Tir allié, Boucliers endommagés, Boucliers hors
+  service*)
+- **Buff** (*Optimisation des boucliers, Attaques performantes, Double défense, Circuit parallèle,
+  Bouclier perpétuel*)
+- **Outils** (*Surcharge temporaire, Fonds de tiroir, Boost, Changement d'outil, Manque de jus,
+  Cannibalisme, Grand remplacement, Multi fonction*)
+
+### 12.6 Altération / redirection des dégâts
+
+- Transfert des dégâts subis vers un autre module désigné (*Transfert*)
+- Renvoi des dégâts subis à l'attaquant (*Renvoie*)
+- Annulation totale de la prochaine attaque sur une cible, différent d'un bouclier classique
+  (*Leurre*)
+- Détournement de la cible d'un ennemi vers un de ses voisins — mécanique déjà anticipée comme
+  *Piratage* en §4.2 mais jamais implémentée (*Tir allié*)
+
+### 12.7 Modification des règles d'autres cartes (méta-effets)
+
+- Changer le coût en électricité de toutes les cartes d'une catégorie pour le reste du combat
+  (*Optimisation des boucliers, Attaques performantes*)
+- Dupliquer l'effet de toutes les cartes d'une catégorie X fois (*Double défense, Circuit
+  parallèle*)
+
+### 12.8 Gain d'électricité via une carte
+
+- Gain fixe (*Surcharge temporaire*)
+- Gain proportionnel au nombre de modules actifs (*Fonds de tiroir*)
+- Gain en échange d'une défausse (*Manque de jus, Cannibalisme*)
+
+### 12.9 Manipulation de pioche / main / défausse via une carte
+
+- Piocher des cartes supplémentaires (*Boost*, avec durée en plus pour *Multi fonction*)
+- Piocher puis défausser en une carte (*Changement d'outil*)
+- Défausser toute la main puis repiocher autant (*Grand remplacement*)
+- Défausser une **quantité choisie par le joueur** entre X et Y (*Cannibalisme*) — nécessite un
+  sous-choix de quantité au moment de jouer la carte, en plus du ciblage habituel
+
+### 12.10 Munitions limitées
+
+Déjà spécifiées en §3.6/§7.4 (mécanique de jeu tranchée) — pas un trou de design mais un chantier
+d'implémentation à part entière (*Réparation, Bouclier perpétuel, Optimisation des boucliers,
+Attaques performantes*, entre autres).
+
+### 12.11 Note annexe : cible des cartes Soute
+
+Les 6 cartes du module Soute (pioche/défausse/électricité) portaient une cible "Ennemi Tous" dans le
+tableau source, incohérente pour des cartes qui ne visent aucun ennemi. Corrigé dans
+`config/cartes.json` : elles se jouent en cliquant **n'importe quel module allié**, dont l'identité
+n'a aucune influence sur l'effet (celui-ci porte sur le deck ou l'électricité, ressources communes
+au vaisseau, pas sur le module cliqué).
