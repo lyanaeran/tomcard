@@ -23,7 +23,7 @@ Grille **2 colonnes (Avant / Arrière) x 3 rangées (Gauche / Mid / Droite)**, c
 - **4 modules différents** sont tirés au sort parmi les 4 autres (Lanceur de missiles, Blindage, Générateur, Soute) et placés aléatoirement sur les 4 cases équipables — pour l'instant les 4 sont donc **toujours** présents (le tirage n'a d'effet que sur leur position), faute d'avoir un 5e module équipable jouable ; le module Sabotage existe dans specs.md/le tableau de cartes mais n'a encore aucune carte jouable (type Debuff non implémenté, voir specs.md §12), donc pas encore dans `config/modules.json`
 - PV et cartes jouables de chaque module : voir `config/modules.json`
 
-- **Électricité** : 3 par tour (ressource pleine à chaque début de tour, ne se cumule pas d'un tour à l'autre)
+- **Électricité** : 5 par tour (ressource pleine à chaque début de tour, ne se cumule pas d'un tour à l'autre)
 - **Main** : capacité maximale de **10 cartes** ; le joueur pioche **5 cartes par tour**
 - Cartes jouées partent en défausse ; quand la pioche est vide, la défausse est mélangée pour reformer la pioche (comme Slay the Spire, cf. specs.md §3.3)
 - Un module (autre que la base) à 0 PV est détruit mais **ne met pas fin au combat** ; seule la destruction de la base termine la run (specs.md §3.4)

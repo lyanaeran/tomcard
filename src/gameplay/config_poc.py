@@ -24,7 +24,7 @@ from src.gameplay.module import Module
 from src.gameplay.position import Colonne, Position, Rangee
 from src.gameplay.vaisseau import Vaisseau
 
-ELECTRICITE_PAR_TOUR = 3
+ELECTRICITE_PAR_TOUR = 5
 ID_MODULE_PRINCIPAL = "MOD_1"
 NOMBRE_MODULES_EQUIPES = 4
 # Deck de base du module principal (12 cartes) : chaque carte de rarete Base une fois, sauf
