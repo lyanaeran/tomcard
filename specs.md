@@ -66,7 +66,7 @@ Trois options indépendantes, chacune payante en Argent (montants à définir, �
 - Le joueur pioche une main et joue ses cartes **librement, dans l'ordre de son choix** (comme dans Slay the Spire)
 - Force des choix de répartition : concentrer l'électricité sur un module ce tour, ou répartir
 - **Ordre de jeu** : tour classique façon StS — le joueur joue librement toutes les cartes qu'il souhaite durant son tour, puis le tour ennemi se déroule. Pas de système d'initiative/vitesse par module
-- **Main** : capacité maximale de 10 cartes ; le joueur pioche 5 cartes par tour. Cartes jouées partent en défausse ; quand la pioche est vide, la défausse est mélangée pour reformer la pioche
+- **Main** : capacité maximale de 10 cartes ; le joueur pioche 5 cartes par tour. Cartes jouées partent en défausse ; quand la pioche est vide, la défausse est mélangée pour reformer la pioche. Exception : une carte à munitions limitées épuisée (0 munition restante) part dans la pile **cartes épuisées** au lieu de la défausse, cf. §3.6
 - **Fin de tour** : les cartes non jouées restant en main sont défaussées à la fin du tour du joueur (comme dans Slay the Spire), avant la pioche de la main suivante
 
 ### 3.4 Destruction de module
@@ -76,6 +76,16 @@ Trois options indépendantes, chacune payante en Argent (montants à définir, �
 
 ### 3.5 Bouclier
 - Le Bouclier absorbe les dégâts subis **avant** les PV. Exemple : un module protégé par 5 Bouclier subit une attaque de 7 dégâts → le Bouclier absorbe 5, les **2 dégâts restants** sont retirés des PV
+
+### 3.6 Munitions (cartes à usage limité)
+
+Certaines cartes ont un nombre de munitions limité en plus de leur coût en électricité (cf. §7.4) :
+
+- **Munitions illimitées** (cas par défaut, toutes les cartes actuelles du POC) : aucun changement, la carte se joue normalement, autant de fois que voulu tant que l'électricité suit
+- **Munitions limitées à N** : chaque utilisation de la carte décrémente son compteur de munitions restantes. Le compteur est **propre à chaque exemplaire physique de la carte dans le deck** (si le deck contient 2 exemplaires d'une carte à 1 munition, chacun peut être joué une fois, soit 2 utilisations au total sur le combat)
+- Quand le compteur d'un exemplaire tombe à **0**, cet exemplaire quitte définitivement le combat : au lieu de partir en défausse, il rejoint une nouvelle pile, les **cartes épuisées**, distincte de la pioche et de la défausse
+- Les cartes épuisées ne reviennent **jamais** dans la pioche pendant le combat en cours, même si la pioche et la défausse sont toutes les deux vides (pas de mélange de secours) — cf. §9.1 pour le cas limite où cela viderait totalement les cartes piochables
+- **Entre deux combats**, chaque carte à munitions limitées repart avec son nombre de munitions d'origine (le compteur ne persiste pas d'un combat à l'autre) — cohérent avec le fait que le deck de combat est reconstitué à chaque combat à partir des pools de cartes des modules équipés (§6)
 
 ---
 
@@ -211,6 +221,19 @@ Axe indépendant du type et de la cible — une carte a un type, une cible **et*
 - Le tag "rare" déjà présent sur *Reconstruction* (§4.2) sera à réévaluer : son effet (résurrection d'un module) correspond plutôt au palier **Légendaire**
 - Rareté et attribution précise par carte (§4.1-4.3) : à faire dans une passe dédiée (voir §9.1 "compléter le jeu de cartes")
 
+### 7.4 Munitions
+
+Axe indépendant du type, de la cible et de la rareté — une carte a, en plus de son coût en
+électricité, un nombre de munitions : soit **illimité** (comportement par défaut, cf. §3.6), soit un
+nombre fixe qui se consomme au fil du combat et se réinitialise au combat suivant. Voir §3.6 pour le
+détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
+
+- Sert à limiter des effets ponctuellement très forts (ex : Bouclier perpétuel, §4.2) sans les
+  rendre indéfiniment répétables dans un même combat
+- Rôle par rapport à la rareté : deux axes différents, une carte Commune peut avoir des munitions
+  limitées et une carte Légendaire des munitions illimitées, ou l'inverse — pas de règle systématique
+  pour l'instant (voir §9.1)
+
 ---
 
 ## 8. Interface / écran de combat
@@ -251,7 +274,7 @@ Axe indépendant du type et de la cible — une carte a un type, une cible **et*
 - **Flotte ennemie** (haut droite) : grille symétrique 2x3, 6 emplacements libres (pas de base adverse). La colonne **avant est tournée vers le joueur** (la plus proche du centre de l'écran) et c'est elle qui est exposée au corps à corps (voir 3.1) ; la colonne arrière est la plus éloignée
 - **Compteur d'électricité** restante affiché en haut de l'écran
 - **Main de cartes** : alignée en bas de l'écran (pas en éventail, pour la lisibilité)
-- **Pioche et défausse** : regroupées ensemble dans un coin de l'écran (compteurs de nombre de cartes), séparées de la main
+- **Pioche, défausse et cartes épuisées** (§3.6) : regroupées ensemble dans un coin de l'écran (compteurs de nombre de cartes), séparées de la main
 
 ### 8.2 Formes visuelles
 
@@ -259,6 +282,7 @@ Axe indépendant du type et de la cible — une carte a un type, une cible **et*
 - **Module de base** : exception, forme différente (plus grande, fond dédié qui englobe les 5 emplacements)
 - **Cartes** : format **rectangulaire**
 - **PV / Bouclier** : affichés par de petites pastilles rondes (rouge pour les PV, bleue pour le Bouclier) flottant juste au-dessus de chaque case, jamais superposées à l'image (validé en POC, voir poc.md §8)
+- **Munitions restantes** (§3.6) : affichées sur la carte comme le coût en électricité, dans une pastille ronde **verte** — uniquement pour les cartes à munitions limitées (rien affiché pour les munitions illimitées, comportement par défaut)
 
 ### 8.3 Interaction de jeu d'une carte
 
@@ -287,10 +311,17 @@ Axe indépendant du type et de la cible — une carte a un type, une cible **et*
 - Plafond exact de slots équipables (proposition actuelle : 5, base incluse) et autorisation ou non des doublons de modules
 - Représentation visuelle d'un ennemi L occupant 2 emplacements (§3.2, §8.1) : rectangle fusionné sur les 2 cases, ou deux images liées logiquement ?
 - Compléter le jeu de cartes de chaque module : les archétypes de §4.3 (Bouclier énergétique, Radar, Propulseur, IA de combat, Générateur, Sabotage, Soute/Fret) n'ont pas encore de decks détaillés comme ceux de §4.1-4.2 ; les cartes déjà écrites en §4.1-4.2 n'ont pas encore de type/cible/rareté assignés (§7)
+- Munitions (§3.6/§7.4) : cas limite si la pioche et la défausse sont toutes les deux vides en cours de combat alors qu'il reste des cartes épuisées (qui ne sont jamais remélangées) — le joueur peut alors se retrouver sans carte à piocher ; à surveiller en playtest une fois des cartes à munitions limitées réellement jouables (voir §9.2 pour l'état d'implémentation actuel)
+- Munitions (§7.4) : pas de règle systématique reliant rareté et munitions pour l'instant (une carte de n'importe quel palier peut avoir des munitions limitées ou non) — à revisiter si un pattern se dégage en concevant plus de cartes
 
 ### 9.2 Technique / développement
 
 *(voir §10 pour les choix techniques déjà tranchés)*
+
+- Munitions (§3.6/§7.4) : mécanique pas encore implémentée dans `src/gameplay/` — les cartes du
+  tableau de conception qui en ont une (ex : Réparation, Bouclier perpétuel) sont pour l'instant
+  stockées dans `config/cartes.json` sans bloc "effet" (non jouables), voir la PR "config : import
+  des cartes Module principal, Lanceur de missiles, Blindage"
 
 ---
 
