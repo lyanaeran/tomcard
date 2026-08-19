@@ -19,15 +19,27 @@ class Deck:
         self._aleatoire.shuffle(self.pioche)
         self.main: list[Carte] = []
         self.defausse: list[Carte] = []
+        self.cartes_epuisees: list[Carte] = []
 
     def piocher_debut_de_tour(self) -> None:
         """Pioche le nombre de cartes prevu pour un tour."""
-        for _ in range(self.CARTES_PIOCHEES_PAR_TOUR):
+        self.piocher_cartes(self.CARTES_PIOCHEES_PAR_TOUR)
+
+    def piocher_cartes(self, quantite: int) -> None:
+        """Pioche `quantite` cartes (hors du tirage de debut de tour, ex : carte Outils)."""
+        for _ in range(quantite):
             self._piocher_une_carte()
 
     def jouer(self, carte: Carte) -> None:
-        """Retire une carte de la main et l'envoie en defausse."""
+        """Retire une carte de la main. Part en defausse, sauf si ses munitions tombent a
+        0 (paragraphe 3.6) : dans ce cas elle rejoint les cartes epuisees et ne revient
+        jamais dans le combat en cours (pas de remelange avec la defausse)."""
         self.main.remove(carte)
+        if carte.munitions_restantes is not None:
+            carte.munitions_restantes -= 1
+            if carte.munitions_restantes <= 0:
+                self.cartes_epuisees.append(carte)
+                return
         self.defausse.append(carte)
 
     def defausser_main(self) -> None:

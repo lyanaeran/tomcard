@@ -11,7 +11,7 @@ from src.gameplay.donnees import charger_cartes, charger_ennemis, charger_module
 def test_charger_cartes_renvoie_les_cartes_jouables_avec_images_existantes():
     cartes = charger_cartes()
 
-    assert len(cartes) == 12
+    assert len(cartes) == 10
     for carte in cartes.values():
         assert isinstance(carte.type, TypeCarte)
         assert isinstance(carte.cible, CibleCarte)
@@ -26,11 +26,11 @@ def test_charger_cartes_ignore_les_cartes_sans_bloc_effet():
     assert "CRT_13" not in cartes  # non jouable (Missiles, effet a deux valeurs)
 
 
-def test_charger_modules_renvoie_6_modules_avec_images_existantes_et_cartes_connues():
+def test_charger_modules_renvoie_5_modules_avec_images_existantes_et_cartes_connues():
     modules = charger_modules()
     ids_cartes_connus = set(charger_cartes())
 
-    assert len(modules) == 6
+    assert len(modules) == 5
     for module in modules:
         assert Path(module.image).is_file()
         assert set(module.cartes).issubset(ids_cartes_connus)

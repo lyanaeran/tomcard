@@ -4,7 +4,7 @@ Moteur du combat entre le vaisseau du joueur et une flotte d'ennemis (cf. poc.md
 
 from enum import Enum, auto
 
-from src.gameplay.carte import CIBLES_SANS_CLIC, Carte, CibleCarte, TypeCarte
+from src.gameplay.carte import CIBLES_SANS_CLIC, ActionCarte, Carte, CibleCarte, TypeCarte
 from src.gameplay.ciblage import module_cible_par_ennemi
 from src.gameplay.ennemi import Ennemi
 from src.gameplay.flotte import Flotte
@@ -100,10 +100,17 @@ class Combat:
 
         Renvoie, pour chaque cible effectivement touchee, le montant reellement applique.
         """
+        if carte.type == TypeCarte.OUTILS:
+            # Une carte Outils ne touche jamais de module/ennemi : sa cible ne sert qu'a
+            # valider un clic eventuel (specs.md 12.11), l'effet s'applique une seule fois
+            # quel que soit le nombre de modules/ennemis vivants.
+            return [(None, self._appliquer_outils(carte))]
         if carte.cible == CibleCarte.ALLIES_MULTIPLES:
             cibles = self._modules_vivants()
         elif carte.cible == CibleCarte.ENNEMIS_MULTIPLES:
             cibles = self.flotte.ennemis_vivants()
+        elif carte.cible == CibleCarte.MODULE_PRINCIPAL:
+            cibles = [self.joueur.vaisseau.base]
         elif carte.cible == CibleCarte.LIGNE_ENNEMIE:
             position = self._position_de_ennemi(cible)
             occupants = (self.flotte.ennemi_en(colonne, position.rangee) for colonne in (Colonne.AVANT, Colonne.ARRIERE))
@@ -129,6 +136,16 @@ class Combat:
             valeur_effective = min(carte.valeur, cible.pv_max - cible.pv)
             cible.soigner(carte.valeur)
         return valeur_effective
+
+    def _appliquer_outils(self, carte: Carte) -> int:
+        """Applique l'effet d'une carte Outils (specs.md 12.9) : n'affecte pas la cible
+        cliquee (celle-ci n'a qu'un role de clic obligatoire, cf. specs.md 12.11), mais
+        une ressource commune au joueur (electricite ou pioche)."""
+        if carte.action == ActionCarte.GAIN_ELECTRICITE:
+            self.joueur.electricite += carte.valeur
+        elif carte.action == ActionCarte.PIOCHE_SUPPLEMENTAIRE:
+            self.joueur.deck.piocher_cartes(carte.valeur)
+        return carte.valeur
 
     def _tour_ennemi(self) -> list[tuple[Position, Ennemi, Module, int]]:
         """Chaque ennemi vivant attaque sa cible, dans l'ordre de la grille (poc.md paragraphe 3)."""

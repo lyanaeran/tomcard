@@ -17,7 +17,7 @@ from src.gameplay.vaisseau import Vaisseau
 IMG = "test.png"
 CARTE_ATTAQUE = Carte(nom="Attaque", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMI_UNIQUE, cout=1, valeur=7)
 CARTE_BOUCLIER = Carte(nom="Bouclier", image=IMG, type=TypeCarte.DEFENSE, cible=CibleCarte.ALLIE_UNIQUE, cout=1, valeur=5)
-CARTE_SOIN = Carte(nom="Soin", image=IMG, type=TypeCarte.SOIN, cible=CibleCarte.ALLIE_UNIQUE, cout=1, valeur=4)
+CARTE_REPARATION = Carte(nom="Soin", image=IMG, type=TypeCarte.REPARATION, cible=CibleCarte.ALLIE_UNIQUE, cout=1, valeur=4)
 CARTE_PERCER = Carte(nom="Percer", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.LIGNE_ENNEMIE, cout=2, valeur=5)
 CARTE_PROTEGER = Carte(nom="Proteger", image=IMG, type=TypeCarte.DEFENSE, cible=CibleCarte.ALLIES_MULTIPLES, cout=2, valeur=4)
 CARTE_MITRAILLER = Carte(nom="Mitrailler", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMIS_MULTIPLES, cout=2, valeur=3)
@@ -26,7 +26,7 @@ POSITION_ENNEMI = Position(Colonne.AVANT, Rangee.GAUCHE)
 
 
 def _nouveau_combat(pv_base: int = 15, pv_ennemi: int = 15, degats_ennemi: int = 7, ennemis: dict | None = None):
-    cartes = [CARTE_ATTAQUE] * 5 + [CARTE_BOUCLIER] * 3 + [CARTE_SOIN]
+    cartes = [CARTE_ATTAQUE] * 5 + [CARTE_BOUCLIER] * 3 + [CARTE_REPARATION]
     deck = Deck(cartes=cartes, generateur_aleatoire=random.Random(0))
     vaisseau = Vaisseau(base=Module(pv_max=pv_base))
     joueur = Joueur(vaisseau=vaisseau, deck=deck, electricite_par_tour=3)
@@ -76,12 +76,12 @@ def test_jouer_une_carte_bouclier_protege_le_module_choisi():
 
 def test_jouer_une_carte_soin_repare_le_module_choisi():
     combat, vaisseau, _flotte = _nouveau_combat()
-    combat.joueur.deck.main = [CARTE_SOIN]
+    combat.joueur.deck.main = [CARTE_REPARATION]
     vaisseau.base.subir_degats(10)
 
-    combat.jouer_carte(CARTE_SOIN, vaisseau.base)
+    combat.jouer_carte(CARTE_REPARATION, vaisseau.base)
 
-    assert vaisseau.base.pv == 15 - 10 + CARTE_SOIN.valeur
+    assert vaisseau.base.pv == 15 - 10 + CARTE_REPARATION.valeur
 
 
 def test_jouer_carte_renvoie_le_montant_effectif_applique():
@@ -98,10 +98,10 @@ def test_jouer_carte_renvoie_le_montant_effectif_applique():
 
 def test_jouer_une_carte_soin_renvoie_le_montant_effectif_plafonne_au_pv_max():
     combat, vaisseau, _flotte = _nouveau_combat()
-    combat.joueur.deck.main = [CARTE_SOIN]
+    combat.joueur.deck.main = [CARTE_REPARATION]
     vaisseau.base.subir_degats(2)  # il ne manque que 2 PV, la carte en soigne 4
 
-    resultat = combat.jouer_carte(CARTE_SOIN, vaisseau.base)
+    resultat = combat.jouer_carte(CARTE_REPARATION, vaisseau.base)
 
     assert resultat == [(vaisseau.base, 2)]
     assert vaisseau.base.pv == vaisseau.base.pv_max
@@ -218,7 +218,7 @@ def test_defaite_quand_le_module_de_base_est_detruit():
 
 
 def test_defaite_independante_de_la_destruction_d_un_module_non_base():
-    cartes = [CARTE_ATTAQUE] * 5 + [CARTE_BOUCLIER] * 3 + [CARTE_SOIN]
+    cartes = [CARTE_ATTAQUE] * 5 + [CARTE_BOUCLIER] * 3 + [CARTE_REPARATION]
     deck = Deck(cartes=cartes, generateur_aleatoire=random.Random(0))
     module_fragile = Module(pv_max=1)
     vaisseau = Vaisseau(base=Module(pv_max=15), avant_gauche=module_fragile)
