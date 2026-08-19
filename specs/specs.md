@@ -187,12 +187,16 @@ Classification par nature de l'effet — remplace l'ancien découpage par porté
 | Type | Description | Sous-catégories |
 |---|---|---|
 | **Attaque** | Inflige des dégâts | Direct / décalé (dégâts différés) / poison (dégâts sur la durée) |
-| **Défense** | Protège un ou plusieurs modules | Bouclier absolu (x tours), réduction de dégâts en %, régénération de Bouclier sur la durée |
-| **Contrôle** | Neutralise ou limite un ennemi | Stun, restriction d'action (ex : pas d'attaque ce tour) |
+| **Defense** | Protège un ou plusieurs modules | Bouclier absolu (x tours), réduction de dégâts en %, régénération de Bouclier sur la durée |
+| **Controle** | Neutralise ou limite un ennemi | Stun, restriction d'action (ex : pas d'attaque ce tour) |
 | **Debuff** | Affaiblit une cible ennemie | Plafond de dégâts infligés, réduction en %, réduction de Bouclier |
 | **Buff** | Renforce le vaisseau ou un module | Augmentation de dégâts, augmentation de Bouclier |
-| **Soin** | Répare les PV d'un module | (voir aussi module Réparation, §4.2) |
+| **Reparation** | Répare les PV d'un module | (voir aussi module Réparation, §4.2) — remplace l'ancien type "Soin" |
 | **Outils** | Manipule la pioche/défausse ou l'électricité | Piocher, défausser, recycler... ; gagner/convertir de l'électricité |
+
+Noms de type volontairement **sans accent** (Defense, Controle, Reparation), pour correspondre
+directement aux futures valeurs de l'enum `TypeCarte` côté code (§10). Le moteur actuel n'implémente
+encore qu'un sous-ensemble : voir §12.5 pour l'état d'implémentation par type.
 
 ### 7.2 Cible
 
@@ -379,6 +383,10 @@ cartes (§7) et la boucle de récompenses (§2.1, §6) stabilisés.
 - À trancher plus tard : comment ces cartes s'intègrent au deck existant (pioche normale, zone à
   part, slot dédié au module...), leur coût (électricité ou gratuites, puisqu'elles ne sont pas
   jouées manuellement), et si elles ont une rareté (§7.3) comme les autres cartes
+- **Type de carte "Effet"** (nouveau, distinct des types de §7.1) : une carte qui produit son effet
+  dès qu'elle est **piochée**, plutôt que jouée par le joueur. Probablement ajoutée au deck par les
+  ennemis (dans l'esprit des cartes Statut/Malédiction de Slay the Spire) plutôt que choisie par le
+  joueur
 
 ---
 
@@ -430,12 +438,19 @@ Valeur d'une carte toujours un montant fixe actuellement ; il manque un effet ex
 
 Déjà nommés en §7.1 mais aucun n'a de valeur `TypeCarte` ni de logique dans `combat.py` :
 
+*(Note : `TypeCarte` a aujourd'hui une valeur `SOIN`, l'ancien nom du type Reparation — simple
+renommage à faire, la logique de soin existe déjà, contrairement aux quatre types ci-dessous qui
+demandent une vraie nouvelle logique dans `combat.py`.)*
+
 - **Debuff** (*Tordre le canon, Brèche, Ligne avant, Tir allié, Boucliers endommagés, Boucliers hors
   service*)
 - **Buff** (*Optimisation des boucliers, Attaques performantes, Double défense, Circuit parallèle,
   Bouclier perpétuel*)
 - **Outils** (*Surcharge temporaire, Fonds de tiroir, Boost, Changement d'outil, Manque de jus,
   Cannibalisme, Grand remplacement, Multi fonction*)
+- **Controle** : aucune carte du tableau actuel n'est taguée Controle, mais le type reste prévu en
+  §7.1 (stun, restriction d'action) — *Tir allié* (taguée Debuff) s'en rapproche le plus
+  (détournement de cible)
 
 ### 12.6 Altération / redirection des dégâts
 
