@@ -13,17 +13,34 @@ Un deckbuilder roguelike inspiré de Slay the Spire, où le joueur incarne un va
 ## 2. Boucle de jeu (structure de run)
 
 - Pas de carte de progression classique : à chaque étape, le joueur ne voit que **la prochaine étape** (aucune visibilité au-delà)
+- Après chaque combat gagné, phase de récompenses (§2.1) puis le joueur choisit la prochaine étape parmi celles proposées
 - Types d'étapes possibles :
   - **PRIME** — combat, contrat de chasseur de primes. Affiche un niveau de difficulté / la composition annoncée des ennemis (tailles S/M/L, cf. 3.2) sans révéler le détail exact
-  - **STATION SERVICE** — réparation du vaisseau (remonte les PV des modules). Logique d'apparition encore ouverte (voir §8), pistes à l'étude :
+  - **STATION SERVICE** (le "garage") — entretien du vaisseau contre de l'Argent : réparer, améliorer ou déplacer un module (détail en §2.2). Logique d'apparition encore ouverte (voir §8), pistes à l'étude :
     - toujours disponible en alternative à chaque étape, ou
     - probabilité liée aux PV du vaisseau (voire garantie sous un seuil de dégâts), ou
     - garantie après un combat difficile (Prime dure ou Boss)
-  - **PLANÈTE COMMERCIALE** — achat de cartes ou d'autres bonus
-  - **AVENTURE** — événement inconnu, façon "?" de Slay the Spire
+  - **PLANÈTE COMMERCIALE** (le "marché") — achat de cartes contre de l'Argent ; la disponibilité des cartes Rares/Légendaires pour un module dépend de son niveau d'amélioration (voir §2.2 et §6)
+  - **AVENTURE** — événement inconnu, façon "?" de Slay the Spire. Contenu entièrement à définir (§9.1)
   - *(autres types d'étapes à imaginer)*
 - **Boss** : revient toutes les *n* étapes (n à ajuster en playtest, indicatif 8-10)
   - Victoire sur un boss → le joueur choisit **1 nouveau module parmi 2 propositions**, avec ses cartes de base associées (deck de départ propre au module — détail à trancher une fois le système de cartes approfondi, voir §7)
+
+### 2.1 Argent et récompenses de combat
+
+- Après chaque combat gagné, le joueur gagne de l'**Argent** — nouvelle ressource de run, distincte de l'Électricité (ressource de combat, voir §3). Montant exact à définir (§9.1)
+- Il gagne aussi peut-être une carte : voir §6 pour le mécanisme de choix (candidate par module équipé). Récompense garantie ou probabiliste à trancher (§9.1)
+- Le joueur choisit ensuite l'étape suivante parmi celles qui apparaissent (Prime, Station service, Planète commerciale ou Aventure) — l'offre n'est pas forcément la même à chaque fois (voir §9.1)
+
+### 2.2 Station service (garage)
+
+Trois options indépendantes, chacune payante en Argent (montants à définir, §9.1) :
+
+- **Réparer un module** : restaure ses PV jusqu'à son maximum actuel
+- **Améliorer un module** : augmente ses PV max. Pistes envisagées (non exclusives, à trancher en §9.1) :
+  - le module ne propose au départ que des cartes Communes (en récompense de combat comme à la Planète commerciale), et débloque le palier Rare puis Légendaire au fil de ses améliorations
+  - un module amélioré propose plusieurs cartes au choix après combat plutôt qu'une seule
+- **Déplacer un module** : change sa position sur le vaisseau, contre paiement
 
 ---
 
@@ -141,8 +158,13 @@ Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fi
 
 ## 6. Progression des modules / cartes
 
-- Après un combat gagné, le joueur choisit **1 carte parmi 3 propositions**, pondérées par rareté (voir 7.3)
-- Possibilité de choisir (ou non) **quel module** reçoit cette carte
+- Après un combat gagné, le joueur gagne peut-être une carte (voir §2.1). Mécanisme : **1 carte candidate par module équipé**, tirée dans le pool de cartes propre à ce module — le joueur choisit parmi ces N candidates, ce qui attribue implicitement la carte au module correspondant
+  - Pour le **module principal** (module de base), sa candidate est tirée dans le **pool entier** de cartes (tous modules confondus)
+  - Pour un **module secondaire**, sa candidate est tirée dans la **liste de cartes propre à ce module**
+  - La rareté (voir 7.3) pondère chaque tirage individuel
+  - Remplace l'ancien mécanisme "1 carte parmi 3 propositions pondérées par rareté, avec choix du module destinataire" : le choix du module destinataire se fait maintenant implicitement en choisissant la candidate
+- À la Planète commerciale (§2.2), achat direct de cartes contre de l'Argent ; la disponibilité de cartes Rares/Légendaires pour un module dépend de son niveau d'amélioration (Station service, §2.2)
+- Amélioration d'un module (Station service, §2.2) : piste envisagée pour débloquer des paliers de rareté supérieurs pour ses candidates après combat et/ou pour ses cartes disponibles à la Planète commerciale — probabilités et seuils exacts à trancher (§9.1)
 
 ---
 
@@ -185,7 +207,7 @@ Axe indépendant du type et de la cible — une carte a un type, une cible **et*
 | **Rare** | Peu fréquente | Meilleur ratio effet/électricité, ou mécanique inédite |
 | **Légendaire** | Très peu de cartes | Effets exceptionnels, peuvent changer la façon de jouer un module (ex : Reconstruction, §4.2) |
 
-- La rareté pondère le tirage des **3 propositions** offertes après un combat gagné (§6) : plus une carte est rare, moins elle a de chances d'apparaître dans les propositions
+- La rareté pondère le tirage des **candidates de carte** offertes après un combat gagné (§6, une candidate par module équipé) ainsi que la disponibilité des cartes à la Planète commerciale (§2.2) : plus une carte est rare, moins elle a de chances d'apparaître, sauf module suffisamment amélioré (Station service, §2.2)
 - Le tag "rare" déjà présent sur *Reconstruction* (§4.2) sera à réévaluer : son effet (résurrection d'un module) correspond plutôt au palier **Légendaire**
 - Rareté et attribution précise par carte (§4.1-4.3) : à faire dans une passe dédiée (voir §9.1 "compléter le jeu de cartes")
 
@@ -254,8 +276,12 @@ Axe indépendant du type et de la cible — une carte a un type, une cible **et*
 
 ### 9.1 Design / gameplay
 
-- Contenu exact de la Planète commerciale et de l'Aventure
-- Logique d'apparition de la Station Service : toujours disponible, liée aux PV du vaisseau, ou garantie après un combat difficile (voir §2)
+- Contenu exact de la Planète commerciale (uniquement des cartes, ou aussi d'autres bonus ?) et de l'Aventure (entièrement à définir, voir §2)
+- Logique d'apparition de la Station service : toujours disponible, liée aux PV du vaisseau, ou garantie après un combat difficile (voir §2)
+- Montants exacts d'Argent : récompense de combat, coût de réparation, coût d'amélioration, coût de déplacement d'un module (§2.1, §2.2)
+- Probabilités de déblocage des paliers de rareté (Commune → Rare → Légendaire) selon le niveau d'amélioration d'un module, et si l'amélioration ajoute plutôt/en plus des candidates multiples après combat (§2.2, §6)
+- La Planète commerciale propose-t-elle des cartes pour tous les modules du pool, ou seulement pour les modules actuellement équipés ? (§2, §6)
+- La carte gagnée après un combat est-elle garantie à chaque victoire, ou seulement probable ? (§2.1, §6)
 - Fréquence exacte des Boss (valeur de *n* étapes)
 - Cartes de base fournies avec un nouveau module choisi après un Boss : deck de départ fixe par module, à définir une fois le système de cartes approfondi (voir §7)
 - Plafond exact de slots équipables (proposition actuelle : 5, base incluse) et autorisation ou non des doublons de modules
@@ -306,3 +332,19 @@ pyproject.toml
 - Classes claires et bien définies, une responsabilité par classe
 - Commentaires en français, **sans accents ni cédilles** (ASCII uniquement)
 - Tests unitaires (pytest) dans `tests/`
+
+---
+
+## 11. Idées à explorer plus tard
+
+Pistes évoquées mais pas encore approfondies ni décidées — à revisiter une fois le système de
+cartes (§7) et la boucle de récompenses (§2.1, §6) stabilisés.
+
+- **Cartes auto-jouées** : des cartes qui se déclenchent seules, sans action du joueur, en début ou
+  en fin de combat (ex : buff automatique pour toute la durée du combat au démarrage, soin ou gain
+  d'Argent à la fin) — distinct des cartes jouées normalement pendant le tour du joueur (§3, §7)
+- Une carte auto-jouée en fin de combat pourrait aussi offrir une carte candidate supplémentaire, en
+  plus de la récompense normale de combat (§2.1, §6)
+- À trancher plus tard : comment ces cartes s'intègrent au deck existant (pioche normale, zone à
+  part, slot dédié au module...), leur coût (électricité ou gratuites, puisqu'elles ne sont pas
+  jouées manuellement), et si elles ont une rareté (§7.3) comme les autres cartes

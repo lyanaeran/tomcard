@@ -3,6 +3,12 @@
 Deckbuilder roguelike (thème vaisseaux spatiaux) inspiré de Slay the Spire. Actuellement un
 **POC de combat** jouable (pas de boucle de run complète).
 
+## Langue
+
+Répondre à l'utilisateur en français, y compris pour les messages de statut/résumés (les
+commentaires de code restent en français ASCII comme précisé plus bas ; le code lui-même — noms de
+variables, identifiants — reste en français, déjà la convention du projet).
+
 ## Documents de référence (à tenir à jour)
 
 - `specs.md` — vision de conception globale du jeu complet (boucle de run, modules, cartes, etc.)
