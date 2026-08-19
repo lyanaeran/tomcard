@@ -66,7 +66,7 @@ Trois options indépendantes, chacune payante en Argent (montants à définir, �
 - Le joueur pioche une main et joue ses cartes **librement, dans l'ordre de son choix** (comme dans Slay the Spire)
 - Force des choix de répartition : concentrer l'électricité sur un module ce tour, ou répartir
 - **Ordre de jeu** : tour classique façon StS — le joueur joue librement toutes les cartes qu'il souhaite durant son tour, puis le tour ennemi se déroule. Pas de système d'initiative/vitesse par module
-- **Main** : capacité maximale de 10 cartes ; le joueur pioche 5 cartes par tour. Cartes jouées partent en défausse ; quand la pioche est vide, la défausse est mélangée pour reformer la pioche
+- **Main** : capacité maximale de 10 cartes ; le joueur pioche 5 cartes par tour. Cartes jouées partent en défausse ; quand la pioche est vide, la défausse est mélangée pour reformer la pioche. Exception : une carte à munitions limitées épuisée (0 munition restante) part dans la pile **cartes épuisées** au lieu de la défausse, cf. §3.6
 - **Fin de tour** : les cartes non jouées restant en main sont défaussées à la fin du tour du joueur (comme dans Slay the Spire), avant la pioche de la main suivante
 
 ### 3.4 Destruction de module
@@ -76,6 +76,16 @@ Trois options indépendantes, chacune payante en Argent (montants à définir, �
 
 ### 3.5 Bouclier
 - Le Bouclier absorbe les dégâts subis **avant** les PV. Exemple : un module protégé par 5 Bouclier subit une attaque de 7 dégâts → le Bouclier absorbe 5, les **2 dégâts restants** sont retirés des PV
+
+### 3.6 Munitions (cartes à usage limité)
+
+Certaines cartes ont un nombre de munitions limité en plus de leur coût en électricité (cf. §7.4) :
+
+- **Munitions illimitées** (cas par défaut, toutes les cartes actuelles du POC) : aucun changement, la carte se joue normalement, autant de fois que voulu tant que l'électricité suit
+- **Munitions limitées à N** : chaque utilisation de la carte décrémente son compteur de munitions restantes. Le compteur est **propre à chaque exemplaire physique de la carte dans le deck** (si le deck contient 2 exemplaires d'une carte à 1 munition, chacun peut être joué une fois, soit 2 utilisations au total sur le combat)
+- Quand le compteur d'un exemplaire tombe à **0**, cet exemplaire quitte définitivement le combat : au lieu de partir en défausse, il rejoint une nouvelle pile, les **cartes épuisées**, distincte de la pioche et de la défausse
+- Les cartes épuisées ne reviennent **jamais** dans la pioche pendant le combat en cours, même si la pioche et la défausse sont toutes les deux vides (pas de mélange de secours) — cf. §9.1 pour le cas limite où cela viderait totalement les cartes piochables
+- **Entre deux combats**, chaque carte à munitions limitées repart avec son nombre de munitions d'origine (le compteur ne persiste pas d'un combat à l'autre) — cohérent avec le fait que le deck de combat est reconstitué à chaque combat à partir des pools de cartes des modules équipés (§6)
 
 ---
 
@@ -211,6 +221,19 @@ Axe indépendant du type et de la cible — une carte a un type, une cible **et*
 - Le tag "rare" déjà présent sur *Reconstruction* (§4.2) sera à réévaluer : son effet (résurrection d'un module) correspond plutôt au palier **Légendaire**
 - Rareté et attribution précise par carte (§4.1-4.3) : à faire dans une passe dédiée (voir §9.1 "compléter le jeu de cartes")
 
+### 7.4 Munitions
+
+Axe indépendant du type, de la cible et de la rareté — une carte a, en plus de son coût en
+électricité, un nombre de munitions : soit **illimité** (comportement par défaut, cf. §3.6), soit un
+nombre fixe qui se consomme au fil du combat et se réinitialise au combat suivant. Voir §3.6 pour le
+détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
+
+- Sert à limiter des effets ponctuellement très forts (ex : Bouclier perpétuel, §4.2) sans les
+  rendre indéfiniment répétables dans un même combat
+- Rôle par rapport à la rareté : deux axes différents, une carte Commune peut avoir des munitions
+  limitées et une carte Légendaire des munitions illimitées, ou l'inverse — pas de règle systématique
+  pour l'instant (voir §9.1)
+
 ---
 
 ## 8. Interface / écran de combat
@@ -251,7 +274,7 @@ Axe indépendant du type et de la cible — une carte a un type, une cible **et*
 - **Flotte ennemie** (haut droite) : grille symétrique 2x3, 6 emplacements libres (pas de base adverse). La colonne **avant est tournée vers le joueur** (la plus proche du centre de l'écran) et c'est elle qui est exposée au corps à corps (voir 3.1) ; la colonne arrière est la plus éloignée
 - **Compteur d'électricité** restante affiché en haut de l'écran
 - **Main de cartes** : alignée en bas de l'écran (pas en éventail, pour la lisibilité)
-- **Pioche et défausse** : regroupées ensemble dans un coin de l'écran (compteurs de nombre de cartes), séparées de la main
+- **Pioche, défausse et cartes épuisées** (§3.6) : regroupées ensemble dans un coin de l'écran (compteurs de nombre de cartes), séparées de la main
 
 ### 8.2 Formes visuelles
 
@@ -259,6 +282,7 @@ Axe indépendant du type et de la cible — une carte a un type, une cible **et*
 - **Module de base** : exception, forme différente (plus grande, fond dédié qui englobe les 5 emplacements)
 - **Cartes** : format **rectangulaire**
 - **PV / Bouclier** : affichés par de petites pastilles rondes (rouge pour les PV, bleue pour le Bouclier) flottant juste au-dessus de chaque case, jamais superposées à l'image (validé en POC, voir poc.md §8)
+- **Munitions restantes** (§3.6) : affichées sur la carte comme le coût en électricité, dans une pastille ronde **verte** — uniquement pour les cartes à munitions limitées (rien affiché pour les munitions illimitées, comportement par défaut)
 
 ### 8.3 Interaction de jeu d'une carte
 
@@ -287,10 +311,17 @@ Axe indépendant du type et de la cible — une carte a un type, une cible **et*
 - Plafond exact de slots équipables (proposition actuelle : 5, base incluse) et autorisation ou non des doublons de modules
 - Représentation visuelle d'un ennemi L occupant 2 emplacements (§3.2, §8.1) : rectangle fusionné sur les 2 cases, ou deux images liées logiquement ?
 - Compléter le jeu de cartes de chaque module : les archétypes de §4.3 (Bouclier énergétique, Radar, Propulseur, IA de combat, Générateur, Sabotage, Soute/Fret) n'ont pas encore de decks détaillés comme ceux de §4.1-4.2 ; les cartes déjà écrites en §4.1-4.2 n'ont pas encore de type/cible/rareté assignés (§7)
+- Munitions (§3.6/§7.4) : cas limite si la pioche et la défausse sont toutes les deux vides en cours de combat alors qu'il reste des cartes épuisées (qui ne sont jamais remélangées) — le joueur peut alors se retrouver sans carte à piocher ; à surveiller en playtest une fois des cartes à munitions limitées réellement jouables (voir §9.2 pour l'état d'implémentation actuel)
+- Munitions (§7.4) : pas de règle systématique reliant rareté et munitions pour l'instant (une carte de n'importe quel palier peut avoir des munitions limitées ou non) — à revisiter si un pattern se dégage en concevant plus de cartes
 
 ### 9.2 Technique / développement
 
 *(voir §10 pour les choix techniques déjà tranchés)*
+
+- Munitions (§3.6/§7.4) : mécanique pas encore implémentée dans `src/gameplay/` — les cartes du
+  tableau de conception qui en ont une (ex : Réparation, Bouclier perpétuel) sont pour l'instant
+  stockées dans `config/cartes.json` sans bloc "effet" (non jouables), voir la PR "config : import
+  des cartes Module principal, Lanceur de missiles, Blindage"
 
 ---
 
@@ -348,3 +379,104 @@ cartes (§7) et la boucle de récompenses (§2.1, §6) stabilisés.
 - À trancher plus tard : comment ces cartes s'intègrent au deck existant (pioche normale, zone à
   part, slot dédié au module...), leur coût (électricité ou gratuites, puisqu'elles ne sont pas
   jouées manuellement), et si elles ont une rareté (§7.3) comme les autres cartes
+
+---
+
+## 12. Mécaniques de combat manquantes (constat issu du tableau de cartes)
+
+En important le tableau de conception de cartes de l'utilisateur dans `config/cartes.json` (voir la
+PR "config : import des cartes Module principal, Lanceur de missiles, Blindage"), seules 6 des 38
+cartes du tableau correspondent à ce que le moteur actuel (`src/gameplay/carte.py`, `combat.py`)
+sait exécuter. Les 32 autres restent stockées pour référence (champ `_non_jouable`) mais sont
+inertes en jeu. Cette section recense les mécaniques qui leur manquent, groupées par nature plutôt
+que par carte, pour servir de feuille de route à une future extension du moteur.
+
+### 12.1 Cibles fixes ou par rang
+
+Le `CibleCarte` actuel (§7.2) ne couvre que soi, un allié/ennemi au choix, tous les alliés/ennemis,
+ou la ligne perçante. Il manque :
+
+- **Module Principal** — cible toujours le module de base, sans choix du joueur (*Protéger le
+  vaisseau, Réparation, Blindage maximal*)
+- **Ennemi Avant** / **Ligne avant** ennemie — rang avant adverse uniquement (*Ligne avant*)
+- **Ennemi Arrière** / **Ligne arrière** — rang arrière adverse uniquement (*Ligne arrière*)
+- **Module Avant** — rang avant allié uniquement (*Protéger l'avant poste*)
+
+Ces cibles par rang se résolvent par un **clic sur une case du rang visé**, comme la Ligne ennemie
+perçante aujourd'hui (§3.1, §7.2), et non automatiquement comme Alliés/Ennemis multiples.
+
+### 12.2 Effets à deux valeurs (X et Y) sur une même carte
+
+- Cible unique + splash différencié : X à la cible cliquée, Y à toutes les autres (*Missiles*)
+- Deux zones différentes en une carte : X sur la ligne avant ennemie, Y sur la ligne arrière
+  (*Torpille*)
+
+### 12.3 Effets à durée (plusieurs tours)
+
+- Dégâts répétés pendant Y tours (*Embrasement, Guerre nucléaire*)
+- Debuff actif pendant Y tours (*Boucliers hors service*)
+- Bouclier accordé pendant Y tours (*Blindage maximal*)
+- Bouclier qui grandit chaque tour, persistant (*Bouclier perpétuel*)
+- Pioche bonus pendant Y tours (*Multi fonction*)
+
+### 12.4 Effets en pourcentage
+
+Valeur d'une carte toujours un montant fixe actuellement ; il manque un effet exprimé en % :
+
+- Bouclier = % des PV du module (*Bouclier adaptatif*)
+- Dégâts subis +X% (*Brèche, Ligne avant, Boucliers endommagés, Boucliers hors service*)
+
+### 12.5 Types de carte absents du moteur
+
+Déjà nommés en §7.1 mais aucun n'a de valeur `TypeCarte` ni de logique dans `combat.py` :
+
+- **Debuff** (*Tordre le canon, Brèche, Ligne avant, Tir allié, Boucliers endommagés, Boucliers hors
+  service*)
+- **Buff** (*Optimisation des boucliers, Attaques performantes, Double défense, Circuit parallèle,
+  Bouclier perpétuel*)
+- **Outils** (*Surcharge temporaire, Fonds de tiroir, Boost, Changement d'outil, Manque de jus,
+  Cannibalisme, Grand remplacement, Multi fonction*)
+
+### 12.6 Altération / redirection des dégâts
+
+- Transfert des dégâts subis vers un autre module désigné (*Transfert*)
+- Renvoi des dégâts subis à l'attaquant (*Renvoie*)
+- Annulation totale de la prochaine attaque sur une cible, différent d'un bouclier classique
+  (*Leurre*)
+- Détournement de la cible d'un ennemi vers un de ses voisins — mécanique déjà anticipée comme
+  *Piratage* en §4.2 mais jamais implémentée (*Tir allié*)
+
+### 12.7 Modification des règles d'autres cartes (méta-effets)
+
+- Changer le coût en électricité de toutes les cartes d'une catégorie pour le reste du combat
+  (*Optimisation des boucliers, Attaques performantes*)
+- Dupliquer l'effet de toutes les cartes d'une catégorie X fois (*Double défense, Circuit
+  parallèle*)
+
+### 12.8 Gain d'électricité via une carte
+
+- Gain fixe (*Surcharge temporaire*)
+- Gain proportionnel au nombre de modules actifs (*Fonds de tiroir*)
+- Gain en échange d'une défausse (*Manque de jus, Cannibalisme*)
+
+### 12.9 Manipulation de pioche / main / défausse via une carte
+
+- Piocher des cartes supplémentaires (*Boost*, avec durée en plus pour *Multi fonction*)
+- Piocher puis défausser en une carte (*Changement d'outil*)
+- Défausser toute la main puis repiocher autant (*Grand remplacement*)
+- Défausser une **quantité choisie par le joueur** entre X et Y (*Cannibalisme*) — nécessite un
+  sous-choix de quantité au moment de jouer la carte, en plus du ciblage habituel
+
+### 12.10 Munitions limitées
+
+Déjà spécifiées en §3.6/§7.4 (mécanique de jeu tranchée) — pas un trou de design mais un chantier
+d'implémentation à part entière (*Réparation, Bouclier perpétuel, Optimisation des boucliers,
+Attaques performantes*, entre autres).
+
+### 12.11 Note annexe : cible des cartes Soute
+
+Les 6 cartes du module Soute (pioche/défausse/électricité) portaient une cible "Ennemi Tous" dans le
+tableau source, incohérente pour des cartes qui ne visent aucun ennemi. Corrigé dans
+`config/cartes.json` : elles se jouent en cliquant **n'importe quel module allié**, dont l'identité
+n'a aucune influence sur l'effet (celui-ci porte sur le deck ou l'électricité, ressources communes
+au vaisseau, pas sur le module cliqué).
