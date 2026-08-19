@@ -8,14 +8,22 @@ from src.gameplay.carte import CibleCarte, TypeCarte
 from src.gameplay.donnees import charger_cartes, charger_ennemis, charger_modules
 
 
-def test_charger_cartes_renvoie_6_cartes_avec_images_existantes():
+def test_charger_cartes_renvoie_les_cartes_jouables_avec_images_existantes():
     cartes = charger_cartes()
 
-    assert len(cartes) == 6
+    assert len(cartes) == 12
     for carte in cartes.values():
         assert isinstance(carte.type, TypeCarte)
         assert isinstance(carte.cible, CibleCarte)
         assert Path(carte.image).is_file()
+
+
+def test_charger_cartes_ignore_les_cartes_sans_bloc_effet():
+    """Cartes de design pas encore jouables (mecanique non supportee, cf. specs.md 9.1)."""
+    cartes = charger_cartes()
+
+    assert "CRT_15" in cartes  # jouable (Ciel de missiles)
+    assert "CRT_13" not in cartes  # non jouable (Missiles, effet a deux valeurs)
 
 
 def test_charger_modules_renvoie_6_modules_avec_images_existantes_et_cartes_connues():

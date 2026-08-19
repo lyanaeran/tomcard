@@ -43,11 +43,19 @@ def _chemin_image(chemin_relatif: str) -> str:
 
 
 def charger_cartes() -> dict[str, Carte]:
-    """Charge config/cartes.json. Renvoie un dict id de carte -> Carte."""
+    """Charge config/cartes.json. Renvoie un dict id de carte -> Carte.
+
+    Les entrees sans bloc "effet" sont des cartes de design pas encore jouables
+    (mecanique non supportee par le moteur actuel, ex : Debuff, Buff, Outils,
+    cible figee, effet a duree/munitions limitees - voir specs.md 9.1) : elles
+    restent presentes dans cartes.json pour reference mais sont ignorees ici.
+    """
     donnees = json.loads((DOSSIER_CONFIG / "cartes.json").read_text())
     cartes = {}
     for entree in donnees["cartes"]:
-        effet = entree["effet"]
+        effet = entree.get("effet")
+        if effet is None:
+            continue
         cartes[entree["id"]] = Carte(
             nom=entree["nom"],
             image=_chemin_image(entree["image"]),
