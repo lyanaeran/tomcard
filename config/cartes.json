@@ -1,49 +1,6 @@
 {
   "cartes": [
     {
-      "id": "CRT_1",
-      "nom": "Attaquer",
-      "image": "assets/cartes/attaquer.png",
-      "cout": 1,
-      "effet": { "type": "ATTAQUE", "cible": "ENNEMI_UNIQUE", "valeur": 7 }
-    },
-    {
-      "id": "CRT_2",
-      "nom": "Mitrailler",
-      "image": "assets/cartes/mitrailler.png",
-      "cout": 2,
-      "effet": { "type": "ATTAQUE", "cible": "ENNEMIS_MULTIPLES", "valeur": 3 }
-    },
-    {
-      "id": "CRT_3",
-      "nom": "Percer",
-      "image": "assets/cartes/percer.png",
-      "cout": 2,
-      "effet": { "type": "ATTAQUE", "cible": "LIGNE_ENNEMIE", "valeur": 5, "note": "touche l'avant et l'arriere de la rangee visee (2 ennemis), cf. specs.md 3.1" }
-    },
-    {
-      "id": "CRT_4",
-      "nom": "Defendre",
-      "image": "assets/cartes/defendre.png",
-      "cout": 1,
-      "effet": { "type": "DEFENSE", "cible": "ALLIE_UNIQUE", "valeur": 5 }
-    },
-    {
-      "id": "CRT_5",
-      "nom": "Proteger",
-      "image": "assets/cartes/proteger.png",
-      "cout": 1,
-      "effet": { "type": "DEFENSE", "cible": "ALLIES_MULTIPLES", "valeur": 4 }
-    },
-    {
-      "id": "CRT_6",
-      "nom": "Soigner",
-      "image": "assets/cartes/soigner.png",
-      "cout": 1,
-      "effet": { "type": "SOIN", "cible": "ALLIE_UNIQUE", "valeur": 4 }
-    },
-
-    {
       "id": "CRT_7",
       "nom": "Laser",
       "image": "assets/cartes/soigner.png",
@@ -116,7 +73,7 @@
       "y": null,
       "munition": null,
       "description": "Bouclier de X sur le module principal",
-      "_non_jouable": "cible fixe 'module principal' non representable par CibleCarte (voir specs.md 9.1)"
+      "effet": { "type": "DEFENSE", "cible": "MODULE_PRINCIPAL", "valeur": 8 }
     },
     {
       "id": "CRT_12",
@@ -131,7 +88,7 @@
       "y": null,
       "munition": 2,
       "description": "Repare le module principal pour X",
-      "_non_jouable": "cible fixe 'module principal' + limite de munitions non supportees par le moteur actuel"
+      "effet": { "type": "REPARATION", "cible": "MODULE_PRINCIPAL", "valeur": 8 }
     },
 
     {
@@ -359,7 +316,7 @@
       "y": null,
       "munition": null,
       "description": "Gagne X electricite",
-      "_non_jouable": "gain d'electricite via une carte non supporte par le moteur actuel"
+      "effet": { "type": "OUTILS", "cible": "ALLIES_MULTIPLES", "valeur": 2, "action": "GAIN_ELECTRICITE" }
     },
     {
       "id": "CRT_28",
@@ -541,7 +498,7 @@
       "y": null,
       "munition": null,
       "description": "Pioche X cartes supplementaires",
-      "_non_jouable": "manipulation de pioche non supportee par le moteur actuel"
+      "effet": { "type": "OUTILS", "cible": "ALLIE_UNIQUE", "valeur": 2, "action": "PIOCHE_SUPPLEMENTAIRE" }
     },
     {
       "id": "CRT_40",

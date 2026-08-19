@@ -6,7 +6,7 @@ cf. poc.md et specs.md paragraphe 8). Utilise les images de assets/.
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.carte import CIBLES_SANS_CLIC, Carte, CibleCarte, TypeCarte
+from src.gameplay.carte import CIBLES_SANS_CLIC, Carte, CibleCarte, RareteCarte, TypeCarte
 from src.gameplay.combat import Combat, EtatCombat
 from src.gameplay.config_poc import creer_combat_poc
 from src.gameplay.ennemi import Ennemi
@@ -92,6 +92,16 @@ COULEUR_PASTILLE_PV = (190, 40, 40)
 COULEUR_PASTILLE_BOUCLIER = (50, 110, 200)
 _RAYON_TOTAL_PASTILLE = RAYON_PASTILLE + EPAISSEUR_CONTOUR_PASTILLE
 HAUTEUR_ZONE_PASTILLES = MARGE_PASTILLE_HAUT + 2 * _RAYON_TOTAL_PASTILLE
+
+# Indicateur de rarete (etoile en haut a gauche de la carte) et pastille de munitions
+# restantes (en haut a droite, meme style que les pastilles PV/Bouclier), cf. specs.md 8.2
+COULEUR_ETOILE_RARETE = {
+    RareteCarte.BASE: (245, 245, 245),
+    RareteCarte.COMMUNE: (70, 190, 90),
+    RareteCarte.RARE: (60, 130, 230),
+    RareteCarte.LEGENDAIRE: (235, 150, 30),
+}
+COULEUR_PASTILLE_MUNITION = (70, 190, 90)
 
 # Popups +/-N affiches 2 secondes sur une cible touchee par une carte ou une
 # attaque ennemie (degats en rouge, bouclier pose en bleu, soin en vert)
@@ -394,6 +404,17 @@ class FenetreCombat(pyglet.window.Window):
                 elements.append(bordure)
             elements.append(_sprite_ajuste(carte.image, x, CARTE_Y, CARTE_LARGEUR, CARTE_HAUTEUR, lot))
             elements.append(_bandeau(x, CARTE_Y, CARTE_LARGEUR, HAUTEUR_BANDEAU_CARTE, lot))
+            elements.extend(self._dessiner_etoile_rarete(x, carte, lot))
+            if carte.munitions_restantes is not None:
+                elements.extend(
+                    _pastille(
+                        x + CARTE_LARGEUR - _RAYON_TOTAL_PASTILLE,
+                        CARTE_Y + CARTE_HAUTEUR - _RAYON_TOTAL_PASTILLE,
+                        COULEUR_PASTILLE_MUNITION,
+                        carte.munitions_restantes,
+                        lot,
+                    )
+                )
             texte = pyglet.text.Label(
                 f"{carte.nom}\n{carte.valeur}  Cout {carte.cout}",
                 x=x + CARTE_LARGEUR / 2,
@@ -408,6 +429,33 @@ class FenetreCombat(pyglet.window.Window):
             )
             elements.append(texte)
         return elements
+
+    def _dessiner_etoile_rarete(self, x: float, carte: Carte, lot: pyglet.graphics.Batch) -> list:
+        """Etoile de rarete en haut a gauche de la carte (specs.md paragraphe 8.2)."""
+        couleur = COULEUR_ETOILE_RARETE[carte.rarete]
+        ombre = pyglet.text.Label(
+            "★",
+            x=x + 11,
+            y=CARTE_Y + CARTE_HAUTEUR - 9,
+            anchor_x="center",
+            anchor_y="center",
+            font_size=16,
+            color=(0, 0, 0, 255),
+            batch=lot,
+            group=GROUPE_SUPERPOSITION,
+        )
+        etoile = pyglet.text.Label(
+            "★",
+            x=x + 10,
+            y=CARTE_Y + CARTE_HAUTEUR - 10,
+            anchor_x="center",
+            anchor_y="center",
+            font_size=16,
+            color=(*couleur, 255),
+            batch=lot,
+            group=GROUPE_SUPERPOSITION,
+        )
+        return [ombre, etoile]
 
     def _dessiner_bouton_fin_tour(self, lot: pyglet.graphics.Batch) -> list:
         """Dessine le bouton permettant de terminer le tour du joueur."""

@@ -324,15 +324,30 @@ function rendreGrilleEnnemis() {
         </div>`;
 }
 
+// Couleur de l'etoile de rarete (specs.md paragraphe 8.2), meme mapping que fenetre.py
+// (COULEUR_ETOILE_RARETE).
+const CLASSE_ETOILE_RARETE = {
+    BASE: "etoile-base",
+    COMMUNE: "etoile-commune",
+    RARE: "etoile-rare",
+    LEGENDAIRE: "etoile-legendaire",
+};
+
 function rendreMain() {
     return etatCourant.main
         .map((carte) => {
             const classes = ["carte"];
             if (carte.index === indexCarteSelectionnee) classes.push("selectionnee");
+            const munitions =
+                carte.munitions_restantes !== null
+                    ? `<span class="pastille pastille-munition">${carte.munitions_restantes}</span>`
+                    : "";
             return `
             <button class="${classes.join(" ")}" data-index="${carte.index}" title="${carte.nom}">
                 <img src="${carte.image}" alt="${carte.nom}">
+                <span class="etoile-rarete ${CLASSE_ETOILE_RARETE[carte.rarete]}">★</span>
                 <span class="pastille pastille-cout">⚡${carte.cout}</span>
+                ${munitions}
             </button>`;
         })
         .join("");
@@ -347,13 +362,21 @@ const LIBELLES_CIBLE = {
     LIGNE_ENNEMIE: "la rangee ennemie visee (avant + arriere)",
     ALLIE_UNIQUE: "un module",
     ALLIES_MULTIPLES: "tous les modules",
+    MODULE_PRINCIPAL: "le module principal",
+};
+
+const LIBELLES_ACTION_OUTILS = {
+    GAIN_ELECTRICITE: (carte) => `Gagne ${carte.valeur} ⚡.`,
+    PIOCHE_SUPPLEMENTAIRE: (carte) => `Pioche ${carte.valeur} cartes supplementaires.`,
 };
 
 function texteEffetCarte(carte) {
     const cible = LIBELLES_CIBLE[carte.cible];
     if (carte.type === "ATTAQUE") return `Inflige ${carte.valeur} degats a ${cible}.`;
     if (carte.type === "DEFENSE") return `Bouclier de ${carte.valeur} a ${cible}.`;
-    return `Soigne ${carte.valeur} ❤️ a ${cible}.`;
+    if (carte.type === "REPARATION") return `Repare ${carte.valeur} PV a ${cible}.`;
+    if (carte.type === "OUTILS") return LIBELLES_ACTION_OUTILS[carte.action](carte);
+    return `Effet de ${carte.valeur} a ${cible}.`;
 }
 
 // Infobulle de la carte selectionnee (#info-carte), affichee au centre de
@@ -364,11 +387,14 @@ function texteEffetCarte(carte) {
 function rendreInfoCarte() {
     const carte = etatCourant.main.find((c) => c.index === indexCarteSelectionnee);
     if (!carte) return "";
+    const munitions =
+        carte.munitions_restantes !== null ? `<div class="info-carte-munitions">🔋 ${carte.munitions_restantes}</div>` : "";
     return `
         <img src="${carte.image}" alt="${carte.nom}">
         <div class="info-carte-nom">${carte.nom}</div>
         <div class="info-carte-effet">${texteEffetCarte(carte)}</div>
-        <div class="info-carte-cout">⚡ ${carte.cout}</div>`;
+        <div class="info-carte-cout">⚡ ${carte.cout}</div>
+        ${munitions}`;
 }
 
 function rendreBanniereFin() {

@@ -5,42 +5,35 @@
       "nom": "Principal",
       "image": "assets/modules/principal.png",
       "points_de_vie": 15,
-      "cartes": ["CRT_1", "CRT_4", "CRT_6", "CRT_7", "CRT_8", "CRT_9", "CRT_10"]
+      "cartes": ["CRT_7", "CRT_8", "CRT_9", "CRT_10", "CRT_11", "CRT_12"]
     },
     {
       "id": "MOD_2",
-      "nom": "Laser",
-      "image": "assets/modules/laser.png",
-      "points_de_vie": 10,
-      "cartes": ["CRT_1", "CRT_3"]
+      "nom": "Lanceur de missiles",
+      "image": "assets/modules/missiles.png",
+      "points_de_vie": 9,
+      "cartes": ["CRT_15"]
     },
     {
       "id": "MOD_3",
-      "nom": "Missiles",
-      "image": "assets/modules/missiles.png",
-      "points_de_vie": 9,
-      "cartes": ["CRT_1", "CRT_3", "CRT_15"]
+      "nom": "Blindage",
+      "image": "assets/modules/bouclier.png",
+      "points_de_vie": 18,
+      "cartes": ["CRT_20"]
     },
     {
       "id": "MOD_4",
-      "nom": "Mitrailleuse",
-      "image": "assets/modules/mitrailleuse.png",
-      "points_de_vie": 11,
-      "cartes": ["CRT_1", "CRT_2"]
+      "nom": "Generateur",
+      "image": "assets/modules/generateur.png",
+      "points_de_vie": 10,
+      "cartes": ["CRT_27"]
     },
     {
       "id": "MOD_5",
-      "nom": "Bouclier",
-      "image": "assets/modules/bouclier.png",
-      "points_de_vie": 18,
-      "cartes": ["CRT_4", "CRT_5", "CRT_20"]
-    },
-    {
-      "id": "MOD_6",
-      "nom": "Soin",
-      "image": "assets/modules/soin.png",
+      "nom": "Soute",
+      "image": "assets/modules/soute.png",
       "points_de_vie": 10,
-      "cartes": ["CRT_5", "CRT_6"]
+      "cartes": ["CRT_39"]
     }
   ]
 }

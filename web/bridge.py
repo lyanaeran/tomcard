@@ -101,6 +101,9 @@ def _carte_json(carte, index: int):
         "cible": carte.cible.name,
         "sans_clic": carte.cible in CIBLES_SANS_CLIC,
         "image": _chemin_web(carte.image),
+        "rarete": carte.rarete.name,
+        "munitions_restantes": carte.munitions_restantes,
+        "action": carte.action.name if carte.action else None,
     }
 
 

@@ -9,11 +9,11 @@ from src.gameplay.deck import Deck
 
 CARTE_ATTAQUE = Carte(nom="Attaque", image="test.png", type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMI_UNIQUE, cout=1, valeur=7)
 CARTE_BOUCLIER = Carte(nom="Bouclier", image="test.png", type=TypeCarte.DEFENSE, cible=CibleCarte.ALLIE_UNIQUE, cout=1, valeur=5)
-CARTE_SOIN = Carte(nom="Soin", image="test.png", type=TypeCarte.SOIN, cible=CibleCarte.ALLIE_UNIQUE, cout=1, valeur=4)
+CARTE_REPARATION = Carte(nom="Soin", image="test.png", type=TypeCarte.REPARATION, cible=CibleCarte.ALLIE_UNIQUE, cout=1, valeur=4)
 
 
 def _deck_poc() -> Deck:
-    cartes = [CARTE_ATTAQUE] * 5 + [CARTE_BOUCLIER] * 3 + [CARTE_SOIN]
+    cartes = [CARTE_ATTAQUE] * 5 + [CARTE_BOUCLIER] * 3 + [CARTE_REPARATION]
     return Deck(cartes=cartes, generateur_aleatoire=random.Random(0))
 
 

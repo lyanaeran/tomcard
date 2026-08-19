@@ -18,9 +18,9 @@ Simplifications restantes par rapport à `specs.md` : pas de boucle de run (pas 
 
 Grille **2 colonnes (Avant / Arrière) x 3 rangées (Gauche / Mid / Droite)**, comme décrit en specs.md §3.1/§5. La colonne Avant fait face à l'ennemi. Le module de base occupe la rangée Mid en entier (les deux colonnes) ; les 4 autres modules équipés occupent chacun une case.
 
-**Composition tirée au sort à chaque combat**, à partir de `config/modules.json` (6 modules définis : Principal + 5 autres) :
+**Composition tirée au sort à chaque combat**, à partir de `config/modules.json` (5 modules définis : Principal + 4 autres) :
 - Le module **Principal** (`MOD_1`) est toujours la base
-- **4 modules différents** sont tirés au sort parmi les 5 autres (Laser, Missiles, Mitrailleuse, Bouclier, Soin) et placés aléatoirement sur les 4 cases équipables — un des 5 modules ne sera donc **pas** du tout présent dans le combat
+- **4 modules différents** sont tirés au sort parmi les 4 autres (Lanceur de missiles, Blindage, Générateur, Soute) et placés aléatoirement sur les 4 cases équipables — pour l'instant les 4 sont donc **toujours** présents (le tirage n'a d'effet que sur leur position), faute d'avoir un 5e module équipable jouable ; le module Sabotage existe dans specs.md/le tableau de cartes mais n'a encore aucune carte jouable (type Debuff non implémenté, voir specs.md §12), donc pas encore dans `config/modules.json`
 - PV et cartes jouables de chaque module : voir `config/modules.json`
 
 - **Électricité** : 3 par tour (ressource pleine à chaque début de tour, ne se cumule pas d'un tour à l'autre)
@@ -49,17 +49,40 @@ Chaque attaque résolue affiche un popup `-N` (dégâts réellement infligés, v
 
 ## 4. Cartes
 
-6 cartes définies dans `config/cartes.json` (Attaquer, Mitrailler, Percer, Défendre, Protéger, Soigner), chacune avec un type, un coût et une cible parmi :
+10 cartes jouables définies dans `config/cartes.json` (issues du tableau de conception complet de
+l'utilisateur, dont 32 autres cartes sont stockées mais pas encore jouables faute de mécanique
+correspondante dans le moteur — voir specs.md §12 pour l'inventaire de ce qui manque). Chaque carte
+a un type, un coût, une cible et une rareté :
+
+**Types** (`TypeCarte`, specs.md §7.1) : `ATTAQUE`, `DEFENSE`, `REPARATION` (remplace l'ancien
+`SOIN`), `OUTILS` (manipule une ressource commune au joueur — électricité ou pioche — pas un
+module/ennemi précis, cf. plus bas).
+
+**Cibles**, avec leur comportement au clic :
 
 | Cible | Comportement au clic |
 |---|---|
 | **Ennemi unique** | Sélectionner la carte, puis cliquer un ennemi vivant |
-| **Allié unique** | Sélectionner la carte, puis cliquer un module vivant |
+| **Allié unique** | Sélectionner la carte, puis cliquer un module vivant (pour une carte Outils, le module cliqué n'a pas d'influence sur l'effet, cf. specs.md §12.11) |
 | **Ligne ennemie** | Sélectionner la carte, puis cliquer un ennemi vivant — touche aussi l'autre case (Avant ↔ Arrière) de la **même rangée**, si elle est occupée |
 | **Alliés multiples** | Se résout **dès la sélection** de la carte (pas de clic de ciblage) — touche tous les modules vivants du joueur |
 | **Ennemis multiples** | Se résout **dès la sélection** de la carte (pas de clic de ciblage) — touche tous les ennemis vivants |
+| **Module principal** | Se résout **dès la sélection** de la carte (pas de clic de ciblage) — touche toujours le module de base |
 
-Une carte est associée à un ou plusieurs modules dans `config/modules.json` (qui peuvent la piocher dans leur deck, cf. §5), mais **son effet ne dépend jamais du module dont elle provient** : une fois dans le deck, elle est jouable sur n'importe quelle cible valide, comme les autres.
+**Cartes Outils** : leur effet ne porte jamais sur un module/ennemi mais sur une ressource commune
+(gagner de l'électricité, piocher des cartes supplémentaires) — un champ `action` (`GAIN_ELECTRICITE`
+/ `PIOCHE_SUPPLEMENTAIRE`) précise laquelle, cf. §8.
+
+**Munitions** (specs.md §3.6/§7.4) : une carte peut avoir un nombre de munitions limité en plus de
+son coût. Chaque utilisation le décrémente ; à 0, l'exemplaire rejoint la pile **cartes épuisées**
+(distincte de la pioche/défausse, jamais remélangée pendant le combat) au lieu de la défausse. Le
+compteur est propre à chaque exemplaire physique dans le deck, et se réinitialise à chaque nouveau
+combat (le deck est reconstitué à zéro, cf. §5). Une carte à munitions illimitées (la majorité) n'est
+pas concernée.
+
+Une carte est associée à un ou plusieurs modules dans `config/modules.json` (qui peuvent la piocher
+dans leur deck, cf. §5), mais **son effet ne dépend jamais du module dont elle provient** : une fois
+dans le deck, elle est jouable sur n'importe quelle cible valide, comme les autres.
 
 Le Bouclier absorbe les dégâts subis avant les PV. Exemple : un module protégé par 5 Bouclier subit une attaque de 7 dégâts → le Bouclier absorbe 5, les **2 dégâts restants** sont retirés des PV.
 
@@ -67,11 +90,18 @@ Le Bouclier absorbe les dégâts subis avant les PV. Exemple : un module protég
 
 ## 5. Composition du deck
 
-**20 cartes tirées au sort à chaque combat**, à partir des jeux de cartes des modules retenus (§2) :
-- **8 cartes** tirées au sort (avec remise) parmi les cartes jouables par le module **Principal**
-- **3 cartes** tirées au sort (avec remise) parmi les cartes jouables par **chacun** des 4 modules équipés (4 x 3 = 12)
+**24 cartes à chaque combat** :
+- **Deck de base du module Principal (12 cartes, fixe, pas de tirage aléatoire)** : chacune de ses
+  cartes de rareté Base une fois, sauf Laser et Bouclier qui en comptent 4 exemplaires chacune
+  (règle donnée explicitement par l'utilisateur, pas un choix du moteur)
+- **3 cartes tirées au sort** (avec remise) parmi les cartes jouables par **chacun** des 4 modules
+  équipés (4 x 3 = 12) — règle intérimaire : la règle cible de specs.md §2.1/§6 (2 Communes + 1 Rare
+  + 1 Légendaire par module équipé) demande qu'aucun module équipable n'ait de pool vide à un palier
+  de rareté donné, ce qui n'est pas encore le cas pour tous les modules (voir specs.md §12) ; en
+  attendant, un tirage uniforme dans les cartes jouables du module (aujourd'hui une seule carte
+  Commune par module) en tient lieu
 
-Une fois tirée, une carte perd tout lien avec le module qui l'a fournie (§4) : le deck n'est qu'une liste de 20 cartes, indifférenciées par leur origine.
+Une fois tirée, une carte perd tout lien avec le module qui l'a fournie (§4) : le deck n'est qu'une liste de 24 cartes, indifférenciées par leur origine. Chaque tirage crée un **exemplaire indépendant** (pas une référence partagée) : deux copies de la même carte ont chacune leur propre compteur de munitions.
 
 ---
 
@@ -119,6 +149,12 @@ version web sont documentés dans les commentaires de `web/app.js`/`web/style.cs
 
 Le rendu utilise les vraies images d'`assets/` (module/ennemi/carte affichés comme des sprites). Cartes, ennemis et le module de base sont mis à l'échelle **sans déformation** dans leur case (ratio préservé). Exception volontaire : les **modules équipés** sur le vaisseau sont **étirés** (largeur et hauteur mises à l'échelle indépendamment) pour que leur propre cadre décoratif recouvre exactement le cadre correspondant sur l'image du vaisseau, plutôt que de laisser un espace vide entre les deux cadres — une légère déformation de l'image est jugée préférable à ce défaut visuel. Un bandeau semi-transparent reste utilisé pour le nom/coût des cartes et pour la mention "Détruit" ; en revanche les PV et le Bouclier ne sont plus affichés dans un bandeau mais par des **pastilles** rondes (rouge pour les PV, bleue pour le Bouclier) flottant juste au-dessus de chaque case, jamais par-dessus l'image (pour ne pas la cacher).
 
+Chaque carte de la main affiche aussi (specs.md §8.2) :
+- Une **étoile de rareté** en haut à gauche, colorée par palier : blanche (Base), verte (Commune),
+  bleue (Rare), orange (Légendaire)
+- Une **pastille verte** avec le nombre de munitions restantes, en haut à droite de la carte
+  (uniquement pour les cartes à munitions limitées ; rien pour les munitions illimitées)
+
 Conventions : classes claires par responsabilité, commentaires en français sans accents ni cédilles (cf. specs.md §10.3).
 
 ### Vaisseau du joueur : emplacements mesurés sur l'image
@@ -130,9 +166,9 @@ Le module de base (`assets/modules/principal.png`) est affiché en grand ; les 4
 Chaque effet résolu — carte jouée par le joueur ou attaque ennemie — affiche un popup pendant 2 secondes sur la ou les cases touchées, puis disparaît :
 - Dégâts (carte d'attaque ou attaque ennemie) : `-N` en rouge
 - Bouclier posé (carte de défense) : `+N` en bleu
-- Soin (carte de soin) : `+N` en vert
+- Réparation (carte de réparation) : `+N` en vert
 
-`N` est le montant **réellement appliqué**, pas la valeur nominale de la carte : les dégâts sont plafonnés par les PV + Bouclier restants de la cible, le soin par son PV max (le Bouclier, lui, n'est jamais plafonné, cf. §4). Une carte à cibles multiples (Alliés multiples, Ennemis multiples, Ligne ennemie) affiche un popup indépendant sur chacune de ses cibles.
+`N` est le montant **réellement appliqué**, pas la valeur nominale de la carte : les dégâts sont plafonnés par les PV + Bouclier restants de la cible, la réparation par son PV max (le Bouclier, lui, n'est jamais plafonné, cf. §4). Une carte à cibles multiples (Alliés multiples, Ennemis multiples, Ligne ennemie) affiche un popup indépendant sur chacune de ses cibles. Une carte Outils ne touche aucun module/ennemi : elle n'affiche pas de popup.
 
 Il n'y a pas d'animation de rayon entre l'attaquant et sa cible : ce retour par popup a été préféré, plus lisible quand plusieurs attaques se résolvent au même tour.
 
@@ -157,18 +193,33 @@ Trois fichiers JSON décrivent le contenu du jeu (modules, ennemis, cartes) de f
 - `nom`, `image` (chemin vers `assets/ennemis/`)
 - `points_de_vie`
 - `action` : une chaîne `TYPE,valeur,cible` décrivant ce que l'ennemi fait à son tour
-  - `TYPE` : `ATK` (attaque) ou `SOIN` (soin) — mêmes types que les cartes (§4), d'autres pourront s'ajouter
+  - `TYPE` : `ATK` (attaque) ou `REPARATION` (soin) — mêmes types que les cartes (§4), d'autres pourront s'ajouter ; seul `ATK` est interprété par `donnees.charger_ennemis()` pour l'instant, les autres sont ignorés
   - `valeur` : dégâts infligés ou PV réparés
   - `cible` : toujours `AUTO` pour l'instant — délègue au ciblage automatique déjà implémenté (§3 : propre rangée d'abord, repli sur la plus proche). Prévu pour accueillir d'autres modes plus tard si besoin (ex. cible aléatoire, PV le plus bas)
 
-**`config/cartes.json`** — une carte par entrée :
+**`config/cartes.json`** — une carte par entrée. Le fichier contient en réalité 38 cartes (tout le
+tableau de conception fourni par l'utilisateur), mais seules celles avec un bloc `effet` sont
+jouables (`donnees.charger_cartes()` ignore silencieusement les autres, cf. specs.md §12) :
 - `id` : identifiant unique, format `CRT_N`
 - `nom`, `image` (chemin vers `assets/cartes/`)
 - `cout` (en électricité)
-- `effet` : objet `{ type, cible, valeur }` où `type` et `cible` reprennent les valeurs de specs.md §7.1/§7.2 :
-  - `type` : `ATTAQUE` / `DEFENSE` / `SOIN`
-  - `cible` : `ALLIE_UNIQUE` / `ALLIES_MULTIPLES` / `ENNEMI_UNIQUE` / `ENNEMIS_MULTIPLES` / **`LIGNE_ENNEMIE`** (nouveau : touche l'avant et l'arrière de la rangée visée, soit 2 ennemis — pour les cartes perçantes de specs.md §3.1, ex. Percer)
+- `rarete` : `Base` / `Commune` / `Rare` / `Legendaire` (specs.md §7.3)
+- `munition` : nombre de munitions (absent/`null` = illimitées, cf. §4)
+- `effet` (absent = carte non jouable) : objet `{ type, cible, valeur, action? }` où `type` et
+  `cible` reprennent les valeurs de specs.md §7.1/§7.2 :
+  - `type` : `ATTAQUE` / `DEFENSE` / `REPARATION` / `OUTILS`
+  - `cible` : `ALLIE_UNIQUE` / `ALLIES_MULTIPLES` / `ENNEMI_UNIQUE` / `ENNEMIS_MULTIPLES` /
+    `LIGNE_ENNEMIE` (touche l'avant et l'arrière de la rangée visée, soit 2 ennemis) /
+    `MODULE_PRINCIPAL` (toujours le module de base, pas de clic)
+  - `action` (uniquement pour `type: OUTILS`) : `GAIN_ELECTRICITE` / `PIOCHE_SUPPLEMENTAIRE` —
+    précise l'effet exact, chaque carte Outils étant un mécanisme différent (specs.md §12.9)
 
-Les 6 cartes actuelles couvrent les 6 images disponibles : Attaquer (cible unique), Mitrailler (dégâts répartis sur plusieurs ennemis), Percer (perçant, toute la rangée visée), Défendre (Bouclier sur un allié au choix), Protéger (Bouclier sur tous les alliés), Soigner (PV sur un allié au choix). Les modules leur sont associés par thème (ex. Bouclier → Défendre/Protéger, Soin → Protéger/Soigner) — répartition à ajuster librement, ce n'est qu'une première proposition.
+Les 10 cartes actuellement jouables : les 6 du module Principal (Laser, Laser perçant,
+Bombardement, Bouclier, Protéger le vaisseau, Réparation), et une par module équipé (Ciel de
+missiles pour Lanceur de missiles, Mode défensif pour Blindage, Surcharge temporaire pour
+Générateur, Boost pour Soute) — les 28 autres cartes du tableau restent stockées pour référence,
+non jouables faute de mécanique (specs.md §12).
 
-**Toutes les valeurs (PV, dégâts, coûts) sont inventées**, comme le reste des données numériques de ce POC (§1).
+**Toutes les valeurs (PV, dégâts, coûts, munitions) viennent du tableau de conception fourni par
+l'utilisateur**, sauf les PV des modules Générateur et Soute (10 chacun) qui restent **inventés**
+faute de valeur donnée, comme le reste des données numériques de ce POC (§1).

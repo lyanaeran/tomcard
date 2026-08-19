@@ -6,7 +6,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from src.gameplay.carte import Carte, CibleCarte, TypeCarte
+from src.gameplay.carte import ActionCarte, Carte, CibleCarte, RareteCarte, TypeCarte
 
 RACINE = Path(__file__).resolve().parents[2]
 DOSSIER_CONFIG = RACINE / "config"
@@ -56,6 +56,8 @@ def charger_cartes() -> dict[str, Carte]:
         effet = entree.get("effet")
         if effet is None:
             continue
+        rarete = RareteCarte[entree["rarete"].upper()] if "rarete" in entree else RareteCarte.BASE
+        action = ActionCarte[effet["action"]] if "action" in effet else None
         cartes[entree["id"]] = Carte(
             nom=entree["nom"],
             image=_chemin_image(entree["image"]),
@@ -63,6 +65,9 @@ def charger_cartes() -> dict[str, Carte]:
             cible=CibleCarte[effet["cible"]],
             cout=entree["cout"],
             valeur=effet["valeur"],
+            rarete=rarete,
+            munitions_max=entree.get("munition"),
+            action=action,
         )
     return cartes
 

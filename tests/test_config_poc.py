@@ -7,7 +7,6 @@ import random
 from src.gameplay.combat import EtatCombat
 from src.gameplay.config_poc import (
     CARTES_PAR_MODULE_EQUIPE,
-    CARTES_PAR_MODULE_PRINCIPAL,
     ELECTRICITE_PAR_TOUR,
     ID_MODULE_PRINCIPAL,
     NOMBRE_MODULES_EQUIPES,
@@ -70,7 +69,7 @@ def test_creer_flotte_remplit_les_6_cases():
 
 def test_tirer_cartes_pioche_la_bonne_quantite_dans_la_pool():
     cartes = charger_cartes()
-    pool = ("CRT_1", "CRT_4", "CRT_6")
+    pool = ("CRT_7", "CRT_10", "CRT_12")
     aleatoire = random.Random(3)
 
     tirees = tirer_cartes(pool, 8, cartes, aleatoire)
@@ -80,7 +79,17 @@ def test_tirer_cartes_pioche_la_bonne_quantite_dans_la_pool():
     assert all(carte.nom in noms_pool for carte in tirees)
 
 
-def test_creer_deck_contient_20_cartes():
+def test_tirer_cartes_renvoie_des_exemplaires_independants():
+    """Deux tirages du meme id ne doivent pas partager d'objet (munitions par exemplaire)."""
+    cartes = charger_cartes()
+    tirees = tirer_cartes(("CRT_12",), 2, cartes, random.Random(1))
+
+    assert tirees[0] is not tirees[1]
+    assert tirees[0] is not cartes["CRT_12"]
+
+
+def test_creer_deck_contient_24_cartes():
+    """12 cartes fixes du module principal (deck de base) + 3 par module equipe."""
     specs_modules = charger_modules()
     cartes = charger_cartes()
     aleatoire = random.Random(5)
@@ -89,8 +98,22 @@ def test_creer_deck_contient_20_cartes():
     deck = creer_deck(specs_utilisees, cartes, aleatoire)
 
     total = len(deck.pioche) + len(deck.main) + len(deck.defausse)
-    attendu = CARTES_PAR_MODULE_PRINCIPAL + CARTES_PAR_MODULE_EQUIPE * (NOMBRE_MODULES_EQUIPES)
-    assert total == attendu == 20
+    attendu = 12 + CARTES_PAR_MODULE_EQUIPE * NOMBRE_MODULES_EQUIPES
+    assert total == attendu == 24
+
+
+def test_creer_deck_module_principal_a_4_laser_et_4_bouclier():
+    specs_modules = charger_modules()
+    cartes = charger_cartes()
+    aleatoire = random.Random(5)
+    _vaisseau, specs_utilisees = creer_vaisseau(specs_modules, aleatoire)
+
+    deck = creer_deck(specs_utilisees, cartes, aleatoire)
+
+    toutes = deck.pioche + deck.main + deck.defausse
+    noms = [carte.nom for carte in toutes]
+    assert noms.count("Laser") == 4
+    assert noms.count("Bouclier") == 4
 
 
 def test_creer_combat_poc_initialise_un_combat_complet():
