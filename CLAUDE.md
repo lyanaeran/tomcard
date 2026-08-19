@@ -123,7 +123,12 @@ directement — pour que les tests et les captures d'écran restent reproductibl
 
 ## Git / PR
 
-Historique de travail sur deux branches : `spec-jeu` (évolutions de `specs/specs.md`/`specs/poc.md` seules) et
-`poc` (code du POC). Créer une PR par changement logique, avec plan de test dans la description.
-Toute valeur numérique inventée faute de spec précise (PV, dégâts, coûts...) doit être signalée
-comme telle dans la PR et dans `specs/poc.md` (voir l'avertissement en tête de `specs/poc.md`).
+Créer une PR par changement logique, avec plan de test dans la description. Toute valeur numérique
+inventée faute de spec précise (PV, dégâts, coûts...) doit être signalée comme telle dans la PR et
+dans `specs/poc.md` (voir l'avertissement en tête de `specs/poc.md`).
+
+**Avant de pousser un commit supplémentaire sur une branche existante, vérifier l'état de sa PR**
+(mergée/fermée ou encore ouverte). Pousser sur une branche dont la PR est déjà mergée ou fermée
+laisse le commit orphelin, jamais intégré à `main` sans action manuelle supplémentaire — c'est
+arrivé plusieurs fois dans ce projet. Si la PR est déjà mergée/fermée, repartir d'une nouvelle
+branche depuis `main` (ou rouvrir une PR dédiée) plutôt que de pousser sur l'ancienne branche.
