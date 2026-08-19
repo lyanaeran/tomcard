@@ -186,7 +186,7 @@ function selectionnerCarte(carte) {
     rendre();
 }
 
-const CIBLES_ALLIEES = new Set(["ALLIE_UNIQUE", "ALLIES_MULTIPLES"]);
+const CIBLES_ALLIEES = new Set(["ALLIE_UNIQUE", "ALLIES_MULTIPLES", "MODULE_PRINCIPAL"]);
 
 function cliquerCase(idCase, typeCase) {
     if (indexCarteSelectionnee === null) return;
