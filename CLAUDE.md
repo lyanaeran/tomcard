@@ -11,13 +11,18 @@ variables, identifiants — reste en français, déjà la convention du projet).
 
 ## Documents de référence (à tenir à jour)
 
-- `specs.md` — vision de conception globale du jeu complet (boucle de run, modules, cartes, etc.)
-- `poc.md` — spec du POC de combat actuellement implémenté, dérivée de `specs.md`
+- `specs/specs.md` — vision de conception globale du jeu complet (boucle de run, modules, cartes, etc.)
+- `specs/poc.md` — spec du POC de combat actuellement implémenté, dérivée de `specs/specs.md`
+- `specs/cartes.xlsx` — registre éditable des cartes (une ligne par carte du tableau de conception,
+  colonnes Rareté/Module/Catégorie/Cible/Coût/X/Y/Munition/Nom/Description/Jouable/Notes), miroir
+  humainement modifiable de `config/cartes.json`. Pas rechargé par le code (`config/cartes.json`
+  reste la seule source de vérité pour le moteur) : si l'un est modifié, reporter le changement dans
+  l'autre à la main.
 
-**Ces deux fichiers doivent rester synchronisés avec le code.** Quand une décision de design est
+**Les deux fichiers `specs.md`/`poc.md` doivent rester synchronisés avec le code.** Quand une décision de design est
 prise ou clarifiée en cours d'implémentation (ex. règle de ciblage, format d'une carte, retour
-visuel d'un effet), reporte-la dans `poc.md` (détail POC) et, si c'est une décision de design
-réutilisable au-delà du POC, dans `specs.md` aussi. Inversement, avant d'implémenter une
+visuel d'un effet), reporte-la dans `specs/poc.md` (détail POC) et, si c'est une décision de design
+réutilisable au-delà du POC, dans `specs/specs.md` aussi. Inversement, avant d'implémenter une
 fonctionnalité un peu ambiguë, relis la section concernée de ces deux fichiers.
 
 ## Deux façons de jouer (PC et web/iOS) — les deux doivent rester fonctionnelles
@@ -27,13 +32,13 @@ chacune leur propre couche d'affichage. Voir `README.md` pour les instructions d
 détaillées.
 
 - **PC (pyglet)** : `python main.py`, affichage natif via `src/ui/fenetre.py`. Version de référence,
-  la plus fidèle à `poc.md`/`specs.md`.
+  la plus fidèle à `specs/poc.md`/`specs/specs.md`.
 - **Web (navigateur / iPhone)** : `index.html` + `web/` (`app.js`, `style.css`, `bridge.py`).
   Exécute `src/gameplay/` tel quel dans le navigateur via [Pyodide](https://pyodide.org/) (Python
   compilé en WebAssembly) ; `web/bridge.py` sérialise l'état du combat en JSON pour l'affichage
   HTML/CSS/JS. UI volontairement simplifiée par rapport à pyglet (pas d'infobulle au survol, taille
   des cases pilotée par la hauteur d'écran...) — ces écarts sont documentés dans les commentaires de
-  `web/app.js`/`web/style.css`, pas dans `poc.md`/`specs.md` qui décrivent la version de référence.
+  `web/app.js`/`web/style.css`, pas dans `specs/poc.md`/`specs/specs.md` qui décrivent la version de référence.
 
 **Ces deux façons de jouer doivent rester fonctionnelles en permanence.** En particulier :
 
@@ -55,7 +60,7 @@ détaillées.
 
 ## Architecture
 
-Séparation stricte, cf. `specs.md` §10 :
+Séparation stricte, cf. `specs/specs.md` §10 :
 
 - `src/gameplay/` — logique de jeu pure, **zéro dépendance pyglet**, entièrement testable sans
   affichage. Contient le moteur de combat (`combat.py`), le ciblage ennemi (`ciblage.py`), les
@@ -77,7 +82,7 @@ Séparation stricte, cf. `specs.md` §10 :
 
 - Une responsabilité claire par classe
 - Commentaires en français, **ASCII uniquement (sans accents ni cédilles)** — cette règle ne
-  s'applique qu'au code, pas à `specs.md`/`poc.md`/`CLAUDE.md` qui utilisent l'orthographe normale
+  s'applique qu'au code, pas à `specs/specs.md`/`specs/poc.md`/`CLAUDE.md` qui utilisent l'orthographe normale
 - Docstrings courtes, une ligne si possible
 - `src/gameplay` ne doit jamais importer `pyglet` ; si une fonction a besoin d'affichage, elle
   appartient à `src/ui`
@@ -118,7 +123,7 @@ directement — pour que les tests et les captures d'écran restent reproductibl
 
 ## Git / PR
 
-Historique de travail sur deux branches : `spec-jeu` (évolutions de `specs.md`/`poc.md` seules) et
+Historique de travail sur deux branches : `spec-jeu` (évolutions de `specs/specs.md`/`specs/poc.md` seules) et
 `poc` (code du POC). Créer une PR par changement logique, avec plan de test dans la description.
 Toute valeur numérique inventée faute de spec précise (PV, dégâts, coûts...) doit être signalée
-comme telle dans la PR et dans `poc.md` (voir l'avertissement en tête de `poc.md`).
+comme telle dans la PR et dans `specs/poc.md` (voir l'avertissement en tête de `specs/poc.md`).
