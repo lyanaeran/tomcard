@@ -76,6 +76,15 @@ def _intention_json(ennemi):
     }
 
 
+def _debuffs_json(ennemi):
+    """Debuffs actifs de cet ennemi (specs.md 12.1/12.4), chacun independant des autres
+    (aucune fusion : la magnitude affichee est celle de cette instance, pas la somme)."""
+    return [
+        {"action": debuff.action.name, "valeur": debuff.valeur, "tours_restants": debuff.tours_restants}
+        for debuff in ennemi.debuffs_actifs
+    ]
+
+
 def _ennemi_json(ennemi, id_case: str):
     if ennemi is None:
         return None
@@ -88,6 +97,7 @@ def _ennemi_json(ennemi, id_case: str):
         "image": _chemin_web(ennemi.image),
         "degats_attaque": ennemi.degats_attaque,
         "intention": _intention_json(ennemi),
+        "debuffs": _debuffs_json(ennemi),
     }
 
 

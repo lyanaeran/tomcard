@@ -79,8 +79,16 @@ décrémenté à la fin de chaque tour ennemi, que l'ennemi concerné ait agi ou
 - `REDUCTION_DEGATS` : diminue les dégâts infligés par l'ennemi lors de ses prochaines attaques
 - `VULNERABILITE` : augmente en % les dégâts qu'il subit des attaques du joueur
 
-Appliquer un nouveau debuff du même type sur un ennemi déjà debuffé **remplace** l'ancien plutôt que
-de cumuler (simplification du moteur, aucune règle de cumul dans le tableau de conception).
+Chaque debuff appliqué est **indépendant** des autres : un ennemi porte une liste de 0 à N debuffs
+actifs, sans fusion ni remplacement, même entre deux debuffs du même type. Tant qu'ils sont actifs,
+leurs magnitudes s'additionnent (ex : un ennemi avec Vulnérabilité +20% pendant 1 tour puis
+Vulnérabilité +50% pendant 3 tours subit +70% de dégâts tant que les deux sont actifs). Chaque
+debuff décompte sa propre durée indépendamment des autres et disparaît de la liste dès qu'elle
+atteint 0 (dans l'exemple, après le premier tour ennemi il ne reste que le +50% pour 2 tours).
+
+Affichage (UI) : les debuffs actifs d'un ennemi apparaissent dans son infobulle (un par ligne, avec
+sa magnitude et ses tours restants), et une pastille orange au-dessus de sa case affiche le nombre
+de debuffs actifs — absente si aucun debuff n'est actif.
 
 **Munitions** (specs.md §3.6/§7.4) : une carte peut avoir un nombre de munitions limité en plus de
 son coût. Chaque utilisation le décrémente ; à 0, l'exemplaire rejoint la pile **cartes épuisées**

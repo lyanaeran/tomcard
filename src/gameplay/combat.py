@@ -149,11 +149,9 @@ class Combat:
         return valeur_effective
 
     def _appliquer_debuff(self, carte: Carte, cible: Ennemi) -> int:
-        """Applique un debuff temporaire a un ennemi (specs.md 12.1/12.4)."""
-        if carte.action == ActionCarte.REDUCTION_DEGATS:
-            cible.appliquer_reduction_degats(carte.valeur, carte.duree)
-        elif carte.action == ActionCarte.VULNERABILITE:
-            cible.appliquer_vulnerabilite(carte.valeur, carte.duree)
+        """Applique un debuff temporaire a un ennemi (specs.md 12.1/12.4). Independant des
+        debuffs deja actifs sur cet ennemi : s'ajoute a la liste plutot que de les remplacer."""
+        cible.appliquer_debuff(carte.action, carte.valeur, carte.duree)
         return carte.valeur
 
     def _appliquer_outils(self, carte: Carte) -> int:

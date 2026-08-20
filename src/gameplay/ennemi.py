@@ -2,6 +2,22 @@
 L'ennemi unique affronte dans le combat du POC.
 """
 
+from dataclasses import dataclass
+
+from src.gameplay.carte import ActionCarte
+
+
+@dataclass
+class DebuffActif:
+    """Un debuff Sabotage applique sur un ennemi (specs.md 12.1/12.4). Chaque debuff joue est
+    independant des autres : ils ne fusionnent jamais, meme du meme type sur le meme ennemi
+    (decide avec l'utilisateur - un ennemi peut porter plusieurs debuffs du meme type a la fois,
+    leurs effets s'additionnent tant qu'ils sont actifs)."""
+
+    action: ActionCarte
+    valeur: int
+    tours_restants: int
+
 
 class Ennemi:
     """Represente un ennemi affronte en combat."""
@@ -12,13 +28,7 @@ class Ennemi:
         self.degats_attaque = degats_attaque
         self.nom = nom
         self.image = image
-        # Debuffs temporaires (cartes Sabotage, specs.md 12.1/12.4) : appliquer un nouveau
-        # debuff du meme type remplace l'ancien plutot que de cumuler (simplification, pas
-        # de regle de cumul donnee dans le tableau de conception).
-        self.reduction_degats = 0
-        self.reduction_degats_tours = 0
-        self.vulnerabilite_pourcent = 0
-        self.vulnerabilite_tours = 0
+        self.debuffs_actifs: list[DebuffActif] = []
 
     def est_detruit(self) -> bool:
         """Renvoie True si l'ennemi n'a plus de points de vie."""
@@ -28,35 +38,31 @@ class Ennemi:
         """Applique des degats directement sur les points de vie (pas de bouclier ennemi dans ce POC)."""
         self.pv = max(0, self.pv - degats)
 
-    def appliquer_reduction_degats(self, valeur: int, tours: int) -> None:
-        """Debuff "Tordre le canon" : diminue les degats infliges par cet ennemi (specs.md 12.1)."""
-        self.reduction_degats = valeur
-        self.reduction_degats_tours = tours
+    def appliquer_debuff(self, action: ActionCarte, valeur: int, tours: int) -> None:
+        """Ajoute un nouveau debuff a la liste des debuffs actifs (specs.md 12.1/12.4).
 
-    def appliquer_vulnerabilite(self, pourcent: int, tours: int) -> None:
-        """Debuff "Breche"/"Ligne avant"/"Boucliers endommages"/"...hors service" : augmente
-        les degats subis par cet ennemi en % (specs.md 12.4)."""
-        self.vulnerabilite_pourcent = pourcent
-        self.vulnerabilite_tours = tours
+        Independant des debuffs deja actifs : n'ecrase ni ne fusionne rien, meme un debuff du
+        meme type deja present. Leurs effets s'additionnent tant qu'ils sont actifs (§12.1).
+        """
+        self.debuffs_actifs.append(DebuffActif(action=action, valeur=valeur, tours_restants=tours))
+
+    def _somme_debuffs(self, action: ActionCarte) -> int:
+        return sum(debuff.valeur for debuff in self.debuffs_actifs if debuff.action == action)
 
     def degats_attaque_effectifs(self) -> int:
-        """Degats reellement infliges par cet ennemi, reduction de "Tordre le canon" appliquee."""
-        return max(0, self.degats_attaque - self.reduction_degats)
+        """Degats reellement infliges par cet ennemi, somme des reductions actives soustraite."""
+        return max(0, self.degats_attaque - self._somme_debuffs(ActionCarte.REDUCTION_DEGATS))
 
     def degats_subis(self, degats: int) -> int:
-        """Degats bruts d'une carte, majores par la vulnerabilite active de cet ennemi."""
-        if self.vulnerabilite_pourcent:
-            return round(degats * (1 + self.vulnerabilite_pourcent / 100))
+        """Degats bruts d'une carte, majores par la somme des vulnerabilites actives de cet ennemi."""
+        vulnerabilite = self._somme_debuffs(ActionCarte.VULNERABILITE)
+        if vulnerabilite:
+            return round(degats * (1 + vulnerabilite / 100))
         return degats
 
     def decrementer_debuffs(self) -> None:
         """A appeler une fois par tour ennemi ecoule : fait expirer les debuffs a duree
-        (specs.md 12.1/12.4 - le compteur baisse a chaque tour, meme si l'ennemi n'a pas agi)."""
-        if self.reduction_degats_tours > 0:
-            self.reduction_degats_tours -= 1
-            if self.reduction_degats_tours == 0:
-                self.reduction_degats = 0
-        if self.vulnerabilite_tours > 0:
-            self.vulnerabilite_tours -= 1
-            if self.vulnerabilite_tours == 0:
-                self.vulnerabilite_pourcent = 0
+        (specs.md 12.1/12.4 - chaque debuff decompte independamment, meme si l'ennemi n'a pas agi)."""
+        for debuff in self.debuffs_actifs:
+            debuff.tours_restants -= 1
+        self.debuffs_actifs = [debuff for debuff in self.debuffs_actifs if debuff.tours_restants > 0]

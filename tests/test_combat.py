@@ -416,9 +416,9 @@ def test_colonne_avant_ennemie_touche_toute_la_colonne_avant_uniquement():
 
     combat.jouer_carte(CARTE_COLONNE_AVANT, avant_g)  # clic sur un ennemi de la colonne avant
 
-    assert avant_g.vulnerabilite_pourcent == 100
-    assert avant_d.vulnerabilite_pourcent == 100
-    assert arriere_g.vulnerabilite_pourcent == 0  # colonne arriere non touchee
+    assert avant_g.debuffs_actifs[0].valeur == 100
+    assert avant_d.debuffs_actifs[0].valeur == 100
+    assert arriere_g.debuffs_actifs == []  # colonne arriere non touchee
 
 
 def test_colonne_avant_ennemie_refuse_un_clic_sur_l_arriere():
@@ -434,5 +434,5 @@ def test_colonne_avant_ennemie_refuse_un_clic_sur_l_arriere():
 
     combat.jouer_carte(CARTE_COLONNE_AVANT, arriere)  # clic sur l'arriere -> refuse
 
-    assert arriere.vulnerabilite_pourcent == 0
-    assert avant.vulnerabilite_pourcent == 0
+    assert arriere.debuffs_actifs == []
+    assert avant.debuffs_actifs == []

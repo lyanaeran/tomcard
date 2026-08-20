@@ -387,6 +387,14 @@ cartes (§7) et la boucle de récompenses (§2.1, §6) stabilisés.
   dès qu'elle est **piochée**, plutôt que jouée par le joueur. Probablement ajoutée au deck par les
   ennemis (dans l'esprit des cartes Statut/Malédiction de Slay the Spire) plutôt que choisie par le
   joueur
+- **Stacks à intensité cumulative** (façon Poison/Force de Slay the Spire) : un unique compteur par
+  ennemi qui s'additionne à chaque application (contrairement aux debuffs Vulnérabilité/Réduction de
+  dégâts actuels, §7.1/§12.1, où chaque application reste une instance indépendante avec sa propre
+  durée — plusieurs instances coexistent et leurs magnitudes s'additionnent tant qu'elles sont
+  actives, mais rien ne fusionne en un seul compteur) et qui inflige un effet croissant avec le
+  nombre de stacks (ex : dégâts égaux au compteur, qui décroît de 1 chaque tour). Mécanique distincte
+  à concevoir pour de futures cartes, pas une règle à appliquer aux cartes de vulnérabilité
+  existantes
 
 ---
 
@@ -421,9 +429,10 @@ perçante (§3.1, §7.2), et non automatiquement comme Alliés/Ennemis multiples
 
 ### 12.3 Effets à durée (plusieurs tours)
 
-Debuff actif pendant Y tours (compteur sur `Ennemi`, décrémenté à chaque tour ennemi écoulé même si
-l'ennemi concerné n'a pas agi) — **implémenté** pour les debuffs (§12.4/§12.5) : *Boucliers hors
-service* jouable. Reste manquant pour les autres effets à durée :
+Debuff actif pendant Y tours (chaque application ajoutée à la liste `Ennemi.debuffs_actifs`, comme
+une instance indépendante avec sa propre durée ; décrémentée à chaque tour ennemi écoulé même si
+l'ennemi concerné n'a pas agi, et retirée de la liste à 0) — **implémenté** pour les debuffs
+(§12.4/§12.5) : *Boucliers hors service* jouable. Reste manquant pour les autres effets à durée :
 
 - Dégâts répétés pendant Y tours (*Embrasement, Guerre nucléaire*)
 - Bouclier accordé pendant Y tours (*Blindage maximal*)
@@ -432,9 +441,9 @@ service* jouable. Reste manquant pour les autres effets à durée :
 
 ### 12.4 Effets en pourcentage
 
-**Implémenté pour les debuffs** (`Ennemi.vulnerabilite_pourcent`, majore les dégâts subis d'une
-attaque du joueur) : *Brèche, Ligne avant, Boucliers endommagés, Boucliers hors service* jouables.
-Reste manquant pour les effets alliés :
+**Implémenté pour les debuffs** (somme des `valeur` des debuffs `VULNERABILITE` actifs dans
+`Ennemi.debuffs_actifs`, majore les dégâts subis d'une attaque du joueur) : *Brèche, Ligne avant,
+Boucliers endommagés, Boucliers hors service* jouables. Reste manquant pour les effets alliés :
 
 - Bouclier = % des PV du module (*Bouclier adaptatif*)
 

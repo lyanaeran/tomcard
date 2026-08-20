@@ -224,6 +224,9 @@ function afficherInfobulle(idCase, typeCase) {
         if (objet.intention) {
             lignes.push(`<div>🎯 ${objet.intention.module_nom} (-${objet.intention.degats})</div>`);
         }
+        for (const debuff of objet.debuffs) {
+            lignes.push(`<div>${libelleDebuffActif(debuff)}</div>`);
+        }
     }
     const panneau = document.getElementById("info-case");
     panneau.innerHTML = lignes.join("");
@@ -253,7 +256,13 @@ function rendrePastilles(objet, typeCase) {
     if (objet.detruit) return "";
     const bouclier =
         typeCase === "allie" ? `<span class="pastille pastille-bouclier">${objet.bouclier}</span>` : "";
-    return `${bouclier}<span class="pastille pastille-pv">${objet.pv}</span>`;
+    // Pastille orange du nombre de debuffs actifs (pas de bouclier chez les
+    // ennemis, meme emplacement) ; absente si aucun debuff actif.
+    const debuffs =
+        typeCase === "ennemi" && objet.debuffs.length > 0
+            ? `<span class="pastille pastille-debuffs">${objet.debuffs.length}</span>`
+            : "";
+    return `${bouclier}${debuffs}<span class="pastille pastille-pv">${objet.pv}</span>`;
 }
 
 // Pastilles du module de base : centrees en haut de l'image du vaisseau
@@ -376,6 +385,19 @@ const LIBELLES_ACTION_DEBUFF = {
     REDUCTION_DEGATS: (carte, cible) => `Diminue les degats infliges par ${cible} de ${carte.valeur}, pendant ${carte.duree} tour(s).`,
     VULNERABILITE: (carte, cible) => `Augmente les degats subis par ${cible} de ${carte.valeur}%, pendant ${carte.duree} tour(s).`,
 };
+
+// Libelle d'un debuff actif sur un ennemi (poc.md/specs.md 12.1/12.4), affiche dans son
+// infobulle. Chaque debuff est independant : la valeur affichee est celle de cette
+// instance uniquement, plusieurs debuffs du meme type peuvent apparaitre en meme temps.
+const LIBELLES_ACTION_DEBUFF_ACTIF = {
+    REDUCTION_DEGATS: (debuff) => `Degats reduits -${debuff.valeur}`,
+    VULNERABILITE: (debuff) => `Vulnerabilite +${debuff.valeur}%`,
+};
+
+function libelleDebuffActif(debuff) {
+    const tour = debuff.tours_restants === 1 ? "tour" : "tours";
+    return `${LIBELLES_ACTION_DEBUFF_ACTIF[debuff.action](debuff)} (${debuff.tours_restants} ${tour})`;
+}
 
 function texteEffetCarte(carte) {
     const cible = LIBELLES_CIBLE[carte.cible];
