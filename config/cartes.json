@@ -149,7 +149,7 @@
       "y": null,
       "munition": null,
       "description": "Inflige X degats a tous les ennemis de la ligne arriere",
-      "_non_jouable": "cible 'ennemis de la ligne arriere' non representable par CibleCarte (voir specs.md 9.1)"
+      "effet": { "type": "ATTAQUE", "cible": "COLONNE_ARRIERE_ENNEMIE", "valeur": 7 }
     },
     {
       "id": "CRT_17",
@@ -407,7 +407,7 @@
       "y": null,
       "munition": null,
       "description": "Diminue les degats de l'ennemi de X au prochain tour",
-      "_non_jouable": "type Debuff non supporte par le moteur actuel"
+      "effet": { "type": "DEBUFF", "cible": "ENNEMI_UNIQUE", "valeur": 5, "action": "REDUCTION_DEGATS", "duree": 1 }
     },
     {
       "id": "CRT_34",
@@ -422,7 +422,7 @@
       "y": null,
       "munition": null,
       "description": "Augmente les degats subis par l'ennemi de X% au prochain tour",
-      "_non_jouable": "type Debuff (effet en pourcentage) non supporte par le moteur actuel"
+      "effet": { "type": "DEBUFF", "cible": "ENNEMI_UNIQUE", "valeur": 100, "action": "VULNERABILITE", "duree": 1 }
     },
     {
       "id": "CRT_35",
@@ -437,7 +437,7 @@
       "y": null,
       "munition": null,
       "description": "Augmente les degats subis par la ligne avant ennemie de X% au prochain tour",
-      "_non_jouable": "type Debuff + cible 'ligne avant ennemie' non supportes par le moteur actuel"
+      "effet": { "type": "DEBUFF", "cible": "COLONNE_AVANT_ENNEMIE", "valeur": 100, "action": "VULNERABILITE", "duree": 1 }
     },
     {
       "id": "CRT_36",
@@ -467,7 +467,7 @@
       "y": null,
       "munition": null,
       "description": "Augmente les degats subis par tous les ennemis de X% au prochain tour",
-      "_non_jouable": "type Debuff (effet en pourcentage) non supporte par le moteur actuel"
+      "effet": { "type": "DEBUFF", "cible": "ENNEMIS_MULTIPLES", "valeur": 100, "action": "VULNERABILITE", "duree": 1 }
     },
     {
       "id": "CRT_38",
@@ -482,7 +482,7 @@
       "y": 5,
       "munition": null,
       "description": "Augmente les degats subis par tous les ennemis de X% pour les Y prochains tours",
-      "_non_jouable": "type Debuff + effet a duree non supportes par le moteur actuel"
+      "effet": { "type": "DEBUFF", "cible": "ENNEMIS_MULTIPLES", "valeur": 100, "action": "VULNERABILITE", "duree": 5 }
     },
 
     {

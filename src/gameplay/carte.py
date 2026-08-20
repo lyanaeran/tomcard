@@ -17,6 +17,7 @@ class TypeCarte(Enum):
     DEFENSE = auto()
     REPARATION = auto()
     OUTILS = auto()
+    DEBUFF = auto()
 
 
 class CibleCarte(Enum):
@@ -29,6 +30,10 @@ class CibleCarte(Enum):
     au plus), pour les cartes percantes (specs.md paragraphe 3.1).
     MODULE_PRINCIPAL : cible toujours le module de base, pas de clic necessaire
     (specs.md paragraphe 9.1).
+    COLONNE_AVANT_ENNEMIE / COLONNE_ARRIERE_ENNEMIE : toute la colonne avant (ou
+    arriere) ennemie, jusqu'a 3 ennemis. Le joueur doit cliquer un ennemi de cette
+    colonne precise pour confirmer (specs.md paragraphe 12.1) - contrairement a
+    LIGNE_ENNEMIE, la colonne visee est fixe par la carte, pas deduite du clic.
     """
 
     ENNEMI_UNIQUE = auto()
@@ -37,6 +42,8 @@ class CibleCarte(Enum):
     ENNEMIS_MULTIPLES = auto()
     LIGNE_ENNEMIE = auto()
     MODULE_PRINCIPAL = auto()
+    COLONNE_AVANT_ENNEMIE = auto()
+    COLONNE_ARRIERE_ENNEMIE = auto()
 
 
 # Cibles qui se resolvent sans clic de ciblage (pas de choix individuel possible)
@@ -53,12 +60,14 @@ class RareteCarte(Enum):
 
 
 class ActionCarte(Enum):
-    """Effet precis d'une carte OUTILS (chaque carte Outils est un mecanisme different,
-    cf. specs.md paragraphe 12.9) : la valeur de la carte s'interprete differemment
+    """Effet precis d'une carte OUTILS ou DEBUFF (chaque carte est un mecanisme different,
+    cf. specs.md paragraphe 12.9/12.1) : la valeur de la carte s'interprete differemment
     selon cette action."""
 
     GAIN_ELECTRICITE = auto()
     PIOCHE_SUPPLEMENTAIRE = auto()
+    REDUCTION_DEGATS = auto()
+    VULNERABILITE = auto()
 
 
 @dataclass(eq=False)
@@ -81,6 +90,7 @@ class Carte:
     munitions_max: int | None = None
     munitions_restantes: int | None = None
     action: ActionCarte | None = None
+    duree: int | None = None
 
     def __post_init__(self):
         if self.munitions_restantes is None and self.munitions_max is not None:

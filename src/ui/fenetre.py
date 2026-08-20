@@ -6,7 +6,7 @@ cf. poc.md et specs.md paragraphe 8). Utilise les images de assets/.
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.carte import CIBLES_SANS_CLIC, Carte, CibleCarte, RareteCarte, TypeCarte
+from src.gameplay.carte import CIBLES_SANS_CLIC, ActionCarte, Carte, CibleCarte, RareteCarte, TypeCarte
 from src.gameplay.combat import Combat, EtatCombat
 from src.gameplay.config_poc import creer_combat_poc
 from src.gameplay.ennemi import Ennemi
@@ -109,6 +109,7 @@ TAILLE_POLICE_POPUP = 22
 COULEUR_POPUP_DEGATS = COULEUR_PASTILLE_PV
 COULEUR_POPUP_BOUCLIER = COULEUR_PASTILLE_BOUCLIER
 COULEUR_POPUP_SOIN = (70, 200, 90)
+COULEUR_POPUP_DEBUFF = (215, 130, 40)
 COULEUR_OMBRE_POPUP = (0, 0, 0)
 DECALAGE_OMBRE_POPUP = 2
 
@@ -247,6 +248,10 @@ def _texte_et_couleur_effet(carte: Carte, valeur_effective: int) -> tuple[str, t
         return f"-{valeur_effective}", COULEUR_POPUP_DEGATS
     if carte.type == TypeCarte.DEFENSE:
         return f"+{valeur_effective}", COULEUR_POPUP_BOUCLIER
+    if carte.type == TypeCarte.DEBUFF:
+        if carte.action == ActionCarte.VULNERABILITE:
+            return f"+{valeur_effective}%", COULEUR_POPUP_DEBUFF
+        return f"-{valeur_effective}", COULEUR_POPUP_DEBUFF
     return f"+{valeur_effective}", COULEUR_POPUP_SOIN
 
 

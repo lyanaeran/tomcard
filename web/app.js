@@ -363,11 +363,18 @@ const LIBELLES_CIBLE = {
     ALLIE_UNIQUE: "un module",
     ALLIES_MULTIPLES: "tous les modules",
     MODULE_PRINCIPAL: "le module principal",
+    COLONNE_AVANT_ENNEMIE: "la ligne avant ennemie",
+    COLONNE_ARRIERE_ENNEMIE: "la ligne arriere ennemie",
 };
 
 const LIBELLES_ACTION_OUTILS = {
     GAIN_ELECTRICITE: (carte) => `Gagne ${carte.valeur} ⚡.`,
     PIOCHE_SUPPLEMENTAIRE: (carte) => `Pioche ${carte.valeur} cartes supplementaires.`,
+};
+
+const LIBELLES_ACTION_DEBUFF = {
+    REDUCTION_DEGATS: (carte, cible) => `Diminue les degats infliges par ${cible} de ${carte.valeur}, pendant ${carte.duree} tour(s).`,
+    VULNERABILITE: (carte, cible) => `Augmente les degats subis par ${cible} de ${carte.valeur}%, pendant ${carte.duree} tour(s).`,
 };
 
 function texteEffetCarte(carte) {
@@ -376,6 +383,7 @@ function texteEffetCarte(carte) {
     if (carte.type === "DEFENSE") return `Bouclier de ${carte.valeur} a ${cible}.`;
     if (carte.type === "REPARATION") return `Repare ${carte.valeur} PV a ${cible}.`;
     if (carte.type === "OUTILS") return LIBELLES_ACTION_OUTILS[carte.action](carte);
+    if (carte.type === "DEBUFF") return LIBELLES_ACTION_DEBUFF[carte.action](carte, cible);
     return `Effet de ${carte.valeur} a ${cible}.`;
 }
 

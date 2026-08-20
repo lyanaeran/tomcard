@@ -18,9 +18,9 @@ Simplifications restantes par rapport à `specs.md` : pas de boucle de run (pas 
 
 Grille **2 colonnes (Avant / Arrière) x 3 rangées (Gauche / Mid / Droite)**, comme décrit en specs.md §3.1/§5. La colonne Avant fait face à l'ennemi. Le module de base occupe la rangée Mid en entier (les deux colonnes) ; les 4 autres modules équipés occupent chacun une case.
 
-**Composition tirée au sort à chaque combat**, à partir de `config/modules.json` (5 modules définis : Principal + 4 autres) :
+**Composition tirée au sort à chaque combat**, à partir de `config/modules.json` (6 modules définis : Principal + 5 autres) :
 - Le module **Principal** (`MOD_1`) est toujours la base
-- **4 modules différents** sont tirés au sort parmi les 4 autres (Lanceur de missiles, Blindage, Générateur, Soute) et placés aléatoirement sur les 4 cases équipables — pour l'instant les 4 sont donc **toujours** présents (le tirage n'a d'effet que sur leur position), faute d'avoir un 5e module équipable jouable ; le module Sabotage existe dans specs.md/le tableau de cartes mais n'a encore aucune carte jouable (type Debuff non implémenté, voir specs.md §12), donc pas encore dans `config/modules.json`
+- **4 modules différents** sont tirés au sort parmi les 5 autres (Lanceur de missiles, Blindage, Générateur, Soute, Sabotage) et placés aléatoirement sur les 4 cases équipables — un des 5 modules ne sera donc pas présent dans le combat
 - PV et cartes jouables de chaque module : voir `config/modules.json`
 
 - **Électricité** : 5 par tour (ressource pleine à chaque début de tour, ne se cumule pas d'un tour à l'autre)
@@ -49,14 +49,14 @@ Chaque attaque résolue affiche un popup `-N` (dégâts réellement infligés, v
 
 ## 4. Cartes
 
-10 cartes jouables définies dans `config/cartes.json` (issues du tableau de conception complet de
-l'utilisateur, dont 32 autres cartes sont stockées mais pas encore jouables faute de mécanique
+16 cartes jouables définies dans `config/cartes.json` (issues du tableau de conception complet de
+l'utilisateur, dont 22 autres cartes sont stockées mais pas encore jouables faute de mécanique
 correspondante dans le moteur — voir specs.md §12 pour l'inventaire de ce qui manque). Chaque carte
 a un type, un coût, une cible et une rareté :
 
 **Types** (`TypeCarte`, specs.md §7.1) : `ATTAQUE`, `DEFENSE`, `REPARATION` (remplace l'ancien
 `SOIN`), `OUTILS` (manipule une ressource commune au joueur — électricité ou pioche — pas un
-module/ennemi précis, cf. plus bas).
+module/ennemi précis, cf. plus bas), `DEBUFF` (affaiblit un ennemi, temporairement).
 
 **Cibles**, avec leur comportement au clic :
 
@@ -68,10 +68,19 @@ module/ennemi précis, cf. plus bas).
 | **Alliés multiples** | Se résout **dès la sélection** de la carte (pas de clic de ciblage) — touche tous les modules vivants du joueur |
 | **Ennemis multiples** | Se résout **dès la sélection** de la carte (pas de clic de ciblage) — touche tous les ennemis vivants |
 | **Module principal** | Se résout **dès la sélection** de la carte (pas de clic de ciblage) — touche toujours le module de base |
+| **Colonne avant/arrière ennemie** | Sélectionner la carte, puis cliquer un ennemi de la colonne visée par la carte (avant ou arrière, fixé par la carte — un clic sur l'autre colonne est refusé) — touche les 3 ennemis de cette colonne |
 
 **Cartes Outils** : leur effet ne porte jamais sur un module/ennemi mais sur une ressource commune
 (gagner de l'électricité, piocher des cartes supplémentaires) — un champ `action` (`GAIN_ELECTRICITE`
 / `PIOCHE_SUPPLEMENTAIRE`) précise laquelle, cf. §8.
+
+**Cartes Debuff** : affaiblissent temporairement un ennemi, pour un nombre de tours donné (`duree`,
+décrémenté à la fin de chaque tour ennemi, que l'ennemi concerné ait agi ou non) :
+- `REDUCTION_DEGATS` : diminue les dégâts infligés par l'ennemi lors de ses prochaines attaques
+- `VULNERABILITE` : augmente en % les dégâts qu'il subit des attaques du joueur
+
+Appliquer un nouveau debuff du même type sur un ennemi déjà debuffé **remplace** l'ancien plutôt que
+de cumuler (simplification du moteur, aucune règle de cumul dans le tableau de conception).
 
 **Munitions** (specs.md §3.6/§7.4) : une carte peut avoir un nombre de munitions limité en plus de
 son coût. Chaque utilisation le décrémente ; à 0, l'exemplaire rejoint la pile **cartes épuisées**
@@ -167,8 +176,9 @@ Chaque effet résolu — carte jouée par le joueur ou attaque ennemie — affic
 - Dégâts (carte d'attaque ou attaque ennemie) : `-N` en rouge
 - Bouclier posé (carte de défense) : `+N` en bleu
 - Réparation (carte de réparation) : `+N` en vert
+- Debuff (carte Debuff) : `-N` (réduction de dégâts) ou `+N%` (vulnérabilité), en orange
 
-`N` est le montant **réellement appliqué**, pas la valeur nominale de la carte : les dégâts sont plafonnés par les PV + Bouclier restants de la cible, la réparation par son PV max (le Bouclier, lui, n'est jamais plafonné, cf. §4). Une carte à cibles multiples (Alliés multiples, Ennemis multiples, Ligne ennemie) affiche un popup indépendant sur chacune de ses cibles. Une carte Outils ne touche aucun module/ennemi : elle n'affiche pas de popup.
+`N` est le montant **réellement appliqué**, pas la valeur nominale de la carte : les dégâts sont plafonnés par les PV + Bouclier restants de la cible, la réparation par son PV max (le Bouclier, lui, n'est jamais plafonné, cf. §4). Une carte à cibles multiples (Alliés multiples, Ennemis multiples, Ligne ennemie, Colonne avant/arrière ennemie) affiche un popup indépendant sur chacune de ses cibles. Une carte Outils ne touche aucun module/ennemi : elle n'affiche pas de popup.
 
 Il n'y a pas d'animation de rayon entre l'attaquant et sa cible : ce retour par popup a été préféré, plus lisible quand plusieurs attaques se résolvent au même tour.
 
@@ -205,20 +215,27 @@ jouables (`donnees.charger_cartes()` ignore silencieusement les autres, cf. spec
 - `cout` (en électricité)
 - `rarete` : `Base` / `Commune` / `Rare` / `Legendaire` (specs.md §7.3)
 - `munition` : nombre de munitions (absent/`null` = illimitées, cf. §4)
-- `effet` (absent = carte non jouable) : objet `{ type, cible, valeur, action? }` où `type` et
-  `cible` reprennent les valeurs de specs.md §7.1/§7.2 :
-  - `type` : `ATTAQUE` / `DEFENSE` / `REPARATION` / `OUTILS`
+- `effet` (absent = carte non jouable) : objet `{ type, cible, valeur, action?, duree? }` où `type`
+  et `cible` reprennent les valeurs de specs.md §7.1/§7.2 :
+  - `type` : `ATTAQUE` / `DEFENSE` / `REPARATION` / `OUTILS` / `DEBUFF`
   - `cible` : `ALLIE_UNIQUE` / `ALLIES_MULTIPLES` / `ENNEMI_UNIQUE` / `ENNEMIS_MULTIPLES` /
     `LIGNE_ENNEMIE` (touche l'avant et l'arrière de la rangée visée, soit 2 ennemis) /
-    `MODULE_PRINCIPAL` (toujours le module de base, pas de clic)
-  - `action` (uniquement pour `type: OUTILS`) : `GAIN_ELECTRICITE` / `PIOCHE_SUPPLEMENTAIRE` —
-    précise l'effet exact, chaque carte Outils étant un mécanisme différent (specs.md §12.9)
+    `MODULE_PRINCIPAL` (toujours le module de base, pas de clic) / `COLONNE_AVANT_ENNEMIE` /
+    `COLONNE_ARRIERE_ENNEMIE` (toute la colonne visée par la carte, fixe — 3 ennemis au plus ;
+    contrairement à `LIGNE_ENNEMIE`, le clic doit tomber dans cette colonne precise)
+  - `action` (pour `type: OUTILS` ou `type: DEBUFF`) : `GAIN_ELECTRICITE` / `PIOCHE_SUPPLEMENTAIRE`
+    (Outils) ou `REDUCTION_DEGATS` / `VULNERABILITE` (Debuff) — précise l'effet exact, chaque carte
+    étant un mécanisme différent (specs.md §12.9/§12.1)
+  - `duree` (pour `type: DEBUFF` uniquement) : nombre de tours ennemis pendant lesquels le debuff
+    reste actif, décrémenté à chaque tour même si l'ennemi concerné n'a pas agi
 
-Les 10 cartes actuellement jouables : les 6 du module Principal (Laser, Laser perçant,
-Bombardement, Bouclier, Protéger le vaisseau, Réparation), et une par module équipé (Ciel de
-missiles pour Lanceur de missiles, Mode défensif pour Blindage, Surcharge temporaire pour
-Générateur, Boost pour Soute) — les 28 autres cartes du tableau restent stockées pour référence,
-non jouables faute de mécanique (specs.md §12).
+Les 16 cartes actuellement jouables : les 6 du module Principal (Laser, Laser perçant,
+Bombardement, Bouclier, Protéger le vaisseau, Réparation), Ciel de missiles et Ligne arrière
+(Lanceur de missiles), Mode défensif (Blindage), Surcharge temporaire (Générateur), Boost (Soute),
+et 5 des 6 cartes de Sabotage (Tordre le canon, Brèche, Ligne avant, Boucliers endommagés,
+Boucliers hors service — seule Tir allié, qui détourne l'attaque d'un ennemi vers un autre ennemi,
+reste non jouable, cf. specs.md §12.6) — les 22 autres cartes du tableau restent stockées pour
+référence, non jouables faute de mécanique (specs.md §12).
 
 **Toutes les valeurs (PV, dégâts, coûts, munitions) viennent du tableau de conception fourni par
 l'utilisateur**, sauf les PV des modules Générateur et Soute (10 chacun) qui restent **inventés**

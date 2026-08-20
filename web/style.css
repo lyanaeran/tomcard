@@ -394,6 +394,10 @@ body {
     color: #51cf66;
 }
 
+.popup-debuff {
+    color: #ff9f43;
+}
+
 @keyframes popup-flottement {
     0% {
         opacity: 0;

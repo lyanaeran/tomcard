@@ -10,7 +10,7 @@ from src.gameplay.ennemi import Ennemi
 from src.gameplay.flotte import Flotte
 from src.gameplay.joueur import Joueur
 from src.gameplay.module import Module
-from src.gameplay.position import Colonne, Position
+from src.gameplay.position import Colonne, Position, Rangee
 
 
 class EtatCombat(Enum):
@@ -93,6 +93,10 @@ class Combat:
             return isinstance(cible, Module) and cible in self._modules_vivants()
         if carte.cible == CibleCarte.LIGNE_ENNEMIE:
             return isinstance(cible, Ennemi) and cible in self.flotte.ennemis_vivants()
+        if carte.cible == CibleCarte.COLONNE_AVANT_ENNEMIE:
+            return isinstance(cible, Ennemi) and cible in self.flotte.ennemis_vivants() and self._position_de_ennemi(cible).colonne == Colonne.AVANT
+        if carte.cible == CibleCarte.COLONNE_ARRIERE_ENNEMIE:
+            return isinstance(cible, Ennemi) and cible in self.flotte.ennemis_vivants() and self._position_de_ennemi(cible).colonne == Colonne.ARRIERE
         return False
 
     def _appliquer_effet(self, carte: Carte, cible: Module | Ennemi | None) -> list[tuple[Module | Ennemi, int]]:
@@ -115,6 +119,10 @@ class Combat:
             position = self._position_de_ennemi(cible)
             occupants = (self.flotte.ennemi_en(colonne, position.rangee) for colonne in (Colonne.AVANT, Colonne.ARRIERE))
             cibles = [occupant for occupant in occupants if occupant is not None]
+        elif carte.cible in (CibleCarte.COLONNE_AVANT_ENNEMIE, CibleCarte.COLONNE_ARRIERE_ENNEMIE):
+            colonne = Colonne.AVANT if carte.cible == CibleCarte.COLONNE_AVANT_ENNEMIE else Colonne.ARRIERE
+            occupants = (self.flotte.ennemi_en(colonne, rangee) for rangee in (Rangee.GAUCHE, Rangee.MID, Rangee.DROITE))
+            cibles = [occupant for occupant in occupants if occupant is not None]
         else:
             cibles = [cible]
         return [(une_cible, self._appliquer_effet_simple(carte, une_cible)) for une_cible in cibles]
@@ -127,15 +135,26 @@ class Combat:
         son PV max (le bouclier, lui, n'est jamais plafonne).
         """
         if carte.type == TypeCarte.ATTAQUE:
-            valeur_effective = _degats_effectifs(cible, carte.valeur)
-            cible.subir_degats(carte.valeur)
+            degats_bruts = cible.degats_subis(carte.valeur) if isinstance(cible, Ennemi) else carte.valeur
+            valeur_effective = _degats_effectifs(cible, degats_bruts)
+            cible.subir_degats(degats_bruts)
         elif carte.type == TypeCarte.DEFENSE:
             valeur_effective = carte.valeur
             cible.ajouter_bouclier(carte.valeur)
+        elif carte.type == TypeCarte.DEBUFF:
+            valeur_effective = self._appliquer_debuff(carte, cible)
         else:
             valeur_effective = min(carte.valeur, cible.pv_max - cible.pv)
             cible.soigner(carte.valeur)
         return valeur_effective
+
+    def _appliquer_debuff(self, carte: Carte, cible: Ennemi) -> int:
+        """Applique un debuff temporaire a un ennemi (specs.md 12.1/12.4)."""
+        if carte.action == ActionCarte.REDUCTION_DEGATS:
+            cible.appliquer_reduction_degats(carte.valeur, carte.duree)
+        elif carte.action == ActionCarte.VULNERABILITE:
+            cible.appliquer_vulnerabilite(carte.valeur, carte.duree)
+        return carte.valeur
 
     def _appliquer_outils(self, carte: Carte) -> int:
         """Applique l'effet d'une carte Outils (specs.md 12.9) : n'affecte pas la cible
@@ -155,12 +174,15 @@ class Combat:
                 continue
             cible = module_cible_par_ennemi(self.joueur.vaisseau, position.rangee)
             if cible is not None:
-                degats_effectifs = _degats_effectifs(cible, ennemi.degats_attaque)
-                cible.subir_degats(ennemi.degats_attaque)
+                degats = ennemi.degats_attaque_effectifs()
+                degats_effectifs = _degats_effectifs(cible, degats)
+                cible.subir_degats(degats)
                 attaques.append((position, ennemi, cible, degats_effectifs))
             self._verifier_fin_de_combat()
             if self.etat != EtatCombat.EN_COURS:
                 break
+        for ennemi in self.flotte.ennemis_vivants():
+            ennemi.decrementer_debuffs()
         return attaques
 
     def _position_de_ennemi(self, ennemi: Ennemi) -> Position | None:

@@ -104,6 +104,7 @@ def _carte_json(carte, index: int):
         "rarete": carte.rarete.name,
         "munitions_restantes": carte.munitions_restantes,
         "action": carte.action.name if carte.action else None,
+        "duree": carte.duree,
     }
 
 
@@ -153,7 +154,7 @@ def _id_ennemi(ennemi) -> str | None:
     return None
 
 
-def _popup(cible, type_carte: str, valeur: int) -> dict | None:
+def _popup(cible, type_carte: str, valeur: int, action: str | None) -> dict | None:
     """Construit le popup +/-N pour une cible touchee (poc.md paragraphe 8)."""
     if isinstance(cible, Module):
         id_case, camp = _id_module(cible), "allie"
@@ -165,6 +166,8 @@ def _popup(cible, type_carte: str, valeur: int) -> dict | None:
         texte, couleur = f"-{valeur}", "degats"
     elif type_carte == "DEFENSE":
         texte, couleur = f"+{valeur}", "bouclier"
+    elif type_carte == "DEBUFF":
+        texte, couleur = (f"+{valeur}%", "debuff") if action == "VULNERABILITE" else (f"-{valeur}", "debuff")
     else:
         texte, couleur = f"+{valeur}", "soin"
     return {"id": id_case, "camp": camp, "texte": texte, "couleur": couleur}
@@ -195,7 +198,8 @@ def jouer_carte(index_carte: int, id_cible) -> str:
     carte = combat.joueur.deck.main[index_carte]
     cible = _resoudre_cible(carte, id_cible)
     resultats = combat.jouer_carte(carte, cible)
-    popups = [popup for cible_touchee, valeur in resultats if (popup := _popup(cible_touchee, carte.type.name, valeur))]
+    action = carte.action.name if carte.action else None
+    popups = [popup for cible_touchee, valeur in resultats if (popup := _popup(cible_touchee, carte.type.name, valeur, action))]
     return json.dumps({"etat": _etat_dict(), "popups": popups})
 
 
