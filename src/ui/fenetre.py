@@ -6,10 +6,10 @@ cf. poc.md et specs.md paragraphe 8). Utilise les images de assets/.
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.carte import CIBLES_SANS_CLIC, Carte, CibleCarte, RareteCarte, TypeCarte
+from src.gameplay.carte import CIBLES_SANS_CLIC, ActionCarte, Carte, CibleCarte, RareteCarte, TypeCarte
 from src.gameplay.combat import Combat, EtatCombat
 from src.gameplay.config_poc import creer_combat_poc
-from src.gameplay.ennemi import Ennemi
+from src.gameplay.ennemi import DebuffActif, Ennemi
 from src.gameplay.module import Module
 from src.gameplay.position import Colonne, Position, Rangee
 from src.ui.animation import AnimationPopup
@@ -102,6 +102,7 @@ COULEUR_ETOILE_RARETE = {
     RareteCarte.LEGENDAIRE: (235, 150, 30),
 }
 COULEUR_PASTILLE_MUNITION = (70, 190, 90)
+COULEUR_PASTILLE_DEBUFFS = (215, 130, 40)
 
 # Popups +/-N affiches 2 secondes sur une cible touchee par une carte ou une
 # attaque ennemie (degats en rouge, bouclier pose en bleu, soin en vert)
@@ -109,6 +110,7 @@ TAILLE_POLICE_POPUP = 22
 COULEUR_POPUP_DEGATS = COULEUR_PASTILLE_PV
 COULEUR_POPUP_BOUCLIER = COULEUR_PASTILLE_BOUCLIER
 COULEUR_POPUP_SOIN = (70, 200, 90)
+COULEUR_POPUP_DEBUFF = (215, 130, 40)
 COULEUR_OMBRE_POPUP = (0, 0, 0)
 DECALAGE_OMBRE_POPUP = 2
 
@@ -247,7 +249,21 @@ def _texte_et_couleur_effet(carte: Carte, valeur_effective: int) -> tuple[str, t
         return f"-{valeur_effective}", COULEUR_POPUP_DEGATS
     if carte.type == TypeCarte.DEFENSE:
         return f"+{valeur_effective}", COULEUR_POPUP_BOUCLIER
+    if carte.type == TypeCarte.DEBUFF:
+        if carte.action == ActionCarte.VULNERABILITE:
+            return f"+{valeur_effective}%", COULEUR_POPUP_DEBUFF
+        return f"-{valeur_effective}", COULEUR_POPUP_DEBUFF
     return f"+{valeur_effective}", COULEUR_POPUP_SOIN
+
+
+def _libelle_debuff(debuff: DebuffActif) -> str:
+    """Texte d'une ligne d'infobulle pour un debuff actif (specs.md 12.1/12.4)."""
+    if debuff.action == ActionCarte.VULNERABILITE:
+        texte = f"Vulnerabilite +{debuff.valeur}%"
+    else:
+        texte = f"Degats reduits -{debuff.valeur}"
+    tour = "tour" if debuff.tours_restants == 1 else "tours"
+    return f"{texte} ({debuff.tours_restants} {tour})"
 
 
 class FenetreCombat(pyglet.window.Window):
@@ -336,14 +352,21 @@ class FenetreCombat(pyglet.window.Window):
         return elements
 
     def _dessiner_ennemi_case(self, lot: pyglet.graphics.Batch, position: Position, ennemi: Ennemi) -> list:
-        """Dessine une case ennemie (image + pastille PV), grisee si detruite."""
+        """Dessine une case ennemie (image + pastille PV, + pastille orange du nombre de
+        debuffs actifs s'il y en a au moins un), grisee si detruite."""
         x, y, largeur, hauteur = _rect_ennemi(position)
         detruit = ennemi.est_detruit()
         sprite = _sprite_ajuste(ennemi.image, x, y, largeur, hauteur, lot)
         if detruit:
             sprite.opacity = OPACITE_DETRUIT
             return [sprite, *self._texte_detruit(x, y, largeur, hauteur, lot)]
-        return [sprite, *_pastilles_pv_bouclier(x, y, largeur, hauteur, ennemi.pv, None, lot)]
+        elements = [sprite, *_pastilles_pv_bouclier(x, y, largeur, hauteur, ennemi.pv, None, lot)]
+        if ennemi.debuffs_actifs:
+            cx_pv = x + largeur - RAYON_PASTILLE - MARGE_PASTILLE
+            cx_debuffs = cx_pv - RAYON_PASTILLE * 2 - MARGE_PASTILLE
+            cy = y + hauteur + MARGE_PASTILLE_HAUT + _RAYON_TOTAL_PASTILLE
+            elements += _pastille(cx_debuffs, cy, COULEUR_PASTILLE_DEBUFFS, len(ennemi.debuffs_actifs), lot)
+        return elements
 
     def _texte_detruit(self, x: float, y: float, largeur: float, hauteur: float, lot: pyglet.graphics.Batch) -> list:
         """Bandeau + texte "Detruit" centre sur une case."""
@@ -501,6 +524,7 @@ class FenetreCombat(pyglet.window.Window):
             cible = self.combat.previsualiser_cible(entite)
             if cible is not None:
                 lignes.append(f"Vise : {cible.nom} ({entite.degats_attaque} degats)")
+            lignes.extend(_libelle_debuff(debuff) for debuff in entite.debuffs_actifs)
         else:
             rect = self._rect_du_module(entite)
             lignes = [entite.nom, f"PV {entite.pv}/{entite.pv_max}", f"Bouclier {entite.bouclier}"]

@@ -387,6 +387,14 @@ cartes (§7) et la boucle de récompenses (§2.1, §6) stabilisés.
   dès qu'elle est **piochée**, plutôt que jouée par le joueur. Probablement ajoutée au deck par les
   ennemis (dans l'esprit des cartes Statut/Malédiction de Slay the Spire) plutôt que choisie par le
   joueur
+- **Stacks à intensité cumulative** (façon Poison/Force de Slay the Spire) : un unique compteur par
+  ennemi qui s'additionne à chaque application (contrairement aux debuffs Vulnérabilité/Réduction de
+  dégâts actuels, §7.1/§12.1, où chaque application reste une instance indépendante avec sa propre
+  durée — plusieurs instances coexistent et leurs magnitudes s'additionnent tant qu'elles sont
+  actives, mais rien ne fusionne en un seul compteur) et qui inflige un effet croissant avec le
+  nombre de stacks (ex : dégâts égaux au compteur, qui décroît de 1 chaque tour). Mécanique distincte
+  à concevoir pour de futures cartes, pas une règle à appliquer aux cartes de vulnérabilité
+  existantes
 
 ---
 
@@ -401,17 +409,17 @@ que par carte, pour servir de feuille de route à une future extension du moteur
 
 ### 12.1 Cibles fixes ou par rang
 
-Le `CibleCarte` actuel (§7.2) ne couvre que soi, un allié/ennemi au choix, tous les alliés/ennemis,
-ou la ligne perçante. Il manque :
-
-- **Module Principal** — cible toujours le module de base, sans choix du joueur (*Protéger le
-  vaisseau, Réparation, Blindage maximal*)
-- **Ennemi Avant** / **Ligne avant** ennemie — rang avant adverse uniquement (*Ligne avant*)
-- **Ennemi Arrière** / **Ligne arrière** — rang arrière adverse uniquement (*Ligne arrière*)
-- **Module Avant** — rang avant allié uniquement (*Protéger l'avant poste*)
+- **Module Principal** — cible toujours le module de base, sans choix du joueur — **implémenté**
+  (`CibleCarte.MODULE_PRINCIPAL`, sans clic) : *Protéger le vaisseau, Réparation* jouables. Reste
+  non jouable pour la même raison si combinée à une autre mécanique manquante (*Blindage maximal*,
+  qui a en plus un effet à durée, §12.3)
+- **Ennemi Avant** / **Ligne avant** ennemie, **Ennemi Arrière** / **Ligne arrière** — **implémenté**
+  (`CibleCarte.COLONNE_AVANT_ENNEMIE` / `COLONNE_ARRIERE_ENNEMIE`, colonne fixée par la carte, un
+  clic sur l'autre colonne est refusé) : *Ligne avant, Ligne arrière* jouables
+- **Module Avant** — rang avant allié uniquement — non implémenté (*Protéger l'avant poste*)
 
 Ces cibles par rang se résolvent par un **clic sur une case du rang visé**, comme la Ligne ennemie
-perçante aujourd'hui (§3.1, §7.2), et non automatiquement comme Alliés/Ennemis multiples.
+perçante (§3.1, §7.2), et non automatiquement comme Alliés/Ennemis multiples.
 
 ### 12.2 Effets à deux valeurs (X et Y) sur une même carte
 
@@ -421,36 +429,41 @@ perçante aujourd'hui (§3.1, §7.2), et non automatiquement comme Alliés/Ennem
 
 ### 12.3 Effets à durée (plusieurs tours)
 
+Debuff actif pendant Y tours (chaque application ajoutée à la liste `Ennemi.debuffs_actifs`, comme
+une instance indépendante avec sa propre durée ; décrémentée à chaque tour ennemi écoulé même si
+l'ennemi concerné n'a pas agi, et retirée de la liste à 0) — **implémenté** pour les debuffs
+(§12.4/§12.5) : *Boucliers hors service* jouable. Reste manquant pour les autres effets à durée :
+
 - Dégâts répétés pendant Y tours (*Embrasement, Guerre nucléaire*)
-- Debuff actif pendant Y tours (*Boucliers hors service*)
 - Bouclier accordé pendant Y tours (*Blindage maximal*)
 - Bouclier qui grandit chaque tour, persistant (*Bouclier perpétuel*)
 - Pioche bonus pendant Y tours (*Multi fonction*)
 
 ### 12.4 Effets en pourcentage
 
-Valeur d'une carte toujours un montant fixe actuellement ; il manque un effet exprimé en % :
+**Implémenté pour les debuffs** (somme des `valeur` des debuffs `VULNERABILITE` actifs dans
+`Ennemi.debuffs_actifs`, majore les dégâts subis d'une attaque du joueur) : *Brèche, Ligne avant,
+Boucliers endommagés, Boucliers hors service* jouables. Reste manquant pour les effets alliés :
 
 - Bouclier = % des PV du module (*Bouclier adaptatif*)
-- Dégâts subis +X% (*Brèche, Ligne avant, Boucliers endommagés, Boucliers hors service*)
 
 ### 12.5 Types de carte absents du moteur
 
-Déjà nommés en §7.1 mais aucun n'a de valeur `TypeCarte` ni de logique dans `combat.py` :
+Déjà nommés en §7.1. État d'implémentation dans `combat.py` :
 
-*(Note : `TypeCarte` a aujourd'hui une valeur `SOIN`, l'ancien nom du type Reparation — simple
-renommage à faire, la logique de soin existe déjà, contrairement aux quatre types ci-dessous qui
-demandent une vraie nouvelle logique dans `combat.py`.)*
-
-- **Debuff** (*Tordre le canon, Brèche, Ligne avant, Tir allié, Boucliers endommagés, Boucliers hors
-  service*)
-- **Buff** (*Optimisation des boucliers, Attaques performantes, Double défense, Circuit parallèle,
-  Bouclier perpétuel*)
-- **Outils** (*Surcharge temporaire, Fonds de tiroir, Boost, Changement d'outil, Manque de jus,
-  Cannibalisme, Grand remplacement, Multi fonction*)
-- **Controle** : aucune carte du tableau actuel n'est taguée Controle, mais le type reste prévu en
-  §7.1 (stun, restriction d'action) — *Tir allié* (taguée Debuff) s'en rapproche le plus
-  (détournement de cible)
+- **Reparation** — **implémenté** (renommage de l'ancien type `SOIN`, même logique)
+- **Debuff** — **implémenté** (`TypeCarte.DEBUFF`, deux actions : `REDUCTION_DEGATS` et
+  `VULNERABILITE`, cf. §12.1/§12.3/§12.4) : *Tordre le canon, Brèche, Ligne avant, Boucliers
+  endommagés, Boucliers hors service* jouables. *Tir allié* reste non jouable, sa mécanique de
+  détournement de cible étant distincte des deux actions ci-dessus (§12.6)
+- **Buff** — non implémenté (*Optimisation des boucliers, Attaques performantes, Double défense,
+  Circuit parallèle, Bouclier perpétuel*)
+- **Outils** — **implémenté** (`TypeCarte.OUTILS`, cf. §12.9) pour deux actions (`GAIN_ELECTRICITE`,
+  `PIOCHE_SUPPLEMENTAIRE`) : *Surcharge temporaire, Boost* jouables. Le reste demande encore une
+  logique dédiée (*Fonds de tiroir, Changement d'outil, Manque de jus, Cannibalisme, Grand
+  remplacement, Multi fonction*)
+- **Controle** : toujours aucune carte taguée Controle dans le tableau ; type prévu en §7.1 (stun,
+  restriction d'action) mais rien à implémenter pour l'instant
 
 ### 12.6 Altération / redirection des dégâts
 
@@ -459,7 +472,10 @@ demandent une vraie nouvelle logique dans `combat.py`.)*
 - Annulation totale de la prochaine attaque sur une cible, différent d'un bouclier classique
   (*Leurre*)
 - Détournement de la cible d'un ennemi vers un de ses voisins — mécanique déjà anticipée comme
-  *Piratage* en §4.2 mais jamais implémentée (*Tir allié*)
+  *Piratage* en §4.2 mais jamais implémentée (*Tir allié*). Décision prise avec l'utilisateur pour
+  quand cette carte sera implémentée : le "voisin" est **n'importe quel autre ennemi vivant** (pas
+  de restriction géométrique d'adjacence) — l'ennemi debuffé attaque un allié à lui au hasard parmi
+  les ennemis vivants restants, plutôt qu'un module du joueur, à son prochain tour
 
 ### 12.7 Modification des règles d'autres cartes (méta-effets)
 
@@ -476,7 +492,8 @@ demandent une vraie nouvelle logique dans `combat.py`.)*
 
 ### 12.9 Manipulation de pioche / main / défausse via une carte
 
-- Piocher des cartes supplémentaires (*Boost*, avec durée en plus pour *Multi fonction*)
+- Piocher des cartes supplémentaires — **implémenté** (`ActionCarte.PIOCHE_SUPPLEMENTAIRE`,
+  `Deck.piocher_cartes()`) : *Boost* jouable. Manque encore la durée pour *Multi fonction*
 - Piocher puis défausser en une carte (*Changement d'outil*)
 - Défausser toute la main puis repiocher autant (*Grand remplacement*)
 - Défausser une **quantité choisie par le joueur** entre X et Y (*Cannibalisme*) — nécessite un
@@ -484,9 +501,10 @@ demandent une vraie nouvelle logique dans `combat.py`.)*
 
 ### 12.10 Munitions limitées
 
-Déjà spécifiées en §3.6/§7.4 (mécanique de jeu tranchée) — pas un trou de design mais un chantier
-d'implémentation à part entière (*Réparation, Bouclier perpétuel, Optimisation des boucliers,
-Attaques performantes*, entre autres).
+Déjà spécifiées en §3.6/§7.4 (mécanique de jeu tranchée) — **implémenté** (`Carte.munitions_max`/
+`munitions_restantes`, pile `Deck.cartes_epuisees`) : *Réparation* jouable. Reste bloqué par
+d'autres mécaniques manquantes pour les autres cartes à munitions (*Bouclier perpétuel,
+Optimisation des boucliers, Attaques performantes*, qui ont toutes en plus besoin du type Buff).
 
 ### 12.11 Note annexe : cible des cartes Soute
 

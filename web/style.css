@@ -277,6 +277,14 @@ body {
     background: rgb(50, 110, 200);
 }
 
+/* Nombre de debuffs actifs sur un ennemi (specs.md 12.1/12.4), meme position que
+   .pastille-bouclier puisqu'un ennemi n'a jamais de bouclier ; meme orange que
+   .popup-debuff. Absente si aucun debuff actif (cf. rendrePastilles dans app.js). */
+.pastille-debuffs {
+    right: calc(var(--taille-pastille) + 9px);
+    background: #d78228;
+}
+
 .pastille-cout {
     top: 3px;
     right: 3px;
@@ -392,6 +400,10 @@ body {
 
 .popup-soin {
     color: #51cf66;
+}
+
+.popup-debuff {
+    color: #ff9f43;
 }
 
 @keyframes popup-flottement {

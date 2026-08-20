@@ -34,6 +34,13 @@
       "image": "assets/modules/soute.png",
       "points_de_vie": 10,
       "cartes": ["CRT_39"]
+    },
+    {
+      "id": "MOD_6",
+      "nom": "Sabotage",
+      "image": "assets/modules/sabotage.png",
+      "points_de_vie": 10,
+      "cartes": ["CRT_33", "CRT_34", "CRT_35", "CRT_37", "CRT_38"]
     }
   ]
 }

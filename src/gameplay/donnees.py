@@ -66,6 +66,7 @@ def charger_cartes() -> dict[str, Carte]:
             cout=entree["cout"],
             valeur=effet["valeur"],
             rarete=rarete,
+            duree=effet.get("duree"),
             munitions_max=entree.get("munition"),
             action=action,
         )

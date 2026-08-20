@@ -4,7 +4,7 @@ Tests unitaires pour le moteur de combat (src/gameplay/combat.py).
 
 import random
 
-from src.gameplay.carte import Carte, CibleCarte, TypeCarte
+from src.gameplay.carte import ActionCarte, Carte, CibleCarte, TypeCarte
 from src.gameplay.combat import Combat, EtatCombat
 from src.gameplay.deck import Deck
 from src.gameplay.ennemi import Ennemi
@@ -21,6 +21,18 @@ CARTE_REPARATION = Carte(nom="Soin", image=IMG, type=TypeCarte.REPARATION, cible
 CARTE_PERCER = Carte(nom="Percer", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.LIGNE_ENNEMIE, cout=2, valeur=5)
 CARTE_PROTEGER = Carte(nom="Proteger", image=IMG, type=TypeCarte.DEFENSE, cible=CibleCarte.ALLIES_MULTIPLES, cout=2, valeur=4)
 CARTE_MITRAILLER = Carte(nom="Mitrailler", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMIS_MULTIPLES, cout=2, valeur=3)
+CARTE_REDUCTION_DEGATS = Carte(
+    nom="Tordre le canon", image=IMG, type=TypeCarte.DEBUFF, cible=CibleCarte.ENNEMI_UNIQUE,
+    cout=1, valeur=5, action=ActionCarte.REDUCTION_DEGATS, duree=1,
+)
+CARTE_VULNERABILITE = Carte(
+    nom="Breche", image=IMG, type=TypeCarte.DEBUFF, cible=CibleCarte.ENNEMI_UNIQUE,
+    cout=2, valeur=100, action=ActionCarte.VULNERABILITE, duree=1,
+)
+CARTE_COLONNE_AVANT = Carte(
+    nom="Ligne avant", image=IMG, type=TypeCarte.DEBUFF, cible=CibleCarte.COLONNE_AVANT_ENNEMIE,
+    cout=1, valeur=100, action=ActionCarte.VULNERABILITE, duree=1,
+)
 
 POSITION_ENNEMI = Position(Colonne.AVANT, Rangee.GAUCHE)
 
@@ -345,3 +357,82 @@ def test_cible_sans_clic_refusee_si_une_cible_est_quand_meme_fournie():
     combat.jouer_carte(CARTE_PROTEGER, vaisseau.base)  # cible superflue -> refuse
 
     assert vaisseau.base.bouclier == 0
+
+
+# --- Debuff (Sabotage, specs.md 12.1/12.4) ---
+
+
+def test_reduction_degats_diminue_les_degats_de_la_prochaine_attaque():
+    combat, vaisseau, flotte = _nouveau_combat(degats_ennemi=7)
+    ennemi = flotte.ennemis_vivants()[0]
+    combat.joueur.deck.main = [CARTE_REDUCTION_DEGATS]
+    combat.joueur.electricite = 2
+
+    combat.jouer_carte(CARTE_REDUCTION_DEGATS, ennemi)
+    combat.finir_tour_joueur()
+
+    assert vaisseau.base.pv == 15 - (7 - 5)
+
+
+def test_reduction_degats_expire_apres_un_tour():
+    combat, vaisseau, flotte = _nouveau_combat(degats_ennemi=7, pv_base=100)
+    ennemi = flotte.ennemis_vivants()[0]
+    combat.joueur.deck.main = [CARTE_REDUCTION_DEGATS]
+    combat.joueur.electricite = 2
+    combat.jouer_carte(CARTE_REDUCTION_DEGATS, ennemi)
+    combat.finir_tour_joueur()  # 1er tour ennemi : reduction active (-5)
+    pv_apres_premier_tour = vaisseau.base.pv
+
+    combat.finir_tour_joueur()  # 2e tour ennemi : reduction expiree, degats pleins
+
+    assert vaisseau.base.pv == pv_apres_premier_tour - 7
+
+
+def test_vulnerabilite_majore_les_degats_d_une_attaque_du_joueur():
+    combat, _vaisseau, flotte = _nouveau_combat(pv_ennemi=30)
+    ennemi = flotte.ennemis_vivants()[0]
+    combat.joueur.deck.main = [CARTE_VULNERABILITE, CARTE_ATTAQUE]
+    combat.joueur.electricite = 5
+
+    combat.jouer_carte(CARTE_VULNERABILITE, ennemi)
+    resultat = combat.jouer_carte(CARTE_ATTAQUE, ennemi)
+
+    assert resultat == [(ennemi, 14)]  # 7 degats * (1 + 100%)
+    assert ennemi.pv == 30 - 14
+
+
+def test_colonne_avant_ennemie_touche_toute_la_colonne_avant_uniquement():
+    avant_g = Ennemi(pv_max=15, degats_attaque=1)
+    avant_d = Ennemi(pv_max=15, degats_attaque=1)
+    arriere_g = Ennemi(pv_max=15, degats_attaque=1)
+    ennemis = {
+        Position(Colonne.AVANT, Rangee.GAUCHE): avant_g,
+        Position(Colonne.AVANT, Rangee.DROITE): avant_d,
+        Position(Colonne.ARRIERE, Rangee.GAUCHE): arriere_g,
+    }
+    combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
+    combat.joueur.deck.main = [CARTE_COLONNE_AVANT]
+    combat.joueur.electricite = 2
+
+    combat.jouer_carte(CARTE_COLONNE_AVANT, avant_g)  # clic sur un ennemi de la colonne avant
+
+    assert avant_g.debuffs_actifs[0].valeur == 100
+    assert avant_d.debuffs_actifs[0].valeur == 100
+    assert arriere_g.debuffs_actifs == []  # colonne arriere non touchee
+
+
+def test_colonne_avant_ennemie_refuse_un_clic_sur_l_arriere():
+    avant = Ennemi(pv_max=15, degats_attaque=1)
+    arriere = Ennemi(pv_max=15, degats_attaque=1)
+    ennemis = {
+        Position(Colonne.AVANT, Rangee.GAUCHE): avant,
+        Position(Colonne.ARRIERE, Rangee.GAUCHE): arriere,
+    }
+    combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
+    combat.joueur.deck.main = [CARTE_COLONNE_AVANT]
+    combat.joueur.electricite = 2
+
+    combat.jouer_carte(CARTE_COLONNE_AVANT, arriere)  # clic sur l'arriere -> refuse
+
+    assert arriere.debuffs_actifs == []
+    assert avant.debuffs_actifs == []
