@@ -123,12 +123,18 @@ directement — pour que les tests et les captures d'écran restent reproductibl
 
 ## Git / PR
 
-Créer une PR par changement logique, avec plan de test dans la description. Toute valeur numérique
-inventée faute de spec précise (PV, dégâts, coûts...) doit être signalée comme telle dans la PR et
-dans `specs/poc.md` (voir l'avertissement en tête de `specs/poc.md`).
+**Une seule branche de travail : `devjeux`.** Ne pas créer de nouvelle branche à chaque tâche (ça a
+produit un grand nombre de branches mortes/orphelines dans ce projet, cf. plus bas) : tout le
+développement se fait sur `devjeux`, avec une PR `devjeux` → `main` par changement logique, plan de
+test dans la description. Toute valeur numérique inventée faute de spec précise (PV, dégâts,
+coûts...) doit être signalée comme telle dans la PR et dans `specs/poc.md` (voir l'avertissement en
+tête de `specs/poc.md`).
 
-**Avant de pousser un commit supplémentaire sur une branche existante, vérifier l'état de sa PR**
-(mergée/fermée ou encore ouverte). Pousser sur une branche dont la PR est déjà mergée ou fermée
-laisse le commit orphelin, jamais intégré à `main` sans action manuelle supplémentaire — c'est
-arrivé plusieurs fois dans ce projet. Si la PR est déjà mergée/fermée, repartir d'une nouvelle
-branche depuis `main` (ou rouvrir une PR dédiée) plutôt que de pousser sur l'ancienne branche.
+**Avant de pousser un commit supplémentaire sur `devjeux`, vérifier l'état de sa PR** (mergée/fermée
+ou encore ouverte). Pousser sur une branche dont la PR est déjà mergée ou fermée laisse le commit
+orphelin, jamais intégré à `main` sans action manuelle supplémentaire — c'est arrivé plusieurs fois
+dans ce projet quand chaque tâche avait sa propre branche. Si la PR `devjeux` → `main` est déjà
+mergée/fermée, remettre `devjeux` à jour depuis `main` avant de continuer
+(`git fetch origin main && git checkout -B devjeux origin/main && git push -f origin devjeux`)
+plutôt que de pousser sur l'état obsolète de la branche, et plutôt que de créer une branche
+supplémentaire.
