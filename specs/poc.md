@@ -49,8 +49,8 @@ Chaque attaque résolue affiche un popup `-N` (dégâts réellement infligés, v
 
 ## 4. Cartes
 
-17 cartes jouables définies dans `config/cartes.json` (issues du tableau de conception complet de
-l'utilisateur, dont 21 autres cartes sont stockées mais pas encore jouables faute de mécanique
+19 cartes jouables définies dans `config/cartes.json` (issues du tableau de conception complet de
+l'utilisateur, dont 19 autres cartes sont stockées mais pas encore jouables faute de mécanique
 correspondante dans le moteur — voir specs.md §12 pour l'inventaire de ce qui manque). Chaque carte
 a un type, un coût, une cible et une rareté :
 
@@ -70,6 +70,7 @@ module/ennemi précis, cf. plus bas), `DEBUFF` (affaiblit un ennemi, temporairem
 | **Ennemis multiples** | Sélectionner la carte, puis cliquer **n'importe quel** ennemi vivant pour confirmer (la case cliquée n'a pas d'influence, l'effet touche tous les ennemis vivants) |
 | **Module principal** | Sélectionner la carte, puis cliquer **n'importe quel** module allié vivant pour confirmer (la case cliquée n'a pas d'influence, l'effet touche toujours le module de base) |
 | **Colonne avant/arrière ennemie** | Sélectionner la carte, puis cliquer un ennemi de la colonne visée par la carte (avant ou arrière, fixé par la carte — un clic sur l'autre colonne est refusé) — touche les 3 ennemis de cette colonne |
+| **Colonne avant alliée** | Sélectionner la carte, puis cliquer un module de la colonne avant (avant-gauche ou avant-droite, jamais le module principal — un clic sur l'arrière ou le module principal est refusé) — touche les 2 modules de cette colonne |
 
 Pour Alliés multiples/Ennemis multiples/Module principal (les 3 cibles "sans clic de ciblage précis"
 de specs.md §7.2), la cible cliquée ne détermine pas l'effet, mais **un clic de confirmation reste
@@ -85,6 +86,14 @@ flux (sélection puis confirmation) est identique sur PC et sur web/iOS**, cf. C
 décrémenté à la fin de chaque tour ennemi, que l'ennemi concerné ait agi ou non) :
 - `REDUCTION_DEGATS` : diminue les dégâts infligés par l'ennemi lors de ses prochaines attaques
 - `VULNERABILITE` : augmente en % les dégâts qu'il subit des attaques du joueur
+- `REDIRECTION_CIBLE` : au prochain tour ennemi, l'ennemi debuffé attaque un **autre ennemi vivant
+  tiré au hasard** plutôt qu'un module du joueur (*Tir allié*, specs.md §12.6) ; sans autre ennemi
+  vivant, il attaque normalement (rien à rediriger vers). Le tirage au hasard n'a lieu qu'à la
+  résolution réelle du tour (`Combat._cible_redirection`), jamais lors d'un survol/tap de
+  prévisualisation (`Combat.previsualiser_cible`), pour ne pas consommer l'aléa à chaque redessin
+  (cf. CLAUDE.md "Déterminisme du tirage aléatoire") : tant que le debuff est actif, l'infobulle affiche "Vise
+  un allié au hasard" plutôt qu'une cible précise, et l'intention réelle n'est connue qu'après
+  "Fin de tour"
 
 Chaque debuff appliqué est **indépendant** des autres : un ennemi porte une liste de 0 à N debuffs
 actifs, sans fusion ni remplacement, même entre deux debuffs du même type. Tant qu'ils sont actifs,
@@ -275,22 +284,25 @@ jouables (`donnees.charger_cartes()` ignore silencieusement les autres, cf. spec
     `LIGNE_ENNEMIE` (touche l'avant et l'arrière de la rangée visée, soit 2 ennemis) /
     `MODULE_PRINCIPAL` (toujours le module de base, pas de clic) / `COLONNE_AVANT_ENNEMIE` /
     `COLONNE_ARRIERE_ENNEMIE` (toute la colonne visée par la carte, fixe — 3 ennemis au plus ;
-    contrairement à `LIGNE_ENNEMIE`, le clic doit tomber dans cette colonne precise)
+    contrairement à `LIGNE_ENNEMIE`, le clic doit tomber dans cette colonne precise) /
+    `COLONNE_AVANT_ALLIEE` (les 2 modules avant-gauche/avant-droite, jamais le module principal ;
+    même principe que les colonnes ennemies)
   - `action` (pour `type: OUTILS`, `DEBUFF` ou `BUFF`) : `GAIN_ELECTRICITE` / `PIOCHE_SUPPLEMENTAIRE`
-    (Outils), `REDUCTION_DEGATS` / `VULNERABILITE` (Debuff), ou `BOUCLIER_PAR_TOUR` (Buff) — précise
-    l'effet exact, chaque carte étant un mécanisme différent (specs.md §12.9/§12.1/§12.5)
+    (Outils), `REDUCTION_DEGATS` / `VULNERABILITE` / `REDIRECTION_CIBLE` (Debuff), ou
+    `BOUCLIER_PAR_TOUR` (Buff) — précise l'effet exact, chaque carte étant un mécanisme différent
+    (specs.md §12.9/§12.1/§12.5/§12.6)
   - `duree` (pour `type: DEBUFF` ou `BUFF`) : nombre de tours pendant lesquels l'effet reste actif,
     décrémenté à chaque tour ennemi écoulé (Debuff) ou chaque tour joueur écoulé (Buff), même si
     l'ennemi/le module concerné n'a pas agi ; absente/`null` pour un Buff **persistant** (ne
     décompte jamais, dure tout le combat — cf. *Bouclier perpétuel*)
 
-Les 17 cartes actuellement jouables : les 6 du module Principal (Laser, Laser perçant,
+Les 19 cartes actuellement jouables : les 6 du module Principal (Laser, Laser perçant,
 Bombardement, Bouclier, Protéger le vaisseau, Réparation), Ciel de missiles et Ligne arrière
-(Lanceur de missiles), Mode défensif (Blindage), Bouclier perpétuel (Blindage), Surcharge
-temporaire (Générateur), Boost (Soute), et 5 des 6 cartes de Sabotage (Tordre le canon, Brèche,
-Ligne avant, Boucliers endommagés, Boucliers hors service — seule Tir allié, qui détourne
-l'attaque d'un ennemi vers un autre ennemi, reste non jouable, cf. specs.md §12.6) — les 21 autres
-cartes du tableau restent stockées pour référence, non jouables faute de mécanique (specs.md §12).
+(Lanceur de missiles), Mode défensif (Blindage), Bouclier perpétuel (Blindage), Protéger l'avant
+poste (Blindage), Surcharge temporaire (Générateur), Boost (Soute), et les 6 cartes de Sabotage
+(Tordre le canon, Brèche, Ligne avant, Boucliers endommagés, Boucliers hors service, Tir allié) —
+le module Sabotage est maintenant entièrement jouable. Les 19 autres cartes du tableau restent
+stockées pour référence, non jouables faute de mécanique (specs.md §12).
 
 **Toutes les valeurs (PV, dégâts, coûts, munitions) viennent du tableau de conception fourni par
 l'utilisateur**, sauf les PV des modules Générateur et Soute (10 chacun) qui restent **inventés**

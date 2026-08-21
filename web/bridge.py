@@ -15,7 +15,7 @@ import sys
 
 sys.path.insert(0, "/repo")
 
-from src.gameplay.carte import CIBLES_SANS_CLIC, CibleCarte
+from src.gameplay.carte import CIBLES_SANS_CLIC, ActionCarte, CibleCarte
 from src.gameplay.combat import _degats_effectifs
 from src.gameplay.config_poc import creer_combat_poc
 from src.gameplay.module import Module
@@ -74,13 +74,21 @@ def _module_json(module, id_case: str):
 def _intention_json(ennemi):
     """Intention de cet ennemi (poc.md paragraphe 8) : module vise et degats reellement
     infliges, calcules avec la meme fonction que la resolution reelle de l'attaque
-    (previsualiser_cible + _degats_effectifs de combat.py, aucune logique dupliquee)."""
+    (previsualiser_cible + _degats_effectifs de combat.py, aucune logique dupliquee).
+
+    Si Tir allie est actif (specs.md 12.6), previsualiser_cible renvoie None expres (la
+    cible reelle - un autre ennemi - n'est tiree au hasard qu'a la resolution du tour,
+    jamais au survol/tap, pour rester deterministe) : on le signale explicitement plutot
+    que de renvoyer None comme pour "aucune cible a portee", pour que l'UI l'affiche."""
     if ennemi.est_detruit():
         return None
+    if any(debuff.action == ActionCarte.REDIRECTION_CIBLE for debuff in ennemi.debuffs_actifs):
+        return {"redirection": True}
     cible = combat.previsualiser_cible(ennemi)
     if cible is None:
         return None
     return {
+        "redirection": False,
         "module_id": _id_module(cible),
         "module_nom": cible.nom,
         "degats": _degats_effectifs(cible, ennemi.degats_attaque_effectifs()),
@@ -188,7 +196,12 @@ def _popup(cible, type_carte: str, valeur: int, action: str | None) -> dict | No
     elif type_carte == "DEFENSE":
         texte, couleur = f"+{valeur}", "bouclier"
     elif type_carte == "DEBUFF":
-        texte, couleur = (f"+{valeur}%", "debuff") if action == "VULNERABILITE" else (f"-{valeur}", "debuff")
+        if action == "VULNERABILITE":
+            texte, couleur = f"+{valeur}%", "debuff"
+        elif action == "REDIRECTION_CIBLE":
+            texte, couleur = "Detourne !", "debuff"
+        else:
+            texte, couleur = f"-{valeur}", "debuff"
     elif type_carte == "BUFF":
         texte, couleur = f"+{valeur}", "buff"
     else:
@@ -207,7 +220,7 @@ def nouveau_combat(graine) -> str:
 def _resoudre_cible(carte, id_cible):
     if carte.cible in CIBLES_SANS_CLIC:
         return None
-    if carte.cible == CibleCarte.ALLIE_UNIQUE:
+    if carte.cible in (CibleCarte.ALLIE_UNIQUE, CibleCarte.COLONNE_AVANT_ALLIEE):
         if id_cible == "base":
             return combat.joueur.vaisseau.base
         position = IDS_MODULES.get(id_cible)
@@ -227,11 +240,17 @@ def jouer_carte(index_carte: int, id_cible) -> str:
 
 
 def finir_tour() -> str:
-    """Termine le tour du joueur ; renvoie aussi un popup -N par attaque ennemie resolue."""
+    """Termine le tour du joueur ; renvoie aussi un popup -N par attaque ennemie resolue.
+
+    La cible peut etre un module (cas normal) ou un autre ennemi si Tir allie est actif sur
+    l'attaquant (specs.md 12.6, resolu dans Combat._tour_ennemi)."""
     attaques = combat.finir_tour_joueur()
     popups = []
-    for _position, _ennemi, module_cible, degats_effectifs in attaques:
-        id_case = _id_module(module_cible)
+    for _position, _ennemi, cible, degats_effectifs in attaques:
+        if isinstance(cible, Module):
+            id_case, camp = _id_module(cible), "allie"
+        else:
+            id_case, camp = _id_ennemi(cible), "ennemi"
         if id_case is not None:
-            popups.append({"id": id_case, "camp": "allie", "texte": f"-{degats_effectifs}", "couleur": "degats"})
+            popups.append({"id": id_case, "camp": camp, "texte": f"-{degats_effectifs}", "couleur": "degats"})
     return json.dumps({"etat": _etat_dict(), "popups": popups})

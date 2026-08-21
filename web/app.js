@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "15";
+const VERSION_CACHE = "16";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -186,7 +186,7 @@ function selectionnerCarte(carte) {
     rendre();
 }
 
-const CIBLES_ALLIEES = new Set(["ALLIE_UNIQUE", "ALLIES_MULTIPLES", "MODULE_PRINCIPAL"]);
+const CIBLES_ALLIEES = new Set(["ALLIE_UNIQUE", "ALLIES_MULTIPLES", "MODULE_PRINCIPAL", "COLONNE_AVANT_ALLIEE"]);
 
 function cliquerCase(idCase, typeCase) {
     if (indexCarteSelectionnee === null) return;
@@ -235,7 +235,14 @@ function afficherInfobulle(idCase, typeCase) {
     } else {
         lignes.push(`<div>⚔️ ${objet.degats_attaque}</div>`);
         if (objet.intention) {
-            lignes.push(`<div>🎯 ${objet.intention.module_nom} (-${objet.intention.degats})</div>`);
+            // Tir allie actif (specs.md 12.6) : la cible reelle (un autre ennemi) n'est
+            // tiree au hasard qu'a la resolution du tour, jamais ici (cf. bridge.py
+            // _intention_json), pour rester deterministe au tap/redessin.
+            if (objet.intention.redirection) {
+                lignes.push(`<div>🎯 Vise un allie au hasard</div>`);
+            } else {
+                lignes.push(`<div>🎯 ${objet.intention.module_nom} (-${objet.intention.degats})</div>`);
+            }
         }
         for (const debuff of objet.debuffs) {
             lignes.push(`<div>${libelleDebuffActif(debuff)}</div>`);
@@ -403,6 +410,7 @@ const LIBELLES_CIBLE = {
     MODULE_PRINCIPAL: "le module principal",
     COLONNE_AVANT_ENNEMIE: "la ligne avant ennemie",
     COLONNE_ARRIERE_ENNEMIE: "la ligne arriere ennemie",
+    COLONNE_AVANT_ALLIEE: "la ligne avant alliee",
 };
 
 const LIBELLES_ACTION_OUTILS = {
@@ -413,6 +421,7 @@ const LIBELLES_ACTION_OUTILS = {
 const LIBELLES_ACTION_DEBUFF = {
     REDUCTION_DEGATS: (carte, cible) => `Diminue les degats infliges par ${cible} de ${carte.valeur}, pendant ${carte.duree} tour(s).`,
     VULNERABILITE: (carte, cible) => `Augmente les degats subis par ${cible} de ${carte.valeur}%, pendant ${carte.duree} tour(s).`,
+    REDIRECTION_CIBLE: (carte, cible) => `Detourne l'attaque de ${cible} vers un autre ennemi tire au hasard, pendant ${carte.duree} tour(s).`,
 };
 
 // Libelle d'un debuff actif sur un ennemi (poc.md/specs.md 12.1/12.4), affiche dans son
@@ -421,6 +430,7 @@ const LIBELLES_ACTION_DEBUFF = {
 const LIBELLES_ACTION_DEBUFF_ACTIF = {
     REDUCTION_DEGATS: (debuff) => `Degats reduits -${debuff.valeur}`,
     VULNERABILITE: (debuff) => `Vulnerabilite +${debuff.valeur}%`,
+    REDIRECTION_CIBLE: () => `Tir detourne`,
 };
 
 function libelleDebuffActif(debuff) {

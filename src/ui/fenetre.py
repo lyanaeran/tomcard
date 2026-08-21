@@ -302,6 +302,8 @@ def _texte_et_couleur_effet(carte: Carte, valeur_effective: int) -> tuple[str, t
     if carte.type == TypeCarte.DEBUFF:
         if carte.action == ActionCarte.VULNERABILITE:
             return f"+{valeur_effective}%", COULEUR_POPUP_DEBUFF
+        if carte.action == ActionCarte.REDIRECTION_CIBLE:
+            return "Detourne !", COULEUR_POPUP_DEBUFF
         return f"-{valeur_effective}", COULEUR_POPUP_DEBUFF
     if carte.type == TypeCarte.BUFF:
         return f"+{valeur_effective}", COULEUR_POPUP_BUFF
@@ -309,9 +311,11 @@ def _texte_et_couleur_effet(carte: Carte, valeur_effective: int) -> tuple[str, t
 
 
 def _libelle_debuff(debuff: DebuffActif) -> str:
-    """Texte d'une ligne d'infobulle pour un debuff actif (specs.md 12.1/12.4)."""
+    """Texte d'une ligne d'infobulle pour un debuff actif (specs.md 12.1/12.4/12.6)."""
     if debuff.action == ActionCarte.VULNERABILITE:
         texte = f"Vulnerabilite +{debuff.valeur}%"
+    elif debuff.action == ActionCarte.REDIRECTION_CIBLE:
+        texte = "Tir detourne"
     else:
         texte = f"Degats reduits -{debuff.valeur}"
     tour = "tour" if debuff.tours_restants == 1 else "tours"
@@ -634,6 +638,11 @@ class FenetreCombat(pyglet.window.Window):
             cible = self.combat.previsualiser_cible(entite)
             if cible is not None:
                 lignes.append(f"Vise : {cible.nom} ({entite.degats_attaque_effectifs()} degats)")
+            elif any(debuff.action == ActionCarte.REDIRECTION_CIBLE for debuff in entite.debuffs_actifs):
+                # Tir allie actif (specs.md 12.6) : la cible reelle (un autre ennemi) n'est
+                # tiree au hasard qu'a la resolution du tour, jamais au survol - cf.
+                # Combat.previsualiser_cible/_cible_redirection pour rester deterministe.
+                lignes.append("Vise : un allie au hasard")
             lignes.extend(_libelle_debuff(debuff) for debuff in entite.debuffs_actifs)
         else:
             rect = self._rect_du_module(entite)
@@ -738,7 +747,7 @@ class FenetreCombat(pyglet.window.Window):
             if not touche:
                 return
             cible = None
-        elif carte.cible == CibleCarte.ALLIE_UNIQUE:
+        elif carte.cible in (CibleCarte.ALLIE_UNIQUE, CibleCarte.COLONNE_AVANT_ALLIEE):
             cible = self._module_a(x, y)
             if cible is None:
                 return
@@ -789,10 +798,11 @@ class FenetreCombat(pyglet.window.Window):
             texte, couleur = _texte_et_couleur_effet(carte, valeur_effective)
             self._ajouter_popup(cible, texte, couleur)
 
-    def _afficher_popups_attaques_ennemi(self, attaques: list[tuple[Position, Ennemi, Module, int]]) -> None:
-        """Affiche un popup -N (degats reellement infliges) sur chaque module touche par une attaque ennemie."""
-        for _position, _ennemi, module_cible, degats_effectifs in attaques:
-            self._ajouter_popup(module_cible, f"-{degats_effectifs}", COULEUR_POPUP_DEGATS)
+    def _afficher_popups_attaques_ennemi(self, attaques: list[tuple[Position, Ennemi, Module | Ennemi, int]]) -> None:
+        """Affiche un popup -N (degats reellement infliges) sur chaque cible touchee par une
+        attaque ennemie - un module, ou un autre ennemi si Tir allie est actif (specs.md 12.6)."""
+        for _position, _ennemi, cible_touchee, degats_effectifs in attaques:
+            self._ajouter_popup(cible_touchee, f"-{degats_effectifs}", COULEUR_POPUP_DEGATS)
 
     def _ajouter_popup(self, cible: Module | Ennemi, texte: str, couleur: tuple[int, int, int]) -> None:
         """Demarre l'affichage d'un popup +/-N centre sur la case de cette cible, pour 2 secondes."""

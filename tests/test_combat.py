@@ -37,19 +37,35 @@ CARTE_BOUCLIER_PERPETUEL = Carte(
     nom="Bouclier perpetuel", image=IMG, type=TypeCarte.BUFF, cible=CibleCarte.MODULE_PRINCIPAL,
     cout=5, valeur=10, action=ActionCarte.BOUCLIER_PAR_TOUR, duree=None,
 )
+CARTE_TIR_ALLIE = Carte(
+    nom="Tir allie", image=IMG, type=TypeCarte.DEBUFF, cible=CibleCarte.ENNEMI_UNIQUE,
+    cout=3, valeur=0, action=ActionCarte.REDIRECTION_CIBLE, duree=1,
+)
+CARTE_COLONNE_AVANT_ALLIEE = Carte(
+    nom="Proteger l'avant poste", image=IMG, type=TypeCarte.DEFENSE, cible=CibleCarte.COLONNE_AVANT_ALLIEE,
+    cout=2, valeur=10,
+)
 
 POSITION_ENNEMI = Position(Colonne.AVANT, Rangee.GAUCHE)
 
 
-def _nouveau_combat(pv_base: int = 15, pv_ennemi: int = 15, degats_ennemi: int = 7, ennemis: dict | None = None):
+def _nouveau_combat(
+    pv_base: int = 15,
+    pv_ennemi: int = 15,
+    degats_ennemi: int = 7,
+    ennemis: dict | None = None,
+    vaisseau: Vaisseau | None = None,
+    aleatoire: random.Random | None = None,
+):
     cartes = [CARTE_ATTAQUE] * 5 + [CARTE_BOUCLIER] * 3 + [CARTE_REPARATION]
     deck = Deck(cartes=cartes, generateur_aleatoire=random.Random(0))
-    vaisseau = Vaisseau(base=Module(pv_max=pv_base))
+    if vaisseau is None:
+        vaisseau = Vaisseau(base=Module(pv_max=pv_base))
     joueur = Joueur(vaisseau=vaisseau, deck=deck, electricite_par_tour=3)
     if ennemis is None:
         ennemis = {POSITION_ENNEMI: Ennemi(pv_max=pv_ennemi, degats_attaque=degats_ennemi)}
     flotte = Flotte(ennemis)
-    combat = Combat(joueur=joueur, flotte=flotte)
+    combat = Combat(joueur=joueur, flotte=flotte, aleatoire=aleatoire)
     return combat, vaisseau, flotte
 
 
@@ -468,3 +484,123 @@ def test_buff_bouclier_perpetuel_se_redeclenche_a_chaque_tour_joueur_sans_expire
     combat.finir_tour_joueur()
     assert vaisseau.base.bouclier == 30  # persistant : ne s'arrete jamais
     assert len(vaisseau.base.buffs_actifs) == 1
+
+
+# --- Tir allie (Sabotage, specs.md 12.6) ---
+
+
+def test_tir_allie_redirige_l_attaque_vers_un_autre_ennemi_vivant():
+    attaquant = Ennemi(pv_max=15, degats_attaque=7)
+    # degats_attaque=0 : isole l'assertion sur le joueur (sinon cible_potentielle
+    # attaquerait aussi normalement le joueur de son cote, ce qui est correct mais
+    # brouillerait l'assertion "attaquant n'a pas touche le joueur").
+    cible_potentielle = Ennemi(pv_max=15, degats_attaque=0)
+    ennemis = {
+        Position(Colonne.AVANT, Rangee.GAUCHE): attaquant,
+        Position(Colonne.ARRIERE, Rangee.GAUCHE): cible_potentielle,
+    }
+    combat, vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
+    combat.joueur.deck.main = [CARTE_TIR_ALLIE]
+    combat.joueur.electricite = 3
+
+    combat.jouer_carte(CARTE_TIR_ALLIE, attaquant)
+    combat.finir_tour_joueur()
+
+    assert cible_potentielle.pv == 15 - 7  # a subi l'attaque a la place du joueur
+    assert vaisseau.base.pv == 15  # le joueur n'a pas ete touche
+
+
+def test_tir_allie_sans_autre_ennemi_attaque_normalement():
+    seul = Ennemi(pv_max=15, degats_attaque=7)
+    ennemis = {POSITION_ENNEMI: seul}
+    combat, vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
+    combat.joueur.deck.main = [CARTE_TIR_ALLIE]
+    combat.joueur.electricite = 3
+
+    combat.jouer_carte(CARTE_TIR_ALLIE, seul)
+    combat.finir_tour_joueur()
+
+    assert vaisseau.base.pv == 15 - 7  # aucun autre ennemi disponible : attaque normale
+
+
+def test_tir_allie_expire_apres_un_tour():
+    attaquant = Ennemi(pv_max=15, degats_attaque=7)
+    autre = Ennemi(pv_max=15, degats_attaque=0)
+    ennemis = {
+        Position(Colonne.AVANT, Rangee.GAUCHE): attaquant,
+        Position(Colonne.ARRIERE, Rangee.GAUCHE): autre,
+    }
+    combat, vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
+    combat.joueur.deck.main = [CARTE_TIR_ALLIE]
+    combat.joueur.electricite = 3
+    combat.jouer_carte(CARTE_TIR_ALLIE, attaquant)
+    combat.finir_tour_joueur()  # 1er tour ennemi : redirection active
+    pv_base_apres_premier_tour = vaisseau.base.pv
+
+    combat.finir_tour_joueur()  # 2e tour ennemi : debuff expire, attaque normale
+
+    assert vaisseau.base.pv == pv_base_apres_premier_tour - 7
+
+
+def test_previsualiser_cible_masque_le_module_si_redirection_active():
+    attaquant = Ennemi(pv_max=15, degats_attaque=7)
+    autre = Ennemi(pv_max=15, degats_attaque=1)
+    ennemis = {
+        Position(Colonne.AVANT, Rangee.GAUCHE): attaquant,
+        Position(Colonne.ARRIERE, Rangee.GAUCHE): autre,
+    }
+    combat, vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
+    combat.joueur.deck.main = [CARTE_TIR_ALLIE]
+    combat.joueur.electricite = 3
+    assert combat.previsualiser_cible(attaquant) is vaisseau.base
+
+    combat.jouer_carte(CARTE_TIR_ALLIE, attaquant)
+
+    # Appele plusieurs fois (comme au survol/redessin repete de l'UI) : ne doit jamais
+    # consommer l'alea ni faire planter, contrairement a la resolution reelle du tour.
+    assert combat.previsualiser_cible(attaquant) is None
+    assert combat.previsualiser_cible(attaquant) is None
+
+
+# --- Colonne avant alliee (Blindage, specs.md 12.1) ---
+
+
+def _vaisseau_complet(pv: int = 15) -> Vaisseau:
+    return Vaisseau(
+        base=Module(pv_max=pv, nom="Base"),
+        avant_gauche=Module(pv_max=pv, nom="AvantGauche"),
+        avant_droite=Module(pv_max=pv, nom="AvantDroite"),
+        arriere_gauche=Module(pv_max=pv, nom="ArriereGauche"),
+        arriere_droite=Module(pv_max=pv, nom="ArriereDroite"),
+    )
+
+
+def test_colonne_avant_alliee_protege_seulement_les_deux_modules_avant():
+    vaisseau = _vaisseau_complet()
+    combat, _vaisseau, _flotte = _nouveau_combat(vaisseau=vaisseau)
+    combat.joueur.deck.main = [CARTE_COLONNE_AVANT_ALLIEE]
+    combat.joueur.electricite = 2
+    avant_gauche = vaisseau.module_en(Colonne.AVANT, Rangee.GAUCHE)
+
+    combat.jouer_carte(CARTE_COLONNE_AVANT_ALLIEE, avant_gauche)  # clic sur un module avant
+
+    assert vaisseau.module_en(Colonne.AVANT, Rangee.GAUCHE).bouclier == 10
+    assert vaisseau.module_en(Colonne.AVANT, Rangee.DROITE).bouclier == 10
+    assert vaisseau.module_en(Colonne.ARRIERE, Rangee.GAUCHE).bouclier == 0
+    assert vaisseau.module_en(Colonne.ARRIERE, Rangee.DROITE).bouclier == 0
+    assert vaisseau.base.bouclier == 0
+
+
+def test_colonne_avant_alliee_refuse_un_clic_sur_l_arriere_ou_la_base():
+    vaisseau = _vaisseau_complet()
+    combat, _vaisseau, _flotte = _nouveau_combat(vaisseau=vaisseau)
+    combat.joueur.deck.main = [CARTE_COLONNE_AVANT_ALLIEE]
+    combat.joueur.electricite = 2
+    arriere_gauche = vaisseau.module_en(Colonne.ARRIERE, Rangee.GAUCHE)
+
+    resultat_arriere = combat.jouer_carte(CARTE_COLONNE_AVANT_ALLIEE, arriere_gauche)
+    resultat_base = combat.jouer_carte(CARTE_COLONNE_AVANT_ALLIEE, vaisseau.base)
+
+    assert resultat_arriere == []
+    assert resultat_base == []
+    assert vaisseau.module_en(Colonne.AVANT, Rangee.GAUCHE).bouclier == 0
