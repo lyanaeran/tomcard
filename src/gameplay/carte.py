@@ -35,6 +35,9 @@ class CibleCarte(Enum):
     arriere) ennemie, jusqu'a 3 ennemis. Le joueur doit cliquer un ennemi de cette
     colonne precise pour confirmer (specs.md paragraphe 12.1) - contrairement a
     LIGNE_ENNEMIE, la colonne visee est fixe par la carte, pas deduite du clic.
+    COLONNE_AVANT_ALLIEE : les modules avant-gauche et avant-droite du joueur (jamais
+    le module principal, qui occupe la rangee mid). Meme principe que les colonnes
+    ennemies : le joueur doit cliquer un module de cette colonne pour confirmer.
     """
 
     ENNEMI_UNIQUE = auto()
@@ -45,6 +48,7 @@ class CibleCarte(Enum):
     MODULE_PRINCIPAL = auto()
     COLONNE_AVANT_ENNEMIE = auto()
     COLONNE_ARRIERE_ENNEMIE = auto()
+    COLONNE_AVANT_ALLIEE = auto()
 
 
 # Cibles qui se resolvent sans clic de ciblage (pas de choix individuel possible)
@@ -70,6 +74,7 @@ class ActionCarte(Enum):
     REDUCTION_DEGATS = auto()
     VULNERABILITE = auto()
     BOUCLIER_PAR_TOUR = auto()
+    REDIRECTION_CIBLE = auto()
 
 
 @dataclass(eq=False)

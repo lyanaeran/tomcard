@@ -2,6 +2,7 @@
 Moteur du combat entre le vaisseau du joueur et une flotte d'ennemis (cf. poc.md).
 """
 
+import random
 from enum import Enum, auto
 
 from src.gameplay.carte import CIBLES_SANS_CLIC, ActionCarte, Carte, CibleCarte, TypeCarte
@@ -30,10 +31,13 @@ def _degats_effectifs(cible: Module | Ennemi, degats: int) -> int:
 class Combat:
     """Orchestre le deroulement du combat entre le joueur et la flotte ennemie."""
 
-    def __init__(self, joueur: Joueur, flotte: Flotte):
+    def __init__(self, joueur: Joueur, flotte: Flotte, aleatoire: random.Random | None = None):
         self.joueur = joueur
         self.flotte = flotte
         self.etat = EtatCombat.EN_COURS
+        # Utilise pour le tirage au sort de Tir allie (specs.md 12.6) - jamais le module
+        # random global directement, cf. CLAUDE.md "Determinisme du tirage aleatoire".
+        self.aleatoire = aleatoire or random.Random()
         self.joueur.debut_de_tour()
         self._declencher_buffs_debut_de_tour()
 
@@ -58,11 +62,12 @@ class Combat:
         self._verifier_fin_de_combat()
         return cibles_touchees
 
-    def finir_tour_joueur(self) -> list[tuple[Position, Ennemi, Module, int]]:
+    def finir_tour_joueur(self) -> list[tuple[Position, Ennemi, Module | Ennemi, int]]:
         """Termine le tour du joueur (defausse la main restante) et enchaine sur le tour ennemi.
 
-        Renvoie la liste des attaques resolues (position et ennemi attaquant, module cible,
-        degats reellement infliges), pour permettre a l'UI d'animer chaque attaque.
+        Renvoie la liste des attaques resolues (position et ennemi attaquant, cible - un
+        module, ou un autre ennemi si Tir allie est actif, specs.md 12.6 -, degats reellement
+        infliges), pour permettre a l'UI d'animer chaque attaque.
         """
         if self.etat != EtatCombat.EN_COURS:
             return []
@@ -81,9 +86,14 @@ class Combat:
             module.declencher_buffs_tour()
 
     def previsualiser_cible(self, ennemi: Ennemi) -> Module | None:
-        """Renvoie le module que cet ennemi attaquerait s'il agissait maintenant (pour le survol UI)."""
+        """Renvoie le module que cet ennemi attaquerait s'il agissait maintenant (pour le
+        survol UI), ou None s'il n'y a pas de module a portee OU si un debuff Tir allie est
+        actif (specs.md 12.6) : dans ce cas la cible reelle (un autre ennemi tire au hasard)
+        n'est determinee qu'a la resolution du tour (_tour_ennemi/_cible_redirection),
+        jamais ici, pour ne pas consommer l'alea a chaque survol/redessin (appele en boucle
+        par l'UI, cf. CLAUDE.md determinisme du tirage aleatoire)."""
         position = self._position_de_ennemi(ennemi)
-        if position is None:
+        if position is None or self._redirection_active(ennemi):
             return None
         return module_cible_par_ennemi(self.joueur.vaisseau, position.rangee)
 
@@ -91,6 +101,14 @@ class Combat:
         """Tous les modules du joueur encore en vie (base incluse)."""
         modules = [self.joueur.vaisseau.base, *self.joueur.vaisseau.modules_equipes().values()]
         return [m for m in modules if not m.est_detruit()]
+
+    def _position_de_module(self, module: Module) -> Position | None:
+        """Retrouve la position d'un module equipe dans le vaisseau, ou None (base incluse,
+        car la base n'a pas de position de colonne/rangee equipee - cf. Vaisseau.module_en)."""
+        for position, occupant in self.joueur.vaisseau.modules_equipes().items():
+            if occupant is module:
+                return position
+        return None
 
     def _cible_valide(self, carte: Carte, cible: Module | Ennemi | None) -> bool:
         """Verifie que la cible correspond au type de carte et est bien vivante dans ce combat."""
@@ -106,6 +124,11 @@ class Combat:
             return isinstance(cible, Ennemi) and cible in self.flotte.ennemis_vivants() and self._position_de_ennemi(cible).colonne == Colonne.AVANT
         if carte.cible == CibleCarte.COLONNE_ARRIERE_ENNEMIE:
             return isinstance(cible, Ennemi) and cible in self.flotte.ennemis_vivants() and self._position_de_ennemi(cible).colonne == Colonne.ARRIERE
+        if carte.cible == CibleCarte.COLONNE_AVANT_ALLIEE:
+            if not (isinstance(cible, Module) and cible in self._modules_vivants()):
+                return False
+            position = self._position_de_module(cible)
+            return position is not None and position.colonne == Colonne.AVANT
         return False
 
     def _appliquer_effet(self, carte: Carte, cible: Module | Ennemi | None) -> list[tuple[Module | Ennemi, int]]:
@@ -131,6 +154,9 @@ class Combat:
         elif carte.cible in (CibleCarte.COLONNE_AVANT_ENNEMIE, CibleCarte.COLONNE_ARRIERE_ENNEMIE):
             colonne = Colonne.AVANT if carte.cible == CibleCarte.COLONNE_AVANT_ENNEMIE else Colonne.ARRIERE
             occupants = (self.flotte.ennemi_en(colonne, rangee) for rangee in (Rangee.GAUCHE, Rangee.MID, Rangee.DROITE))
+            cibles = [occupant for occupant in occupants if occupant is not None]
+        elif carte.cible == CibleCarte.COLONNE_AVANT_ALLIEE:
+            occupants = (self.joueur.vaisseau.module_en(Colonne.AVANT, rangee) for rangee in (Rangee.GAUCHE, Rangee.DROITE))
             cibles = [occupant for occupant in occupants if occupant is not None]
         else:
             cibles = [cible]
@@ -181,13 +207,15 @@ class Combat:
             self.joueur.deck.piocher_cartes(carte.valeur)
         return carte.valeur
 
-    def _tour_ennemi(self) -> list[tuple[Position, Ennemi, Module, int]]:
-        """Chaque ennemi vivant attaque sa cible, dans l'ordre de la grille (poc.md paragraphe 3)."""
+    def _tour_ennemi(self) -> list[tuple[Position, Ennemi, Module | Ennemi, int]]:
+        """Chaque ennemi vivant attaque sa cible, dans l'ordre de la grille (poc.md paragraphe
+        3). Un ennemi sous Tir allie (specs.md 12.6) attaque un autre ennemi vivant tire au
+        hasard a la place, si au moins un autre ennemi est encore en vie."""
         attaques = []
         for position, ennemi in self.flotte.positions().items():
             if ennemi.est_detruit():
                 continue
-            cible = module_cible_par_ennemi(self.joueur.vaisseau, position.rangee)
+            cible = self._cible_redirection(ennemi) or module_cible_par_ennemi(self.joueur.vaisseau, position.rangee)
             if cible is not None:
                 degats = ennemi.degats_attaque_effectifs()
                 degats_effectifs = _degats_effectifs(cible, degats)
@@ -199,6 +227,25 @@ class Combat:
         for ennemi in self.flotte.ennemis_vivants():
             ennemi.decrementer_debuffs()
         return attaques
+
+    def _redirection_active(self, ennemi: Ennemi) -> bool:
+        """Indique si Tir allie (specs.md 12.6) est actif sur cet ennemi ET qu'un autre
+        ennemi est vivant pour en recevoir l'effet - sans tirer au sort lequel (cf.
+        previsualiser_cible/_cible_redirection)."""
+        a_le_debuff = any(debuff.action == ActionCarte.REDIRECTION_CIBLE for debuff in ennemi.debuffs_actifs)
+        if not a_le_debuff:
+            return False
+        return any(autre is not ennemi for autre in self.flotte.ennemis_vivants())
+
+    def _cible_redirection(self, ennemi: Ennemi) -> Ennemi | None:
+        """Si Tir allie est actif sur cet ennemi (specs.md 12.6), tire au hasard un autre
+        ennemi vivant pour cibler a sa place ; None sinon. Seule methode qui consomme l'alea
+        pour cette mecanique - previsualiser_cible ne fait que verifier l'eligibilite via
+        _redirection_active, sans tirage, pour rester deterministe au survol/redessin."""
+        if not self._redirection_active(ennemi):
+            return None
+        autres = [autre for autre in self.flotte.ennemis_vivants() if autre is not ennemi]
+        return self.aleatoire.choice(autres)
 
     def _position_de_ennemi(self, ennemi: Ennemi) -> Position | None:
         """Retrouve la position d'un ennemi dans la flotte, ou None s'il n'y est pas."""

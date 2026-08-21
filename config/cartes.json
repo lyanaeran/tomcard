@@ -255,7 +255,11 @@
       "y": null,
       "munition": null,
       "description": "Bouclier de X sur tous les modules de la ligne avant",
-      "_non_jouable": "cible 'modules de la ligne avant' non representable par CibleCarte (voir specs.md 9.1)"
+      "effet": {
+        "type": "DEFENSE",
+        "cible": "COLONNE_AVANT_ALLIEE",
+        "valeur": 10
+      }
     },
     {
       "id": "CRT_24",
@@ -457,7 +461,13 @@
       "y": null,
       "munition": null,
       "description": "Change la cible de l'ennemi pour un de ses voisins au prochain tour",
-      "_non_jouable": "mecanique de detournement de cible non supportee par le moteur actuel"
+      "effet": {
+        "type": "DEBUFF",
+        "cible": "ENNEMI_UNIQUE",
+        "valeur": 0,
+        "action": "REDIRECTION_CIBLE",
+        "duree": 1
+      }
     },
     {
       "id": "CRT_37",

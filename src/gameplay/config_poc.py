@@ -130,4 +130,4 @@ def creer_combat_poc(generateur_aleatoire: random.Random | None = None) -> Comba
     joueur = Joueur(vaisseau=vaisseau, deck=deck, electricite_par_tour=ELECTRICITE_PAR_TOUR)
     flotte = creer_flotte(specs_ennemis, aleatoire)
 
-    return Combat(joueur=joueur, flotte=flotte)
+    return Combat(joueur=joueur, flotte=flotte, aleatoire=aleatoire)

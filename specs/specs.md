@@ -421,7 +421,10 @@ que par carte, pour servir de feuille de route à une future extension du moteur
 - **Ennemi Avant** / **Ligne avant** ennemie, **Ennemi Arrière** / **Ligne arrière** — **implémenté**
   (`CibleCarte.COLONNE_AVANT_ENNEMIE` / `COLONNE_ARRIERE_ENNEMIE`, colonne fixée par la carte, un
   clic sur l'autre colonne est refusé) : *Ligne avant, Ligne arrière* jouables
-- **Module Avant** — rang avant allié uniquement — non implémenté (*Protéger l'avant poste*)
+- **Module Avant** — colonne avant alliée uniquement (avant-gauche + avant-droite, jamais le
+  module principal qui occupe la rangée mid) — **implémenté** (`CibleCarte.COLONNE_AVANT_ALLIEE`,
+  même principe que les colonnes ennemies : un clic sur un module de cette colonne précise
+  confirme) : *Protéger l'avant poste* jouable
 
 Ces cibles par rang se résolvent par un **clic sur une case du rang visé**, comme la Ligne ennemie
 perçante (§3.1, §7.2), et non automatiquement comme Alliés/Ennemis multiples.
@@ -473,10 +476,10 @@ Boucliers endommagés, Boucliers hors service* jouables. Reste manquant pour les
 Déjà nommés en §7.1. État d'implémentation dans `combat.py` :
 
 - **Reparation** — **implémenté** (renommage de l'ancien type `SOIN`, même logique)
-- **Debuff** — **implémenté** (`TypeCarte.DEBUFF`, deux actions : `REDUCTION_DEGATS` et
-  `VULNERABILITE`, cf. §12.1/§12.3/§12.4) : *Tordre le canon, Brèche, Ligne avant, Boucliers
-  endommagés, Boucliers hors service* jouables. *Tir allié* reste non jouable, sa mécanique de
-  détournement de cible étant distincte des deux actions ci-dessus (§12.6)
+- **Debuff** — **implémenté** (`TypeCarte.DEBUFF`, trois actions : `REDUCTION_DEGATS`,
+  `VULNERABILITE` et `REDIRECTION_CIBLE`, cf. §12.1/§12.3/§12.4/§12.6) : *Tordre le canon, Brèche,
+  Ligne avant, Boucliers endommagés, Boucliers hors service, Tir allié* jouables — les 6 cartes du
+  module Sabotage sont maintenant toutes jouables
 - **Buff** — **implémenté** (`TypeCarte.BUFF`, une action : `BOUCLIER_PAR_TOUR`, cf. §12.3) :
   *Bouclier perpétuel* jouable. *Optimisation des boucliers, Attaques performantes* (modification du
   coût d'une catégorie de cartes) et *Double défense, Circuit parallèle* (duplication d'effet)
@@ -495,10 +498,15 @@ Déjà nommés en §7.1. État d'implémentation dans `combat.py` :
 - Annulation totale de la prochaine attaque sur une cible, différent d'un bouclier classique
   (*Leurre*)
 - Détournement de la cible d'un ennemi vers un de ses voisins — mécanique déjà anticipée comme
-  *Piratage* en §4.2 mais jamais implémentée (*Tir allié*). Décision prise avec l'utilisateur pour
-  quand cette carte sera implémentée : le "voisin" est **n'importe quel autre ennemi vivant** (pas
-  de restriction géométrique d'adjacence) — l'ennemi debuffé attaque un allié à lui au hasard parmi
-  les ennemis vivants restants, plutôt qu'un module du joueur, à son prochain tour
+  *Piratage* en §4.2 — **implémenté** (`ActionCarte.REDIRECTION_CIBLE`) : *Tir allié* jouable. Le
+  "voisin" est **n'importe quel autre ennemi vivant** (pas de restriction géométrique d'adjacence,
+  décision prise avec l'utilisateur) — l'ennemi debuffé attaque un allié à lui tiré au hasard parmi
+  les ennemis vivants restants, plutôt qu'un module du joueur, à son prochain tour ; sans autre
+  ennemi vivant, il attaque normalement (rien à rediriger vers). Le tirage au hasard n'a lieu qu'à
+  la résolution réelle du tour (`Combat._cible_redirection`), jamais lors d'un simple survol/tap de
+  prévisualisation (`Combat.previsualiser_cible`), pour ne pas consommer l'aléa à chaque redessin —
+  l'UI affiche alors "Vise un allié au hasard" plutôt qu'une cible précise, tant que le tour n'est
+  pas résolu
 
 ### 12.7 Modification des règles d'autres cartes (méta-effets)
 
