@@ -55,6 +55,13 @@ détaillées.
   sélectionner la carte puis confirmer par un clic/tap sur une case vivante du bon camp — jamais de
   résolution automatique au seul clic sur la carte, cf. specs.md §8.3/poc.md §4. Toute divergence de
   ce flux entre `src/ui/fenetre.py` (`_essayer_de_cibler`) et `web/app.js` (`cliquerCase`) est un bug.
+- **Tout changement doit être testé sur PC et sur web/iOS avant d'être considéré terminé** — pas
+  seulement vérifié par lecture de code des deux côtés. Un changement qui touche `src/gameplay/` ou
+  `config/*.json` sans impact visuel/interactif (règle de calcul interne, etc.) reste couvert par
+  `pytest` seul, qui s'exécute contre le même code pour les deux versions ; tout changement qui
+  touche `src/ui/fenetre.py`, `web/app.js`/`web/style.css`/`web/bridge.py`, ou le comportement visible
+  d'une carte/mécanique, doit être vérifié sur les deux avec les méthodes de la section "Tester les
+  deux versions" ci-dessous.
 
 ## Stack et commandes
 
@@ -81,7 +88,7 @@ Séparation stricte, cf. `specs/specs.md` §10 :
 - `assets/{cartes,modules,ennemis}/` — images uniquement pour l'instant
 - `tests/` — un fichier de test par module de `src/gameplay/` (et `test_animation.py` pour la
   minuterie de `src/ui/`). Les fonctions de `src/ui/fenetre.py` autres que les minuteries, et tout
-  `web/`, ne sont pas couverts par pytest (voir "Tester l'UI" ci-dessous)
+  `web/`, ne sont pas couverts par pytest (voir "Tester les deux versions" ci-dessous)
 
 ## Conventions de code
 
@@ -92,14 +99,19 @@ Séparation stricte, cf. `specs/specs.md` §10 :
 - `src/gameplay` ne doit jamais importer `pyglet` ; si une fonction a besoin d'affichage, elle
   appartient à `src/ui`
 
-## Tester l'UI (pyglet)
+## Tester les deux versions
 
-`src/ui/fenetre.py` n'a pas de tests pytest classiques (dessiner avec pyglet n'est pas unitaire).
-Pattern utilisé jusqu'ici pour valider visuellement un changement :
+Aucune des deux UI n'a de tests pytest classiques (`fenetre.py` : dessiner avec pyglet n'est pas
+unitaire ; `web/` : n'est pas exécuté par pytest du tout, cf. Architecture). Un changement visible
+sur l'une ou l'autre doit donc être vérifié manuellement avec les méthodes ci-dessous **avant d'être
+considéré terminé** (cf. "Deux façons de jouer").
+
+### PC (pyglet)
 
 1. Lancer un serveur X virtuel : `Xvfb :99 -screen 0 1280x800x24 &`
 2. Écrire un petit script Python qui construit une `FenetreCombat`, appelle
-   `fenetre.dispatch_event("on_draw")` puis
+   `fenetre.switch_to(); fenetre.clear(); fenetre.on_draw(); fenetre.flip()` (**pas**
+   `fenetre.dispatch_event("on_draw")`, qui produit un ecran noir dans cet environnement), puis
    `pyglet.image.get_buffer_manager().get_color_buffer().save("capture.png")`, en simulant les
    clics/survols voulus (`fenetre.on_mouse_press(...)`, `fenetre.on_mouse_motion(...)`, ou en
    appelant directement les méthodes internes comme `_essayer_de_cibler`)
@@ -110,6 +122,25 @@ Pattern utilisé jusqu'ici pour valider visuellement un changement :
 5. Utiliser un `random.Random(seed)` fixe passé à `creer_combat_poc()` pour un combat reproductible
 6. Nettoyer les scripts/captures temporaires du scratchpad une fois la vérification faite (ne rien
    laisser dans le dépôt)
+
+### Web (iOS/navigateur)
+
+Un vrai test en navigateur avec Pyodide n'est pas toujours possible (le CDN `cdn.jsdelivr.net` peut
+être bloqué par le sandbox réseau de l'environnement d'exécution) — dans ce cas, le signaler
+explicitement dans la PR plutôt que prétendre avoir testé en navigateur. Méthodes de repli, à
+combiner :
+
+1. **Appeler `web/bridge.py` directement en Python**, sans navigateur : construire un `Combat` (via
+   `creer_combat_poc` ou à la main), assigner `bridge.combat`, puis appeler les fonctions exposées
+   (`bridge._etat_dict()`, `bridge.jouer_carte(...)`, etc.) et vérifier le JSON produit — c'est le
+   même code que celui exécuté par Pyodide dans le navigateur, aucune logique n'est dupliquée
+2. **Valider la syntaxe de `web/app.js`** avec `node --check web/app.js` (n'exécute pas le code,
+   détecte seulement les erreurs de syntaxe)
+3. Si un navigateur réel est accessible, tester manuellement dans les DevTools (menu réactif au
+   pouce, orientation paysage, tailles d'écran iPhone)
+4. **Incrémenter `VERSION_CACHE`** dans `web/app.js` et les paramètres `?v=` dans `index.html` à
+   chaque changement de `app.js`/`bridge.py`/`style.css` (cache-busting manuel, cf. commentaire en
+   tête de `app.js`)
 
 ## Déterminisme du tirage aléatoire
 
