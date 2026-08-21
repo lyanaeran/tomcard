@@ -518,7 +518,7 @@ body {
     border: 2px solid #4c6ef5;
     border-radius: 12px;
     padding: 0.7rem 1rem;
-    max-width: min(75vw, 240px);
+    max-width: min(65vw, 170px);
     text-align: center;
 }
 
@@ -528,8 +528,8 @@ body {
 }
 
 #info-carte img {
-    width: 110px;
-    aspect-ratio: 3 / 4;
+    width: 90px;
+    aspect-ratio: 1 / 1;
     object-fit: contain;
 }
 
