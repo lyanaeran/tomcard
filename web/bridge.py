@@ -68,6 +68,7 @@ def _module_json(module, id_case: str):
         "detruit": module.est_detruit(),
         "image": _chemin_web(module.image),
         "buffs": _buffs_json(module),
+        "leurre_actif": module.leurre_actif,
     }
 
 
@@ -194,7 +195,10 @@ def _popup(cible, type_carte: str, valeur: int, action: str | None) -> dict | No
     if type_carte == "ATTAQUE":
         texte, couleur = f"-{valeur}", "degats"
     elif type_carte == "DEFENSE":
-        texte, couleur = f"+{valeur}", "bouclier"
+        if action == "ANNULATION_PROCHAINE_ATTAQUE":
+            texte, couleur = "Leurre actif !", "bouclier"
+        else:
+            texte, couleur = f"+{valeur}", "bouclier"
     elif type_carte == "DEBUFF":
         if action == "VULNERABILITE":
             texte, couleur = f"+{valeur}%", "debuff"

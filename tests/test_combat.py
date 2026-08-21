@@ -57,6 +57,10 @@ CARTE_FONDS_DE_TIROIR = Carte(
     nom="Fonds de tiroir", image=IMG, type=TypeCarte.OUTILS, cible=CibleCarte.ALLIES_MULTIPLES,
     cout=1, valeur=1, action=ActionCarte.GAIN_ELECTRICITE_PAR_MODULE,
 )
+CARTE_LEURRE = Carte(
+    nom="Leurre", image=IMG, type=TypeCarte.DEFENSE, cible=CibleCarte.ALLIE_UNIQUE,
+    cout=3, valeur=0, action=ActionCarte.ANNULATION_PROCHAINE_ATTAQUE,
+)
 
 POSITION_ENNEMI = Position(Colonne.AVANT, Rangee.GAUCHE)
 
@@ -687,3 +691,37 @@ def test_fonds_de_tiroir_ignore_les_modules_detruits():
     resultat = combat.jouer_carte(CARTE_FONDS_DE_TIROIR, None)
 
     assert resultat == [(None, 4)]  # 4 modules vivants sur 5
+
+
+# --- Leurre (Lanceur de missiles, specs.md 12.6) ---
+
+
+def test_leurre_pose_le_flag_sans_toucher_au_bouclier():
+    combat, vaisseau, _flotte = _nouveau_combat()
+    combat.joueur.deck.main = [CARTE_LEURRE]
+    combat.joueur.electricite = 3
+
+    resultat = combat.jouer_carte(CARTE_LEURRE, vaisseau.base)
+
+    assert resultat == [(vaisseau.base, 0)]
+    assert vaisseau.base.leurre_actif is True
+    assert vaisseau.base.bouclier == 0
+
+
+def test_leurre_annule_totalement_la_prochaine_attaque_puis_se_consomme():
+    combat, vaisseau, flotte = _nouveau_combat()
+    ennemi = flotte.ennemis_vivants()[0]
+    combat.joueur.deck.main = [CARTE_LEURRE]
+    combat.joueur.electricite = 3
+    combat.jouer_carte(CARTE_LEURRE, vaisseau.base)
+
+    attaques = combat.finir_tour_joueur()
+
+    assert attaques == [(POSITION_ENNEMI, ennemi, vaisseau.base, 0)]
+    assert vaisseau.base.pv == 15  # aucun degat, meme sans bouclier
+    assert vaisseau.base.leurre_actif is False  # consomme par cette attaque
+
+    attaques_suivantes = combat.finir_tour_joueur()
+
+    assert attaques_suivantes == [(POSITION_ENNEMI, ennemi, vaisseau.base, 7)]  # plus de leurre : degats normaux
+    assert vaisseau.base.pv == 15 - 7

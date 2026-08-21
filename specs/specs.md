@@ -500,7 +500,13 @@ Déjà nommés en §7.1. État d'implémentation dans `combat.py` :
 - Transfert des dégâts subis vers un autre module désigné (*Transfert*)
 - Renvoi des dégâts subis à l'attaquant (*Renvoie*)
 - Annulation totale de la prochaine attaque sur une cible, différent d'un bouclier classique
-  (*Leurre*)
+  (*Leurre*) — **implémenté** (`ActionCarte.ANNULATION_PROCHAINE_ATTAQUE`, sur une carte Defense) :
+  *Leurre* jouable. Un flag `Module.leurre_actif` (pas un buff : pas de redéclenchement
+  périodique, pas de durée en tours) rend la **toute prochaine** attaque reçue totalement nulle
+  (0 dégât, y compris si elle dépasserait PV+bouclier cumulés), puis se consomme — dès la première
+  attaque reçue après la pose, même si plusieurs ennemis attaquent ce module dans le même tour
+  (seule la première du tour est annulée, les suivantes s'appliquent normalement). Pastille dédiée
+  (cyan) distincte des pastilles de buff, affichée tant que le leurre n'a pas encore été consommé
 - Détournement de la cible d'un ennemi vers un de ses voisins — mécanique déjà anticipée comme
   *Piratage* en §4.2 — **implémenté** (`ActionCarte.REDIRECTION_CIBLE`) : *Tir allié* jouable. Le
   "voisin" est **n'importe quel autre ennemi vivant** (pas de restriction géométrique d'adjacence,

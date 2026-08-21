@@ -77,6 +77,7 @@ class ActionCarte(Enum):
     BOUCLIER_PAR_TOUR = auto()
     BOUCLIER_POURCENTAGE_PV = auto()
     REDIRECTION_CIBLE = auto()
+    ANNULATION_PROCHAINE_ATTAQUE = auto()
 
 
 @dataclass(eq=False)

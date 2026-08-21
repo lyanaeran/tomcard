@@ -24,7 +24,11 @@ class EtatCombat(Enum):
 
 def _degats_effectifs(cible: Module | Ennemi, degats: int) -> int:
     """Combien de PV+bouclier une cible va reellement perdre pour ces degats, sans
-    depasser ce qu'il lui reste (specs.md paragraphe 3.5 : le bouclier absorbe en premier)."""
+    depasser ce qu'il lui reste (specs.md paragraphe 3.5 : le bouclier absorbe en premier).
+    Un leurre actif (specs.md 12.6) annule totalement l'attaque : 0 degats, quel que soit
+    le montant."""
+    if getattr(cible, "leurre_actif", False):
+        return 0
     return min(degats, cible.pv + getattr(cible, "bouclier", 0))
 
 
@@ -176,9 +180,13 @@ class Combat:
         elif carte.type == TypeCarte.DEFENSE:
             if carte.action == ActionCarte.BOUCLIER_POURCENTAGE_PV:
                 valeur_effective = round(cible.pv_max * carte.valeur / 100)
+                cible.ajouter_bouclier(valeur_effective)
+            elif carte.action == ActionCarte.ANNULATION_PROCHAINE_ATTAQUE:
+                cible.leurre_actif = True
+                valeur_effective = 0
             else:
                 valeur_effective = carte.valeur
-            cible.ajouter_bouclier(valeur_effective)
+                cible.ajouter_bouclier(valeur_effective)
         elif carte.type == TypeCarte.DEBUFF:
             valeur_effective = self._appliquer_debuff(carte, cible)
         elif carte.type == TypeCarte.BUFF:
