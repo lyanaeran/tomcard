@@ -179,7 +179,12 @@
       "y": null,
       "munition": null,
       "description": "Annule la prochaine attaque sur le module cible",
-      "_non_jouable": "mecanique d'annulation d'attaque non supportee par le moteur actuel (n'est pas un bouclier)"
+      "effet": {
+        "type": "DEFENSE",
+        "cible": "ALLIE_UNIQUE",
+        "valeur": 0,
+        "action": "ANNULATION_PROCHAINE_ATTAQUE"
+      }
     },
     {
       "id": "CRT_19",

@@ -29,13 +29,21 @@ class Module:
         self.nom = nom
         self.image = image
         self.buffs_actifs: list[BuffActif] = []
+        self.leurre_actif = False
 
     def est_detruit(self) -> bool:
         """Renvoie True si le module n'a plus de points de vie."""
         return self.pv <= 0
 
     def subir_degats(self, degats: int) -> None:
-        """Applique des degats, en absorbant d'abord avec le bouclier (specs.md paragraphe 3.5)."""
+        """Applique des degats, en absorbant d'abord avec le bouclier (specs.md paragraphe 3.5).
+
+        Un leurre actif (specs.md 12.6) annule totalement la prochaine attaque recue, quelle
+        que soit son ampleur - different d'un bouclier classique qui absorbe un montant fixe -
+        puis se consomme (une seule attaque annulee par pose de la carte)."""
+        if self.leurre_actif:
+            self.leurre_actif = False
+            return
         degats_restants = max(0, degats - self.bouclier)
         self.bouclier = max(0, self.bouclier - degats)
         self.pv = max(0, self.pv - degats_restants)

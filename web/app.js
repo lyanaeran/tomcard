@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "18";
+const VERSION_CACHE = "19";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -232,6 +232,9 @@ function afficherInfobulle(idCase, typeCase) {
         for (const buff of buffsPersistants) {
             lignes.push(`<div>${libelleBuffActif(buff)}</div>`);
         }
+        if (objet.leurre_actif) {
+            lignes.push(`<div>Leurre actif (annule la prochaine attaque)</div>`);
+        }
     } else {
         lignes.push(`<div>⚔️ ${objet.degats_attaque}</div>`);
         if (objet.intention) {
@@ -272,14 +275,17 @@ function attacherPressionCase(element, idCase, typeCase) {
 // Pastilles du nombre de buffs actifs sur un module (specs.md 12.3/12.5) : une doree pour
 // les buffs a duree limitee, une distincte pour les buffs persistants (qui durent tout le
 // combat, tours_restants null) - comptes separes, jamais additionnes dans une seule
-// pastille. Chacune absente si son compte est a 0.
-function rendrePastillesBuffs(buffs) {
-    const duree = buffs.filter((buff) => buff.tours_restants !== null).length;
-    const persistants = buffs.filter((buff) => buff.tours_restants === null).length;
+// pastille. Chacune absente si son compte est a 0. Une derniere pastille signale un leurre
+// actif (specs.md 12.6), different d'un buff : pas de compte (present ou absent), se
+// consomme a la prochaine attaque recue plutot qu'a l'expiration d'une duree.
+function rendrePastillesBuffs(module) {
+    const duree = module.buffs.filter((buff) => buff.tours_restants !== null).length;
+    const persistants = module.buffs.filter((buff) => buff.tours_restants === null).length;
     const badgeDuree = duree > 0 ? `<span class="pastille pastille-buffs">${duree}</span>` : "";
     const badgePersistants =
         persistants > 0 ? `<span class="pastille pastille-buffs-persistants">${persistants}</span>` : "";
-    return `${badgeDuree}${badgePersistants}`;
+    const badgeLeurre = module.leurre_actif ? `<span class="pastille pastille-leurre">1</span>` : "";
+    return `${badgeDuree}${badgePersistants}${badgeLeurre}`;
 }
 
 // Pastilles PV (rouge) / Bouclier (bleu, allies uniquement) : memes couleurs
@@ -295,7 +301,7 @@ function rendrePastilles(objet, typeCase) {
         typeCase === "ennemi" && objet.debuffs.length > 0
             ? `<span class="pastille pastille-debuffs">${objet.debuffs.length}</span>`
             : "";
-    const buffs = typeCase === "allie" ? rendrePastillesBuffs(objet.buffs) : "";
+    const buffs = typeCase === "allie" ? rendrePastillesBuffs(objet) : "";
     return `${bouclier}${debuffs}${buffs}<span class="pastille pastille-pv">${objet.pv}</span>`;
 }
 
@@ -304,7 +310,7 @@ function rendrePastilles(objet, typeCase) {
 // comme les autres cases (poc.md paragraphe 8).
 function rendrePastillesBase(base) {
     if (base.detruit) return "";
-    const buffs = rendrePastillesBuffs(base.buffs);
+    const buffs = rendrePastillesBuffs(base);
     return `
         <div class="pastilles-base">
             ${buffs}
@@ -464,6 +470,7 @@ function texteEffetCarte(carte) {
     if (carte.type === "ATTAQUE") return `Inflige ${carte.valeur} degats a ${cible}.`;
     if (carte.type === "DEFENSE") {
         if (carte.action === "BOUCLIER_POURCENTAGE_PV") return `Bouclier de ${carte.valeur}% des PV de ${cible}.`;
+        if (carte.action === "ANNULATION_PROCHAINE_ATTAQUE") return `Annule la prochaine attaque sur ${cible}.`;
         return `Bouclier de ${carte.valeur} a ${cible}.`;
     }
     if (carte.type === "REPARATION") return `Repare ${carte.valeur} PV a ${cible}.`;

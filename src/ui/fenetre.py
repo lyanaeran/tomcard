@@ -125,6 +125,9 @@ COULEUR_PASTILLE_BUFFS = (235, 200, 60)
 # Buffs persistants (duree tout le combat, ex. Bouclier perpetuel) : compte separe de
 # celui des buffs a duree limitee, teinte distincte pour les reconnaitre d'un coup d'oeil.
 COULEUR_PASTILLE_BUFFS_PERSISTANTS = (170, 130, 220)
+# Leurre actif (specs.md 12.6) : pas un buff (pas de redeclenchement periodique, se consomme
+# a la prochaine attaque recue plutot qu'a l'expiration d'une duree) - pastille dediee.
+COULEUR_PASTILLE_LEURRE = (90, 200, 210)
 
 # Popups +/-N affiches 2 secondes sur une cible touchee par une carte ou une
 # attaque ennemie (degats en rouge, bouclier pose en bleu, soin en vert)
@@ -280,7 +283,10 @@ def _pastilles_buffs_module(module: Module, cx_pv: float, cy: float, lot: pyglet
     sa pastille PV (par-dessus l'emplacement Bouclier) : une doree pour les buffs a duree
     limitee, une distincte pour les buffs persistants (qui durent tout le combat) - comptes
     separes, jamais additionnes dans une seule pastille. Chacune absente si son compte est a
-    0. cx_pv/cy : memes reperes que la pastille PV de ce module (cf. _pastilles_pv_bouclier)."""
+    0. Une derniere pastille (encore plus a gauche) signale un leurre actif (specs.md 12.6),
+    different d'un buff : pas de compte (present ou absent), se consomme a la prochaine
+    attaque recue plutot qu'a l'expiration d'une duree. cx_pv/cy : memes reperes que la
+    pastille PV de ce module (cf. _pastilles_pv_bouclier)."""
     buffs_duree = [buff for buff in module.buffs_actifs if buff.tours_restants is not None]
     buffs_persistants = [buff for buff in module.buffs_actifs if buff.tours_restants is None]
     elements = []
@@ -290,6 +296,9 @@ def _pastilles_buffs_module(module: Module, cx_pv: float, cy: float, lot: pyglet
         cx -= RAYON_PASTILLE * 2 + MARGE_PASTILLE
     if buffs_persistants:
         elements += _pastille(cx, cy, COULEUR_PASTILLE_BUFFS_PERSISTANTS, len(buffs_persistants), lot)
+        cx -= RAYON_PASTILLE * 2 + MARGE_PASTILLE
+    if module.leurre_actif:
+        elements += _pastille(cx, cy, COULEUR_PASTILLE_LEURRE, 1, lot)
     return elements
 
 
@@ -298,6 +307,8 @@ def _texte_et_couleur_effet(carte: Carte, valeur_effective: int) -> tuple[str, t
     if carte.type == TypeCarte.ATTAQUE:
         return f"-{valeur_effective}", COULEUR_POPUP_DEGATS
     if carte.type == TypeCarte.DEFENSE:
+        if carte.action == ActionCarte.ANNULATION_PROCHAINE_ATTAQUE:
+            return "Leurre actif !", COULEUR_POPUP_BOUCLIER
         return f"+{valeur_effective}", COULEUR_POPUP_BOUCLIER
     if carte.type == TypeCarte.DEBUFF:
         if carte.action == ActionCarte.VULNERABILITE:
@@ -648,6 +659,8 @@ class FenetreCombat(pyglet.window.Window):
             rect = self._rect_du_module(entite)
             lignes = [entite.nom, f"PV {entite.pv}/{entite.pv_max}", f"Bouclier {entite.bouclier}"]
             lignes.extend(_lignes_buffs(entite))
+            if entite.leurre_actif:
+                lignes.append("Leurre actif (annule la prochaine attaque)")
 
         return self._infobulle(rect, lignes, lot)
 

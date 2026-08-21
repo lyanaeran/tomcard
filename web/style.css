@@ -310,6 +310,15 @@ body {
     background: #aa82dc;
 }
 
+/* Leurre actif (specs.md 12.6) : pas un buff (pas de redeclenchement periodique, se
+   consomme a la prochaine attaque recue plutot qu'a l'expiration d'une duree), un cran plus
+   a gauche encore. Teinte distincte (cyan) pour la reconnaitre d'un coup d'oeil. Absente si
+   aucun leurre actif. */
+.pastille-leurre {
+    right: calc(var(--taille-pastille) * 4 + 27px);
+    background: #5ac8d2;
+}
+
 .pastille-cout {
     top: 3px;
     right: 3px;
