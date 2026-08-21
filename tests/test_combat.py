@@ -45,6 +45,18 @@ CARTE_COLONNE_AVANT_ALLIEE = Carte(
     nom="Proteger l'avant poste", image=IMG, type=TypeCarte.DEFENSE, cible=CibleCarte.COLONNE_AVANT_ALLIEE,
     cout=2, valeur=10,
 )
+CARTE_BLINDAGE_MAXIMAL = Carte(
+    nom="Blindage maximal", image=IMG, type=TypeCarte.BUFF, cible=CibleCarte.MODULE_PRINCIPAL,
+    cout=2, valeur=8, action=ActionCarte.BOUCLIER_PAR_TOUR, duree=3,
+)
+CARTE_BOUCLIER_ADAPTATIF = Carte(
+    nom="Bouclier adaptatif", image=IMG, type=TypeCarte.DEFENSE, cible=CibleCarte.ALLIE_UNIQUE,
+    cout=1, valeur=80, action=ActionCarte.BOUCLIER_POURCENTAGE_PV,
+)
+CARTE_FONDS_DE_TIROIR = Carte(
+    nom="Fonds de tiroir", image=IMG, type=TypeCarte.OUTILS, cible=CibleCarte.ALLIES_MULTIPLES,
+    cout=1, valeur=1, action=ActionCarte.GAIN_ELECTRICITE_PAR_MODULE,
+)
 
 POSITION_ENNEMI = Position(Colonne.AVANT, Rangee.GAUCHE)
 
@@ -604,3 +616,74 @@ def test_colonne_avant_alliee_refuse_un_clic_sur_l_arriere_ou_la_base():
     assert resultat_arriere == []
     assert resultat_base == []
     assert vaisseau.module_en(Colonne.AVANT, Rangee.GAUCHE).bouclier == 0
+
+
+# --- Blindage maximal (Blindage, specs.md 12.1/12.3) ---
+
+
+def test_blindage_maximal_donne_du_bouclier_immediatement():
+    combat, vaisseau, _flotte = _nouveau_combat()
+    combat.joueur.deck.main = [CARTE_BLINDAGE_MAXIMAL]
+    combat.joueur.electricite = 2
+
+    resultat = combat.jouer_carte(CARTE_BLINDAGE_MAXIMAL, None)  # Module Principal, sans clic
+
+    assert resultat == [(vaisseau.base, 8)]
+    assert vaisseau.base.bouclier == 8
+
+
+def test_blindage_maximal_expire_apres_3_tours():
+    combat, vaisseau, _flotte = _nouveau_combat(degats_ennemi=0)
+    combat.joueur.deck.main = [CARTE_BLINDAGE_MAXIMAL]
+    combat.joueur.electricite = 2
+    combat.jouer_carte(CARTE_BLINDAGE_MAXIMAL, None)
+
+    combat.finir_tour_joueur()
+    combat.finir_tour_joueur()
+    combat.finir_tour_joueur()
+    assert vaisseau.base.bouclier == 32  # 8 a la pose + 8 x 3 tours
+    assert vaisseau.base.buffs_actifs == []
+
+    combat.finir_tour_joueur()
+    assert vaisseau.base.bouclier == 32  # expire : plus de redeclenchement
+
+
+# --- Bouclier adaptatif (Blindage, specs.md 12.4) ---
+
+
+def test_bouclier_adaptatif_donne_un_bouclier_proportionnel_aux_pv_max():
+    combat, vaisseau, _flotte = _nouveau_combat(pv_base=15)
+    combat.joueur.deck.main = [CARTE_BOUCLIER_ADAPTATIF]
+    combat.joueur.electricite = 2
+
+    resultat = combat.jouer_carte(CARTE_BOUCLIER_ADAPTATIF, vaisseau.base)
+
+    assert resultat == [(vaisseau.base, 12)]  # round(15 * 80 / 100)
+    assert vaisseau.base.bouclier == 12
+
+
+# --- Fonds de tiroir (Generateur, specs.md 12.8) ---
+
+
+def test_fonds_de_tiroir_donne_de_l_electricite_par_module_actif():
+    vaisseau = _vaisseau_complet()
+    combat, _vaisseau, _flotte = _nouveau_combat(vaisseau=vaisseau)
+    combat.joueur.deck.main = [CARTE_FONDS_DE_TIROIR]
+    combat.joueur.electricite = 10
+
+    resultat = combat.jouer_carte(CARTE_FONDS_DE_TIROIR, None)  # ALLIES_MULTIPLES, sans clic
+
+    assert resultat == [(None, 5)]  # 1 x (base + 4 modules equipes)
+    assert combat.joueur.electricite == 14  # 10 - 1 (cout) + 5 (gain)
+
+
+def test_fonds_de_tiroir_ignore_les_modules_detruits():
+    vaisseau = _vaisseau_complet()
+    vaisseau.module_en(Colonne.AVANT, Rangee.GAUCHE).pv = 0
+    combat, _vaisseau, _flotte = _nouveau_combat(vaisseau=vaisseau)
+    combat.joueur.deck.main = [CARTE_FONDS_DE_TIROIR]
+    combat.joueur.electricite = 10
+
+    resultat = combat.jouer_carte(CARTE_FONDS_DE_TIROIR, None)
+
+    assert resultat == [(None, 4)]  # 4 modules vivants sur 5
