@@ -3,7 +3,7 @@
     {
       "id": "CRT_7",
       "nom": "Laser",
-      "image": "assets/cartes/soigner.png",
+      "image": "assets/cartes/attaque.png",
       "module_origine": "Module principal",
       "rarete": "Base",
       "categorie": "Attaque",
@@ -18,7 +18,7 @@
     {
       "id": "CRT_8",
       "nom": "Laser percant",
-      "image": "assets/cartes/attaquer.png",
+      "image": "assets/cartes/attaque_percante.png",
       "module_origine": "Module principal",
       "rarete": "Base",
       "categorie": "Attaque",
@@ -33,7 +33,7 @@
     {
       "id": "CRT_9",
       "nom": "Bombardement",
-      "image": "assets/cartes/attaquer.png",
+      "image": "assets/cartes/bombe.png",
       "module_origine": "Module principal",
       "rarete": "Base",
       "categorie": "Attaque",
@@ -48,7 +48,7 @@
     {
       "id": "CRT_10",
       "nom": "Bouclier",
-      "image": "assets/cartes/soigner.png",
+      "image": "assets/cartes/bouclier.png",
       "module_origine": "Module principal",
       "rarete": "Base",
       "categorie": "Defense",
@@ -63,7 +63,7 @@
     {
       "id": "CRT_11",
       "nom": "Proteger le vaisseau",
-      "image": "assets/cartes/mitrailler.png",
+      "image": "assets/cartes/defense.png",
       "module_origine": "Module principal",
       "rarete": "Base",
       "categorie": "Defense",
@@ -78,7 +78,7 @@
     {
       "id": "CRT_12",
       "nom": "Reparation",
-      "image": "assets/cartes/defendre.png",
+      "image": "assets/cartes/reparation.png",
       "module_origine": "Module principal",
       "rarete": "Base",
       "categorie": "Reparation",
@@ -124,7 +124,7 @@
     {
       "id": "CRT_15",
       "nom": "Ciel de missiles",
-      "image": "assets/cartes/soigner.png",
+      "image": "assets/cartes/missiles.png",
       "module_origine": "Lanceur de missiles",
       "rarete": "Commune",
       "categorie": "Attaque",
@@ -139,7 +139,7 @@
     {
       "id": "CRT_16",
       "nom": "Ligne arriere",
-      "image": "assets/cartes/attaquer.png",
+      "image": "assets/cartes/tir_groupe.png",
       "module_origine": "Lanceur de missiles",
       "rarete": "Commune",
       "categorie": "Attaque",
@@ -200,7 +200,7 @@
     {
       "id": "CRT_20",
       "nom": "Mode defensif",
-      "image": "assets/cartes/attaquer.png",
+      "image": "assets/cartes/champ_electromagnetique.png",
       "module_origine": "Blindage",
       "rarete": "Commune",
       "categorie": "Defense",
@@ -245,7 +245,7 @@
     {
       "id": "CRT_23",
       "nom": "Proteger l'avant poste",
-      "image": "assets/cartes/attaquer.png",
+      "image": "assets/cartes/tourelle.png",
       "module_origine": "Blindage",
       "rarete": "Commune",
       "categorie": "Defense",
@@ -294,7 +294,7 @@
     {
       "id": "CRT_26",
       "nom": "Bouclier perpetuel",
-      "image": "assets/cartes/defendre.png",
+      "image": "assets/cartes/recharge.png",
       "module_origine": "Blindage",
       "rarete": "Legendaire",
       "categorie": "Buff",
@@ -315,7 +315,7 @@
     {
       "id": "CRT_27",
       "nom": "Surcharge temporaire",
-      "image": "assets/cartes/defendre.png",
+      "image": "assets/cartes/generateur_electricite.png",
       "module_origine": "Generateur",
       "rarete": "Commune",
       "categorie": "Outils",
@@ -406,7 +406,7 @@
     {
       "id": "CRT_33",
       "nom": "Tordre le canon",
-      "image": "assets/cartes/soigner.png",
+      "image": "assets/cartes/sabotage.png",
       "module_origine": "Sabotage",
       "rarete": "Commune",
       "categorie": "Debuff",
@@ -421,7 +421,7 @@
     {
       "id": "CRT_34",
       "nom": "Breche",
-      "image": "assets/cartes/soigner.png",
+      "image": "assets/cartes/emp.png",
       "module_origine": "Sabotage",
       "rarete": "Commune",
       "categorie": "Debuff",
@@ -436,7 +436,7 @@
     {
       "id": "CRT_35",
       "nom": "Ligne avant",
-      "image": "assets/cartes/soigner.png",
+      "image": "assets/cartes/zone_de_feu.png",
       "module_origine": "Sabotage",
       "rarete": "Commune",
       "categorie": "Debuff",
@@ -451,7 +451,7 @@
     {
       "id": "CRT_36",
       "nom": "Tir allie",
-      "image": "assets/cartes/proteger.png",
+      "image": "assets/cartes/camouflage.png",
       "module_origine": "Sabotage",
       "rarete": "Rare",
       "categorie": "Debuff",
@@ -472,7 +472,7 @@
     {
       "id": "CRT_37",
       "nom": "Boucliers endomages",
-      "image": "assets/cartes/percer.png",
+      "image": "assets/cartes/onde_de_choc.png",
       "module_origine": "Sabotage",
       "rarete": "Rare",
       "categorie": "Debuff",
@@ -487,7 +487,7 @@
     {
       "id": "CRT_38",
       "nom": "Boucliers hors service",
-      "image": "assets/cartes/defendre.png",
+      "image": "assets/cartes/scanner.png",
       "module_origine": "Sabotage",
       "rarete": "Legendaire",
       "categorie": "Debuff",
@@ -503,7 +503,7 @@
     {
       "id": "CRT_39",
       "nom": "Boost",
-      "image": "assets/cartes/percer.png",
+      "image": "assets/cartes/soute_vaisseau.png",
       "module_origine": "Soute",
       "rarete": "Commune",
       "categorie": "Outils",
