@@ -72,7 +72,7 @@ def _intention_json(ennemi):
     return {
         "module_id": _id_module(cible),
         "module_nom": cible.nom,
-        "degats": _degats_effectifs(cible, ennemi.degats_attaque),
+        "degats": _degats_effectifs(cible, ennemi.degats_attaque_effectifs()),
     }
 
 
@@ -95,7 +95,7 @@ def _ennemi_json(ennemi, id_case: str):
         "pv_max": ennemi.pv_max,
         "detruit": ennemi.est_detruit(),
         "image": _chemin_web(ennemi.image),
-        "degats_attaque": ennemi.degats_attaque,
+        "degats_attaque": ennemi.degats_attaque_effectifs(),
         "intention": _intention_json(ennemi),
         "debuffs": _debuffs_json(ennemi),
     }

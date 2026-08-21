@@ -166,6 +166,14 @@ version web sont documentés dans les commentaires de `web/app.js`/`web/style.cs
 
 Le rendu utilise les vraies images d'`assets/` (module/ennemi/carte affichés comme des sprites). Cartes, ennemis et le module de base sont mis à l'échelle **sans déformation** dans leur case (ratio préservé). Exception volontaire : les **modules équipés** sur le vaisseau sont **étirés** (largeur et hauteur mises à l'échelle indépendamment) pour que leur propre cadre décoratif recouvre exactement le cadre correspondant sur l'image du vaisseau, plutôt que de laisser un espace vide entre les deux cadres — une légère déformation de l'image est jugée préférable à ce défaut visuel. Un bandeau semi-transparent reste utilisé pour le nom/coût des cartes et pour la mention "Détruit" ; en revanche les PV et le Bouclier ne sont plus affichés dans un bandeau mais par des **pastilles** rondes (rouge pour les PV, bleue pour le Bouclier) flottant juste au-dessus de chaque case, jamais par-dessus l'image (pour ne pas la cacher).
 
+**Disposition générale** (rapprochée de la version web, cf. `web/style.css`) : une image de fond
+(`assets/fond.PNG`) remplit toute la fenêtre, étirée pour s'adapter à sa taille (une légère
+déformation est acceptée plutôt que de laisser des bandes vides). Un bandeau en haut de l'écran
+regroupe l'électricité disponible (à gauche) et le bouton "Fin de tour" (à droite), comme l'en-tête
+de la version web. Le bloc vaisseau + flotte ennemie est centré horizontalement dans la fenêtre
+(marges égales des deux côtés), et la main de cartes est centrée en bas de l'écran plutôt qu'alignée
+à une position fixe.
+
 Chaque carte de la main affiche aussi (specs.md §8.2) :
 - Une **étoile de rareté** en haut à gauche, colorée par palier : blanche (Base), verte (Commune),
   bleue (Rare), orange (Légendaire)
@@ -189,6 +197,11 @@ Chaque effet résolu — carte jouée par le joueur ou attaque ennemie — affic
 `N` est le montant **réellement appliqué**, pas la valeur nominale de la carte : les dégâts sont plafonnés par les PV + Bouclier restants de la cible, la réparation par son PV max (le Bouclier, lui, n'est jamais plafonné, cf. §4). Une carte à cibles multiples (Alliés multiples, Ennemis multiples, Ligne ennemie, Colonne avant/arrière ennemie) affiche un popup indépendant sur chacune de ses cibles. Une carte Outils ne touche aucun module/ennemi : elle n'affiche pas de popup.
 
 Il n'y a pas d'animation de rayon entre l'attaquant et sa cible : ce retour par popup a été préféré, plus lisible quand plusieurs attaques se résolvent au même tour.
+
+Ce popup +/-N reste ancré sur la case touchée, comme sur la version web — contrairement à
+l'infobulle de survol/tap (module, ennemi, ou carte sélectionnée) qui, elle, est centrée à l'écran
+sur la version web (`#info-carte`/`#info-case`) mais reste ancrée au-dessus de sa case sur pc :
+différence assumée entre les deux versions, pas à unifier.
 
 ### Survol de la souris (infobulle)
 

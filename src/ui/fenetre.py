@@ -9,6 +9,7 @@ from pyglet import shapes
 from src.gameplay.carte import CIBLES_SANS_CLIC, ActionCarte, Carte, CibleCarte, RareteCarte, TypeCarte
 from src.gameplay.combat import Combat, EtatCombat
 from src.gameplay.config_poc import creer_combat_poc
+from src.gameplay.donnees import RACINE
 from src.gameplay.ennemi import DebuffActif, Ennemi
 from src.gameplay.module import Module
 from src.gameplay.position import Colonne, Position, Rangee
@@ -26,7 +27,7 @@ ESPACEMENT_CELLULE = 14
 ESPACEMENT_LIGNE = 44
 HAUTEUR_BANDEAU_CASE = 42
 
-ENNEMI_AVANT_X = 900
+ENNEMI_AVANT_X = 953
 ENNEMI_ARRIERE_X = ENNEMI_AVANT_X + CELLULE_LARGEUR + ESPACEMENT_CELLULE
 
 RANGEE_Y = {
@@ -38,7 +39,10 @@ RANGEE_Y = {
 # Vaisseau du joueur : le module de base (assets/modules/principal.png) est
 # affiche en grand, et les modules equipes se placent dans les emplacements
 # vides visibles sur cette image (mesures directement sur l'image source).
-VAISSEAU_X = 40
+# VAISSEAU_X/ENNEMI_AVANT_X sont choisis pour que le bloc vaisseau+flotte
+# soit centre horizontalement dans la fenetre (marges egales des deux cotes),
+# comme la disposition #grilles (justify-content:center) de la version web.
+VAISSEAU_X = 93
 VAISSEAU_Y = 300
 VAISSEAU_LARGEUR = 640
 _TAILLE_IMAGE_PRINCIPAL = (1205, 651)  # largeur, hauteur de assets/modules/principal.png
@@ -64,16 +68,20 @@ _HAUT_PARE_BRISE_IMAGE = 360
 CENTRE_PARE_BRISE_VAISSEAU_X = VAISSEAU_X + _CENTRE_PARE_BRISE_IMAGE * _ECHELLE_VAISSEAU
 HAUT_PARE_BRISE_VAISSEAU_Y = VAISSEAU_Y + _HAUT_PARE_BRISE_IMAGE * _ECHELLE_VAISSEAU
 
-# Main de cartes, alignee en bas (specs.md paragraphe 8.1)
+# Main de cartes, centree en bas de l'ecran (specs.md paragraphe 8.1), comme
+# la version web (#main, justify-content:center) plutot qu'a une position fixe.
 CARTE_LARGEUR, CARTE_HAUTEUR = 100, 140
 CARTE_Y = 40
 CARTE_ESPACEMENT = 120
-CARTE_X_DEPART = 180
 HAUTEUR_BANDEAU_CARTE = 46
 
-# Bouton de fin de tour
-BOUTON_X, BOUTON_Y = 1080, 40
-BOUTON_LARGEUR, BOUTON_HAUTEUR = 140, 50
+# En-tete (bandeau du haut) : electricite a gauche, bouton fin de tour a
+# droite, comme #entete sur la version web.
+ENTETE_HAUTEUR = 60
+ENTETE_Y = HAUTEUR_FENETRE - ENTETE_HAUTEUR
+BOUTON_LARGEUR, BOUTON_HAUTEUR = 140, 40
+BOUTON_X = LARGEUR_FENETRE - BOUTON_LARGEUR - 20
+BOUTON_Y = ENTETE_Y + (ENTETE_HAUTEUR - BOUTON_HAUTEUR) / 2
 
 COULEUR_BANDEAU = (10, 10, 12)
 OPACITE_BANDEAU = 190
@@ -81,6 +89,11 @@ COULEUR_CARTE_SURLIGNEE = (210, 180, 40)
 COULEUR_BOUTON = (90, 90, 95)
 COULEUR_SURVOL = (255, 255, 255)
 OPACITE_DETRUIT = 70
+
+# Image de fond (specs.md/poc.md paragraphe 8), etiree pour remplir toute la
+# fenetre (deformation acceptee, decision utilisateur) - meme fichier que la
+# version web (assets/fond.PNG).
+FOND_IMAGE = str(RACINE / "assets" / "fond.PNG")
 
 # Pastilles PV (rouge) / Bouclier (bleu), flottant au-dessus de chaque case
 # (et non par-dessus l'image, pour ne pas la cacher)
@@ -122,6 +135,9 @@ HAUTEUR_INFOBULLE_LIGNE = 18
 # (pastilles, bandeaux, textes, rayons...) : l'ordre entre sprites et formes
 # n'est pas garanti par pyglet sans groupe explicite.
 GROUPE_SUPERPOSITION = pyglet.graphics.Group(order=1)
+# Groupe de rendu pour l'image de fond, garanti derriere tout le reste (ordre
+# negatif < ordre par defaut des sprites vaisseau/flotte/cartes).
+GROUPE_FOND = pyglet.graphics.Group(order=-1)
 
 _cache_images: dict[str, pyglet.image.AbstractImage] = {}
 
@@ -146,13 +162,19 @@ def _sprite_ajuste(
 
 
 def _sprite_etire(
-    chemin: str, x: float, y: float, largeur: float, hauteur: float, lot: pyglet.graphics.Batch
+    chemin: str,
+    x: float,
+    y: float,
+    largeur: float,
+    hauteur: float,
+    lot: pyglet.graphics.Batch,
+    groupe: pyglet.graphics.Group | None = None,
 ) -> pyglet.sprite.Sprite:
     """Cree un sprite pour cette image, etire independamment en largeur et en hauteur
     pour remplir exactement le rectangle sur ses 4 cotes (le cadre de l'image du module
     doit se superposer pile a celui du vaisseau). Contrairement a `_sprite_ajuste`, le
     ratio de l'image n'est pas preserve : une legere deformation est acceptee."""
-    sprite = pyglet.sprite.Sprite(_image(chemin), batch=lot)
+    sprite = pyglet.sprite.Sprite(_image(chemin), batch=lot, group=groupe)
     sprite.scale_x = largeur / sprite.width
     sprite.scale_y = hauteur / sprite.height
     sprite.x = x
@@ -290,11 +312,11 @@ class FenetreCombat(pyglet.window.Window):
         # references gardees le temps du dessin, pyglet ne garde pas de reference forte tout seul
         elements = []
 
+        elements.extend(self._dessiner_fond(lot))
         elements.extend(self._dessiner_vaisseau(lot))
         elements.extend(self._dessiner_flotte(lot))
         elements.extend(self._dessiner_popups(lot))
         elements.extend(self._dessiner_main(lot))
-        elements.extend(self._dessiner_bouton_fin_tour(lot))
         elements.extend(self._dessiner_entete(lot))
         elements.extend(self._dessiner_survol(lot))
 
@@ -302,6 +324,11 @@ class FenetreCombat(pyglet.window.Window):
             elements.extend(self._dessiner_message_fin(lot))
 
         lot.draw()
+
+    def _dessiner_fond(self, lot: pyglet.graphics.Batch) -> list:
+        """Dessine l'image de fond, etiree pour remplir toute la fenetre (deformation
+        acceptee), comme l'arriere-plan de la version web (body en fond.PNG)."""
+        return [_sprite_etire(FOND_IMAGE, 0, 0, LARGEUR_FENETRE, HAUTEUR_FENETRE, lot, groupe=GROUPE_FOND)]
 
     def _dessiner_vaisseau(self, lot: pyglet.graphics.Batch) -> list:
         """Dessine le grand sprite du vaisseau (base) et les modules equipes dans leurs emplacements."""
@@ -414,12 +441,22 @@ class FenetreCombat(pyglet.window.Window):
             elements.extend([ombre, avant_plan])
         return elements
 
+    def _x_carte_depart(self) -> float:
+        """X du bord gauche de la premiere carte, pour que la rangee soit centree
+        horizontalement dans la fenetre, comme #main (justify-content:center) sur le web."""
+        main = self.combat.joueur.deck.main
+        if not main:
+            return LARGEUR_FENETRE / 2
+        largeur_rangee = (len(main) - 1) * CARTE_ESPACEMENT + CARTE_LARGEUR
+        return (LARGEUR_FENETRE - largeur_rangee) / 2
+
     def _dessiner_main(self, lot: pyglet.graphics.Batch) -> list:
-        """Dessine les cartes de la main du joueur, alignees en bas de l'ecran (specs.md paragraphe 8.1)."""
+        """Dessine les cartes de la main du joueur, centrees en bas de l'ecran (specs.md paragraphe 8.1)."""
         elements = []
         main = self.combat.joueur.deck.main
+        x_depart = self._x_carte_depart()
         for index, carte in enumerate(main):
-            x = CARTE_X_DEPART + index * CARTE_ESPACEMENT
+            x = x_depart + index * CARTE_ESPACEMENT
             if index == self.index_carte_selectionnee:
                 bordure = shapes.Rectangle(
                     x - 4, CARTE_Y - 4, CARTE_LARGEUR + 8, CARTE_HAUTEUR + 8, color=COULEUR_CARTE_SURLIGNEE, batch=lot
@@ -481,8 +518,10 @@ class FenetreCombat(pyglet.window.Window):
         return [ombre, etoile]
 
     def _dessiner_bouton_fin_tour(self, lot: pyglet.graphics.Batch) -> list:
-        """Dessine le bouton permettant de terminer le tour du joueur."""
-        rectangle = shapes.Rectangle(BOUTON_X, BOUTON_Y, BOUTON_LARGEUR, BOUTON_HAUTEUR, color=COULEUR_BOUTON, batch=lot)
+        """Dessine le bouton permettant de terminer le tour du joueur, dans l'en-tete."""
+        rectangle = shapes.Rectangle(
+            BOUTON_X, BOUTON_Y, BOUTON_LARGEUR, BOUTON_HAUTEUR, color=COULEUR_BOUTON, batch=lot, group=GROUPE_SUPERPOSITION
+        )
         texte = pyglet.text.Label(
             "Fin de tour",
             x=BOUTON_X + BOUTON_LARGEUR / 2,
@@ -490,19 +529,27 @@ class FenetreCombat(pyglet.window.Window):
             anchor_x="center",
             anchor_y="center",
             batch=lot,
+            group=GROUPE_SUPERPOSITION,
         )
         return [rectangle, texte]
 
     def _dessiner_entete(self, lot: pyglet.graphics.Batch) -> list:
-        """Affiche l'electricite disponible en haut de l'ecran."""
+        """Bandeau du haut : electricite disponible a gauche, bouton fin de tour a droite
+        (meme composition que #entete sur la version web)."""
         joueur = self.combat.joueur
+        elements = [_bandeau(0, ENTETE_Y, LARGEUR_FENETRE, ENTETE_HAUTEUR, lot)]
         texte = pyglet.text.Label(
             f"Electricite : {joueur.electricite}",
             x=20,
-            y=HAUTEUR_FENETRE - 30,
+            y=ENTETE_Y + ENTETE_HAUTEUR / 2,
+            anchor_x="left",
+            anchor_y="center",
             batch=lot,
+            group=GROUPE_SUPERPOSITION,
         )
-        return [texte]
+        elements.append(texte)
+        elements.extend(self._dessiner_bouton_fin_tour(lot))
+        return elements
 
     def _dessiner_survol(self, lot: pyglet.graphics.Batch) -> list:
         """Affiche une infobulle (nom, PV/PV max, Bouclier) sur le module/ennemi survole.
@@ -523,7 +570,7 @@ class FenetreCombat(pyglet.window.Window):
             lignes = [entite.nom, f"PV {entite.pv}/{entite.pv_max}"]
             cible = self.combat.previsualiser_cible(entite)
             if cible is not None:
-                lignes.append(f"Vise : {cible.nom} ({entite.degats_attaque} degats)")
+                lignes.append(f"Vise : {cible.nom} ({entite.degats_attaque_effectifs()} degats)")
             lignes.extend(_libelle_debuff(debuff) for debuff in entite.debuffs_actifs)
         else:
             rect = self._rect_du_module(entite)
@@ -603,8 +650,9 @@ class FenetreCombat(pyglet.window.Window):
     def _trouver_carte_cliquee(self, x: int, y: int) -> int | None:
         """Renvoie l'index de la carte de la main cliquee, ou None si aucune."""
         main = self.combat.joueur.deck.main
+        x_depart = self._x_carte_depart()
         for index in range(len(main)):
-            carte_x = CARTE_X_DEPART + index * CARTE_ESPACEMENT
+            carte_x = x_depart + index * CARTE_ESPACEMENT
             if _point_dans_rectangle(x, y, carte_x, CARTE_Y, CARTE_LARGEUR, CARTE_HAUTEUR):
                 return index
         return None
@@ -617,12 +665,14 @@ class FenetreCombat(pyglet.window.Window):
             return
         carte = main[self.index_carte_selectionnee]
 
+        # A ce stade carte.cible n'est jamais une valeur de CIBLES_SANS_CLIC (deja
+        # resolues plus haut dans on_mouse_press) : seul ALLIE_UNIQUE vise le camp
+        # allie, tout le reste (ENNEMI_UNIQUE, LIGNE_ENNEMIE, COLONNE_*_ENNEMIE...)
+        # vise un ennemi clique, comme le camp attendu (CIBLES_ALLIEES) sur le web.
         if carte.cible == CibleCarte.ALLIE_UNIQUE:
             cible = self._module_a(x, y)
-        elif carte.cible in (CibleCarte.ENNEMI_UNIQUE, CibleCarte.LIGNE_ENNEMIE):
-            cible = self._ennemi_a(x, y)
         else:
-            cible = None
+            cible = self._ennemi_a(x, y)
 
         if cible is not None:
             cibles_touchees = self.combat.jouer_carte(carte, cible)
