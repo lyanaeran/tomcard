@@ -174,3 +174,8 @@ mergée/fermée, remettre `devjeux` à jour depuis `main` avant de continuer
 (`git fetch origin main && git checkout -B devjeux origin/main && git push -f origin devjeux`)
 plutôt que de pousser sur l'état obsolète de la branche, et plutôt que de créer une branche
 supplémentaire.
+
+**Ouvrir la PR `devjeux` → `main` systématiquement après chaque push**, sans attendre que
+l'utilisateur la demande explicitement (préférence confirmée par l'utilisateur) — que ce soit une
+nouvelle PR (si la précédente est mergée/fermée) ou une mise à jour de la description d'une PR déjà
+ouverte sur le même commit.
