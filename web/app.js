@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "14";
+const VERSION_CACHE = "15";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -219,7 +219,17 @@ function afficherInfobulle(idCase, typeCase) {
     const lignes = [`<div class="infobulle-nom">${objet.nom}</div>`, `<div>❤️ ${objet.pv}/${objet.pv_max}</div>`];
     if (typeCase === "allie") {
         lignes.push(`<div>🔵 ${objet.bouclier}</div>`);
-        for (const buff of objet.buffs) {
+        // Groupes separes (jamais melanges), meme separation que les deux pastilles de
+        // buffs (cf. rendrePastillesBuffs) : buffs a duree limitee, puis persistants.
+        const buffsDuree = objet.buffs.filter((buff) => buff.tours_restants !== null);
+        const buffsPersistants = objet.buffs.filter((buff) => buff.tours_restants === null);
+        for (const buff of buffsDuree) {
+            lignes.push(`<div>${libelleBuffActif(buff)}</div>`);
+        }
+        if (buffsDuree.length > 0 && buffsPersistants.length > 0) {
+            lignes.push(`<div>Persistants :</div>`);
+        }
+        for (const buff of buffsPersistants) {
             lignes.push(`<div>${libelleBuffActif(buff)}</div>`);
         }
     } else {
@@ -252,6 +262,19 @@ function attacherPressionCase(element, idCase, typeCase) {
     });
 }
 
+// Pastilles du nombre de buffs actifs sur un module (specs.md 12.3/12.5) : une doree pour
+// les buffs a duree limitee, une distincte pour les buffs persistants (qui durent tout le
+// combat, tours_restants null) - comptes separes, jamais additionnes dans une seule
+// pastille. Chacune absente si son compte est a 0.
+function rendrePastillesBuffs(buffs) {
+    const duree = buffs.filter((buff) => buff.tours_restants !== null).length;
+    const persistants = buffs.filter((buff) => buff.tours_restants === null).length;
+    const badgeDuree = duree > 0 ? `<span class="pastille pastille-buffs">${duree}</span>` : "";
+    const badgePersistants =
+        persistants > 0 ? `<span class="pastille pastille-buffs-persistants">${persistants}</span>` : "";
+    return `${badgeDuree}${badgePersistants}`;
+}
+
 // Pastilles PV (rouge) / Bouclier (bleu, allies uniquement) : memes couleurs
 // que COULEUR_PASTILLE_PV/COULEUR_PASTILLE_BOUCLIER dans src/ui/fenetre.py.
 // Masquees si detruit, comme sur pc (le bandeau "Detruit" les remplace).
@@ -265,12 +288,7 @@ function rendrePastilles(objet, typeCase) {
         typeCase === "ennemi" && objet.debuffs.length > 0
             ? `<span class="pastille pastille-debuffs">${objet.debuffs.length}</span>`
             : "";
-    // Pastille doree du nombre de buffs actifs sur un module (pas de debuff cote allie,
-    // meme emplacement) ; absente si aucun buff actif.
-    const buffs =
-        typeCase === "allie" && objet.buffs.length > 0
-            ? `<span class="pastille pastille-buffs">${objet.buffs.length}</span>`
-            : "";
+    const buffs = typeCase === "allie" ? rendrePastillesBuffs(objet.buffs) : "";
     return `${bouclier}${debuffs}${buffs}<span class="pastille pastille-pv">${objet.pv}</span>`;
 }
 
@@ -279,7 +297,7 @@ function rendrePastilles(objet, typeCase) {
 // comme les autres cases (poc.md paragraphe 8).
 function rendrePastillesBase(base) {
     if (base.detruit) return "";
-    const buffs = base.buffs.length > 0 ? `<span class="pastille pastille-buffs">${base.buffs.length}</span>` : "";
+    const buffs = rendrePastillesBuffs(base.buffs);
     return `
         <div class="pastilles-base">
             ${buffs}

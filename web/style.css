@@ -292,12 +292,22 @@ body {
     background: #d78228;
 }
 
-/* Nombre de buffs actifs sur un module (specs.md 12.3/12.5), un cran plus a gauche que
-   .pastille-bouclier (un module allie a toujours les deux, contrairement a un ennemi) ;
-   meme dore que .popup-buff. Absente si aucun buff actif (cf. rendrePastilles dans app.js). */
+/* Nombre de buffs a duree limitee actifs sur un module (specs.md 12.3/12.5), un cran plus
+   a gauche que .pastille-bouclier (un module allie a toujours les deux, contrairement a un
+   ennemi) ; meme dore que .popup-buff. Absente si aucun buff a duree limitee actif
+   (cf. rendrePastillesBuffs dans app.js). */
 .pastille-buffs {
     right: calc(var(--taille-pastille) * 2 + 15px);
     background: #ebc83c;
+}
+
+/* Nombre de buffs persistants actifs (qui durent tout le combat, ex. Bouclier perpetuel) :
+   compte separe de .pastille-buffs, jamais additionne, un cran plus a gauche encore.
+   Teinte distincte (violet) pour les reconnaitre d'un coup d'oeil. Absente si aucun buff
+   persistant actif. */
+.pastille-buffs-persistants {
+    right: calc(var(--taille-pastille) * 3 + 21px);
+    background: #aa82dc;
 }
 
 .pastille-cout {

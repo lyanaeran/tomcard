@@ -99,13 +99,21 @@ buffs actifs indépendants sur `Module.buffs_actifs`, magnitudes cumulées tant 
 
 Un buff peut avoir une durée limitée (`duree`, décomptée à chaque début de tour joueur suivant la
 pose) ou être **persistant** (`duree` absente/nulle) : il ne décompte alors jamais et dure tout le
-combat. *Bouclier perpétuel* (Blindage, Légendaire) est persistant : `+10` Bouclier au module ciblé,
-immédiatement puis à chaque tour joueur, jusqu'à la fin du combat.
+combat. Un buff persistant cible toujours le **module principal** (`CibleCarte.MODULE_PRINCIPAL`,
+pas de clic requis) plutôt qu'un module au choix du joueur : c'est le seul module dont la survie
+est garantie tout le combat (§3.4), donc le seul endroit où un effet censé durer jusqu'à la fin a du
+sens — décision explicite qui déroge à la cible "Module Unique" du tableau de conception d'origine,
+cf. `cible_design` dans `config/cartes.json` (même principe que la correction des cartes Soute,
+§12.11 de specs.md). *Bouclier perpétuel* (Blindage, Légendaire) est persistant : `+10` Bouclier au
+module principal, immédiatement puis à chaque tour joueur, jusqu'à la fin du combat.
 
-Affichage (UI) : les buffs actifs d'un module apparaissent dans son infobulle (un par ligne, avec sa
-magnitude et ses tours restants, ou "illimité" si persistant), et une pastille dorée au-dessus de sa
-case affiche le nombre de buffs actifs — absente si aucun buff n'est actif (même principe que les
-debuffs ennemis, couleur différente pour les distinguer d'un coup d'œil).
+Affichage (UI) : les buffs actifs d'un module apparaissent dans son infobulle, groupés en deux
+sections **séparées** (jamais mélangées) — d'abord ceux à durée limitée, puis ceux persistants (avec
+un séparateur "Persistants :" si les deux groupes sont non vides) — et **deux pastilles distinctes**
+au-dessus de sa case affichent chacune leur propre compte (dorée pour les buffs à durée limitée,
+violette pour les persistants), jamais additionnées dans une seule pastille ; chacune absente si son
+compte est à 0 (même principe que la pastille des debuffs ennemis, couleurs différentes pour
+distinguer les trois d'un coup d'œil).
 
 **Munitions** (specs.md §3.6/§7.4) : une carte peut avoir un nombre de munitions limité en plus de
 son coût. Chaque utilisation le décrémente ; à 0, l'exemplaire rejoint la pile **cartes épuisées**

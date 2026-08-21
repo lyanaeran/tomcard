@@ -34,7 +34,7 @@ CARTE_COLONNE_AVANT = Carte(
     cout=1, valeur=100, action=ActionCarte.VULNERABILITE, duree=1,
 )
 CARTE_BOUCLIER_PERPETUEL = Carte(
-    nom="Bouclier perpetuel", image=IMG, type=TypeCarte.BUFF, cible=CibleCarte.ALLIE_UNIQUE,
+    nom="Bouclier perpetuel", image=IMG, type=TypeCarte.BUFF, cible=CibleCarte.MODULE_PRINCIPAL,
     cout=5, valeur=10, action=ActionCarte.BOUCLIER_PAR_TOUR, duree=None,
 )
 
@@ -450,7 +450,7 @@ def test_buff_bouclier_perpetuel_donne_du_bouclier_immediatement():
     combat.joueur.deck.main = [CARTE_BOUCLIER_PERPETUEL]
     combat.joueur.electricite = 5
 
-    resultat = combat.jouer_carte(CARTE_BOUCLIER_PERPETUEL, vaisseau.base)
+    resultat = combat.jouer_carte(CARTE_BOUCLIER_PERPETUEL, None)  # Module Principal, sans clic
 
     assert resultat == [(vaisseau.base, 10)]
     assert vaisseau.base.bouclier == 10
@@ -460,7 +460,7 @@ def test_buff_bouclier_perpetuel_se_redeclenche_a_chaque_tour_joueur_sans_expire
     combat, vaisseau, _flotte = _nouveau_combat(degats_ennemi=0)
     combat.joueur.deck.main = [CARTE_BOUCLIER_PERPETUEL]
     combat.joueur.electricite = 5
-    combat.jouer_carte(CARTE_BOUCLIER_PERPETUEL, vaisseau.base)
+    combat.jouer_carte(CARTE_BOUCLIER_PERPETUEL, None)
 
     combat.finir_tour_joueur()
     assert vaisseau.base.bouclier == 20  # 10 a la pose + 10 au debut du tour suivant

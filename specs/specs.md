@@ -439,8 +439,17 @@ Même mécanique côté allié (`Module.buffs_actifs`), avec en plus la possibil
 **implémenté** (§12.5) : *Bouclier perpétuel* jouable, seule carte Buff à effet périodique simple
 (les 4 autres cartes Buff sont des méta-effets, cf. §12.5/§12.7). L'effet d'un buff se déclenche une
 première fois immédiatement à la pose de la carte (comme les autres types de carte), puis se
-redéclenche à chaque début de tour joueur tant qu'il reste actif. Reste manquant pour les autres
-effets à durée :
+redéclenche à chaque début de tour joueur tant qu'il reste actif.
+
+Un buff persistant cible toujours le **module principal** plutôt qu'un module au choix du joueur
+(déviation assumée de la cible "Module Unique" du tableau de conception, décision utilisateur) : lui
+seul est garanti de survivre tout le combat (§3.4), donc le seul module où un effet censé durer
+jusqu'à la fin a du sens. Sur un module, les buffs à durée limitée et les buffs persistants sont
+affichés **séparément** (deux pastilles distinctes avec un compte chacune, jamais additionnées ; deux
+groupes distincts dans l'infobulle), pour que le joueur distingue d'un coup d'œil ce qui va expirer
+de ce qui ne bougera plus jusqu'à la fin du combat.
+
+Reste manquant pour les autres effets à durée :
 
 - Dégâts répétés pendant Y tours (*Embrasement, Guerre nucléaire*)
 - Bouclier accordé pendant Y tours (*Blindage maximal*)

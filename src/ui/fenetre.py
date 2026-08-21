@@ -117,6 +117,9 @@ COULEUR_ETOILE_RARETE = {
 COULEUR_PASTILLE_MUNITION = (70, 190, 90)
 COULEUR_PASTILLE_DEBUFFS = (215, 130, 40)
 COULEUR_PASTILLE_BUFFS = (235, 200, 60)
+# Buffs persistants (duree tout le combat, ex. Bouclier perpetuel) : compte separe de
+# celui des buffs a duree limitee, teinte distincte pour les reconnaitre d'un coup d'oeil.
+COULEUR_PASTILLE_BUFFS_PERSISTANTS = (170, 130, 220)
 
 # Popups +/-N affiches 2 secondes sur une cible touchee par une carte ou une
 # attaque ennemie (degats en rouge, bouclier pose en bleu, soin en vert)
@@ -267,15 +270,22 @@ def _rect_ennemi(position: Position) -> tuple[float, float, float, float]:
     return x, RANGEE_Y[position.rangee], CELLULE_LARGEUR, CELLULE_HAUTEUR
 
 
-def _pastille_buffs_module(module: Module, cx_pv: float, cy: float, lot: pyglet.graphics.Batch) -> list:
-    """Pastille doree du nombre de buffs actifs sur un module (specs.md 12.3/12.5), deux
-    crans a gauche de sa pastille PV (par-dessus l'emplacement Bouclier) - absente si
-    aucun buff actif. cx_pv/cy : memes reperes que la pastille PV de ce module
-    (cf. _pastilles_pv_bouclier)."""
-    if not module.buffs_actifs:
-        return []
-    cx_buffs = cx_pv - 2 * (RAYON_PASTILLE * 2 + MARGE_PASTILLE)
-    return _pastille(cx_buffs, cy, COULEUR_PASTILLE_BUFFS, len(module.buffs_actifs), lot)
+def _pastilles_buffs_module(module: Module, cx_pv: float, cy: float, lot: pyglet.graphics.Batch) -> list:
+    """Pastilles du nombre de buffs actifs sur un module (specs.md 12.3/12.5), a gauche de
+    sa pastille PV (par-dessus l'emplacement Bouclier) : une doree pour les buffs a duree
+    limitee, une distincte pour les buffs persistants (qui durent tout le combat) - comptes
+    separes, jamais additionnes dans une seule pastille. Chacune absente si son compte est a
+    0. cx_pv/cy : memes reperes que la pastille PV de ce module (cf. _pastilles_pv_bouclier)."""
+    buffs_duree = [buff for buff in module.buffs_actifs if buff.tours_restants is not None]
+    buffs_persistants = [buff for buff in module.buffs_actifs if buff.tours_restants is None]
+    elements = []
+    cx = cx_pv - 2 * (RAYON_PASTILLE * 2 + MARGE_PASTILLE)
+    if buffs_duree:
+        elements += _pastille(cx, cy, COULEUR_PASTILLE_BUFFS, len(buffs_duree), lot)
+        cx -= RAYON_PASTILLE * 2 + MARGE_PASTILLE
+    if buffs_persistants:
+        elements += _pastille(cx, cy, COULEUR_PASTILLE_BUFFS_PERSISTANTS, len(buffs_persistants), lot)
+    return elements
 
 
 def _texte_et_couleur_effet(carte: Carte, valeur_effective: int) -> tuple[str, tuple[int, int, int]]:
@@ -314,6 +324,19 @@ def _libelle_buff(buff: BuffActif) -> str:
     else:
         duree = f"{buff.tours_restants} tour" + ("" if buff.tours_restants == 1 else "s")
     return f"{texte} ({duree})"
+
+
+def _lignes_buffs(module: Module) -> list[str]:
+    """Lignes d'infobulle pour les buffs actifs d'un module (specs.md 12.3/12.5), groupees
+    separement : buffs a duree limitee d'abord, puis buffs persistants (qui durent tout le
+    combat) - jamais melanges, meme separation que les deux pastilles (cf. _pastilles_buffs_module)."""
+    buffs_duree = [buff for buff in module.buffs_actifs if buff.tours_restants is not None]
+    buffs_persistants = [buff for buff in module.buffs_actifs if buff.tours_restants is None]
+    lignes = [_libelle_buff(buff) for buff in buffs_duree]
+    if buffs_duree and buffs_persistants:
+        lignes.append("Persistants :")
+    lignes.extend(_libelle_buff(buff) for buff in buffs_persistants)
+    return lignes
 
 
 class FenetreCombat(pyglet.window.Window):
@@ -385,7 +408,7 @@ class FenetreCombat(pyglet.window.Window):
                 )
             )
             cy_base = HAUT_PARE_BRISE_VAISSEAU_Y + MARGE_PASTILLE_HAUT + _RAYON_TOTAL_PASTILLE
-            elements.extend(_pastille_buffs_module(base, CENTRE_PARE_BRISE_VAISSEAU_X, cy_base, lot))
+            elements.extend(_pastilles_buffs_module(base, CENTRE_PARE_BRISE_VAISSEAU_X, cy_base, lot))
 
         for position, module in self.combat.joueur.vaisseau.modules_equipes().items():
             elements.extend(self._dessiner_module_case(lot, position, module))
@@ -402,7 +425,7 @@ class FenetreCombat(pyglet.window.Window):
         elements = [sprite, *_pastilles_pv_bouclier(x, y, largeur, hauteur, module.pv, module.bouclier, lot)]
         cx_pv = x + largeur - RAYON_PASTILLE - MARGE_PASTILLE
         cy = y + hauteur + MARGE_PASTILLE_HAUT + _RAYON_TOTAL_PASTILLE
-        elements.extend(_pastille_buffs_module(module, cx_pv, cy, lot))
+        elements.extend(_pastilles_buffs_module(module, cx_pv, cy, lot))
         return elements
 
     def _dessiner_flotte(self, lot: pyglet.graphics.Batch) -> list:
@@ -610,7 +633,7 @@ class FenetreCombat(pyglet.window.Window):
         else:
             rect = self._rect_du_module(entite)
             lignes = [entite.nom, f"PV {entite.pv}/{entite.pv_max}", f"Bouclier {entite.bouclier}"]
-            lignes.extend(_libelle_buff(buff) for buff in entite.buffs_actifs)
+            lignes.extend(_lignes_buffs(entite))
 
         return self._infobulle(rect, lignes, lot)
 
