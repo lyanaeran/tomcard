@@ -294,7 +294,12 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
 
 1. Clic sur une carte de la main → la carte se **surligne** (état "armée")
 2. Clic sur une **cible valide** → la carte se résout, part en défausse, la surbrillance disparaît
-3. Pour les cartes sans cible unique (Alliés multiples, Ennemis multiples, effet sur tout un camp) : **résolution automatique dès le clic sur la carte**, sans clic de ciblage supplémentaire (validé dans le POC, voir poc.md §4)
+3. Pour les cartes sans cible unique (Alliés multiples, Ennemis multiples, Module principal, effet
+   sur tout un camp) : la cible précise du clic ne compte pas pour l'effet, mais **un clic de
+   confirmation reste nécessaire** sur n'importe quelle case vivante du bon camp (allié ou ennemi) —
+   pas de résolution automatique au seul clic sur la carte, pour éviter qu'un clic accidentel ne la
+   joue (validé dans le POC, voir poc.md §4). **Ce flux de clic/tap doit rester identique entre la
+   version PC et la version web/iOS** (cf. CLAUDE.md, "Deux façons de jouer")
 4. **Fin de tour** : un bouton cliquable "Fin de tour" permet au joueur de terminer son tour à tout moment, même s'il lui reste de l'électricité ou des cartes jouables
 5. **Retour visuel des effets** : chaque effet résolu (carte jouée ou attaque ennemie) affiche un popup `+N`/`-N` pendant quelques secondes sur la ou les cases touchées, avec le montant **réellement appliqué** (plafonné par les PV+Bouclier restants pour les dégâts, par le PV max pour le soin) plutôt que la valeur nominale de la carte — validé en POC, voir poc.md §8
 

@@ -50,6 +50,11 @@ détaillées.
   fetchent ces fichiers directement).
 - `src/gameplay` reste la seule source de vérité pour les règles de jeu : ne jamais dupliquer une
   règle en JS dans `web/app.js`, qui ne doit que lire/afficher l'état renvoyé par `web/bridge.py`.
+- **Le flux d'interaction (nombre de clics/taps pour jouer une carte) doit rester identique entre PC
+  et web**, même pour les cartes "sans clic de ciblage" (Alliés/Ennemis multiples, Module principal) :
+  sélectionner la carte puis confirmer par un clic/tap sur une case vivante du bon camp — jamais de
+  résolution automatique au seul clic sur la carte, cf. specs.md §8.3/poc.md §4. Toute divergence de
+  ce flux entre `src/ui/fenetre.py` (`_essayer_de_cibler`) et `web/app.js` (`cliquerCase`) est un bug.
 
 ## Stack et commandes
 

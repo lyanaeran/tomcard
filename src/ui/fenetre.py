@@ -18,6 +18,11 @@ from src.ui.animation import AnimationPopup
 LARGEUR_FENETRE = 1280
 HAUTEUR_FENETRE = 800
 
+# Cibles de camp allie parmi celles de CIBLES_SANS_CLIC (specs.md 7.2/8.3) : determine
+# quel camp (allie/ennemi) doit etre touche par le clic de confirmation d'une carte sans
+# clic de ciblage precis, meme principe que CIBLES_ALLIEES dans web/app.js.
+CIBLES_CAMP_ALLIE = (CibleCarte.ALLIE_UNIQUE, CibleCarte.ALLIES_MULTIPLES, CibleCarte.MODULE_PRINCIPAL)
+
 # Cases de la flotte ennemie, cf. specs.md paragraphe 8.1
 CELLULE_LARGEUR, CELLULE_HAUTEUR = 110, 90
 ESPACEMENT_CELLULE = 14
@@ -689,14 +694,12 @@ class FenetreCombat(pyglet.window.Window):
 
         index_carte_cliquee = self._trouver_carte_cliquee(x, y)
         if index_carte_cliquee is not None:
-            carte = self.combat.joueur.deck.main[index_carte_cliquee]
-            if carte.cible in CIBLES_SANS_CLIC:
-                cibles_touchees = self.combat.jouer_carte(carte, None)
-                self._afficher_popups_carte(carte, cibles_touchees)
-                self.index_carte_selectionnee = None
-            else:
-                deja_selectionnee = self.index_carte_selectionnee == index_carte_cliquee
-                self.index_carte_selectionnee = None if deja_selectionnee else index_carte_cliquee
+            # Un clic sur une carte l'arme (ou la desarme si deja selectionnee) sans la
+            # jouer, meme pour les cartes sans clic de ciblage (specs.md 8.3) : un second
+            # clic de confirmation sur une case du bon camp reste necessaire, comme sur
+            # le web, pour eviter qu'un simple clic sur la carte ne la joue par accident.
+            deja_selectionnee = self.index_carte_selectionnee == index_carte_cliquee
+            self.index_carte_selectionnee = None if deja_selectionnee else index_carte_cliquee
             return
 
         if self.index_carte_selectionnee is not None:
@@ -724,19 +727,29 @@ class FenetreCombat(pyglet.window.Window):
             return
         carte = main[self.index_carte_selectionnee]
 
-        # A ce stade carte.cible n'est jamais une valeur de CIBLES_SANS_CLIC (deja
-        # resolues plus haut dans on_mouse_press) : seul ALLIE_UNIQUE vise le camp
-        # allie, tout le reste (ENNEMI_UNIQUE, LIGNE_ENNEMIE, COLONNE_*_ENNEMIE...)
-        # vise un ennemi clique, comme le camp attendu (CIBLES_ALLIEES) sur le web.
-        if carte.cible == CibleCarte.ALLIE_UNIQUE:
+        if carte.cible in CIBLES_SANS_CLIC:
+            # La cible precise ne compte pas pour l'effet (jouer_carte l'ignore), mais un
+            # clic de confirmation sur une case du bon camp reste necessaire (comme sur le
+            # web, cf. CIBLES_ALLIEES/cliquerCase dans app.js) : n'importe quel module vivant
+            # confirme une carte de camp allie, n'importe quel ennemi vivant une carte de
+            # camp ennemi.
+            camp_allie = carte.cible in CIBLES_CAMP_ALLIE
+            touche = (self._module_a(x, y) if camp_allie else self._ennemi_a(x, y)) is not None
+            if not touche:
+                return
+            cible = None
+        elif carte.cible == CibleCarte.ALLIE_UNIQUE:
             cible = self._module_a(x, y)
+            if cible is None:
+                return
         else:
             cible = self._ennemi_a(x, y)
+            if cible is None:
+                return
 
-        if cible is not None:
-            cibles_touchees = self.combat.jouer_carte(carte, cible)
-            self._afficher_popups_carte(carte, cibles_touchees)
-            self.index_carte_selectionnee = None
+        cibles_touchees = self.combat.jouer_carte(carte, cible)
+        self._afficher_popups_carte(carte, cibles_touchees)
+        self.index_carte_selectionnee = None
 
     def _module_a(self, x: int, y: int) -> Module | None:
         """Renvoie le module vivant du joueur sous ce point, ou None.

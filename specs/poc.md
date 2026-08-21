@@ -66,10 +66,16 @@ module/ennemi précis, cf. plus bas), `DEBUFF` (affaiblit un ennemi, temporairem
 | **Ennemi unique** | Sélectionner la carte, puis cliquer un ennemi vivant |
 | **Allié unique** | Sélectionner la carte, puis cliquer un module vivant (pour une carte Outils, le module cliqué n'a pas d'influence sur l'effet, cf. specs.md §12.11) |
 | **Ligne ennemie** | Sélectionner la carte, puis cliquer un ennemi vivant — touche aussi l'autre case (Avant ↔ Arrière) de la **même rangée**, si elle est occupée |
-| **Alliés multiples** | Se résout **dès la sélection** de la carte (pas de clic de ciblage) — touche tous les modules vivants du joueur |
-| **Ennemis multiples** | Se résout **dès la sélection** de la carte (pas de clic de ciblage) — touche tous les ennemis vivants |
-| **Module principal** | Se résout **dès la sélection** de la carte (pas de clic de ciblage) — touche toujours le module de base |
+| **Alliés multiples** | Sélectionner la carte, puis cliquer **n'importe quel** module allié vivant pour confirmer (la case cliquée n'a pas d'influence, l'effet touche tous les modules vivants du joueur) |
+| **Ennemis multiples** | Sélectionner la carte, puis cliquer **n'importe quel** ennemi vivant pour confirmer (la case cliquée n'a pas d'influence, l'effet touche tous les ennemis vivants) |
+| **Module principal** | Sélectionner la carte, puis cliquer **n'importe quel** module allié vivant pour confirmer (la case cliquée n'a pas d'influence, l'effet touche toujours le module de base) |
 | **Colonne avant/arrière ennemie** | Sélectionner la carte, puis cliquer un ennemi de la colonne visée par la carte (avant ou arrière, fixé par la carte — un clic sur l'autre colonne est refusé) — touche les 3 ennemis de cette colonne |
+
+Pour Alliés multiples/Ennemis multiples/Module principal (les 3 cibles "sans clic de ciblage précis"
+de specs.md §7.2), la cible cliquée ne détermine pas l'effet, mais **un clic de confirmation reste
+obligatoire** sur une case vivante du bon camp — la carte ne se joue jamais au seul clic de
+sélection, pour éviter qu'un clic accidentel sur une carte en main ne la joue immédiatement. **Ce
+flux (sélection puis confirmation) est identique sur PC et sur web/iOS**, cf. CLAUDE.md.
 
 **Cartes Outils** : leur effet ne porte jamais sur un module/ennemi mais sur une ressource commune
 (gagner de l'électricité, piocher des cartes supplémentaires) — un champ `action` (`GAIN_ELECTRICITE`
