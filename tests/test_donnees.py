@@ -11,7 +11,7 @@ from src.gameplay.donnees import charger_cartes, charger_ennemis, charger_module
 def test_charger_cartes_renvoie_les_cartes_jouables_avec_images_existantes():
     cartes = charger_cartes()
 
-    assert len(cartes) == 16
+    assert len(cartes) == 17
     for carte in cartes.values():
         assert isinstance(carte.type, TypeCarte)
         assert isinstance(carte.cible, CibleCarte)

@@ -292,6 +292,14 @@ body {
     background: #d78228;
 }
 
+/* Nombre de buffs actifs sur un module (specs.md 12.3/12.5), un cran plus a gauche que
+   .pastille-bouclier (un module allie a toujours les deux, contrairement a un ennemi) ;
+   meme dore que .popup-buff. Absente si aucun buff actif (cf. rendrePastilles dans app.js). */
+.pastille-buffs {
+    right: calc(var(--taille-pastille) * 2 + 15px);
+    background: #ebc83c;
+}
+
 .pastille-cout {
     top: 3px;
     right: 3px;
@@ -411,6 +419,10 @@ body {
 
 .popup-debuff {
     color: #ff9f43;
+}
+
+.popup-buff {
+    color: #ebc83c;
 }
 
 @keyframes popup-flottement {

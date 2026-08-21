@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "13";
+const VERSION_CACHE = "14";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -219,6 +219,9 @@ function afficherInfobulle(idCase, typeCase) {
     const lignes = [`<div class="infobulle-nom">${objet.nom}</div>`, `<div>❤️ ${objet.pv}/${objet.pv_max}</div>`];
     if (typeCase === "allie") {
         lignes.push(`<div>🔵 ${objet.bouclier}</div>`);
+        for (const buff of objet.buffs) {
+            lignes.push(`<div>${libelleBuffActif(buff)}</div>`);
+        }
     } else {
         lignes.push(`<div>⚔️ ${objet.degats_attaque}</div>`);
         if (objet.intention) {
@@ -262,7 +265,13 @@ function rendrePastilles(objet, typeCase) {
         typeCase === "ennemi" && objet.debuffs.length > 0
             ? `<span class="pastille pastille-debuffs">${objet.debuffs.length}</span>`
             : "";
-    return `${bouclier}${debuffs}<span class="pastille pastille-pv">${objet.pv}</span>`;
+    // Pastille doree du nombre de buffs actifs sur un module (pas de debuff cote allie,
+    // meme emplacement) ; absente si aucun buff actif.
+    const buffs =
+        typeCase === "allie" && objet.buffs.length > 0
+            ? `<span class="pastille pastille-buffs">${objet.buffs.length}</span>`
+            : "";
+    return `${bouclier}${debuffs}${buffs}<span class="pastille pastille-pv">${objet.pv}</span>`;
 }
 
 // Pastilles du module de base : centrees en haut de l'image du vaisseau
@@ -270,8 +279,10 @@ function rendrePastilles(objet, typeCase) {
 // comme les autres cases (poc.md paragraphe 8).
 function rendrePastillesBase(base) {
     if (base.detruit) return "";
+    const buffs = base.buffs.length > 0 ? `<span class="pastille pastille-buffs">${base.buffs.length}</span>` : "";
     return `
         <div class="pastilles-base">
+            ${buffs}
             <span class="pastille pastille-bouclier">${base.bouclier}</span>
             <span class="pastille pastille-pv">${base.pv}</span>
         </div>`;
@@ -399,6 +410,23 @@ function libelleDebuffActif(debuff) {
     return `${LIBELLES_ACTION_DEBUFF_ACTIF[debuff.action](debuff)} (${debuff.tours_restants} ${tour})`;
 }
 
+const LIBELLES_ACTION_BUFF = {
+    BOUCLIER_PAR_TOUR: (carte, cible) => `${cible} gagne ${carte.valeur} bouclier a chaque tour.`,
+};
+
+// Libelle d'un buff actif sur un module (specs.md 12.3/12.5), affiche dans son infobulle,
+// meme principe que libelleDebuffActif cote ennemi. tours_restants null = buff persistant
+// (dure tout le combat, ex. Bouclier perpetuel).
+const LIBELLES_ACTION_BUFF_ACTIF = {
+    BOUCLIER_PAR_TOUR: (buff) => `+${buff.valeur} bouclier/tour`,
+};
+
+function libelleBuffActif(buff) {
+    if (buff.tours_restants === null) return `${LIBELLES_ACTION_BUFF_ACTIF[buff.action](buff)} (illimite)`;
+    const tour = buff.tours_restants === 1 ? "tour" : "tours";
+    return `${LIBELLES_ACTION_BUFF_ACTIF[buff.action](buff)} (${buff.tours_restants} ${tour})`;
+}
+
 function texteEffetCarte(carte) {
     const cible = LIBELLES_CIBLE[carte.cible];
     if (carte.type === "ATTAQUE") return `Inflige ${carte.valeur} degats a ${cible}.`;
@@ -406,6 +434,7 @@ function texteEffetCarte(carte) {
     if (carte.type === "REPARATION") return `Repare ${carte.valeur} PV a ${cible}.`;
     if (carte.type === "OUTILS") return LIBELLES_ACTION_OUTILS[carte.action](carte);
     if (carte.type === "DEBUFF") return LIBELLES_ACTION_DEBUFF[carte.action](carte, cible);
+    if (carte.type === "BUFF") return LIBELLES_ACTION_BUFF[carte.action](carte, cible);
     return `Effet de ${carte.valeur} a ${cible}.`;
 }
 

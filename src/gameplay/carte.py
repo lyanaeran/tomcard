@@ -18,6 +18,7 @@ class TypeCarte(Enum):
     REPARATION = auto()
     OUTILS = auto()
     DEBUFF = auto()
+    BUFF = auto()
 
 
 class CibleCarte(Enum):
@@ -60,14 +61,15 @@ class RareteCarte(Enum):
 
 
 class ActionCarte(Enum):
-    """Effet precis d'une carte OUTILS ou DEBUFF (chaque carte est un mecanisme different,
-    cf. specs.md paragraphe 12.9/12.1) : la valeur de la carte s'interprete differemment
-    selon cette action."""
+    """Effet precis d'une carte OUTILS, DEBUFF ou BUFF (chaque carte est un mecanisme
+    different, cf. specs.md paragraphe 12.9/12.1/12.5) : la valeur de la carte
+    s'interprete differemment selon cette action."""
 
     GAIN_ELECTRICITE = auto()
     PIOCHE_SUPPLEMENTAIRE = auto()
     REDUCTION_DEGATS = auto()
     VULNERABILITE = auto()
+    BOUCLIER_PAR_TOUR = auto()
 
 
 @dataclass(eq=False)

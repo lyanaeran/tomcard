@@ -11,7 +11,7 @@ from src.gameplay.combat import Combat, EtatCombat
 from src.gameplay.config_poc import creer_combat_poc
 from src.gameplay.donnees import RACINE
 from src.gameplay.ennemi import DebuffActif, Ennemi
-from src.gameplay.module import Module
+from src.gameplay.module import BuffActif, Module
 from src.gameplay.position import Colonne, Position, Rangee
 from src.ui.animation import AnimationPopup
 
@@ -116,6 +116,7 @@ COULEUR_ETOILE_RARETE = {
 }
 COULEUR_PASTILLE_MUNITION = (70, 190, 90)
 COULEUR_PASTILLE_DEBUFFS = (215, 130, 40)
+COULEUR_PASTILLE_BUFFS = (235, 200, 60)
 
 # Popups +/-N affiches 2 secondes sur une cible touchee par une carte ou une
 # attaque ennemie (degats en rouge, bouclier pose en bleu, soin en vert)
@@ -124,6 +125,7 @@ COULEUR_POPUP_DEGATS = COULEUR_PASTILLE_PV
 COULEUR_POPUP_BOUCLIER = COULEUR_PASTILLE_BOUCLIER
 COULEUR_POPUP_SOIN = (70, 200, 90)
 COULEUR_POPUP_DEBUFF = (215, 130, 40)
+COULEUR_POPUP_BUFF = COULEUR_PASTILLE_BUFFS
 COULEUR_OMBRE_POPUP = (0, 0, 0)
 DECALAGE_OMBRE_POPUP = 2
 
@@ -265,6 +267,17 @@ def _rect_ennemi(position: Position) -> tuple[float, float, float, float]:
     return x, RANGEE_Y[position.rangee], CELLULE_LARGEUR, CELLULE_HAUTEUR
 
 
+def _pastille_buffs_module(module: Module, cx_pv: float, cy: float, lot: pyglet.graphics.Batch) -> list:
+    """Pastille doree du nombre de buffs actifs sur un module (specs.md 12.3/12.5), deux
+    crans a gauche de sa pastille PV (par-dessus l'emplacement Bouclier) - absente si
+    aucun buff actif. cx_pv/cy : memes reperes que la pastille PV de ce module
+    (cf. _pastilles_pv_bouclier)."""
+    if not module.buffs_actifs:
+        return []
+    cx_buffs = cx_pv - 2 * (RAYON_PASTILLE * 2 + MARGE_PASTILLE)
+    return _pastille(cx_buffs, cy, COULEUR_PASTILLE_BUFFS, len(module.buffs_actifs), lot)
+
+
 def _texte_et_couleur_effet(carte: Carte, valeur_effective: int) -> tuple[str, tuple[int, int, int]]:
     """Texte (+/-valeur reellement appliquee) et couleur du popup associe a l'effet d'une carte jouee."""
     if carte.type == TypeCarte.ATTAQUE:
@@ -275,6 +288,8 @@ def _texte_et_couleur_effet(carte: Carte, valeur_effective: int) -> tuple[str, t
         if carte.action == ActionCarte.VULNERABILITE:
             return f"+{valeur_effective}%", COULEUR_POPUP_DEBUFF
         return f"-{valeur_effective}", COULEUR_POPUP_DEBUFF
+    if carte.type == TypeCarte.BUFF:
+        return f"+{valeur_effective}", COULEUR_POPUP_BUFF
     return f"+{valeur_effective}", COULEUR_POPUP_SOIN
 
 
@@ -286,6 +301,19 @@ def _libelle_debuff(debuff: DebuffActif) -> str:
         texte = f"Degats reduits -{debuff.valeur}"
     tour = "tour" if debuff.tours_restants == 1 else "tours"
     return f"{texte} ({debuff.tours_restants} {tour})"
+
+
+def _libelle_buff(buff: BuffActif) -> str:
+    """Texte d'une ligne d'infobulle pour un buff actif (specs.md 12.3/12.5)."""
+    if buff.action == ActionCarte.BOUCLIER_PAR_TOUR:
+        texte = f"+{buff.valeur} bouclier/tour"
+    else:
+        texte = f"Buff +{buff.valeur}"
+    if buff.tours_restants is None:
+        duree = "illimite"
+    else:
+        duree = f"{buff.tours_restants} tour" + ("" if buff.tours_restants == 1 else "s")
+    return f"{texte} ({duree})"
 
 
 class FenetreCombat(pyglet.window.Window):
@@ -356,20 +384,26 @@ class FenetreCombat(pyglet.window.Window):
                     haut=HAUT_PARE_BRISE_VAISSEAU_Y,
                 )
             )
+            cy_base = HAUT_PARE_BRISE_VAISSEAU_Y + MARGE_PASTILLE_HAUT + _RAYON_TOTAL_PASTILLE
+            elements.extend(_pastille_buffs_module(base, CENTRE_PARE_BRISE_VAISSEAU_X, cy_base, lot))
 
         for position, module in self.combat.joueur.vaisseau.modules_equipes().items():
             elements.extend(self._dessiner_module_case(lot, position, module))
         return elements
 
     def _dessiner_module_case(self, lot: pyglet.graphics.Batch, position: Position, module: Module) -> list:
-        """Dessine une case module (image + pastilles PV/Bouclier), grisee si detruite."""
+        """Dessine une case module (image + pastilles PV/Bouclier/Buffs), grisee si detruite."""
         x, y, largeur, hauteur = _rect_module(position)
         detruit = module.est_detruit()
         sprite = _sprite_etire(module.image, x, y, largeur, hauteur, lot)
         if detruit:
             sprite.opacity = OPACITE_DETRUIT
             return [sprite, *self._texte_detruit(x, y, largeur, hauteur, lot)]
-        return [sprite, *_pastilles_pv_bouclier(x, y, largeur, hauteur, module.pv, module.bouclier, lot)]
+        elements = [sprite, *_pastilles_pv_bouclier(x, y, largeur, hauteur, module.pv, module.bouclier, lot)]
+        cx_pv = x + largeur - RAYON_PASTILLE - MARGE_PASTILLE
+        cy = y + hauteur + MARGE_PASTILLE_HAUT + _RAYON_TOTAL_PASTILLE
+        elements.extend(_pastille_buffs_module(module, cx_pv, cy, lot))
+        return elements
 
     def _dessiner_flotte(self, lot: pyglet.graphics.Batch) -> list:
         """Dessine chaque case ennemie declaree (grisee si detruite, absente si jamais occupee)."""
@@ -555,6 +589,7 @@ class FenetreCombat(pyglet.window.Window):
         """Affiche une infobulle (nom, PV/PV max, Bouclier) sur le module/ennemi survole.
 
         Pour un ennemi, ajoute aussi son intention (cible visee et degats), cf. poc.md paragraphe 3.
+        Pour un module, ajoute le detail de ses buffs actifs (specs.md 12.3/12.5).
         """
         if self.combat.etat != EtatCombat.EN_COURS:
             return []
@@ -575,6 +610,7 @@ class FenetreCombat(pyglet.window.Window):
         else:
             rect = self._rect_du_module(entite)
             lignes = [entite.nom, f"PV {entite.pv}/{entite.pv_max}", f"Bouclier {entite.bouclier}"]
+            lignes.extend(_libelle_buff(buff) for buff in entite.buffs_actifs)
 
         return self._infobulle(rect, lignes, lot)
 

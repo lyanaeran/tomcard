@@ -2,6 +2,22 @@
 Le module de base du vaisseau du joueur : points de vie et bouclier.
 """
 
+from dataclasses import dataclass
+
+from src.gameplay.carte import ActionCarte
+
+
+@dataclass
+class BuffActif:
+    """Un buff applique sur un module (specs.md 12.3/12.5), sur le meme modele que
+    DebuffActif sur Ennemi : chaque application reste une instance independante (pas de
+    fusion). tours_restants est None pour un buff persistant (dure tout le combat, ne
+    decompte jamais - ex. Bouclier perpetuel, specs.md 12.3)."""
+
+    action: ActionCarte
+    valeur: int
+    tours_restants: int | None
+
 
 class Module:
     """Represente le module de base du vaisseau du joueur."""
@@ -12,6 +28,7 @@ class Module:
         self.bouclier = 0
         self.nom = nom
         self.image = image
+        self.buffs_actifs: list[BuffActif] = []
 
     def est_detruit(self) -> bool:
         """Renvoie True si le module n'a plus de points de vie."""
@@ -30,3 +47,27 @@ class Module:
     def soigner(self, valeur: int) -> None:
         """Repare des points de vie, sans depasser le maximum."""
         self.pv = min(self.pv_max, self.pv + valeur)
+
+    def appliquer_buff(self, action: ActionCarte, valeur: int, tours: int | None) -> None:
+        """Ajoute un nouveau buff actif et declenche son effet immediatement (comme les
+        autres types de carte), en plus des declenchements suivants a chaque debut de
+        tour joueur tant que le buff reste actif (cf. declencher_buffs_tour)."""
+        buff = BuffActif(action=action, valeur=valeur, tours_restants=tours)
+        self.buffs_actifs.append(buff)
+        self._declencher_buff(buff)
+
+    def _declencher_buff(self, buff: BuffActif) -> None:
+        if buff.action == ActionCarte.BOUCLIER_PAR_TOUR:
+            self.ajouter_bouclier(buff.valeur)
+
+    def declencher_buffs_tour(self) -> None:
+        """A appeler au debut de chaque tour joueur : redeclenche l'effet de chaque buff
+        actif (le tout premier declenchement a eu lieu a la pose, cf. appliquer_buff),
+        puis decompte sa duree. Les buffs persistants (tours_restants=None) ne decomptent
+        jamais et durent tout le combat."""
+        for buff in self.buffs_actifs:
+            self._declencher_buff(buff)
+        for buff in self.buffs_actifs:
+            if buff.tours_restants is not None:
+                buff.tours_restants -= 1
+        self.buffs_actifs = [buff for buff in self.buffs_actifs if buff.tours_restants is None or buff.tours_restants > 0]

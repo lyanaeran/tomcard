@@ -49,14 +49,15 @@ Chaque attaque résolue affiche un popup `-N` (dégâts réellement infligés, v
 
 ## 4. Cartes
 
-16 cartes jouables définies dans `config/cartes.json` (issues du tableau de conception complet de
-l'utilisateur, dont 22 autres cartes sont stockées mais pas encore jouables faute de mécanique
+17 cartes jouables définies dans `config/cartes.json` (issues du tableau de conception complet de
+l'utilisateur, dont 21 autres cartes sont stockées mais pas encore jouables faute de mécanique
 correspondante dans le moteur — voir specs.md §12 pour l'inventaire de ce qui manque). Chaque carte
 a un type, un coût, une cible et une rareté :
 
 **Types** (`TypeCarte`, specs.md §7.1) : `ATTAQUE`, `DEFENSE`, `REPARATION` (remplace l'ancien
 `SOIN`), `OUTILS` (manipule une ressource commune au joueur — électricité ou pioche — pas un
-module/ennemi précis, cf. plus bas), `DEBUFF` (affaiblit un ennemi, temporairement).
+module/ennemi précis, cf. plus bas), `DEBUFF` (affaiblit un ennemi, temporairement), `BUFF`
+(renforce un module allié, temporairement ou de façon persistante).
 
 **Cibles**, avec leur comportement au clic :
 
@@ -89,6 +90,22 @@ atteint 0 (dans l'exemple, après le premier tour ennemi il ne reste que le +50%
 Affichage (UI) : les debuffs actifs d'un ennemi apparaissent dans son infobulle (un par ligne, avec
 sa magnitude et ses tours restants), et une pastille orange au-dessus de sa case affiche le nombre
 de debuffs actifs — absente si aucun debuff n'est actif.
+
+**Cartes Buff** : renforcent un module allié, sur le même modèle que les cartes Debuff (liste de
+buffs actifs indépendants sur `Module.buffs_actifs`, magnitudes cumulées tant qu'ils sont actifs) :
+- `BOUCLIER_PAR_TOUR` : donne du Bouclier au module, une première fois immédiatement à la pose de la
+  carte (comme les autres types de carte), puis à nouveau à chaque début de tour joueur tant que le
+  buff reste actif
+
+Un buff peut avoir une durée limitée (`duree`, décomptée à chaque début de tour joueur suivant la
+pose) ou être **persistant** (`duree` absente/nulle) : il ne décompte alors jamais et dure tout le
+combat. *Bouclier perpétuel* (Blindage, Légendaire) est persistant : `+10` Bouclier au module ciblé,
+immédiatement puis à chaque tour joueur, jusqu'à la fin du combat.
+
+Affichage (UI) : les buffs actifs d'un module apparaissent dans son infobulle (un par ligne, avec sa
+magnitude et ses tours restants, ou "illimité" si persistant), et une pastille dorée au-dessus de sa
+case affiche le nombre de buffs actifs — absente si aucun buff n'est actif (même principe que les
+debuffs ennemis, couleur différente pour les distinguer d'un coup d'œil).
 
 **Munitions** (specs.md §3.6/§7.4) : une carte peut avoir un nombre de munitions limité en plus de
 son coût. Chaque utilisation le décrémente ; à 0, l'exemplaire rejoint la pile **cartes épuisées**
@@ -193,6 +210,7 @@ Chaque effet résolu — carte jouée par le joueur ou attaque ennemie — affic
 - Bouclier posé (carte de défense) : `+N` en bleu
 - Réparation (carte de réparation) : `+N` en vert
 - Debuff (carte Debuff) : `-N` (réduction de dégâts) ou `+N%` (vulnérabilité), en orange
+- Buff (carte Buff) : `+N`, en doré
 
 `N` est le montant **réellement appliqué**, pas la valeur nominale de la carte : les dégâts sont plafonnés par les PV + Bouclier restants de la cible, la réparation par son PV max (le Bouclier, lui, n'est jamais plafonné, cf. §4). Une carte à cibles multiples (Alliés multiples, Ennemis multiples, Ligne ennemie, Colonne avant/arrière ennemie) affiche un popup indépendant sur chacune de ses cibles. Une carte Outils ne touche aucun module/ennemi : elle n'affiche pas de popup.
 
@@ -238,25 +256,27 @@ jouables (`donnees.charger_cartes()` ignore silencieusement les autres, cf. spec
 - `munition` : nombre de munitions (absent/`null` = illimitées, cf. §4)
 - `effet` (absent = carte non jouable) : objet `{ type, cible, valeur, action?, duree? }` où `type`
   et `cible` reprennent les valeurs de specs.md §7.1/§7.2 :
-  - `type` : `ATTAQUE` / `DEFENSE` / `REPARATION` / `OUTILS` / `DEBUFF`
+  - `type` : `ATTAQUE` / `DEFENSE` / `REPARATION` / `OUTILS` / `DEBUFF` / `BUFF`
   - `cible` : `ALLIE_UNIQUE` / `ALLIES_MULTIPLES` / `ENNEMI_UNIQUE` / `ENNEMIS_MULTIPLES` /
     `LIGNE_ENNEMIE` (touche l'avant et l'arrière de la rangée visée, soit 2 ennemis) /
     `MODULE_PRINCIPAL` (toujours le module de base, pas de clic) / `COLONNE_AVANT_ENNEMIE` /
     `COLONNE_ARRIERE_ENNEMIE` (toute la colonne visée par la carte, fixe — 3 ennemis au plus ;
     contrairement à `LIGNE_ENNEMIE`, le clic doit tomber dans cette colonne precise)
-  - `action` (pour `type: OUTILS` ou `type: DEBUFF`) : `GAIN_ELECTRICITE` / `PIOCHE_SUPPLEMENTAIRE`
-    (Outils) ou `REDUCTION_DEGATS` / `VULNERABILITE` (Debuff) — précise l'effet exact, chaque carte
-    étant un mécanisme différent (specs.md §12.9/§12.1)
-  - `duree` (pour `type: DEBUFF` uniquement) : nombre de tours ennemis pendant lesquels le debuff
-    reste actif, décrémenté à chaque tour même si l'ennemi concerné n'a pas agi
+  - `action` (pour `type: OUTILS`, `DEBUFF` ou `BUFF`) : `GAIN_ELECTRICITE` / `PIOCHE_SUPPLEMENTAIRE`
+    (Outils), `REDUCTION_DEGATS` / `VULNERABILITE` (Debuff), ou `BOUCLIER_PAR_TOUR` (Buff) — précise
+    l'effet exact, chaque carte étant un mécanisme différent (specs.md §12.9/§12.1/§12.5)
+  - `duree` (pour `type: DEBUFF` ou `BUFF`) : nombre de tours pendant lesquels l'effet reste actif,
+    décrémenté à chaque tour ennemi écoulé (Debuff) ou chaque tour joueur écoulé (Buff), même si
+    l'ennemi/le module concerné n'a pas agi ; absente/`null` pour un Buff **persistant** (ne
+    décompte jamais, dure tout le combat — cf. *Bouclier perpétuel*)
 
-Les 16 cartes actuellement jouables : les 6 du module Principal (Laser, Laser perçant,
+Les 17 cartes actuellement jouables : les 6 du module Principal (Laser, Laser perçant,
 Bombardement, Bouclier, Protéger le vaisseau, Réparation), Ciel de missiles et Ligne arrière
-(Lanceur de missiles), Mode défensif (Blindage), Surcharge temporaire (Générateur), Boost (Soute),
-et 5 des 6 cartes de Sabotage (Tordre le canon, Brèche, Ligne avant, Boucliers endommagés,
-Boucliers hors service — seule Tir allié, qui détourne l'attaque d'un ennemi vers un autre ennemi,
-reste non jouable, cf. specs.md §12.6) — les 22 autres cartes du tableau restent stockées pour
-référence, non jouables faute de mécanique (specs.md §12).
+(Lanceur de missiles), Mode défensif (Blindage), Bouclier perpétuel (Blindage), Surcharge
+temporaire (Générateur), Boost (Soute), et 5 des 6 cartes de Sabotage (Tordre le canon, Brèche,
+Ligne avant, Boucliers endommagés, Boucliers hors service — seule Tir allié, qui détourne
+l'attaque d'un ennemi vers un autre ennemi, reste non jouable, cf. specs.md §12.6) — les 21 autres
+cartes du tableau restent stockées pour référence, non jouables faute de mécanique (specs.md §12).
 
 **Toutes les valeurs (PV, dégâts, coûts, munitions) viennent du tableau de conception fourni par
 l'utilisateur**, sauf les PV des modules Générateur et Soute (10 chacun) qui restent **inventés**

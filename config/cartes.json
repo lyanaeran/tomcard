@@ -300,7 +300,12 @@
       "y": null,
       "munition": 2,
       "description": "Le module augmente son bouclier de X chaque tour",
-      "_non_jouable": "buff persistant + limite de munitions non supportes par le moteur actuel"
+      "effet": {
+        "type": "BUFF",
+        "cible": "ALLIE_UNIQUE",
+        "valeur": 10,
+        "action": "BOUCLIER_PAR_TOUR"
+      }
     },
 
     {
