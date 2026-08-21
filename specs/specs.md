@@ -294,7 +294,12 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
 
 1. Clic sur une carte de la main → la carte se **surligne** (état "armée")
 2. Clic sur une **cible valide** → la carte se résout, part en défausse, la surbrillance disparaît
-3. Pour les cartes sans cible unique (Alliés multiples, Ennemis multiples, effet sur tout un camp) : **résolution automatique dès le clic sur la carte**, sans clic de ciblage supplémentaire (validé dans le POC, voir poc.md §4)
+3. Pour les cartes sans cible unique (Alliés multiples, Ennemis multiples, Module principal, effet
+   sur tout un camp) : la cible précise du clic ne compte pas pour l'effet, mais **un clic de
+   confirmation reste nécessaire** sur n'importe quelle case vivante du bon camp (allié ou ennemi) —
+   pas de résolution automatique au seul clic sur la carte, pour éviter qu'un clic accidentel ne la
+   joue (validé dans le POC, voir poc.md §4). **Ce flux de clic/tap doit rester identique entre la
+   version PC et la version web/iOS** (cf. CLAUDE.md, "Deux façons de jouer")
 4. **Fin de tour** : un bouton cliquable "Fin de tour" permet au joueur de terminer son tour à tout moment, même s'il lui reste de l'électricité ou des cartes jouables
 5. **Retour visuel des effets** : chaque effet résolu (carte jouée ou attaque ennemie) affiche un popup `+N`/`-N` pendant quelques secondes sur la ou les cases touchées, avec le montant **réellement appliqué** (plafonné par les PV+Bouclier restants pour les dégâts, par le PV max pour le soin) plutôt que la valeur nominale de la carte — validé en POC, voir poc.md §8
 
@@ -432,11 +437,27 @@ perçante (§3.1, §7.2), et non automatiquement comme Alliés/Ennemis multiples
 Debuff actif pendant Y tours (chaque application ajoutée à la liste `Ennemi.debuffs_actifs`, comme
 une instance indépendante avec sa propre durée ; décrémentée à chaque tour ennemi écoulé même si
 l'ennemi concerné n'a pas agi, et retirée de la liste à 0) — **implémenté** pour les debuffs
-(§12.4/§12.5) : *Boucliers hors service* jouable. Reste manquant pour les autres effets à durée :
+(§12.4/§12.5) : *Boucliers hors service* jouable.
+
+Même mécanique côté allié (`Module.buffs_actifs`), avec en plus la possibilité d'une durée **nulle**
+(`tours_restants=None`) pour un buff **persistant** qui ne décompte jamais et dure tout le combat —
+**implémenté** (§12.5) : *Bouclier perpétuel* jouable, seule carte Buff à effet périodique simple
+(les 4 autres cartes Buff sont des méta-effets, cf. §12.5/§12.7). L'effet d'un buff se déclenche une
+première fois immédiatement à la pose de la carte (comme les autres types de carte), puis se
+redéclenche à chaque début de tour joueur tant qu'il reste actif.
+
+Un buff persistant cible toujours le **module principal** plutôt qu'un module au choix du joueur
+(déviation assumée de la cible "Module Unique" du tableau de conception, décision utilisateur) : lui
+seul est garanti de survivre tout le combat (§3.4), donc le seul module où un effet censé durer
+jusqu'à la fin a du sens. Sur un module, les buffs à durée limitée et les buffs persistants sont
+affichés **séparément** (deux pastilles distinctes avec un compte chacune, jamais additionnées ; deux
+groupes distincts dans l'infobulle), pour que le joueur distingue d'un coup d'œil ce qui va expirer
+de ce qui ne bougera plus jusqu'à la fin du combat.
+
+Reste manquant pour les autres effets à durée :
 
 - Dégâts répétés pendant Y tours (*Embrasement, Guerre nucléaire*)
 - Bouclier accordé pendant Y tours (*Blindage maximal*)
-- Bouclier qui grandit chaque tour, persistant (*Bouclier perpétuel*)
 - Pioche bonus pendant Y tours (*Multi fonction*)
 
 ### 12.4 Effets en pourcentage
@@ -456,8 +477,10 @@ Déjà nommés en §7.1. État d'implémentation dans `combat.py` :
   `VULNERABILITE`, cf. §12.1/§12.3/§12.4) : *Tordre le canon, Brèche, Ligne avant, Boucliers
   endommagés, Boucliers hors service* jouables. *Tir allié* reste non jouable, sa mécanique de
   détournement de cible étant distincte des deux actions ci-dessus (§12.6)
-- **Buff** — non implémenté (*Optimisation des boucliers, Attaques performantes, Double défense,
-  Circuit parallèle, Bouclier perpétuel*)
+- **Buff** — **implémenté** (`TypeCarte.BUFF`, une action : `BOUCLIER_PAR_TOUR`, cf. §12.3) :
+  *Bouclier perpétuel* jouable. *Optimisation des boucliers, Attaques performantes* (modification du
+  coût d'une catégorie de cartes) et *Double défense, Circuit parallèle* (duplication d'effet)
+  restent non jouables, ce sont des méta-effets distincts (§12.7), pas de simples buffs sur un module
 - **Outils** — **implémenté** (`TypeCarte.OUTILS`, cf. §12.9) pour deux actions (`GAIN_ELECTRICITE`,
   `PIOCHE_SUPPLEMENTAIRE`) : *Surcharge temporaire, Boost* jouables. Le reste demande encore une
   logique dédiée (*Fonds de tiroir, Changement d'outil, Manque de jus, Cannibalisme, Grand

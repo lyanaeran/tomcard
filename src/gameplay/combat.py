@@ -35,6 +35,7 @@ class Combat:
         self.flotte = flotte
         self.etat = EtatCombat.EN_COURS
         self.joueur.debut_de_tour()
+        self._declencher_buffs_debut_de_tour()
 
     def jouer_carte(self, carte: Carte, cible: Module | Ennemi | None = None) -> list[tuple[Module | Ennemi, int]]:
         """Applique l'effet d'une carte jouee par le joueur.
@@ -69,7 +70,15 @@ class Combat:
         attaques = self._tour_ennemi()
         if self.etat == EtatCombat.EN_COURS:
             self.joueur.debut_de_tour()
+            self._declencher_buffs_debut_de_tour()
         return attaques
+
+    def _declencher_buffs_debut_de_tour(self) -> None:
+        """Redeclenche l'effet de chaque buff actif sur les modules vivants et decompte
+        sa duree (specs.md 12.3/12.5) - meme principe que decrementer_debuffs() cote
+        ennemi, mais au debut de chaque tour joueur plutot qu'a chaque tour ennemi."""
+        for module in self._modules_vivants():
+            module.declencher_buffs_tour()
 
     def previsualiser_cible(self, ennemi: Ennemi) -> Module | None:
         """Renvoie le module que cet ennemi attaquerait s'il agissait maintenant (pour le survol UI)."""
@@ -143,6 +152,8 @@ class Combat:
             cible.ajouter_bouclier(carte.valeur)
         elif carte.type == TypeCarte.DEBUFF:
             valeur_effective = self._appliquer_debuff(carte, cible)
+        elif carte.type == TypeCarte.BUFF:
+            valeur_effective = self._appliquer_buff(carte, cible)
         else:
             valeur_effective = min(carte.valeur, cible.pv_max - cible.pv)
             cible.soigner(carte.valeur)
@@ -152,6 +163,12 @@ class Combat:
         """Applique un debuff temporaire a un ennemi (specs.md 12.1/12.4). Independant des
         debuffs deja actifs sur cet ennemi : s'ajoute a la liste plutot que de les remplacer."""
         cible.appliquer_debuff(carte.action, carte.valeur, carte.duree)
+        return carte.valeur
+
+    def _appliquer_buff(self, carte: Carte, cible: Module) -> int:
+        """Applique un buff a un module (specs.md 12.3/12.5). Comme les debuffs, s'ajoute
+        a la liste des buffs actifs plutot que de remplacer un buff existant."""
+        cible.appliquer_buff(carte.action, carte.valeur, carte.duree)
         return carte.valeur
 
     def _appliquer_outils(self, carte: Carte) -> int:

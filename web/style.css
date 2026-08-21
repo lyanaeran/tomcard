@@ -25,7 +25,14 @@
 body {
     margin: 0;
     font-family: -apple-system, system-ui, sans-serif;
-    background: #0b1020;
+    /* Meme image de fond que la version pc (assets/fond.PNG, cf. FOND_IMAGE dans
+       src/ui/fenetre.py), etiree pour couvrir tout l'ecran (deformation acceptee,
+       decision utilisateur) plutot que recadree (cover) pour eviter les bandes vides
+       sur les ratios d'ecran tres differents du ratio source. Pas de
+       background-attachment:fixed (support tres inegal sur Safari iOS) : le fond
+       suit la taille du body, qui couvre deja tout le viewport (#app, min-height:100vh).
+       #0b1020 en dessous, au cas ou l'image tarde a charger. */
+    background: #0b1020 url("../assets/fond.PNG") center / 100% 100% no-repeat;
     color: #e8ecff;
 }
 
@@ -285,6 +292,24 @@ body {
     background: #d78228;
 }
 
+/* Nombre de buffs a duree limitee actifs sur un module (specs.md 12.3/12.5), un cran plus
+   a gauche que .pastille-bouclier (un module allie a toujours les deux, contrairement a un
+   ennemi) ; meme dore que .popup-buff. Absente si aucun buff a duree limitee actif
+   (cf. rendrePastillesBuffs dans app.js). */
+.pastille-buffs {
+    right: calc(var(--taille-pastille) * 2 + 15px);
+    background: #ebc83c;
+}
+
+/* Nombre de buffs persistants actifs (qui durent tout le combat, ex. Bouclier perpetuel) :
+   compte separe de .pastille-buffs, jamais additionne, un cran plus a gauche encore.
+   Teinte distincte (violet) pour les reconnaitre d'un coup d'oeil. Absente si aucun buff
+   persistant actif. */
+.pastille-buffs-persistants {
+    right: calc(var(--taille-pastille) * 3 + 21px);
+    background: #aa82dc;
+}
+
 .pastille-cout {
     top: 3px;
     right: 3px;
@@ -404,6 +429,10 @@ body {
 
 .popup-debuff {
     color: #ff9f43;
+}
+
+.popup-buff {
+    color: #ebc83c;
 }
 
 @keyframes popup-flottement {

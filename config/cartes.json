@@ -294,13 +294,18 @@
       "module_origine": "Blindage",
       "rarete": "Legendaire",
       "categorie": "Buff",
-      "cible_design": "Module Unique",
+      "cible_design": "Module Principal (deviation du design 'Module Unique' : un buff persistant a plus de sens sur le module principal, seul module dont la survie est garantie tout le combat, decision utilisateur)",
       "cout": 5,
       "x": 10,
       "y": null,
       "munition": 2,
-      "description": "Le module augmente son bouclier de X chaque tour",
-      "_non_jouable": "buff persistant + limite de munitions non supportes par le moteur actuel"
+      "description": "Le module principal augmente son bouclier de X chaque tour",
+      "effet": {
+        "type": "BUFF",
+        "cible": "MODULE_PRINCIPAL",
+        "valeur": 10,
+        "action": "BOUCLIER_PAR_TOUR"
+      }
     },
 
     {

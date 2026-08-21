@@ -33,6 +33,10 @@ CARTE_COLONNE_AVANT = Carte(
     nom="Ligne avant", image=IMG, type=TypeCarte.DEBUFF, cible=CibleCarte.COLONNE_AVANT_ENNEMIE,
     cout=1, valeur=100, action=ActionCarte.VULNERABILITE, duree=1,
 )
+CARTE_BOUCLIER_PERPETUEL = Carte(
+    nom="Bouclier perpetuel", image=IMG, type=TypeCarte.BUFF, cible=CibleCarte.MODULE_PRINCIPAL,
+    cout=5, valeur=10, action=ActionCarte.BOUCLIER_PAR_TOUR, duree=None,
+)
 
 POSITION_ENNEMI = Position(Colonne.AVANT, Rangee.GAUCHE)
 
@@ -436,3 +440,31 @@ def test_colonne_avant_ennemie_refuse_un_clic_sur_l_arriere():
 
     assert arriere.debuffs_actifs == []
     assert avant.debuffs_actifs == []
+
+
+# --- Buff (Blindage, specs.md 12.3/12.5) ---
+
+
+def test_buff_bouclier_perpetuel_donne_du_bouclier_immediatement():
+    combat, vaisseau, _flotte = _nouveau_combat()
+    combat.joueur.deck.main = [CARTE_BOUCLIER_PERPETUEL]
+    combat.joueur.electricite = 5
+
+    resultat = combat.jouer_carte(CARTE_BOUCLIER_PERPETUEL, None)  # Module Principal, sans clic
+
+    assert resultat == [(vaisseau.base, 10)]
+    assert vaisseau.base.bouclier == 10
+
+
+def test_buff_bouclier_perpetuel_se_redeclenche_a_chaque_tour_joueur_sans_expirer():
+    combat, vaisseau, _flotte = _nouveau_combat(degats_ennemi=0)
+    combat.joueur.deck.main = [CARTE_BOUCLIER_PERPETUEL]
+    combat.joueur.electricite = 5
+    combat.jouer_carte(CARTE_BOUCLIER_PERPETUEL, None)
+
+    combat.finir_tour_joueur()
+    assert vaisseau.base.bouclier == 20  # 10 a la pose + 10 au debut du tour suivant
+
+    combat.finir_tour_joueur()
+    assert vaisseau.base.bouclier == 30  # persistant : ne s'arrete jamais
+    assert len(vaisseau.base.buffs_actifs) == 1

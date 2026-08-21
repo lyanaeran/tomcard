@@ -46,6 +46,16 @@ def _chemin_web(chemin_fs: str) -> str:
     return chemin_fs[len(RACINE_FS):] if chemin_fs and chemin_fs.startswith(RACINE_FS) else chemin_fs
 
 
+def _buffs_json(module):
+    """Buffs actifs de ce module (specs.md 12.3/12.5), chacun independant des autres
+    (aucune fusion). tours_restants est None pour un buff persistant (dure tout le
+    combat, cf. Module.declencher_buffs_tour)."""
+    return [
+        {"action": buff.action.name, "valeur": buff.valeur, "tours_restants": buff.tours_restants}
+        for buff in module.buffs_actifs
+    ]
+
+
 def _module_json(module, id_case: str):
     if module is None:
         return None
@@ -57,6 +67,7 @@ def _module_json(module, id_case: str):
         "bouclier": module.bouclier,
         "detruit": module.est_detruit(),
         "image": _chemin_web(module.image),
+        "buffs": _buffs_json(module),
     }
 
 
@@ -72,7 +83,7 @@ def _intention_json(ennemi):
     return {
         "module_id": _id_module(cible),
         "module_nom": cible.nom,
-        "degats": _degats_effectifs(cible, ennemi.degats_attaque),
+        "degats": _degats_effectifs(cible, ennemi.degats_attaque_effectifs()),
     }
 
 
@@ -95,7 +106,7 @@ def _ennemi_json(ennemi, id_case: str):
         "pv_max": ennemi.pv_max,
         "detruit": ennemi.est_detruit(),
         "image": _chemin_web(ennemi.image),
-        "degats_attaque": ennemi.degats_attaque,
+        "degats_attaque": ennemi.degats_attaque_effectifs(),
         "intention": _intention_json(ennemi),
         "debuffs": _debuffs_json(ennemi),
     }
@@ -178,6 +189,8 @@ def _popup(cible, type_carte: str, valeur: int, action: str | None) -> dict | No
         texte, couleur = f"+{valeur}", "bouclier"
     elif type_carte == "DEBUFF":
         texte, couleur = (f"+{valeur}%", "debuff") if action == "VULNERABILITE" else (f"-{valeur}", "debuff")
+    elif type_carte == "BUFF":
+        texte, couleur = f"+{valeur}", "buff"
     else:
         texte, couleur = f"+{valeur}", "soin"
     return {"id": id_case, "camp": camp, "texte": texte, "couleur": couleur}
