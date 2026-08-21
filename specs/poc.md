@@ -49,8 +49,8 @@ Chaque attaque résolue affiche un popup `-N` (dégâts réellement infligés, v
 
 ## 4. Cartes
 
-19 cartes jouables définies dans `config/cartes.json` (issues du tableau de conception complet de
-l'utilisateur, dont 19 autres cartes sont stockées mais pas encore jouables faute de mécanique
+22 cartes jouables définies dans `config/cartes.json` (issues du tableau de conception complet de
+l'utilisateur, dont 16 autres cartes sont stockées mais pas encore jouables faute de mécanique
 correspondante dans le moteur — voir specs.md §12 pour l'inventaire de ce qui manque). Chaque carte
 a un type, un coût, une cible et une rareté :
 
@@ -287,22 +287,26 @@ jouables (`donnees.charger_cartes()` ignore silencieusement les autres, cf. spec
     contrairement à `LIGNE_ENNEMIE`, le clic doit tomber dans cette colonne precise) /
     `COLONNE_AVANT_ALLIEE` (les 2 modules avant-gauche/avant-droite, jamais le module principal ;
     même principe que les colonnes ennemies)
-  - `action` (pour `type: OUTILS`, `DEBUFF` ou `BUFF`) : `GAIN_ELECTRICITE` / `PIOCHE_SUPPLEMENTAIRE`
-    (Outils), `REDUCTION_DEGATS` / `VULNERABILITE` / `REDIRECTION_CIBLE` (Debuff), ou
-    `BOUCLIER_PAR_TOUR` (Buff) — précise l'effet exact, chaque carte étant un mécanisme différent
-    (specs.md §12.9/§12.1/§12.5/§12.6)
+  - `action` (pour `type: DEFENSE`, `OUTILS`, `DEBUFF` ou `BUFF`) : `BOUCLIER_POURCENTAGE_PV`
+    (Defense — bouclier = X% des PV max de la cible plutôt qu'un montant fixe, cf. §12.4),
+    `GAIN_ELECTRICITE` / `GAIN_ELECTRICITE_PAR_MODULE` (gain fixe, ou X par module allié encore en
+    vie, base incluse) / `PIOCHE_SUPPLEMENTAIRE` (Outils), `REDUCTION_DEGATS` / `VULNERABILITE` /
+    `REDIRECTION_CIBLE` (Debuff), ou `BOUCLIER_PAR_TOUR` (Buff) — précise l'effet exact, chaque
+    carte étant un mécanisme différent (specs.md §12.4/§12.8/§12.9/§12.1/§12.5/§12.6)
   - `duree` (pour `type: DEBUFF` ou `BUFF`) : nombre de tours pendant lesquels l'effet reste actif,
     décrémenté à chaque tour ennemi écoulé (Debuff) ou chaque tour joueur écoulé (Buff), même si
     l'ennemi/le module concerné n'a pas agi ; absente/`null` pour un Buff **persistant** (ne
     décompte jamais, dure tout le combat — cf. *Bouclier perpétuel*)
 
-Les 19 cartes actuellement jouables : les 6 du module Principal (Laser, Laser perçant,
+Les 22 cartes actuellement jouables : les 6 du module Principal (Laser, Laser perçant,
 Bombardement, Bouclier, Protéger le vaisseau, Réparation), Ciel de missiles et Ligne arrière
-(Lanceur de missiles), Mode défensif (Blindage), Bouclier perpétuel (Blindage), Protéger l'avant
-poste (Blindage), Surcharge temporaire (Générateur), Boost (Soute), et les 6 cartes de Sabotage
-(Tordre le canon, Brèche, Ligne avant, Boucliers endommagés, Boucliers hors service, Tir allié) —
-le module Sabotage est maintenant entièrement jouable. Les 19 autres cartes du tableau restent
-stockées pour référence, non jouables faute de mécanique (specs.md §12).
+(Lanceur de missiles), Mode défensif, Bouclier perpétuel, Protéger l'avant poste, Bouclier
+adaptatif et Blindage maximal (Blindage), Surcharge temporaire et Fonds de tiroir (Générateur),
+Boost (Soute), et les 6 cartes de Sabotage (Tordre le canon, Brèche, Ligne avant, Boucliers
+endommagés, Boucliers hors service, Tir allié) — le module Sabotage est entièrement jouable, le
+module Blindage l'est presque (5 cartes sur 7, restent Transfert et Renvoie, specs.md §12.6). Les 16
+autres cartes du tableau restent stockées pour référence, non jouables faute de mécanique (specs.md
+§12).
 
 **Toutes les valeurs (PV, dégâts, coûts, munitions) viennent du tableau de conception fourni par
 l'utilisateur**, sauf les PV des modules Générateur et Soute (10 chacun) qui restent **inventés**

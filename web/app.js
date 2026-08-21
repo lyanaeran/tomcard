@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "17";
+const VERSION_CACHE = "18";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -415,6 +415,7 @@ const LIBELLES_CIBLE = {
 
 const LIBELLES_ACTION_OUTILS = {
     GAIN_ELECTRICITE: (carte) => `Gagne ${carte.valeur} ⚡.`,
+    GAIN_ELECTRICITE_PAR_MODULE: (carte) => `Gagne ${carte.valeur} ⚡ par module actif.`,
     PIOCHE_SUPPLEMENTAIRE: (carte) => `Pioche ${carte.valeur} cartes supplementaires.`,
 };
 
@@ -439,7 +440,10 @@ function libelleDebuffActif(debuff) {
 }
 
 const LIBELLES_ACTION_BUFF = {
-    BOUCLIER_PAR_TOUR: (carte, cible) => `${cible} gagne ${carte.valeur} bouclier a chaque tour.`,
+    BOUCLIER_PAR_TOUR: (carte, cible) => {
+        const duree = carte.duree ? ` pendant ${carte.duree} tour(s)` : "";
+        return `${cible} gagne ${carte.valeur} bouclier a chaque tour${duree}.`;
+    },
 };
 
 // Libelle d'un buff actif sur un module (specs.md 12.3/12.5), affiche dans son infobulle,
@@ -458,7 +462,10 @@ function libelleBuffActif(buff) {
 function texteEffetCarte(carte) {
     const cible = LIBELLES_CIBLE[carte.cible];
     if (carte.type === "ATTAQUE") return `Inflige ${carte.valeur} degats a ${cible}.`;
-    if (carte.type === "DEFENSE") return `Bouclier de ${carte.valeur} a ${cible}.`;
+    if (carte.type === "DEFENSE") {
+        if (carte.action === "BOUCLIER_POURCENTAGE_PV") return `Bouclier de ${carte.valeur}% des PV de ${cible}.`;
+        return `Bouclier de ${carte.valeur} a ${cible}.`;
+    }
     if (carte.type === "REPARATION") return `Repare ${carte.valeur} PV a ${cible}.`;
     if (carte.type === "OUTILS") return LIBELLES_ACTION_OUTILS[carte.action](carte);
     if (carte.type === "DEBUFF") return LIBELLES_ACTION_DEBUFF[carte.action](carte, cible);

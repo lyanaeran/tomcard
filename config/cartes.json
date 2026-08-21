@@ -225,7 +225,12 @@
       "y": null,
       "munition": null,
       "description": "Bouclier de X% des points de vie du module",
-      "_non_jouable": "effet en pourcentage non supporte (la valeur d'une carte est toujours un montant fixe)"
+      "effet": {
+        "type": "DEFENSE",
+        "cible": "ALLIE_UNIQUE",
+        "valeur": 80,
+        "action": "BOUCLIER_POURCENTAGE_PV"
+      }
     },
     {
       "id": "CRT_22",
@@ -274,7 +279,13 @@
       "y": 3,
       "munition": null,
       "description": "Bouclier de X sur le module principal pour les Y prochains tours",
-      "_non_jouable": "cible fixe 'module principal' + effet a duree non supportes par le moteur actuel"
+      "effet": {
+        "type": "BUFF",
+        "cible": "MODULE_PRINCIPAL",
+        "valeur": 8,
+        "action": "BOUCLIER_PAR_TOUR",
+        "duree": 3
+      }
     },
     {
       "id": "CRT_25",
@@ -385,7 +396,12 @@
       "y": null,
       "munition": null,
       "description": "Gagne X electricite par module actif",
-      "_non_jouable": "gain d'electricite via une carte non supporte par le moteur actuel"
+      "effet": {
+        "type": "OUTILS",
+        "cible": "ALLIES_MULTIPLES",
+        "valeur": 1,
+        "action": "GAIN_ELECTRICITE_PAR_MODULE"
+      }
     },
     {
       "id": "CRT_32",

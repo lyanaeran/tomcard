@@ -407,17 +407,18 @@ cartes (§7) et la boucle de récompenses (§2.1, §6) stabilisés.
 
 En important le tableau de conception de cartes de l'utilisateur dans `config/cartes.json` (voir la
 PR "config : import des cartes Module principal, Lanceur de missiles, Blindage"), seules 6 des 38
-cartes du tableau correspondent à ce que le moteur actuel (`src/gameplay/carte.py`, `combat.py`)
-sait exécuter. Les 32 autres restent stockées pour référence (champ `_non_jouable`) mais sont
-inertes en jeu. Cette section recense les mécaniques qui leur manquent, groupées par nature plutôt
-que par carte, pour servir de feuille de route à une future extension du moteur.
+cartes du tableau correspondaient à ce que le moteur (`src/gameplay/carte.py`, `combat.py`) savait
+exécuter à l'époque. Ce nombre a augmenté au fil des mécaniques ajoutées ci-dessous (22/38 jouables
+au moment de la rédaction la plus récente de cette section, cf. poc.md §4) ; les cartes restantes
+sont stockées pour référence (champ `_non_jouable`) mais inertes en jeu tant que leur mécanique
+n'est pas implémentée. Cette section recense les mécaniques qui leur manquent, groupées par nature
+plutôt que par carte, pour servir de feuille de route à une future extension du moteur.
 
 ### 12.1 Cibles fixes ou par rang
 
 - **Module Principal** — cible toujours le module de base, sans choix du joueur — **implémenté**
-  (`CibleCarte.MODULE_PRINCIPAL`, sans clic) : *Protéger le vaisseau, Réparation* jouables. Reste
-  non jouable pour la même raison si combinée à une autre mécanique manquante (*Blindage maximal*,
-  qui a en plus un effet à durée, §12.3)
+  (`CibleCarte.MODULE_PRINCIPAL`, sans clic) : *Protéger le vaisseau, Réparation, Blindage maximal*
+  jouables
 - **Ennemi Avant** / **Ligne avant** ennemie, **Ennemi Arrière** / **Ligne arrière** — **implémenté**
   (`CibleCarte.COLONNE_AVANT_ENNEMIE` / `COLONNE_ARRIERE_ENNEMIE`, colonne fixée par la carte, un
   clic sur l'autre colonne est refusé) : *Ligne avant, Ligne arrière* jouables
@@ -444,10 +445,12 @@ l'ennemi concerné n'a pas agi, et retirée de la liste à 0) — **implémenté
 
 Même mécanique côté allié (`Module.buffs_actifs`), avec en plus la possibilité d'une durée **nulle**
 (`tours_restants=None`) pour un buff **persistant** qui ne décompte jamais et dure tout le combat —
-**implémenté** (§12.5) : *Bouclier perpétuel* jouable, seule carte Buff à effet périodique simple
-(les 4 autres cartes Buff sont des méta-effets, cf. §12.5/§12.7). L'effet d'un buff se déclenche une
-première fois immédiatement à la pose de la carte (comme les autres types de carte), puis se
-redéclenche à chaque début de tour joueur tant qu'il reste actif.
+**implémenté** (§12.5) : *Bouclier perpétuel* (persistant) et *Blindage maximal* (durée limitée,
+même mécanisme `BOUCLIER_PAR_TOUR` avec `duree` finie plutôt que nulle) jouables — les deux seules
+cartes Buff à effet périodique simple (les 3 autres cartes Buff restantes sont des méta-effets, cf.
+§12.5/§12.7). L'effet d'un buff se déclenche une première fois immédiatement à la pose de la carte
+(comme les autres types de carte), puis se redéclenche à chaque début de tour joueur tant qu'il
+reste actif.
 
 Un buff persistant cible toujours le **module principal** plutôt qu'un module au choix du joueur
 (déviation assumée de la cible "Module Unique" du tableau de conception, décision utilisateur) : lui
@@ -460,16 +463,16 @@ de ce qui ne bougera plus jusqu'à la fin du combat.
 Reste manquant pour les autres effets à durée :
 
 - Dégâts répétés pendant Y tours (*Embrasement, Guerre nucléaire*)
-- Bouclier accordé pendant Y tours (*Blindage maximal*)
 - Pioche bonus pendant Y tours (*Multi fonction*)
 
 ### 12.4 Effets en pourcentage
 
 **Implémenté pour les debuffs** (somme des `valeur` des debuffs `VULNERABILITE` actifs dans
 `Ennemi.debuffs_actifs`, majore les dégâts subis d'une attaque du joueur) : *Brèche, Ligne avant,
-Boucliers endommagés, Boucliers hors service* jouables. Reste manquant pour les effets alliés :
-
-- Bouclier = % des PV du module (*Bouclier adaptatif*)
+Boucliers endommagés, Boucliers hors service* jouables. **Implémenté aussi côté allié**
+(`ActionCarte.BOUCLIER_POURCENTAGE_PV` sur une carte Defense : bouclier = `valeur`% des PV **max**
+de la cible cliquée — les PV actuels varieraient trop selon les dégâts déjà subis, l'effet doit
+rester prévisible — arrondi à l'entier le plus proche) : *Bouclier adaptatif* jouable.
 
 ### 12.5 Types de carte absents du moteur
 
@@ -481,13 +484,14 @@ Déjà nommés en §7.1. État d'implémentation dans `combat.py` :
   Ligne avant, Boucliers endommagés, Boucliers hors service, Tir allié* jouables — les 6 cartes du
   module Sabotage sont maintenant toutes jouables
 - **Buff** — **implémenté** (`TypeCarte.BUFF`, une action : `BOUCLIER_PAR_TOUR`, cf. §12.3) :
-  *Bouclier perpétuel* jouable. *Optimisation des boucliers, Attaques performantes* (modification du
-  coût d'une catégorie de cartes) et *Double défense, Circuit parallèle* (duplication d'effet)
-  restent non jouables, ce sont des méta-effets distincts (§12.7), pas de simples buffs sur un module
-- **Outils** — **implémenté** (`TypeCarte.OUTILS`, cf. §12.9) pour deux actions (`GAIN_ELECTRICITE`,
-  `PIOCHE_SUPPLEMENTAIRE`) : *Surcharge temporaire, Boost* jouables. Le reste demande encore une
-  logique dédiée (*Fonds de tiroir, Changement d'outil, Manque de jus, Cannibalisme, Grand
-  remplacement, Multi fonction*)
+  *Bouclier perpétuel, Blindage maximal* jouables. *Optimisation des boucliers, Attaques
+  performantes* (modification du coût d'une catégorie de cartes) et *Double défense, Circuit
+  parallèle* (duplication d'effet) restent non jouables, ce sont des méta-effets distincts (§12.7),
+  pas de simples buffs sur un module
+- **Outils** — **implémenté** (`TypeCarte.OUTILS`, cf. §12.9) pour trois actions (`GAIN_ELECTRICITE`,
+  `GAIN_ELECTRICITE_PAR_MODULE`, `PIOCHE_SUPPLEMENTAIRE`) : *Surcharge temporaire, Fonds de tiroir,
+  Boost* jouables. Le reste demande encore une logique dédiée (*Changement d'outil, Manque de jus,
+  Cannibalisme, Grand remplacement, Multi fonction*)
 - **Controle** : toujours aucune carte taguée Controle dans le tableau ; type prévu en §7.1 (stun,
   restriction d'action) mais rien à implémenter pour l'instant
 
@@ -517,8 +521,10 @@ Déjà nommés en §7.1. État d'implémentation dans `combat.py` :
 
 ### 12.8 Gain d'électricité via une carte
 
-- Gain fixe (*Surcharge temporaire*)
-- Gain proportionnel au nombre de modules actifs (*Fonds de tiroir*)
+- Gain fixe (*Surcharge temporaire*) — **implémenté** (`ActionCarte.GAIN_ELECTRICITE`)
+- Gain proportionnel au nombre de modules actifs (*Fonds de tiroir*) — **implémenté**
+  (`ActionCarte.GAIN_ELECTRICITE_PAR_MODULE`, `valeur` x nombre de modules alliés vivants, base
+  incluse - mêmes modules que `Combat._modules_vivants()`, déjà utilisé pour Alliés multiples §7.2)
 - Gain en échange d'une défausse (*Manque de jus, Cannibalisme*)
 
 ### 12.9 Manipulation de pioche / main / défausse via une carte

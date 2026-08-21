@@ -174,8 +174,11 @@ class Combat:
             valeur_effective = _degats_effectifs(cible, degats_bruts)
             cible.subir_degats(degats_bruts)
         elif carte.type == TypeCarte.DEFENSE:
-            valeur_effective = carte.valeur
-            cible.ajouter_bouclier(carte.valeur)
+            if carte.action == ActionCarte.BOUCLIER_POURCENTAGE_PV:
+                valeur_effective = round(cible.pv_max * carte.valeur / 100)
+            else:
+                valeur_effective = carte.valeur
+            cible.ajouter_bouclier(valeur_effective)
         elif carte.type == TypeCarte.DEBUFF:
             valeur_effective = self._appliquer_debuff(carte, cible)
         elif carte.type == TypeCarte.BUFF:
@@ -203,7 +206,12 @@ class Combat:
         une ressource commune au joueur (electricite ou pioche)."""
         if carte.action == ActionCarte.GAIN_ELECTRICITE:
             self.joueur.electricite += carte.valeur
-        elif carte.action == ActionCarte.PIOCHE_SUPPLEMENTAIRE:
+            return carte.valeur
+        if carte.action == ActionCarte.GAIN_ELECTRICITE_PAR_MODULE:
+            gain = carte.valeur * len(self._modules_vivants())
+            self.joueur.electricite += gain
+            return gain
+        if carte.action == ActionCarte.PIOCHE_SUPPLEMENTAIRE:
             self.joueur.deck.piocher_cartes(carte.valeur)
         return carte.valeur
 
