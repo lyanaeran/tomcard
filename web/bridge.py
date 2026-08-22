@@ -17,7 +17,9 @@ sys.path.insert(0, "/repo")
 
 from src.gameplay.carte import CIBLES_SANS_CLIC, ActionCarte, CibleCarte
 from src.gameplay.config_poc import creer_combat_poc
+from src.gameplay.donnees import charger_modules
 from src.gameplay.module import Module
+from src.gameplay.parcours import modules_equipables, tirer_candidats_module
 from src.gameplay.position import Colonne, Position, Rangee
 
 RACINE_FS = "/repo/"
@@ -224,6 +226,19 @@ def nouveau_combat(graine) -> str:
     aleatoire = random.Random(int(graine)) if graine is not None else random.Random()
     combat = creer_combat_poc(generateur_aleatoire=aleatoire)
     return json.dumps({"etat": _etat_dict(), "popups": []})
+
+
+def nouveau_choix_module(graine) -> str:
+    """Tire 3 modules candidats differents (specs.md 2.3, Niveau 1), graine optionnelle."""
+    aleatoire = random.Random(int(graine)) if graine is not None else random.Random()
+    pool = modules_equipables(charger_modules())
+    candidats = tirer_candidats_module(pool, aleatoire)
+    return json.dumps(
+        [
+            {"id": candidat.id, "nom": candidat.nom, "image": _chemin_web(candidat.image), "description": candidat.description}
+            for candidat in candidats
+        ]
+    )
 
 
 def _resoudre_cible(carte, id_cible):

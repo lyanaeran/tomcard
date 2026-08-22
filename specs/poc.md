@@ -277,6 +277,8 @@ Trois fichiers JSON décrivent le contenu du jeu (modules, ennemis, cartes) de f
 - `id` : identifiant unique, format `MOD_N`
 - `nom`, `image` (chemin vers `assets/modules/`)
 - `points_de_vie`
+- `description` : type de carte débloqué par ce module, sans révéler les cartes elles-mêmes —
+  utilisé par l'écran de choix de module du parcours (specs.md §2.3), pas par le combat
 - `cartes` : liste d'identifiants de cartes (`CRT_N`) que ce module peut jouer
 
 **`config/ennemis.json`** — un ennemi par entrée :

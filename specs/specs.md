@@ -49,7 +49,13 @@ remplace les pistes encore ouvertes en §2 pour la Station service et la cadence
 
 - **Niveau 1** — **Choix de module**, obligatoire, pas de tirage d'étape : 3 modules **différents**
   tirés au sort parmi le pool, le joueur en choisit un (2ᵉ slot équipé, en plus du module de base —
-  voir §5). C'est ce choix qui pourvoit le 2ᵉ des "2 slots" de départ mentionnés en §5
+  voir §5). C'est ce choix qui pourvoit le 2ᵉ des "2 slots" de départ mentionnés en §5.
+  **Implémenté** en écran autonome, pas encore relié à une orchestration de parcours (qui n'existe
+  pas encore) : `src/gameplay/parcours.py` (tirage), `src/ui/ecran_choix_module.py` (PC),
+  `web/app.js` (`nouveauChoixModule`, exposée sur `window` pour test manuel en attendant un vrai
+  déclencheur) + `web/bridge.py` (`nouveau_choix_module`). Chaque module a désormais un champ
+  `description` dans `config/modules.json` (type de carte débloqué, sans révéler les cartes) —
+  fond de combat réutilisé en placeholder (décision utilisateur), à remplacer par un fond dédié
 - **Niveaux 5 et 9** — 3 propositions dont une **Station service garantie** (les 2 autres tirées
   normalement, voir ci-dessous) — le joueur garde le choix, la Station service n'est pas forcée
 - **Niveau 10** — **Boss**, obligatoire, pas de tirage d'étape. Se répète tous les 10 niveaux (20,

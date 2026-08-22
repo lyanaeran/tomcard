@@ -20,6 +20,7 @@ class SpecModule:
     nom: str
     image: str
     points_de_vie: int
+    description: str
     cartes: tuple[str, ...]
 
 
@@ -82,6 +83,7 @@ def charger_modules() -> list[SpecModule]:
             nom=entree["nom"],
             image=_chemin_image(entree["image"]),
             points_de_vie=entree["points_de_vie"],
+            description=entree["description"],
             cartes=tuple(entree["cartes"]),
         )
         for entree in donnees["modules"]
