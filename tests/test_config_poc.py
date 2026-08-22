@@ -9,9 +9,13 @@ from src.gameplay.config_poc import (
     CARTES_PAR_MODULE_EQUIPE,
     ELECTRICITE_PAR_TOUR,
     ID_MODULE_PRINCIPAL,
+    MODE_TEST,
     NOMBRE_MODULES_EQUIPES,
+    PV_ENNEMI_MODE_TEST,
+    PV_MODULE_MODE_TEST,
     creer_combat_poc,
     creer_deck,
+    creer_deck_mode_test,
     creer_flotte,
     creer_vaisseau,
     tirer_cartes,
@@ -134,3 +138,39 @@ def test_deux_combats_successifs_ont_des_ennemis_independants():
     combat_1.flotte.ennemis_vivants()[0].subir_degats(1000)
 
     assert combat_2.flotte.ennemis_vivants()[0].pv > 0
+
+
+# --- Mode test (poc.md "Mode test") ---
+
+
+def test_creer_deck_mode_test_contient_un_exemplaire_de_chaque_carte_jouable():
+    cartes = charger_cartes()
+    aleatoire = random.Random(3)
+
+    deck = creer_deck_mode_test(cartes, aleatoire)
+
+    toutes = deck.pioche + deck.main + deck.defausse
+    assert len(toutes) == len(cartes)
+    assert sorted(carte.nom for carte in toutes) == sorted(carte.nom for carte in cartes.values())
+
+
+def test_mode_test_actif_donne_200_pv_aux_modules_et_aux_ennemis():
+    """MODE_TEST est la variable de bascule pour les tests manuels (cf. poc.md "Mode test") :
+    ce test verifie son effet quand elle est active, comme actuellement configure."""
+    assert MODE_TEST is True
+    specs_modules = charger_modules()
+    specs_ennemis = charger_ennemis()
+
+    vaisseau, _specs = creer_vaisseau(specs_modules, random.Random(3))
+    flotte = creer_flotte(specs_ennemis, random.Random(3))
+
+    assert vaisseau.base.pv_max == PV_MODULE_MODE_TEST
+    assert all(module.pv_max == PV_MODULE_MODE_TEST for module in vaisseau.modules_equipes().values())
+    assert all(ennemi.pv_max == PV_ENNEMI_MODE_TEST for ennemi in flotte.ennemis_vivants())
+
+
+def test_creer_combat_poc_utilise_le_deck_mode_test_quand_actif():
+    combat = creer_combat_poc(random.Random(4))
+
+    total = len(combat.joueur.deck.pioche) + len(combat.joueur.deck.main) + len(combat.joueur.deck.defausse)
+    assert total == len(charger_cartes())
