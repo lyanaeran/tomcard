@@ -12,21 +12,21 @@
       "nom": "Lanceur de missiles",
       "image": "assets/modules/missiles.png",
       "points_de_vie": 9,
-      "cartes": ["CRT_15"]
+      "cartes": ["CRT_15", "CRT_16", "CRT_18"]
     },
     {
       "id": "MOD_3",
       "nom": "Blindage",
       "image": "assets/modules/bouclier.png",
       "points_de_vie": 18,
-      "cartes": ["CRT_20"]
+      "cartes": ["CRT_20", "CRT_21", "CRT_23", "CRT_24", "CRT_26"]
     },
     {
       "id": "MOD_4",
       "nom": "Generateur",
       "image": "assets/modules/generateur.png",
       "points_de_vie": 10,
-      "cartes": ["CRT_27"]
+      "cartes": ["CRT_27", "CRT_31"]
     },
     {
       "id": "MOD_5",
@@ -40,7 +40,7 @@
       "nom": "Sabotage",
       "image": "assets/modules/sabotage.png",
       "points_de_vie": 10,
-      "cartes": ["CRT_33", "CRT_34", "CRT_35", "CRT_37", "CRT_38"]
+      "cartes": ["CRT_33", "CRT_34", "CRT_35", "CRT_36", "CRT_37", "CRT_38"]
     }
   ]
 }
