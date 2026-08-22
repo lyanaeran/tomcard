@@ -9,6 +9,9 @@ elle provient.
 
 Chaque tirage cree un exemplaire independant (Carte.copie()) : deux copies de la meme carte dans
 le deck ont chacune leur propre compteur de munitions (specs.md paragraphe 3.6).
+
+MODE_TEST (variable ci-dessous) remplace ce tirage aleatoire du deck et les PV normaux par une
+configuration pensee pour les tests manuels - voir sa docstring.
 """
 
 import random
@@ -23,6 +26,16 @@ from src.gameplay.joueur import Joueur
 from src.gameplay.module import Module
 from src.gameplay.position import Colonne, Position, Rangee
 from src.gameplay.vaisseau import Vaisseau
+
+# Mode test : bascule creer_combat_poc() dans une configuration pensee pour les tests manuels
+# plutot que pour le gameplay normal - PV enormement augmentes (survivre de nombreux tours sans
+# mourir) et un exemplaire de chaque carte jouable existante dans le deck (au lieu du tirage
+# aleatoire habituel par module equipe), quels que soient les modules tires au sort, pour pouvoir
+# essayer toutes les mecaniques en un seul combat. Remettre a False pour revenir au comportement
+# normal (production).
+MODE_TEST = True
+PV_MODULE_MODE_TEST = 200
+PV_ENNEMI_MODE_TEST = 200
 
 ELECTRICITE_PAR_TOUR = 5
 ID_MODULE_PRINCIPAL = "MOD_1"
@@ -54,11 +67,13 @@ POSITIONS_ENNEMIES = (
 
 
 def _module_depuis_spec(spec: SpecModule) -> Module:
-    return Module(pv_max=spec.points_de_vie, nom=spec.nom, image=spec.image)
+    pv_max = PV_MODULE_MODE_TEST if MODE_TEST else spec.points_de_vie
+    return Module(pv_max=pv_max, nom=spec.nom, image=spec.image)
 
 
 def _ennemi_depuis_spec(spec: SpecEnnemi) -> Ennemi:
-    return Ennemi(pv_max=spec.points_de_vie, degats_attaque=spec.degats_attaque, nom=spec.nom, image=spec.image)
+    pv_max = PV_ENNEMI_MODE_TEST if MODE_TEST else spec.points_de_vie
+    return Ennemi(pv_max=pv_max, degats_attaque=spec.degats_attaque, nom=spec.nom, image=spec.image)
 
 
 def tirer_cartes(pool_ids: tuple, quantite: int, cartes: dict[str, Carte], aleatoire: random.Random) -> list[Carte]:
@@ -110,6 +125,14 @@ def creer_deck(specs_utilisees: list[SpecModule], cartes: dict[str, Carte], alea
     return Deck(cartes=deck_cartes, generateur_aleatoire=aleatoire)
 
 
+def creer_deck_mode_test(cartes: dict[str, Carte], aleatoire: random.Random) -> Deck:
+    """Mode test (cf. MODE_TEST) : un exemplaire de chaque carte jouable existante, quels que
+    soient les modules tires au sort - pour pouvoir essayer toutes les mecaniques en un seul
+    combat plutot que de dependre du tirage aleatoire habituel."""
+    deck_cartes = [carte.copie() for carte in cartes.values()]
+    return Deck(cartes=deck_cartes, generateur_aleatoire=aleatoire)
+
+
 def creer_flotte(specs_ennemis: list[SpecEnnemi], aleatoire: random.Random) -> Flotte:
     """Tire au sort un ennemi (avec remise) pour chacune des 6 cases de la grille ennemie."""
     ennemis = {
@@ -126,7 +149,7 @@ def creer_combat_poc(generateur_aleatoire: random.Random | None = None) -> Comba
     specs_ennemis = charger_ennemis()
 
     vaisseau, specs_utilisees = creer_vaisseau(specs_modules, aleatoire)
-    deck = creer_deck(specs_utilisees, cartes, aleatoire)
+    deck = creer_deck_mode_test(cartes, aleatoire) if MODE_TEST else creer_deck(specs_utilisees, cartes, aleatoire)
     joueur = Joueur(vaisseau=vaisseau, deck=deck, electricite_par_tour=ELECTRICITE_PAR_TOUR)
     flotte = creer_flotte(specs_ennemis, aleatoire)
 

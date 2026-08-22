@@ -222,6 +222,23 @@ Chaque carte de la main affiche aussi (specs.md §8.2) :
 
 Conventions : classes claires par responsabilité, commentaires en français sans accents ni cédilles (cf. specs.md §10.3).
 
+### Mode test
+
+`MODE_TEST` (`src/gameplay/config_poc.py`) est une variable booléenne, **actuellement `True`**, qui
+remplace la génération aléatoire normale du combat par une configuration pensée pour les tests
+manuels des mécaniques de cartes plutôt que pour le gameplay réel :
+- Tous les modules du joueur et tous les ennemis ont **200 PV** (`PV_MODULE_MODE_TEST`/
+  `PV_ENNEMI_MODE_TEST`), pour survivre de nombreux tours sans mourir. Les modules équipés restent
+  tirés au sort normalement (seuls leurs PV changent).
+- Le deck contient **un exemplaire de chaque carte jouable existante** (`creer_deck_mode_test()`),
+  quels que soient les modules tirés au sort, plutôt que le tirage aléatoire habituel par module
+  équipé — pour pouvoir essayer toutes les mécaniques en un seul combat.
+
+`creer_combat_poc()` lit cette variable directement : aucun changement nécessaire côté PC
+(`FenetreCombat()`) ni web (`web/bridge.py`), les deux appellent cette fonction sans paramètre
+dédié. Remettre `MODE_TEST` à `False` restaure le comportement normal (production) décrit dans le
+reste de cette section et dans specs.md §2/§6.
+
 ### Vaisseau du joueur : emplacements mesurés sur l'image
 
 Le module de base (`assets/modules/principal.png`) est affiché en grand ; les 4 modules équipés se positionnent dans les emplacements vides visibles sur cette image, mesurés directement dessus (coordonnées du cadre métallique complet de chaque emplacement, pas seulement du trou noir intérieur, pour que le cadre du module vienne bien recouvrir celui du vaisseau une fois étiré comme décrit ci-dessus). Les pastilles PV/Bouclier de la base sont positionnées au-dessus du pare-brise du vaisseau (repère mesuré sur l'image), plutôt qu'au hasard au-dessus de toute l'image.
