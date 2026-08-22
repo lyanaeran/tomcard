@@ -43,7 +43,9 @@ Grille miroir **2 colonnes (Avant / Arrière) x 3 rangées (Gauche / Mid / Droit
 
 **Important** : la base ne protège pas les modules Arrière des autres rangées — un ennemi peut attaquer directement le module Arrière de sa propre rangée si l'Avant de cette rangée est vide, même si la base (Mid) est toujours en vie.
 
-Chaque attaque résolue affiche un popup `-N` (dégâts réellement infligés, voir §8) sur le module touché. Au survol de la souris sur un ennemi vivant, une infobulle affiche la cible qu'il vise et les dégâts qu'il infligerait ce tour, calculés avec la même règle (voir §8).
+**Ordre de résolution des attaques** (`Combat._tour_ennemi`) : la colonne Avant de haut en bas (Gauche, Mid, Droite), puis la colonne Arrière de haut en bas. Cet ordre est surtout significatif quand un Leurre (§12.6) protège un module visé par plusieurs ennemis dans le même tour : seule la **première** attaque résolue sur ce module (au sens de cet ordre) est annulée, les suivantes s'appliquent normalement.
+
+Chaque attaque résolue affiche un popup `-N` (dégâts réellement infligés, voir §8) sur le module touché. Au survol de la souris sur un ennemi vivant, une infobulle affiche la cible qu'il vise et les dégâts qu'il **infligerait** ce tour (la vraie attaque de cet ennemi, jamais affectée par un Leurre potentiellement actif sur sa cible — seule la résolution réelle du tour applique l'annulation), calculés avec la même règle (voir §8).
 
 ---
 

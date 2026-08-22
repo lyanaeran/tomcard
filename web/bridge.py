@@ -16,7 +16,6 @@ import sys
 sys.path.insert(0, "/repo")
 
 from src.gameplay.carte import CIBLES_SANS_CLIC, ActionCarte, CibleCarte
-from src.gameplay.combat import _degats_effectifs
 from src.gameplay.config_poc import creer_combat_poc
 from src.gameplay.module import Module
 from src.gameplay.position import Colonne, Position, Rangee
@@ -73,9 +72,15 @@ def _module_json(module, id_case: str):
 
 
 def _intention_json(ennemi):
-    """Intention de cet ennemi (poc.md paragraphe 8) : module vise et degats reellement
-    infliges, calcules avec la meme fonction que la resolution reelle de l'attaque
-    (previsualiser_cible + _degats_effectifs de combat.py, aucune logique dupliquee).
+    """Intention de cet ennemi (poc.md paragraphe 8) : module vise et degats que cet
+    ennemi infligerait, calcules avec la meme fonction que fenetre.py (previsualiser_cible
+    + degats_attaque_effectifs, aucune logique dupliquee).
+
+    Volontairement la valeur "brute" de l'ennemi, pas _degats_effectifs de combat.py (qui
+    plafonne selon PV+bouclier de la cible et renvoie 0 si un leurre est actif, specs.md
+    12.6) : l'intention doit montrer la vraie attaque de chaque ennemi, meme si plusieurs
+    ennemis visent un module leurre - un seul des deux sera reellement annule a la
+    resolution, mais lequel n'est determine qu'a ce moment-la (ordre de resolution).
 
     Si Tir allie est actif (specs.md 12.6), previsualiser_cible renvoie None expres (la
     cible reelle - un autre ennemi - n'est tiree au hasard qu'a la resolution du tour,
@@ -92,7 +97,7 @@ def _intention_json(ennemi):
         "redirection": False,
         "module_id": _id_module(cible),
         "module_nom": cible.nom,
-        "degats": _degats_effectifs(cible, ennemi.degats_attaque_effectifs()),
+        "degats": ennemi.degats_attaque_effectifs(),
     }
 
 
