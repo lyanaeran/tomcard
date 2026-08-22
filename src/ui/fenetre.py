@@ -349,12 +349,12 @@ def _libelle_buff(buff: BuffActif) -> str:
 def _lignes_buffs(module: Module) -> list[str]:
     """Lignes d'infobulle pour les buffs actifs d'un module (specs.md 12.3/12.5), groupees
     separement : buffs a duree limitee d'abord, puis buffs persistants (qui durent tout le
-    combat) - jamais melanges, meme separation que les deux pastilles (cf. _pastilles_buffs_module)."""
+    combat) - jamais melanges, meme separation que les deux pastilles (cf. _pastilles_buffs_module).
+    Pas d'en-tete "Persistants" : chaque ligne de buff persistant se termine deja par "(illimite)"
+    (cf. _libelle_buff), suffisant pour les distinguer."""
     buffs_duree = [buff for buff in module.buffs_actifs if buff.tours_restants is not None]
     buffs_persistants = [buff for buff in module.buffs_actifs if buff.tours_restants is None]
     lignes = [_libelle_buff(buff) for buff in buffs_duree]
-    if buffs_duree and buffs_persistants:
-        lignes.append("Persistants :")
     lignes.extend(_libelle_buff(buff) for buff in buffs_persistants)
     return lignes
 

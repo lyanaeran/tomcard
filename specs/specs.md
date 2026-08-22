@@ -422,10 +422,12 @@ plutôt que par carte, pour servir de feuille de route à une future extension d
 - **Ennemi Avant** / **Ligne avant** ennemie, **Ennemi Arrière** / **Ligne arrière** — **implémenté**
   (`CibleCarte.COLONNE_AVANT_ENNEMIE` / `COLONNE_ARRIERE_ENNEMIE`, colonne fixée par la carte, un
   clic sur l'autre colonne est refusé) : *Ligne avant, Ligne arrière* jouables
-- **Module Avant** — colonne avant alliée uniquement (avant-gauche + avant-droite, jamais le
-  module principal qui occupe la rangée mid) — **implémenté** (`CibleCarte.COLONNE_AVANT_ALLIEE`,
-  même principe que les colonnes ennemies : un clic sur un module de cette colonne précise
-  confirme) : *Protéger l'avant poste* jouable
+- **Module Avant** — colonne avant alliée : avant-gauche + avant-droite, **et le module
+  principal** (qui occupe la rangée mid et compte donc à la fois comme avant et comme arrière,
+  décision utilisateur — contrairement à une première version qui l'excluait) — **implémenté**
+  (`CibleCarte.COLONNE_AVANT_ALLIEE`, même principe que les colonnes ennemies : un clic sur un
+  module de cette colonne précise, ou sur le module principal, confirme) : *Protéger l'avant
+  poste* jouable
 
 Ces cibles par rang se résolvent par un **clic sur une case du rang visé**, comme la Ligne ennemie
 perçante (§3.1, §7.2), et non automatiquement comme Alliés/Ennemis multiples.
@@ -504,9 +506,15 @@ Déjà nommés en §7.1. État d'implémentation dans `combat.py` :
   *Leurre* jouable. Un flag `Module.leurre_actif` (pas un buff : pas de redéclenchement
   périodique, pas de durée en tours) rend la **toute prochaine** attaque reçue totalement nulle
   (0 dégât, y compris si elle dépasserait PV+bouclier cumulés), puis se consomme — dès la première
-  attaque reçue après la pose, même si plusieurs ennemis attaquent ce module dans le même tour
-  (seule la première du tour est annulée, les suivantes s'appliquent normalement). Pastille dédiée
-  (cyan) distincte des pastilles de buff, affichée tant que le leurre n'a pas encore été consommé
+  attaque reçue après la pose, même si plusieurs ennemis attaquent ce module dans le même tour —
+  seule la **première** attaque résolue sur ce module est annulée, dans l'ordre de résolution du
+  tour ennemi (`Combat._tour_ennemi`, poc.md §3 : colonne Avant de haut en bas puis colonne
+  Arrière de haut en bas), les suivantes s'appliquent normalement. L'intention affichée au
+  survol/tap d'un ennemi (poc.md §8) montre toujours sa **vraie** attaque, jamais 0 à cause d'un
+  leurre potentiellement actif sur sa cible : elle reflète ce que cet ennemi ferait pris
+  isolément, pas le résultat final après résolution de tout le tour (qui dépend de l'ordre).
+  Pastille dédiée (cyan) distincte des pastilles de buff, affichée tant que le leurre n'a pas
+  encore été consommé
 - Détournement de la cible d'un ennemi vers un de ses voisins — mécanique déjà anticipée comme
   *Piratage* en §4.2 — **implémenté** (`ActionCarte.REDIRECTION_CIBLE`) : *Tir allié* jouable. Le
   "voisin" est **n'importe quel autre ennemi vivant** (pas de restriction géométrique d'adjacence,

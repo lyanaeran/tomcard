@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "19";
+const VERSION_CACHE = "20";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -220,14 +220,13 @@ function afficherInfobulle(idCase, typeCase) {
     if (typeCase === "allie") {
         lignes.push(`<div>🔵 ${objet.bouclier}</div>`);
         // Groupes separes (jamais melanges), meme separation que les deux pastilles de
-        // buffs (cf. rendrePastillesBuffs) : buffs a duree limitee, puis persistants.
+        // buffs (cf. rendrePastillesBuffs) : buffs a duree limitee, puis persistants. Pas
+        // d'en-tete "Persistants" : chaque ligne de buff persistant se termine deja par
+        // "(illimite)" (cf. libelleBuffActif), suffisant pour les distinguer.
         const buffsDuree = objet.buffs.filter((buff) => buff.tours_restants !== null);
         const buffsPersistants = objet.buffs.filter((buff) => buff.tours_restants === null);
         for (const buff of buffsDuree) {
             lignes.push(`<div>${libelleBuffActif(buff)}</div>`);
-        }
-        if (buffsDuree.length > 0 && buffsPersistants.length > 0) {
-            lignes.push(`<div>Persistants :</div>`);
         }
         for (const buff of buffsPersistants) {
             lignes.push(`<div>${libelleBuffActif(buff)}</div>`);

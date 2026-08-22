@@ -131,6 +131,8 @@ class Combat:
         if carte.cible == CibleCarte.COLONNE_AVANT_ALLIEE:
             if not (isinstance(cible, Module) and cible in self._modules_vivants()):
                 return False
+            if cible is self.joueur.vaisseau.base:
+                return True  # la base occupe la rangee mid, a la fois avant et arriere
             position = self._position_de_module(cible)
             return position is not None and position.colonne == Colonne.AVANT
         return False
@@ -160,7 +162,12 @@ class Combat:
             occupants = (self.flotte.ennemi_en(colonne, rangee) for rangee in (Rangee.GAUCHE, Rangee.MID, Rangee.DROITE))
             cibles = [occupant for occupant in occupants if occupant is not None]
         elif carte.cible == CibleCarte.COLONNE_AVANT_ALLIEE:
-            occupants = (self.joueur.vaisseau.module_en(Colonne.AVANT, rangee) for rangee in (Rangee.GAUCHE, Rangee.DROITE))
+            # Rangee.MID (la base) est incluse : elle occupe la rangee mid, a la fois avant
+            # et arriere (specs.md 12.1), contrairement aux colonnes ennemies ou la base n'a
+            # pas d'equivalent.
+            occupants = (
+                self.joueur.vaisseau.module_en(Colonne.AVANT, rangee) for rangee in (Rangee.GAUCHE, Rangee.MID, Rangee.DROITE)
+            )
             cibles = [occupant for occupant in occupants if occupant is not None]
         else:
             cibles = [cible]
@@ -225,7 +232,13 @@ class Combat:
 
     def _tour_ennemi(self) -> list[tuple[Position, Ennemi, Module | Ennemi, int]]:
         """Chaque ennemi vivant attaque sa cible, dans l'ordre de la grille (poc.md paragraphe
-        3). Un ennemi sous Tir allie (specs.md 12.6) attaque un autre ennemi vivant tire au
+        3) : la colonne Avant de haut en bas (Gauche, Mid, Droite), puis la colonne Arriere de
+        haut en bas - ordre garanti par Flotte.positions() (dict construit dans cet ordre par
+        creer_flotte(), cf. config_poc.POSITIONS_ENNEMIES). Cet ordre determine notamment quelle
+        attaque est annulee quand un Leurre (specs.md 12.6) protege un module vise par plusieurs
+        ennemis dans le meme tour : seule la premiere attaque resolue sur ce module est annulee.
+
+        Un ennemi sous Tir allie (specs.md 12.6) attaque un autre ennemi vivant tire au
         hasard a la place, si au moins un autre ennemi est encore en vie."""
         attaques = []
         for position, ennemi in self.flotte.positions().items():

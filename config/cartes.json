@@ -27,7 +27,7 @@
       "x": 7,
       "y": null,
       "munition": null,
-      "description": "Inflige X degats a la colonne ciblee",
+      "description": "Inflige X degats a une colonne ennemie",
       "effet": { "type": "ATTAQUE", "cible": "LIGNE_ENNEMIE", "valeur": 7 }
     },
     {

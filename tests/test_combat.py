@@ -302,6 +302,48 @@ def test_plusieurs_ennemis_attaquent_dans_le_meme_tour():
     assert vaisseau.base.pv == 15 - 4 - 6
 
 
+def test_ordre_de_resolution_avant_haut_bas_puis_arriere_haut_bas():
+    """L'ordre de resolution des attaques (poc.md paragraphe 3) determine notamment quelle
+    attaque un Leurre annule quand plusieurs ennemis visent le meme module (specs.md 12.6)."""
+    positions_ordonnees = [
+        Position(Colonne.AVANT, Rangee.GAUCHE),
+        Position(Colonne.AVANT, Rangee.MID),
+        Position(Colonne.AVANT, Rangee.DROITE),
+        Position(Colonne.ARRIERE, Rangee.GAUCHE),
+        Position(Colonne.ARRIERE, Rangee.MID),
+        Position(Colonne.ARRIERE, Rangee.DROITE),
+    ]
+    ennemis = {position: Ennemi(pv_max=15, degats_attaque=1, nom=str(position)) for position in positions_ordonnees}
+    combat, _vaisseau, _flotte = _nouveau_combat(vaisseau=_vaisseau_complet(), ennemis=ennemis)
+
+    attaques = combat.finir_tour_joueur()
+
+    assert [position for position, _e, _c, _d in attaques] == positions_ordonnees
+
+
+def test_leurre_avec_deux_attaquants_n_annule_que_la_premiere_attaque_resolue():
+    """Cf. test_ordre_de_resolution_avant_haut_bas_puis_arriere_haut_bas : le premier
+    attaquant dans cet ordre est celui dont l'attaque est annulee par le leurre."""
+    e_avant = Ennemi(pv_max=15, degats_attaque=5, nom="avant")
+    e_arriere = Ennemi(pv_max=15, degats_attaque=3, nom="arriere")
+    ennemis = {
+        Position(Colonne.AVANT, Rangee.GAUCHE): e_avant,
+        Position(Colonne.ARRIERE, Rangee.GAUCHE): e_arriere,
+    }
+    vaisseau = _vaisseau_complet()
+    vaisseau.module_en(Colonne.AVANT, Rangee.GAUCHE).pv = 0  # AVANT-GAUCHE vide : les deux visent ARRIERE-GAUCHE
+    combat, _vaisseau, _flotte = _nouveau_combat(vaisseau=vaisseau, ennemis=ennemis)
+    combat.joueur.deck.main = [CARTE_LEURRE]
+    combat.joueur.electricite = 3
+    arriere_gauche = vaisseau.module_en(Colonne.ARRIERE, Rangee.GAUCHE)
+    combat.jouer_carte(CARTE_LEURRE, arriere_gauche)
+
+    attaques = combat.finir_tour_joueur()
+
+    assert [degats for _p, _e, _c, degats in attaques] == [0, 3]  # avant (premier resolu) annule, arriere non
+    assert arriere_gauche.pv == arriere_gauche.pv_max - 3
+
+
 def test_arret_immediat_si_la_base_est_detruite_en_cours_de_tour():
     e1 = Ennemi(pv_max=15, degats_attaque=20)  # detruit la base d'un coup
     e2 = Ennemi(pv_max=15, degats_attaque=5)
@@ -591,7 +633,7 @@ def _vaisseau_complet(pv: int = 15) -> Vaisseau:
     )
 
 
-def test_colonne_avant_alliee_protege_seulement_les_deux_modules_avant():
+def test_colonne_avant_alliee_protege_les_deux_modules_avant_et_le_principal():
     vaisseau = _vaisseau_complet()
     combat, _vaisseau, _flotte = _nouveau_combat(vaisseau=vaisseau)
     combat.joueur.deck.main = [CARTE_COLONNE_AVANT_ALLIEE]
@@ -604,10 +646,24 @@ def test_colonne_avant_alliee_protege_seulement_les_deux_modules_avant():
     assert vaisseau.module_en(Colonne.AVANT, Rangee.DROITE).bouclier == 10
     assert vaisseau.module_en(Colonne.ARRIERE, Rangee.GAUCHE).bouclier == 0
     assert vaisseau.module_en(Colonne.ARRIERE, Rangee.DROITE).bouclier == 0
-    assert vaisseau.base.bouclier == 0
+    # Le module principal occupe la rangee mid, a la fois avant et arriere (specs.md 12.1).
+    assert vaisseau.base.bouclier == 10
 
 
-def test_colonne_avant_alliee_refuse_un_clic_sur_l_arriere_ou_la_base():
+def test_colonne_avant_alliee_accepte_un_clic_sur_le_module_principal():
+    vaisseau = _vaisseau_complet()
+    combat, _vaisseau, _flotte = _nouveau_combat(vaisseau=vaisseau)
+    combat.joueur.deck.main = [CARTE_COLONNE_AVANT_ALLIEE]
+    combat.joueur.electricite = 2
+
+    resultat = combat.jouer_carte(CARTE_COLONNE_AVANT_ALLIEE, vaisseau.base)  # clic sur le principal
+
+    assert vaisseau.base.bouclier == 10
+    assert vaisseau.module_en(Colonne.AVANT, Rangee.GAUCHE).bouclier == 10
+    assert len(resultat) == 3  # avant-gauche, avant-droite, principal
+
+
+def test_colonne_avant_alliee_refuse_un_clic_sur_l_arriere():
     vaisseau = _vaisseau_complet()
     combat, _vaisseau, _flotte = _nouveau_combat(vaisseau=vaisseau)
     combat.joueur.deck.main = [CARTE_COLONNE_AVANT_ALLIEE]
@@ -615,10 +671,8 @@ def test_colonne_avant_alliee_refuse_un_clic_sur_l_arriere_ou_la_base():
     arriere_gauche = vaisseau.module_en(Colonne.ARRIERE, Rangee.GAUCHE)
 
     resultat_arriere = combat.jouer_carte(CARTE_COLONNE_AVANT_ALLIEE, arriere_gauche)
-    resultat_base = combat.jouer_carte(CARTE_COLONNE_AVANT_ALLIEE, vaisseau.base)
 
     assert resultat_arriere == []
-    assert resultat_base == []
     assert vaisseau.module_en(Colonne.AVANT, Rangee.GAUCHE).bouclier == 0
 
 
