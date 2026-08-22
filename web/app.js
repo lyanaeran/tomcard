@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "20";
+const VERSION_CACHE = "21";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -44,6 +44,7 @@ const FICHIERS_A_MONTER = [
     "src/gameplay/flotte.py",
     "src/gameplay/joueur.py",
     "src/gameplay/module.py",
+    "src/gameplay/parcours.py",
     "src/gameplay/position.py",
     "src/gameplay/vaisseau.py",
     "config/cartes.json",
@@ -531,6 +532,39 @@ function rendre() {
     const boutonRejouer = document.getElementById("bouton-rejouer");
     if (boutonRejouer) boutonRejouer.addEventListener("click", nouvelleGraine);
 }
+
+// Ecran de choix de module (parcours, Niveau 1 - specs.md 2.3). Pas encore reliee a une
+// orchestration de parcours (qui n'existe pas encore) : exposee sur window pour etre appelee
+// manuellement (console du navigateur) en attendant. nouveauChoixModule(graine) tire les
+// candidats via bridge.py puis affiche l'ecran ; choisirModule ne fait encore que logger le
+// choix, aucun etat de parcours a mettre a jour pour l'instant.
+function afficherChoixModule(candidats) {
+    document.getElementById("candidats-module").innerHTML = candidats
+        .map(
+            (candidat, index) => `
+        <div class="candidat-module" data-index="${index}">
+            <img src="${candidat.image}" alt="${candidat.nom}">
+            <div class="candidat-module-nom">${candidat.nom}</div>
+            <div class="candidat-module-description">${candidat.description}</div>
+        </div>`
+        )
+        .join("");
+    document.querySelectorAll(".candidat-module").forEach((element) => {
+        element.addEventListener("click", () => choisirModule(candidats[Number(element.dataset.index)]));
+    });
+    document.getElementById("app").classList.add("cachee");
+    document.getElementById("ecran-choix-module").classList.remove("cachee");
+}
+
+function choisirModule(candidat) {
+    console.log("Module choisi :", candidat.nom);
+}
+
+function nouveauChoixModule(graine = null) {
+    afficherChoixModule(appelerBridge("nouveau_choix_module", graine));
+}
+
+window.nouveauChoixModule = nouveauChoixModule;
 
 document.getElementById("fin-tour").addEventListener("click", finirTour);
 demarrer();

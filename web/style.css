@@ -632,3 +632,68 @@ body {
         font-size: 0.85rem;
     }
 }
+
+/* Ecran de choix de module (parcours, Niveau 1 - specs.md 2.3). Fond de combat reutilise en
+   placeholder (deja applique globalement sur body, cf. le haut de ce fichier) - decision
+   utilisateur, a remplacer par un fond dedie. Pas encore reliee a une orchestration de parcours
+   (qui n'existe pas encore), cf. web/app.js. */
+#ecran-choix-module {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2.5rem;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+#ecran-choix-module h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: normal;
+}
+
+#ecran-choix-module .instruction {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+#candidats-module {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1.5rem;
+}
+
+.candidat-module {
+    width: clamp(160px, 22vw, 260px);
+    background: rgba(20, 24, 34, 0.75);
+    border: 2px solid #5a6e91;
+    border-radius: 10px;
+    padding: 1rem;
+    cursor: pointer;
+}
+
+.candidat-module:hover {
+    border-color: #ffffff;
+}
+
+.candidat-module img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1/1;
+    object-fit: contain;
+    margin-bottom: 0.5rem;
+}
+
+.candidat-module-nom {
+    font-weight: bold;
+    color: #ffdc78;
+    margin-bottom: 0.6rem;
+}
+
+.candidat-module-description {
+    font-size: 0.85rem;
+    color: #dcdce1;
+}

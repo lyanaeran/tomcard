@@ -14,16 +14,16 @@ Un deckbuilder roguelike inspiré de Slay the Spire, où le joueur incarne un va
 
 - Pas de carte de progression classique : à chaque étape, le joueur ne voit que **la prochaine étape** (aucune visibilité au-delà)
 - Après chaque combat gagné, phase de récompenses (§2.1) puis le joueur choisit la prochaine étape parmi celles proposées
+- Structure précise par niveau numéroté (1, 2, 3...) : voir §2.3 — logique d'apparition de la Station
+  service, cadence des Boss et probabilités des étapes désormais tranchées
 - Types d'étapes possibles :
   - **PRIME** — combat, contrat de chasseur de primes. Affiche un niveau de difficulté / la composition annoncée des ennemis (tailles S/M/L, cf. 3.2) sans révéler le détail exact
-  - **STATION SERVICE** (le "garage") — entretien du vaisseau contre de l'Argent : réparer, améliorer ou déplacer un module (détail en §2.2). Logique d'apparition encore ouverte (voir §8), pistes à l'étude :
-    - toujours disponible en alternative à chaque étape, ou
-    - probabilité liée aux PV du vaisseau (voire garantie sous un seuil de dégâts), ou
-    - garantie après un combat difficile (Prime dure ou Boss)
+  - **STATION SERVICE** (le "garage") — entretien du vaisseau contre de l'Argent : réparer, améliorer ou déplacer un module (détail en §2.2)
   - **PLANÈTE COMMERCIALE** (le "marché") — achat de cartes contre de l'Argent ; la disponibilité des cartes Rares/Légendaires pour un module dépend de son niveau d'amélioration (voir §2.2 et §6)
   - **AVENTURE** — événement inconnu, façon "?" de Slay the Spire. Contenu entièrement à définir (§9.1)
+  - **CHOIX DE MODULE** — niveau 1 uniquement (§2.3) : 3 modules différents tirés au sort, le joueur en choisit un
   - *(autres types d'étapes à imaginer)*
-- **Boss** : revient toutes les *n* étapes (n à ajuster en playtest, indicatif 8-10)
+- **Boss** : niveau 10, puis tous les 10 niveaux (20, 30, 40...) — voir §2.3
   - Victoire sur un boss → le joueur choisit **1 nouveau module parmi 2 propositions**, avec ses cartes de base associées (deck de départ propre au module — détail à trancher une fois le système de cartes approfondi, voir §7)
 
 ### 2.1 Argent et récompenses de combat
@@ -41,6 +41,45 @@ Trois options indépendantes, chacune payante en Argent (montants à définir, �
   - le module ne propose au départ que des cartes Communes (en récompense de combat comme à la Planète commerciale), et débloque le palier Rare puis Légendaire au fil de ses améliorations
   - un module amélioré propose plusieurs cartes au choix après combat plutôt qu'une seule
 - **Déplacer un module** : change sa position sur le vaisseau, contre paiement
+
+### 2.3 Structure par niveaux
+
+Le run est une suite de **niveaux numérotés** (1, 2, 3...), chacun une étape. Décision utilisateur,
+remplace les pistes encore ouvertes en §2 pour la Station service et la cadence des Boss :
+
+- **Niveau 1** — **Choix de module**, obligatoire, pas de tirage d'étape : 3 modules **différents**
+  tirés au sort parmi le pool, le joueur en choisit un (2ᵉ slot équipé, en plus du module de base —
+  voir §5). C'est ce choix qui pourvoit le 2ᵉ des "2 slots" de départ mentionnés en §5.
+  **Implémenté** en écran autonome, pas encore relié à une orchestration de parcours (qui n'existe
+  pas encore) : `src/gameplay/parcours.py` (tirage), `src/ui/ecran_choix_module.py` (PC),
+  `web/app.js` (`nouveauChoixModule`, exposée sur `window` pour test manuel en attendant un vrai
+  déclencheur) + `web/bridge.py` (`nouveau_choix_module`). Chaque module a désormais un champ
+  `description` dans `config/modules.json` (type de carte débloqué, sans révéler les cartes) —
+  fond de combat réutilisé en placeholder (décision utilisateur), à remplacer par un fond dédié
+- **Niveaux 5 et 9** — 3 propositions dont une **Station service garantie** (les 2 autres tirées
+  normalement, voir ci-dessous) — le joueur garde le choix, la Station service n'est pas forcée
+- **Niveau 10** — **Boss**, obligatoire, pas de tirage d'étape. Se répète tous les 10 niveaux (20,
+  30, 40...) — remplace la valeur indicative "8-10" précédemment envisagée en §2
+- **Tous les autres niveaux** (2-4, 6-8, 11-14, 16-19...) — **3 propositions**, chaque slot tiré
+  **indépendamment** des deux autres (donc parfois 2 ou 3 propositions identiques, ex. 3 Primes) :
+  - 1/30 **Station service**
+  - 1/30 **Planète commerciale**
+  - 1/10 **Aventure**
+  - Reste (5/6) **Prime** (combat)
+- **Nombre d'ennemis en Prime** : 1 seul ennemi jusqu'au niveau 5, puis 2 à partir du niveau 6 —
+  s'ajoute au système de tailles S/M/L existant (§3.2, deux axes de difficulté indépendants), ne le
+  remplace pas. Progression au-delà de 2 (après le niveau 10 ?) pas encore définie
+- **Doublons de modules autorisés** (remplace la piste "interdire les doublons" de §5) : posséder
+  déjà des exemplaires d'un module **augmente son poids au tirage** lors d'un prochain choix de
+  module (Niveau 1 ou récompense de Boss) — formule de pondération exacte à définir (§9.1)
+
+**Points encore ouverts** (à confirmer avant implémentation, voir aussi §9.1) :
+- Le motif niveaux 5/9 + Boss niveau 10 se répète-t-il identique à chaque décennie (15/19 + 20,
+  25/29 + 30...), ou seule la première décennie a cette forme ?
+- Le nombre d'ennemis en Prime continue-t-il à augmenter après le niveau 10 (Boss), ou reste-t-il
+  bloqué à 2 ?
+- La pondération par doublons déjà possédés s'applique-t-elle aussi au choix de module après un
+  Boss (2 propositions, §2), ou seulement au Niveau 1 ?
 
 ---
 
@@ -158,11 +197,13 @@ Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fi
 
 ## 5. Slots de modules équipables
 
-- Début de run : module de base + 1 module (2 slots)
-- +1 slot débloqué à chaque victoire de boss (rythme lié à la fréquence des boss, voir §2)
+- Début de run : module de base + 1 module (2 slots) — le 2ᵉ module est choisi au Niveau 1 (§2.3)
+- +1 slot débloqué à chaque victoire de boss (rythme lié à la fréquence des boss, voir §2/§2.3)
 - **Plafond proposé : 5 slots** (module de base inclus) — valeur provisoire, encore susceptible de changer
 - Le module de base occupe toujours un slot et reste équipé
-- **Doublons de modules** : à trancher — proposition initiale : **interdire les doublons** (un archétype par run) pour forcer la diversité et simplifier l'équilibrage en v1
+- **Doublons de modules autorisés** (décision utilisateur, remplace l'ancienne proposition
+  "interdire les doublons") : posséder déjà des exemplaires d'un module augmente son poids au
+  tirage lors d'un prochain choix de module — détail en §2.3
 
 ---
 
@@ -310,14 +351,13 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
 ### 9.1 Design / gameplay
 
 - Contenu exact de la Planète commerciale (uniquement des cartes, ou aussi d'autres bonus ?) et de l'Aventure (entièrement à définir, voir §2)
-- Logique d'apparition de la Station service : toujours disponible, liée aux PV du vaisseau, ou garantie après un combat difficile (voir §2)
 - Montants exacts d'Argent : récompense de combat, coût de réparation, coût d'amélioration, coût de déplacement d'un module (§2.1, §2.2)
 - Probabilités de déblocage des paliers de rareté (Commune → Rare → Légendaire) selon le niveau d'amélioration d'un module, et si l'amélioration ajoute plutôt/en plus des candidates multiples après combat (§2.2, §6)
 - La Planète commerciale propose-t-elle des cartes pour tous les modules du pool, ou seulement pour les modules actuellement équipés ? (§2, §6)
 - La carte gagnée après un combat est-elle garantie à chaque victoire, ou seulement probable ? (§2.1, §6)
-- Fréquence exacte des Boss (valeur de *n* étapes)
 - Cartes de base fournies avec un nouveau module choisi après un Boss : deck de départ fixe par module, à définir une fois le système de cartes approfondi (voir §7)
-- Plafond exact de slots équipables (proposition actuelle : 5, base incluse) et autorisation ou non des doublons de modules
+- Plafond exact de slots équipables (proposition actuelle : 5, base incluse) — voir aussi §2.3 pour les points encore ouverts sur la structure par niveaux (répétition du motif 5/9/10 par décennie, progression du nombre d'ennemis, pondération des doublons hors Niveau 1)
+- Formule exacte de pondération des doublons de modules au tirage (§2.3, §5) : plus un exemplaire supplémentaire compte-t-il, linéaire ou autre ?
 - Représentation visuelle d'un ennemi L occupant 2 emplacements (§3.2, §8.1) : rectangle fusionné sur les 2 cases, ou deux images liées logiquement ?
 - Compléter le jeu de cartes de chaque module : les archétypes de §4.3 (Bouclier énergétique, Radar, Propulseur, IA de combat, Générateur, Sabotage, Soute/Fret) n'ont pas encore de decks détaillés comme ceux de §4.1-4.2 ; les cartes déjà écrites en §4.1-4.2 n'ont pas encore de type/cible/rareté assignés (§7)
 - Munitions (§3.6/§7.4) : cas limite si la pioche et la défausse sont toutes les deux vides en cours de combat alors qu'il reste des cartes épuisées (qui ne sont jamais remélangées) — le joueur peut alors se retrouver sans carte à piocher ; à surveiller en playtest une fois des cartes à munitions limitées réellement jouables (voir §9.2 pour l'état d'implémentation actuel)
