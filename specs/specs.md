@@ -63,9 +63,8 @@ actions une fois cette ressource implémentée.
   pas été réparé. Implique une nouvelle couche de persistance hors-combat (PV actuels, PV max, niveau
   de mise à jour, position — par module équipé) qui **n'existe pas encore** dans `src/gameplay/` :
   `Vaisseau`/`Module` sont aujourd'hui recréés à neuf à chaque combat (`creer_vaisseau`/
-  `creer_combat_poc`, tirage aléatoire des modules équipés). Cette persistance sera de toute façon
-  nécessaire pour l'orchestration générale du parcours (§9.2) — pas implémentée à ce stade, spec
-  uniquement
+  `creer_combat_poc`, tirage aléatoire des modules équipés). Format et principes de cette
+  persistance tranchés en §10.3 (fichier de sauvegarde par partie) — pas encore implémentée
 
 #### Écran Station service (interface)
 
@@ -434,12 +433,14 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
 - Montants exacts d'Argent : récompense de combat (§2.1) ; coût des 4 actions de Station service —
   **temporairement gratuites** le temps que la ressource Argent soit implémentée (§2.2)
 - La Planète commerciale propose-t-elle des cartes pour tous les modules du pool, ou seulement pour les modules actuellement équipés ? (§2, §6)
-- **Persistance des modules hors combat** (§2.2) : PV actuels, PV max, niveau de mise à jour et
-  position, par module équipé, doivent survivre d'un combat à l'autre (dégâts non réparés,
-  progression de la Station service) — aucune structure de ce type n'existe encore dans
-  `src/gameplay/` (`Vaisseau`/`Module` sont recréés à neuf à chaque combat). Bloquant pour relier
-  l'écran Station service à un vrai parcours, et de toute façon nécessaire pour l'orchestration
-  générale du parcours (§9.2)
+- **Persistance des modules hors combat** (§2.2) : format et principes tranchés, voir §10.3 (fichier
+  de sauvegarde par partie, plusieurs parties possibles, graine + niveau plutôt que stockage littéral
+  des propositions tirées) — **pas encore implémenté**. Bloquant pour relier l'écran Station service
+  à un vrai parcours, et de toute façon nécessaire pour l'orchestration générale du parcours (§9.2).
+  Portée volontairement limitée aux points de passage entre étapes (§10.3) : un combat ou un passage
+  en Station service en cours n'est pas sauvegardable pour l'instant
+- Écran de sélection de partie (lister/choisir/créer une sauvegarde, §10.3) : pas encore conçu,
+  nécessaire maintenant que plusieurs parties peuvent coexister
 - Améliorer (Station service, §2.2) : y a-t-il un plafond de PV max, ou est-ce répétable indéfiniment ?
 - Filtrage du pool de récompense par palier de mise à jour débloqué (§2.2/§6) : à réconcilier avec le
   mécanisme de repli au palier inférieur déjà implémenté dans `tirer_carte_recompense`, qui suppose
@@ -496,7 +497,70 @@ pyproject.toml
 - Séparation stricte entre `src/ui` (affichage PC) et `src/gameplay` (logique de jeu, partagée avec la version web)
 - `src/gameplay` reste la seule source de vérité des règles de jeu : la version web ne fait que l'exécuter et l'afficher, elle ne réimplémente aucune règle
 
-### 10.3 Conventions de code
+### 10.3 Persistance du parcours (sauvegarde)
+
+Nécessaire pour que les dégâts/niveau de mise à jour des modules (§2.2) et l'avancement dans le
+parcours (§2.3) survivent d'un combat à l'autre — n'existe pas encore, décisions utilisateur
+ci-dessous.
+
+- **Un fichier JSON par partie** (plusieurs parties possibles en parallèle — décision utilisateur) :
+  PC `saves/<id>.json` (nouveau dossier à la racine, ajouté au `.gitignore` : ce sont des
+  sauvegardes de partie, pas du contenu de jeu comme `config/`) ; web une entrée `localStorage` par
+  id, plus une clé d'index listant les ids existants (`localStorage` ne permet pas de lister des
+  entrées directement)
+- **Contenu** :
+  ```json
+  {
+    "version": 1,
+    "id": "partie_20260823_142301",
+    "nom": "Partie du 23 aout",
+    "statut": "EN_COURS",
+    "graine": 918273645,
+    "niveau": 7,
+    "argent": 120,
+    "vaisseau": {
+      "base":           {"module_id": "MOD_1", "pv": 15, "pv_max": 15, "niveau_maj": 1},
+      "avant_gauche":   {"module_id": "MOD_3", "pv": 10, "pv_max": 18, "niveau_maj": 2},
+      "avant_droite":   null,
+      "arriere_gauche": {"module_id": "MOD_2", "pv": 9,  "pv_max": 9,  "niveau_maj": 1},
+      "arriere_droite": null
+    },
+    "deck": ["CRT_7", "CRT_7", "CRT_9", "CRT_15", "CRT_20"]
+  }
+  ```
+  - `version` : version du format, pour d'éventuelles migrations futures
+  - `id` : identifiant unique (nom de fichier PC / suffixe de clé localStorage web)
+  - `nom` : nom affiché dans un futur écran de sélection de partie (généré automatiquement pour
+    l'instant, ex. à partir de la date — pas de renommage par le joueur prévu dans un premier temps)
+  - `statut` : `EN_COURS` ou `TERMINEE` (décision utilisateur : une défaite **ne supprime pas** le
+    fichier, marqué `TERMINEE` pour un futur écran de récapitulatif de run — une nouvelle partie créera
+    un nouvel `id` plutôt que d'écraser une partie terminée)
+  - `graine` : graine maîtresse du run (décision utilisateur). Combinée au `niveau`, elle permet de
+    **retirer à l'identique** les 3 propositions d'étape d'un niveau (§2.3) sans les stocker
+    littéralement — cohérent avec la convention `random.Random` déjà utilisée partout dans le moteur
+    (voir "Déterminisme du tirage aléatoire" dans `CLAUDE.md`). Contrepartie acceptée : un changement futur
+    des probabilités de tirage (§2.3) changerait aussi les propositions déjà tirées d'anciennes
+    sauvegardes rechargées
+  - `niveau` : niveau courant (celui dont les propositions doivent être retirées/re-choisies)
+  - `vaisseau` : un état par emplacement (base + 4 équipables, §5) — `module_id` (référence
+    `config/modules.json`), `pv`/`pv_max` (§2.2), `niveau_maj` (palier de mise à jour, 1 à 3, §2.2) ;
+    `null` si l'emplacement est vide
+  - `deck` : ids de cartes possédées (`config/cartes.json`), doublons répétés dans la liste — même
+    principe que `regrouper_cartes()` (§6) pour l'affichage, mais stockage à plat ici
+- **Portée volontairement limitée** : seuls les points de passage entre étapes sont sauvegardés
+  (juste après tirage des propositions, ou juste après résolution d'une étape) — un combat ou un
+  passage en Station service **en cours** n'est pas sauvegardable dans l'immédiat ; quitter en plein
+  milieu fait perdre cette étape (repart au dernier point de passage sauvegardé au rechargement)
+- **Implémentation proposée** (pas encore faite) : nouveau `src/gameplay/partie.py` — dataclass
+  `Partie` + fonctions pures `partie_vers_json`/`partie_depuis_json` (testables sans I/O, même
+  principe que le reste de `src/gameplay/`) ; un petit wrapper d'I/O fichier côté PC ; `web/bridge.py`
+  expose les mêmes fonctions de (dé)sérialisation, `web/app.js` se charge de la lecture/écriture
+  `localStorage`
+- **Conséquence non résolue** : plusieurs sauvegardes possibles implique un écran de sélection de
+  partie (lister/choisir/créer), qui n'existe pas encore — à concevoir comme les écrans du parcours
+  déjà implémentés (§2.3/§6)
+
+### 10.4 Conventions de code
 
 - Classes claires et bien définies, une responsabilité par classe
 - Commentaires en français, **sans accents ni cédilles** (ASCII uniquement)
