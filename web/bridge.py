@@ -15,8 +15,8 @@ import sys
 
 sys.path.insert(0, "/repo")
 
-from src.gameplay.carte import CIBLES_SANS_CLIC, ActionCarte, CibleCarte
-from src.gameplay.config_poc import creer_combat_poc, creer_vaisseau
+from src.gameplay.carte import CIBLES_SANS_CLIC, ActionCarte, CibleCarte, regrouper_cartes
+from src.gameplay.config_poc import creer_combat_poc, creer_deck, creer_vaisseau
 from src.gameplay.donnees import charger_cartes, charger_modules
 from src.gameplay.module import Module
 from src.gameplay.parcours import modules_equipables, tirer_candidats_module, tirer_candidats_recompense
@@ -264,6 +264,36 @@ def fin_combat_victoire(graine) -> str:
             }
             for spec, carte in candidats
             if carte is not None
+        ]
+    )
+
+
+def etat_deck(graine) -> str:
+    """Ecran "deck en entier" (appelable depuis plusieurs endroits, cf. specs.md 6) : cartes du
+    combat en cours si un combat est actif (combat.joueur.deck), sinon un deck de demonstration
+    tire au sort (graine optionnelle) - meme situation que nouveau_choix_module/
+    fin_combat_victoire pour l'instant : pas encore reliee a un vrai bouton dans l'UI."""
+    if combat is not None:
+        cartes = combat.joueur.deck.toutes_cartes()
+    else:
+        aleatoire = random.Random(int(graine)) if graine is not None else random.Random()
+        _vaisseau, specs_utilisees = creer_vaisseau(charger_modules(), aleatoire)
+        cartes = creer_deck(specs_utilisees, charger_cartes(), aleatoire).toutes_cartes()
+    return json.dumps(
+        [
+            {
+                "nom": carte.nom,
+                "image": _chemin_web(carte.image),
+                "cout": carte.cout,
+                "rarete": carte.rarete.name,
+                "valeur": carte.valeur,
+                "type": carte.type.name,
+                "cible": carte.cible.name,
+                "action": carte.action.name if carte.action else None,
+                "duree": carte.duree,
+                "quantite": quantite,
+            }
+            for carte, quantite in regrouper_cartes(cartes)
         ]
     )
 

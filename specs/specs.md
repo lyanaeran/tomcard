@@ -234,6 +234,22 @@ Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fi
     (réutilisable par d'autres écrans, notamment le futur écran de deck complet, §6 plus bas),
     `texteEffetCarte()` déjà existant dans `web/app.js` côté web (réutilisé tel quel, `bridge.py`
     enrichi des champs `type`/`cible`/`action`/`duree`/`valeur` par candidate)
+- **Écran "deck en entier"** : consultable depuis plusieurs endroits du parcours (pas encore
+  déterminé précisément lesquels, l'orchestration du parcours n'existe pas encore, cf. §2.3) —
+  grille de toutes les cartes actuellement possédées par le joueur, regroupées par modèle (une
+  entrée par carte différente, avec un badge ×N si plusieurs exemplaires) plutôt qu'une case par
+  exemplaire individuel
+  - `Deck.toutes_cartes()` (`src/gameplay/deck.py`) réunit pioche + main + défausse + cartes
+    épuisées ; `regrouper_cartes()` (`src/gameplay/carte.py`) transforme une liste de cartes en
+    `(carte, quantité)` par modèle — fonctions gameplay partagées par les deux plateformes
+  - **Implémenté** en écran autonome (même situation que les deux écrans précédents, pas encore
+    relié à un vrai bouton dans l'UI) : `src/ui/ecran_deck.py` (PC, grille figée de 8 colonnes,
+    survol d'une carte → panneau de description fixe en bas d'écran plutôt qu'une infobulle
+    ancrée sur la carte, pour éviter tout chevauchement avec la ligne voisine dans une grille
+    dense) ; `web/bridge.py` (`etat_deck`, cartes du combat en cours si actif sinon un deck de
+    démonstration tiré au sort) + `web/app.js` (`voirDeck`, exposée sur `window` — pas
+    d'infobulle au survol comme le reste de l'UI web, taper une carte affiche sa description
+    dans un popup, même principe que `#info-carte` pour la main en combat)
 - À la Planète commerciale (§2.2), achat direct de cartes contre de l'Argent ; la disponibilité de cartes Rares/Légendaires pour un module dépend de son niveau d'amélioration (Station service, §2.2)
 - Amélioration d'un module (Station service, §2.2) : piste envisagée pour débloquer des paliers de rareté supérieurs pour ses candidates après combat et/ou pour ses cartes disponibles à la Planète commerciale — probabilités et seuils exacts à trancher (§9.1)
 

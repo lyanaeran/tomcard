@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "23";
+const VERSION_CACHE = "24";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -618,6 +618,49 @@ function nouvelleDefaite() {
 
 window.nouvelleVictoire = nouvelleVictoire;
 window.nouvelleDefaite = nouvelleDefaite;
+
+// Ecran "deck en entier" (appelable depuis plusieurs endroits du parcours, specs.md 6). Meme
+// situation que les deux ecrans precedents : pas encore reliee a un vrai bouton dans l'UI,
+// exposee sur window pour test manuel. Pas d'infobulle au survol (web simplifie par rapport a
+// pyglet, cf. CLAUDE.md) : taper une carte affiche sa description dans un popup, meme principe
+// que #info-carte pour la main en combat.
+let cartesDeckAffichees = [];
+
+function afficherDeck(cartes) {
+    cartesDeckAffichees = cartes;
+    document.getElementById("grille-deck").innerHTML = cartes
+        .map(
+            (carte, index) => `
+        <div class="carte-deck" data-index="${index}">
+            <span class="etoile-${carte.rarete.toLowerCase()}">★</span>
+            ${carte.quantite > 1 ? `<span class="carte-deck-quantite">×${carte.quantite}</span>` : ""}
+            <img src="${carte.image}" alt="${carte.nom}">
+            <div class="carte-deck-nom">${carte.nom}</div>
+            <div class="carte-deck-cout">⚡ ${carte.cout}</div>
+        </div>`
+        )
+        .join("");
+    document.getElementById("info-carte-deck").innerHTML = "";
+    document.querySelectorAll(".carte-deck").forEach((element) => {
+        element.addEventListener("click", () => afficherInfoCarteDeck(cartesDeckAffichees[Number(element.dataset.index)]));
+    });
+    document.getElementById("app").classList.add("cachee");
+    document.getElementById("ecran-deck").classList.remove("cachee");
+}
+
+function afficherInfoCarteDeck(carte) {
+    document.getElementById("info-carte-deck").innerHTML = `
+        <img src="${carte.image}" alt="${carte.nom}">
+        <div class="info-carte-nom">${carte.nom}</div>
+        <div class="info-carte-effet">${texteEffetCarte(carte)}</div>
+        <div class="info-carte-cout">⚡ ${carte.cout}</div>`;
+}
+
+function voirDeck(graine = null) {
+    afficherDeck(appelerBridge("etat_deck", graine));
+}
+
+window.voirDeck = voirDeck;
 
 document.getElementById("fin-tour").addEventListener("click", finirTour);
 demarrer();

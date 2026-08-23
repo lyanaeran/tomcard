@@ -512,7 +512,8 @@ body {
    chacune ancree sur sa case). pointer-events:none pour laisser passer le tap
    sur une case en-dessous (cible d'une carte armee, cf. cliquerCase). */
 #info-carte,
-#info-case {
+#info-case,
+#info-carte-deck {
     position: fixed;
     top: 45%;
     left: 50%;
@@ -532,11 +533,13 @@ body {
 }
 
 #info-carte:empty,
-#info-case:empty {
+#info-case:empty,
+#info-carte-deck:empty {
     display: none;
 }
 
-#info-carte img {
+#info-carte img,
+#info-carte-deck img {
     width: 90px;
     aspect-ratio: 1 / 1;
     object-fit: contain;
@@ -801,4 +804,71 @@ body {
     color: #b4c8e6;
     margin-top: 0.3rem;
     line-height: 1.3;
+}
+
+/* Ecran "deck en entier" (appelable depuis plusieurs endroits du parcours, specs.md 6). Fond de
+   combat reutilise en placeholder (deja applique globalement sur body) - decision utilisateur,
+   a remplacer par un fond dedie. Pas encore reliee a un vrai bouton dans l'UI, cf. web/app.js. */
+#ecran-deck {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+#ecran-deck h1 {
+    margin: 0 0 1.5rem;
+    font-size: 1.8rem;
+    font-weight: normal;
+}
+
+#grille-deck {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    max-width: 900px;
+}
+
+.carte-deck {
+    position: relative;
+    width: clamp(90px, 12vw, 120px);
+    background: rgba(20, 24, 34, 0.75);
+    border: 2px solid #5a6e91;
+    border-radius: 8px;
+    padding: 0.5rem;
+    cursor: pointer;
+}
+
+.carte-deck:hover {
+    border-color: #ffffff;
+}
+
+.carte-deck img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1/1;
+    object-fit: contain;
+    margin-bottom: 0.3rem;
+}
+
+.carte-deck-nom {
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.carte-deck-cout {
+    font-size: 0.7rem;
+    color: #dcdce1;
+}
+
+.carte-deck-quantite {
+    position: absolute;
+    top: 0.3rem;
+    right: 0.4rem;
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: #ffdc78;
 }
