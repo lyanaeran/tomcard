@@ -16,10 +16,10 @@ import sys
 sys.path.insert(0, "/repo")
 
 from src.gameplay.carte import CIBLES_SANS_CLIC, ActionCarte, CibleCarte
-from src.gameplay.config_poc import creer_combat_poc
-from src.gameplay.donnees import charger_modules
+from src.gameplay.config_poc import creer_combat_poc, creer_vaisseau
+from src.gameplay.donnees import charger_cartes, charger_modules
 from src.gameplay.module import Module
-from src.gameplay.parcours import modules_equipables, tirer_candidats_module
+from src.gameplay.parcours import modules_equipables, tirer_candidats_module, tirer_candidats_recompense
 from src.gameplay.position import Colonne, Position, Rangee
 
 RACINE_FS = "/repo/"
@@ -237,6 +237,28 @@ def nouveau_choix_module(graine) -> str:
         [
             {"id": candidat.id, "nom": candidat.nom, "image": _chemin_web(candidat.image), "description": candidat.description}
             for candidat in candidats
+        ]
+    )
+
+
+def fin_combat_victoire(graine) -> str:
+    """Ecran de victoire (specs.md 2.1/6) : un candidat de recompense par module d'un vaisseau
+    tire au sort - demo, pas encore reliee a un vrai combat termine (cf. specs.md 2.3), meme
+    situation que nouveau_choix_module."""
+    aleatoire = random.Random(int(graine)) if graine is not None else random.Random()
+    _vaisseau, specs_utilisees = creer_vaisseau(charger_modules(), aleatoire)
+    candidats = tirer_candidats_recompense(specs_utilisees, charger_cartes(), aleatoire)
+    return json.dumps(
+        [
+            {
+                "module_nom": spec.nom,
+                "carte_nom": carte.nom,
+                "image": _chemin_web(carte.image),
+                "cout": carte.cout,
+                "rarete": carte.rarete.name,
+            }
+            for spec, carte in candidats
+            if carte is not None
         ]
     )
 

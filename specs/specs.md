@@ -29,7 +29,8 @@ Un deckbuilder roguelike inspiré de Slay the Spire, où le joueur incarne un va
 ### 2.1 Argent et récompenses de combat
 
 - Après chaque combat gagné, le joueur gagne de l'**Argent** — nouvelle ressource de run, distincte de l'Électricité (ressource de combat, voir §3). Montant exact à définir (§9.1)
-- Il gagne aussi peut-être une carte : voir §6 pour le mécanisme de choix (candidate par module équipé). Récompense garantie ou probabiliste à trancher (§9.1)
+- Il gagne aussi une carte : voir §6 pour le mécanisme de choix (candidate par module équipé). **Récompense garantie** à chaque victoire (pas probabiliste) — écran de fin de combat implémenté, voir §6
+- En cas de défaite, écran dédié avec message de défaite (pas de choix de carte) — implémenté, voir §6
 - Le joueur choisit ensuite l'étape suivante parmi celles qui apparaissent (Prime, Station service, Planète commerciale ou Aventure) — l'offre n'est pas forcément la même à chaque fois (voir §9.1)
 
 ### 2.2 Station service (garage)
@@ -209,11 +210,24 @@ Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fi
 
 ## 6. Progression des modules / cartes
 
-- Après un combat gagné, le joueur gagne peut-être une carte (voir §2.1). Mécanisme : **1 carte candidate par module équipé**, tirée dans le pool de cartes propre à ce module — le joueur choisit parmi ces N candidates, ce qui attribue implicitement la carte au module correspondant
+- Après un combat gagné, le joueur gagne une carte, garantie (voir §2.1). Mécanisme : **1 carte
+  candidate par module équipé** (base incluse, au maximum 5 — §5), tirée dans le pool de cartes
+  propre à ce module — le joueur choisit parmi ces N candidates, ce qui attribue implicitement la
+  carte au module correspondant
   - Pour le **module principal** (module de base), sa candidate est tirée dans le **pool entier** de cartes (tous modules confondus)
   - Pour un **module secondaire**, sa candidate est tirée dans la **liste de cartes propre à ce module**
-  - La rareté (voir 7.3) pondère chaque tirage individuel
+  - La rareté (voir 7.3) pondère chaque tirage individuel : **5% Légendaire, 20% Rare, sinon (75%)
+    Commune** — décision utilisateur. **Les cartes Base ne sont jamais proposées en récompense**
+    (deck de départ uniquement). Si le pool d'un module n'a aucune carte au palier tiré, on
+    redescend au palier inférieur (Légendaire → Rare → Commune) plutôt que de ne rien proposer
   - Remplace l'ancien mécanisme "1 carte parmi 3 propositions pondérées par rareté, avec choix du module destinataire" : le choix du module destinataire se fait maintenant implicitement en choisissant la candidate
+  - **Implémenté** en écran de fin de combat autonome (Victoire/Défaite), pas encore relié à une
+    orchestration de parcours (qui n'existe pas encore, cf. §2.3) : `src/gameplay/parcours.py`
+    (`tirer_candidats_recompense` et les fonctions de tirage par palier), `src/ui/ecran_fin_combat.py`
+    (PC), `web/app.js` (`nouvelleVictoire`/`nouvelleDefaite`, exposées sur `window` pour test
+    manuel) + `web/bridge.py` (`fin_combat_victoire`). Défaite : titre rouge "DEFAITE" + message
+    "Pas d'inquietude : vos restes seront recycles, rien ne se perd dans l'espace." (fond de
+    combat réutilisé en placeholder, décision utilisateur, à remplacer par un fond dédié)
 - À la Planète commerciale (§2.2), achat direct de cartes contre de l'Argent ; la disponibilité de cartes Rares/Légendaires pour un module dépend de son niveau d'amélioration (Station service, §2.2)
 - Amélioration d'un module (Station service, §2.2) : piste envisagée pour débloquer des paliers de rareté supérieurs pour ses candidates après combat et/ou pour ses cartes disponibles à la Planète commerciale — probabilités et seuils exacts à trancher (§9.1)
 
@@ -354,7 +368,6 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
 - Montants exacts d'Argent : récompense de combat, coût de réparation, coût d'amélioration, coût de déplacement d'un module (§2.1, §2.2)
 - Probabilités de déblocage des paliers de rareté (Commune → Rare → Légendaire) selon le niveau d'amélioration d'un module, et si l'amélioration ajoute plutôt/en plus des candidates multiples après combat (§2.2, §6)
 - La Planète commerciale propose-t-elle des cartes pour tous les modules du pool, ou seulement pour les modules actuellement équipés ? (§2, §6)
-- La carte gagnée après un combat est-elle garantie à chaque victoire, ou seulement probable ? (§2.1, §6)
 - Cartes de base fournies avec un nouveau module choisi après un Boss : deck de départ fixe par module, à définir une fois le système de cartes approfondi (voir §7)
 - Plafond exact de slots équipables (proposition actuelle : 5, base incluse) — voir aussi §2.3 pour les points encore ouverts sur la structure par niveaux (répétition du motif 5/9/10 par décennie, progression du nombre d'ennemis, pondération des doublons hors Niveau 1)
 - Formule exacte de pondération des doublons de modules au tirage (§2.3, §5) : plus un exemplaire supplémentaire compte-t-il, linéaire ou autre ?

@@ -697,3 +697,101 @@ body {
     font-size: 0.85rem;
     color: #dcdce1;
 }
+
+/* Ecran de fin de combat (parcours, specs.md 2.1/6). Fond de combat reutilise en placeholder
+   (deja applique globalement sur body) - decision utilisateur, a remplacer par un fond dedie.
+   Pas encore reliee a une orchestration de parcours, cf. web/app.js. Meme structure generale
+   que #ecran-choix-module (titre, contenu, instruction). */
+#ecran-fin-combat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+#titre-fin-combat {
+    margin: 0;
+    font-size: 2.2rem;
+    font-weight: normal;
+}
+
+#titre-fin-combat.defaite {
+    color: rgb(190, 40, 40);
+}
+
+#titre-fin-combat.victoire {
+    color: rgb(70, 190, 90);
+}
+
+#message-defaite {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+#ecran-fin-combat .instruction {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+#candidats-recompense {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1.2rem;
+}
+
+.candidat-recompense {
+    width: clamp(130px, 17vw, 180px);
+    background: rgba(20, 24, 34, 0.75);
+    border: 2px solid #5a6e91;
+    border-radius: 10px;
+    padding: 0.8rem;
+    cursor: pointer;
+}
+
+.candidat-recompense:hover {
+    border-color: #ffffff;
+}
+
+.candidat-recompense-entete {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.75rem;
+    color: #b4c8e6;
+}
+
+/* Memes couleurs que COULEUR_ETOILE_RARETE dans src/ui/fenetre.py. */
+.etoile-commune {
+    color: rgb(70, 190, 90);
+}
+
+.etoile-rare {
+    color: rgb(60, 130, 230);
+}
+
+.etoile-legendaire {
+    color: rgb(235, 150, 30);
+}
+
+.candidat-recompense img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1/1;
+    object-fit: contain;
+    margin-bottom: 0.4rem;
+}
+
+.candidat-recompense-nom {
+    font-weight: bold;
+}
+
+.candidat-recompense-cout {
+    font-size: 0.85rem;
+    color: #dcdce1;
+}

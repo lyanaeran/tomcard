@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "21";
+const VERSION_CACHE = "22";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -565,6 +565,58 @@ function nouveauChoixModule(graine = null) {
 }
 
 window.nouveauChoixModule = nouveauChoixModule;
+
+// Ecran de fin de combat (parcours, specs.md 2.1/6). Meme situation que l'ecran de choix de
+// module : pas encore reliee a une orchestration de parcours, exposee sur window pour test
+// manuel en attendant. nouvelleDefaite() n'a besoin d'aucune donnee (texte fixe) ;
+// nouvelleVictoire(graine) tire les candidats de recompense via bridge.py (un par module d'un
+// vaisseau tire au sort - demo, pas un vrai combat termine pour l'instant).
+function afficherFinCombat(victoire, candidats) {
+    const titre = document.getElementById("titre-fin-combat");
+    titre.textContent = victoire ? "VICTOIRE" : "DEFAITE";
+    titre.className = victoire ? "victoire" : "defaite";
+    document.getElementById("message-defaite").classList.toggle("cachee", victoire);
+    document.getElementById("candidats-recompense").classList.toggle("cachee", !victoire);
+    document.getElementById("instruction-fin-combat").classList.toggle("cachee", !victoire);
+
+    if (victoire) {
+        document.getElementById("candidats-recompense").innerHTML = candidats
+            .map(
+                (candidat, index) => `
+        <div class="candidat-recompense" data-index="${index}">
+            <div class="candidat-recompense-entete">
+                <span class="etoile-${candidat.rarete.toLowerCase()}">★</span>
+                <span>${candidat.module_nom}</span>
+            </div>
+            <img src="${candidat.image}" alt="${candidat.carte_nom}">
+            <div class="candidat-recompense-nom">${candidat.carte_nom}</div>
+            <div class="candidat-recompense-cout">Cout ${candidat.cout}</div>
+        </div>`
+            )
+            .join("");
+        document.querySelectorAll(".candidat-recompense").forEach((element) => {
+            element.addEventListener("click", () => choisirRecompense(candidats[Number(element.dataset.index)]));
+        });
+    }
+
+    document.getElementById("app").classList.add("cachee");
+    document.getElementById("ecran-fin-combat").classList.remove("cachee");
+}
+
+function choisirRecompense(candidat) {
+    console.log("Carte choisie :", candidat.carte_nom);
+}
+
+function nouvelleVictoire(graine = null) {
+    afficherFinCombat(true, appelerBridge("fin_combat_victoire", graine));
+}
+
+function nouvelleDefaite() {
+    afficherFinCombat(false, []);
+}
+
+window.nouvelleVictoire = nouvelleVictoire;
+window.nouvelleDefaite = nouvelleDefaite;
 
 document.getElementById("fin-tour").addEventListener("click", finirTour);
 demarrer();
