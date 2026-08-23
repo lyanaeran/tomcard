@@ -35,13 +35,51 @@ Un deckbuilder roguelike inspiré de Slay the Spire, où le joueur incarne un va
 
 ### 2.2 Station service (garage)
 
-Trois options indépendantes, chacune payante en Argent (montants à définir, §9.1) :
+Quatre actions indépendantes, appliquées à un module choisi par le joueur (voir écran ci-dessous) :
 
-- **Réparer un module** : restaure ses PV jusqu'à son maximum actuel
-- **Améliorer un module** : augmente ses PV max. Pistes envisagées (non exclusives, à trancher en §9.1) :
-  - le module ne propose au départ que des cartes Communes (en récompense de combat comme à la Planète commerciale), et débloque le palier Rare puis Légendaire au fil de ses améliorations
-  - un module amélioré propose plusieurs cartes au choix après combat plutôt qu'une seule
-- **Déplacer un module** : change sa position sur le vaisseau, contre paiement
+- **Réparer** : restaure 20 PV au module sélectionné (plafonné à son pv_max)
+- **Améliorer** : augmente le pv_max du module sélectionné de 10, et ses PV actuels du même montant
+  (pas seulement le plafond — un module endommagé regagne aussi 10 PV immédiats)
+- **Mettre à jour** : fait progresser le palier de cartes proposées pour ce module, en récompense de
+  combat (§6) et à la Planète commerciale (§2.2 ci-dessus) :
+  **Niveau 1** (valeur de départ, Commune uniquement) → **Niveau 2** (+Rare) → **Niveau 3** (+Légendaire,
+  niveau maximum, cohérent avec les 3 paliers de rareté de §7.3)
+- **Déplacer** : change la position d'un module sur la grille d'équipement (§3.1/§5). Le joueur
+  sélectionne le module à déplacer, clique "Déplacer", puis clique l'emplacement de destination :
+  vide, le module y est simplement déplacé ; occupé, les deux modules échangent leur position
+
+**Toutes les actions sont gratuites pour l'instant** (décision utilisateur, provisoire) : la ressource
+Argent n'existe pas encore côté gameplay (§2.1/§9.1) — un coût en Argent sera réintroduit sur ces 4
+actions une fois cette ressource implémentée.
+
+- Réparer/Améliorer/Mettre à jour s'appliquent au **module principal** comme aux modules équipés.
+  Déplacer ne s'applique pas au principal (toujours en position Mid, pas d'emplacement équivalent à
+  échanger)
+- Améliorer/Mettre à jour progressent **par exemplaire équipé**, pas par type de module : deux
+  exemplaires du même module peuvent avoir des PV max et des paliers de mise à jour différents —
+  cohérent avec les doublons de modules autorisés (§2.3/§5)
+- **Les dégâts subis en combat persistent d'un combat à l'autre** (décision utilisateur — sinon
+  Réparer n'aurait aucune utilité) : un module endommagé le reste au niveau suivant tant qu'il n'a
+  pas été réparé. Implique une nouvelle couche de persistance hors-combat (PV actuels, PV max, niveau
+  de mise à jour, position — par module équipé) qui **n'existe pas encore** dans `src/gameplay/` :
+  `Vaisseau`/`Module` sont aujourd'hui recréés à neuf à chaque combat (`creer_vaisseau`/
+  `creer_combat_poc`, tirage aléatoire des modules équipés). Cette persistance sera de toute façon
+  nécessaire pour l'orchestration générale du parcours (§9.2) — pas implémentée à ce stade, spec
+  uniquement
+
+#### Écran Station service (interface)
+
+- Fond de combat réutilisé en placeholder (comme les 3 autres écrans du parcours déjà implémentés),
+  à remplacer par un fond dédié
+- Modules du vaisseau affichés comme en combat (grille 2×2 + module principal) : le joueur clique un
+  module pour le sélectionner (surbrillance), puis clique une des 4 actions pour l'appliquer au
+  module sélectionné
+- Icônes des 4 actions dans `assets/station_service/` : `reparer.png`, `ameliorer.png`,
+  `mettre_a_jour.png`, `deplacer.png`
+- **Pas encore implémenté** (spec uniquement à ce stade) : dépend de la couche de persistance
+  hors-combat décrite ci-dessus, qui n'existe pas encore. Une fois posée, cet écran suivra le même
+  principe autonome que les 3 écrans déjà implémentés (§2.3/§6) — non relié à une orchestration de
+  parcours tant que celle-ci n'existe pas
 
 ### 2.3 Structure par niveaux
 
@@ -250,8 +288,14 @@ Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fi
     démonstration tiré au sort) + `web/app.js` (`voirDeck`, exposée sur `window` — pas
     d'infobulle au survol comme le reste de l'UI web, taper une carte affiche sa description
     dans un popup, même principe que `#info-carte` pour la main en combat)
-- À la Planète commerciale (§2.2), achat direct de cartes contre de l'Argent ; la disponibilité de cartes Rares/Légendaires pour un module dépend de son niveau d'amélioration (Station service, §2.2)
-- Amélioration d'un module (Station service, §2.2) : piste envisagée pour débloquer des paliers de rareté supérieurs pour ses candidates après combat et/ou pour ses cartes disponibles à la Planète commerciale — probabilités et seuils exacts à trancher (§9.1)
+- À la Planète commerciale (§2.2), achat direct de cartes contre de l'Argent ; la disponibilité de cartes Rares/Légendaires pour un module dépend de son niveau de mise à jour (Station service, §2.2)
+- **Mettre à jour un module (Station service, §2.2) débloque directement les paliers de rareté
+  disponibles pour ses candidates après combat** (et pour ses cartes à la Planète commerciale) :
+  Niveau 1 = Commune uniquement, Niveau 2 = +Rare, Niveau 3 = +Légendaire (palier maximum) —
+  décision utilisateur, remplace l'ancienne piste encore ouverte de probabilités graduelles.
+  Implique qu'à terme, le tirage de récompense (`tirer_carte_recompense`) devra filtrer le pool par
+  palier débloqué du module concerné plutôt que retomber automatiquement au palier inférieur en cas
+  de pool vide comme aujourd'hui (pas encore implémenté, cf. §2.2 pour l'état d'avancement)
 
 ---
 
@@ -387,9 +431,19 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
 ### 9.1 Design / gameplay
 
 - Contenu exact de la Planète commerciale (uniquement des cartes, ou aussi d'autres bonus ?) et de l'Aventure (entièrement à définir, voir §2)
-- Montants exacts d'Argent : récompense de combat, coût de réparation, coût d'amélioration, coût de déplacement d'un module (§2.1, §2.2)
-- Probabilités de déblocage des paliers de rareté (Commune → Rare → Légendaire) selon le niveau d'amélioration d'un module, et si l'amélioration ajoute plutôt/en plus des candidates multiples après combat (§2.2, §6)
+- Montants exacts d'Argent : récompense de combat (§2.1) ; coût des 4 actions de Station service —
+  **temporairement gratuites** le temps que la ressource Argent soit implémentée (§2.2)
 - La Planète commerciale propose-t-elle des cartes pour tous les modules du pool, ou seulement pour les modules actuellement équipés ? (§2, §6)
+- **Persistance des modules hors combat** (§2.2) : PV actuels, PV max, niveau de mise à jour et
+  position, par module équipé, doivent survivre d'un combat à l'autre (dégâts non réparés,
+  progression de la Station service) — aucune structure de ce type n'existe encore dans
+  `src/gameplay/` (`Vaisseau`/`Module` sont recréés à neuf à chaque combat). Bloquant pour relier
+  l'écran Station service à un vrai parcours, et de toute façon nécessaire pour l'orchestration
+  générale du parcours (§9.2)
+- Améliorer (Station service, §2.2) : y a-t-il un plafond de PV max, ou est-ce répétable indéfiniment ?
+- Filtrage du pool de récompense par palier de mise à jour débloqué (§2.2/§6) : à réconcilier avec le
+  mécanisme de repli au palier inférieur déjà implémenté dans `tirer_carte_recompense`, qui suppose
+  aujourd'hui que tout le pool d'un module est accessible
 - Cartes de base fournies avec un nouveau module choisi après un Boss : deck de départ fixe par module, à définir une fois le système de cartes approfondi (voir §7)
 - Plafond exact de slots équipables (proposition actuelle : 5, base incluse) — voir aussi §2.3 pour les points encore ouverts sur la structure par niveaux (répétition du motif 5/9/10 par décennie, progression du nombre d'ennemis, pondération des doublons hors Niveau 1)
 - Formule exacte de pondération des doublons de modules au tirage (§2.3, §5) : plus un exemplaire supplémentaire compte-t-il, linéaire ou autre ?
