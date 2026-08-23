@@ -256,6 +256,11 @@ def fin_combat_victoire(graine) -> str:
                 "image": _chemin_web(carte.image),
                 "cout": carte.cout,
                 "rarete": carte.rarete.name,
+                "valeur": carte.valeur,
+                "type": carte.type.name,
+                "cible": carte.cible.name,
+                "action": carte.action.name if carte.action else None,
+                "duree": carte.duree,
             }
             for spec, carte in candidats
             if carte is not None

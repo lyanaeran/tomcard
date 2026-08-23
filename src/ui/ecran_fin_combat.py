@@ -11,7 +11,15 @@ from pyglet import shapes
 
 from src.gameplay.carte import Carte, RareteCarte
 from src.gameplay.donnees import SpecModule
-from src.ui.fenetre import COULEUR_ETOILE_RARETE, FOND_IMAGE, HAUTEUR_FENETRE, LARGEUR_FENETRE, _sprite_ajuste, _sprite_etire
+from src.ui.fenetre import (
+    COULEUR_ETOILE_RARETE,
+    FOND_IMAGE,
+    HAUTEUR_FENETRE,
+    LARGEUR_FENETRE,
+    _sprite_ajuste,
+    _sprite_etire,
+    texte_effet_carte,
+)
 
 COULEUR_DEFAITE = (190, 40, 40)
 COULEUR_VICTOIRE = (70, 190, 90)
@@ -26,10 +34,10 @@ MESSAGE_DEFAITE = "Pas d'inquietude : vos restes seront recycles, rien ne se per
 INSTRUCTION_VICTOIRE = "Choisissez une carte a ajouter a votre deck."
 
 LARGEUR_CARTE_RECOMPENSE = 180
-HAUTEUR_IMAGE_RECOMPENSE = 120
+HAUTEUR_IMAGE_RECOMPENSE = 100
 ESPACEMENT_RECOMPENSE = 30
-Y_CARTE_RECOMPENSE = 280
-HAUTEUR_CARTE_RECOMPENSE = 300
+Y_CARTE_RECOMPENSE = 240
+HAUTEUR_CARTE_RECOMPENSE = 340
 
 
 def _rect_candidat(index: int, total: int) -> tuple[float, float, float, float]:
@@ -172,7 +180,7 @@ class EcranFinCombat(pyglet.window.Window):
         nom_carte = pyglet.text.Label(
             carte.nom,
             x=cx,
-            y=y_image - 20,
+            y=y_image - 18,
             anchor_x="center",
             anchor_y="center",
             font_size=14,
@@ -180,16 +188,29 @@ class EcranFinCombat(pyglet.window.Window):
             batch=lot,
         )
         cout = pyglet.text.Label(
-            f"Cout {carte.cout}",
+            f"⚡{carte.cout}",
             x=cx,
-            y=y_image - 45,
+            y=y_image - 40,
             anchor_x="center",
             anchor_y="center",
             font_size=12,
             color=(200, 200, 205, 255),
             batch=lot,
         )
-        return [cadre, nom_module, sprite, etoile, nom_carte, cout]
+        description = pyglet.text.Label(
+            texte_effet_carte(carte),
+            x=cx,
+            y=y_image - 62,
+            anchor_x="center",
+            anchor_y="top",
+            font_size=10,
+            color=(200, 200, 205, 255),
+            multiline=True,
+            width=largeur - 24,
+            align="center",
+            batch=lot,
+        )
+        return [cadre, nom_module, sprite, etoile, nom_carte, cout, description]
 
     def on_mouse_motion(self, x: int, y: int, dx: int, dy: int) -> None:
         self.index_survole = self._index_a(x, y)

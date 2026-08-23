@@ -228,6 +228,12 @@ Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fi
     manuel) + `web/bridge.py` (`fin_combat_victoire`). Défaite : titre rouge "DEFAITE" + message
     "Pas d'inquietude : vos restes seront recycles, rien ne se perd dans l'espace." (fond de
     combat réutilisé en placeholder, décision utilisateur, à remplacer par un fond dédié)
+  - Chaque carte candidate affiche son coût en électricité sous forme d'emoji (⚡N, plutôt qu'un
+    texte "Coût N") et sa description d'effet en toutes lettres, générée depuis ses données
+    (type/cible/action/valeur/durée) : `texte_effet_carte()` dans `src/ui/fenetre.py` côté PC
+    (réutilisable par d'autres écrans, notamment le futur écran de deck complet, §6 plus bas),
+    `texteEffetCarte()` déjà existant dans `web/app.js` côté web (réutilisé tel quel, `bridge.py`
+    enrichi des champs `type`/`cible`/`action`/`duree`/`valeur` par candidate)
 - À la Planète commerciale (§2.2), achat direct de cartes contre de l'Argent ; la disponibilité de cartes Rares/Légendaires pour un module dépend de son niveau d'amélioration (Station service, §2.2)
 - Amélioration d'un module (Station service, §2.2) : piste envisagée pour débloquer des paliers de rareté supérieurs pour ses candidates après combat et/ou pour ses cartes disponibles à la Planète commerciale — probabilités et seuils exacts à trancher (§9.1)
 

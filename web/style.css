@@ -795,3 +795,10 @@ body {
     font-size: 0.85rem;
     color: #dcdce1;
 }
+
+.candidat-recompense-description {
+    font-size: 0.75rem;
+    color: #b4c8e6;
+    margin-top: 0.3rem;
+    line-height: 1.3;
+}
