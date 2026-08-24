@@ -158,6 +158,22 @@ def test_combat_depuis_partie_en_mode_test_ignore_les_pv_persistes():
     assert module_equipe.pv_max == PV_MODULE_MODE_TEST
 
 
+def test_combat_depuis_partie_en_mode_test_donne_20_degats_aux_cartes_attaque_de_base():
+    """Meme comportement que creer_deck_mode_test (config_poc.py), applique cette fois au deck
+    reel d'une partie (2 exemplaires de Laser dans _partie_exemple) plutot qu'a une demonstration."""
+    from src.gameplay.config_poc import VALEUR_ATTAQUE_BASE_MODE_TEST
+
+    assert partie_module.MODE_TEST is True
+    partie = _partie_exemple()
+
+    combat = combat_depuis_partie(partie, random.Random(1))
+
+    toutes_les_cartes = combat.joueur.deck.pioche + combat.joueur.deck.main
+    lasers = [carte for carte in toutes_les_cartes if carte.nom == "Laser"]
+    assert len(lasers) == 2
+    assert all(carte.valeur == VALEUR_ATTAQUE_BASE_MODE_TEST for carte in lasers)
+
+
 # --- Progression (specs.md 2.4) ---
 
 

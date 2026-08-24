@@ -4,6 +4,7 @@ Tests unitaires pour la generation aleatoire du combat du POC (src/gameplay/conf
 
 import random
 
+from src.gameplay import config_poc as config_poc_module
 from src.gameplay.carte import RareteCarte, TypeCarte
 from src.gameplay.combat import EtatCombat
 from src.gameplay.config_poc import (
@@ -11,6 +12,7 @@ from src.gameplay.config_poc import (
     ELECTRICITE_PAR_TOUR,
     ID_MODULE_PRINCIPAL,
     MODE_TEST,
+    NOMBRE_ENNEMIS_MODE_TEST,
     NOMBRE_MODULES_EQUIPES,
     PV_ENNEMI_MODE_TEST,
     PV_MODULE_MODE_TEST,
@@ -60,7 +62,9 @@ def test_creer_vaisseau_est_deterministe_pour_une_meme_graine():
     assert noms_1 == noms_2
 
 
-def test_creer_flotte_remplit_les_6_cases():
+def test_creer_flotte_remplit_les_6_cases(monkeypatch):
+    """Hors mode test (cf. test_creer_flotte_en_mode_test_ne_remplit_que_2_cases ci-dessous)."""
+    monkeypatch.setattr(config_poc_module, "MODE_TEST", False)
     specs = charger_ennemis()
     aleatoire = random.Random(1)
 
@@ -71,6 +75,19 @@ def test_creer_flotte_remplit_les_6_cases():
     ids_connus = {spec.nom for spec in specs}
     for ennemi in flotte.ennemis_vivants():
         assert ennemi.nom in ids_connus
+
+
+def test_creer_flotte_en_mode_test_ne_remplit_que_2_cases():
+    """Moins d'ennemis a vaincre par combat en mode test (cf. NOMBRE_ENNEMIS_MODE_TEST), pour
+    accelerer les essais manuels du parcours."""
+    assert MODE_TEST is True
+    specs = charger_ennemis()
+    aleatoire = random.Random(1)
+
+    flotte = creer_flotte(specs, aleatoire)
+
+    assert len(flotte.positions()) == NOMBRE_ENNEMIS_MODE_TEST
+    assert len(flotte.ennemis_vivants()) == NOMBRE_ENNEMIS_MODE_TEST
 
 
 def test_tirer_cartes_pioche_la_bonne_quantite_dans_la_pool():
@@ -128,7 +145,7 @@ def test_creer_combat_poc_initialise_un_combat_complet():
     assert combat.etat == EtatCombat.EN_COURS
     assert combat.joueur.vaisseau.base.nom == "Principal"
     assert len(combat.joueur.vaisseau.modules_equipes()) == NOMBRE_MODULES_EQUIPES
-    assert len(combat.flotte.positions()) == 6
+    assert len(combat.flotte.positions()) == NOMBRE_ENNEMIS_MODE_TEST  # MODE_TEST actif
     assert combat.joueur.electricite == ELECTRICITE_PAR_TOUR
     assert len(combat.joueur.deck.main) == 5
 
