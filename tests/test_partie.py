@@ -126,7 +126,10 @@ def test_deux_appels_a_nouvelle_partie_ont_des_graines_et_ids_differents():
     assert partie1.graine != partie2.graine
 
 
-def test_combat_depuis_partie_reprend_le_vaisseau_et_le_deck_persistants():
+def test_combat_depuis_partie_reprend_le_vaisseau_et_le_deck_persistants(monkeypatch):
+    """Hors mode test (cf. test_combat_depuis_partie_en_mode_test_ignore_les_pv_persistes
+    ci-dessous pour son comportement) : les PV persistes de la partie sont repris tels quels."""
+    monkeypatch.setattr(partie_module, "MODE_TEST", False)
     partie = _partie_exemple()
 
     combat = combat_depuis_partie(partie, random.Random(1))
@@ -135,6 +138,24 @@ def test_combat_depuis_partie_reprend_le_vaisseau_et_le_deck_persistants():
     assert combat.joueur.vaisseau.base.pv_max == 15
     assert combat.joueur.vaisseau.module_en(Colonne.AVANT, Rangee.GAUCHE).pv == 10
     assert len(combat.joueur.deck.pioche) + len(combat.joueur.deck.main) == 3
+
+
+def test_combat_depuis_partie_en_mode_test_ignore_les_pv_persistes():
+    """MODE_TEST (cf. src/gameplay/config_poc.py) doit s'appliquer aux modules du joueur d'un
+    vrai combat de parcours comme il s'applique deja a la flotte ennemie (creer_flotte) - sinon
+    le joueur ne beneficie pas des PV enormement augmentes penses pour les essais manuels."""
+    from src.gameplay.config_poc import PV_MODULE_MODE_TEST
+
+    assert partie_module.MODE_TEST is True
+    partie = _partie_exemple()
+
+    combat = combat_depuis_partie(partie, random.Random(1))
+
+    assert combat.joueur.vaisseau.base.pv == PV_MODULE_MODE_TEST
+    assert combat.joueur.vaisseau.base.pv_max == PV_MODULE_MODE_TEST
+    module_equipe = combat.joueur.vaisseau.module_en(Colonne.AVANT, Rangee.GAUCHE)
+    assert module_equipe.pv == PV_MODULE_MODE_TEST
+    assert module_equipe.pv_max == PV_MODULE_MODE_TEST
 
 
 # --- Progression (specs.md 2.4) ---

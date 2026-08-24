@@ -16,7 +16,14 @@ from pathlib import Path
 
 from src.gameplay.carte import Carte
 from src.gameplay.combat import Combat
-from src.gameplay.config_poc import ELECTRICITE_PAR_TOUR, ID_MODULE_PRINCIPAL, creer_flotte, ids_deck_module_principal
+from src.gameplay.config_poc import (
+    ELECTRICITE_PAR_TOUR,
+    ID_MODULE_PRINCIPAL,
+    MODE_TEST,
+    PV_MODULE_MODE_TEST,
+    creer_flotte,
+    ids_deck_module_principal,
+)
 from src.gameplay.deck import Deck
 from src.gameplay.donnees import SpecModule, charger_cartes, charger_ennemis, charger_modules
 from src.gameplay.joueur import Joueur
@@ -187,7 +194,13 @@ def combat_depuis_partie(partie: Partie, aleatoire: random.Random | None = None)
     """Construit un Combat a partir d'une partie sauvegardee : vaisseau et deck reels du joueur,
     mais flotte ennemie tiree au hasard - approximation temporaire (bouton "Continuer", decision
     utilisateur) en attendant que l'orchestration du parcours (specs.md 2.3/10.3) determine
-    precisement quel combat affronter a ce niveau."""
+    precisement quel combat affronter a ce niveau.
+
+    En mode test (MODE_TEST, cf. config_poc.py), les modules du joueur demarrent ce combat a
+    PV_MODULE_MODE_TEST/PV_MODULE_MODE_TEST (pleine vie), sans tenir compte des PV persistes de
+    la partie - meme principe que la flotte ennemie (creer_flotte), pour pouvoir enchainer les
+    essais manuels du parcours sans jamais perdre. Les PV persistes ne sont pas modifies pour
+    autant (aucune ecriture ici)."""
     aleatoire = aleatoire or random.Random(partie.graine + partie.niveau)
     specs_par_id = {spec.id: spec for spec in charger_modules()}
     cartes = charger_cartes()
@@ -196,8 +209,10 @@ def combat_depuis_partie(partie: Partie, aleatoire: random.Random | None = None)
         if etat is None:
             return None
         spec = specs_par_id[etat.module_id]
-        module = Module(pv_max=etat.pv_max, nom=spec.nom, image=spec.image)
-        module.pv = etat.pv
+        pv_max = PV_MODULE_MODE_TEST if MODE_TEST else etat.pv_max
+        module = Module(pv_max=pv_max, nom=spec.nom, image=spec.image)
+        if not MODE_TEST:
+            module.pv = etat.pv
         return module
 
     base = _module(partie.vaisseau["base"])

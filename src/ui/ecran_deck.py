@@ -1,8 +1,8 @@
 """
-Ecran "voir le deck en entier" (appelable depuis plusieurs endroits du parcours - combat en
-cours, menus hors combat... - une fois l'orchestration du parcours ecrite, cf. specs.md 2.3).
-Fenetre pyglet independante pour l'instant, meme situation que ecran_choix_module.py et
-ecran_fin_combat.py.
+Ecran "voir le deck en entier" (specs.md 6/10.3), ouvert depuis l'ecran de partie (bouton "Voir le
+deck"). Fenetre pyglet independante comme les autres ecrans du parcours ; l'ecran de partie ayant
+deja ete ferme avant l'ouverture de celui-ci (main.py), le bouton "Retour" (self.termine) est le
+seul moyen d'y revenir - pas de fermeture de fenetre native qui rouvrirait quoi que ce soit.
 
 Fond de combat reutilise en placeholder (decision utilisateur), a remplacer par un fond dedie.
 """
@@ -28,6 +28,9 @@ COULEUR_CONTOUR_CARTE_SURVOLEE = (255, 255, 255)
 COULEUR_QUANTITE = (255, 220, 120)
 OPACITE_FOND_CARTE = 190
 
+COULEUR_BOUTON = (60, 90, 160)
+COULEUR_BOUTON_SURVOLE = (90, 130, 210)
+
 COULEUR_FOND_PANNEAU = (10, 14, 30)
 COULEUR_CONTOUR_PANNEAU = (76, 110, 245)
 OPACITE_FOND_PANNEAU = 235
@@ -44,6 +47,18 @@ Y_HAUT_GRILLE = HAUTEUR_FENETRE - 110
 # positionnee pres de la carte survolee chevaucherait la ligne voisine.
 HAUTEUR_PANNEAU = 70
 LARGEUR_PANNEAU = 500
+
+# Bouton "Retour" en haut a droite (plutot qu'en bas, ou la place depend de la taille du deck) -
+# seul moyen de fermer cet ecran et de revenir a l'ecran de partie (specs.md 10.3), qui a ete
+# ferme avant l'ouverture de celui-ci (main.py).
+LARGEUR_BOUTON = 140
+HAUTEUR_BOUTON = 40
+X_BOUTON = LARGEUR_FENETRE - LARGEUR_BOUTON - 20
+Y_BOUTON = HAUTEUR_FENETRE - HAUTEUR_BOUTON - 20
+
+
+def _rect_bouton() -> tuple[float, float, float, float]:
+    return X_BOUTON, Y_BOUTON, LARGEUR_BOUTON, HAUTEUR_BOUTON
 
 
 def _grille_depart_x() -> float:
@@ -73,6 +88,8 @@ class EcranDeck(pyglet.window.Window):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.groupes = regrouper_cartes(cartes)
         self.index_survole: int | None = None
+        self.bouton_retour_survole: bool = False
+        self.termine: bool = False
 
     def on_draw(self) -> None:
         self.clear()
@@ -100,7 +117,24 @@ class EcranDeck(pyglet.window.Window):
         if self.index_survole is not None:
             carte, _quantite = self.groupes[self.index_survole]
             elements.extend(self._dessiner_panneau_description(carte, lot))
+        elements.extend(self._dessiner_bouton_retour(lot))
         return elements
+
+    def _dessiner_bouton_retour(self, lot: pyglet.graphics.Batch) -> list:
+        x, y, largeur, hauteur = _rect_bouton()
+        couleur = COULEUR_BOUTON_SURVOLE if self.bouton_retour_survole else COULEUR_BOUTON
+        rectangle = shapes.Rectangle(x, y, largeur, hauteur, color=couleur, batch=lot)
+        texte = pyglet.text.Label(
+            "Retour",
+            x=x + largeur / 2,
+            y=y + hauteur / 2,
+            anchor_x="center",
+            anchor_y="center",
+            font_size=14,
+            color=(*COULEUR_TEXTE, 255),
+            batch=lot,
+        )
+        return [rectangle, texte]
 
     def _dessiner_carte(self, index: int, carte: Carte, quantite: int, lot: pyglet.graphics.Batch) -> list:
         x, y, largeur, hauteur = _rect_carte(index)
@@ -213,6 +247,11 @@ class EcranDeck(pyglet.window.Window):
 
     def on_mouse_motion(self, x: int, y: int, dx: int, dy: int) -> None:
         self.index_survole = self._index_a(x, y)
+        self.bouton_retour_survole = _point_dans_rectangle(x, y, *_rect_bouton())
+
+    def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
+        if _point_dans_rectangle(x, y, *_rect_bouton()):
+            self.termine = True
 
     def _index_a(self, x: int, y: int) -> int | None:
         for index in range(len(self.groupes)):
