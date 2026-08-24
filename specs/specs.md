@@ -82,6 +82,12 @@ actions une fois cette ressource implémentée.
   l'emplacement de destination (vide ou occupé) parmi les 4 équipables ; recliquer le module source
   annule l'armement. Un bouton "J'ai terminé" ferme l'écran → Choix du prochain niveau (étape 3),
   avec avancement du niveau (comme une étape résolue, §2.4)
+- **Réparer/Améliorer/Mettre à jour** affichent un popup de confirmation sur la carte du module
+  concerné (2 secondes, même mécanisme que les popups +/-N du combat) — `+N PV`/`+N PV max`/
+  `Niveau N`, calculé à partir de l'état avant/après l'action plutôt qu'une valeur de réglage
+  dupliquée côté web (décision utilisateur, feedback demandé pendant les essais manuels). Le module
+  sélectionné est ensuite **désélectionné automatiquement** (le popup suffit à confirmer l'effet) ;
+  **Déplacer** garde son comportement propre (armement/clic de destination, cf. ci-dessus)
 - Icônes des 4 actions dans `assets/station_service/` (`reparer.png`, `ameliorer.png`,
   `mettre_a_jour.png`, `deplacer.png`) : déjà pourvues de leur propre cadre/nom incrusté (fournies
   par l'utilisateur, même principe que `assets/prochain_niveau/`), affichées seules sans étiquette de
@@ -146,6 +152,16 @@ Vue d'ensemble de tous les écrans du jeu et de ce que chacun déclenche une foi
 terminée — schéma fourni par l'utilisateur, normalisé ici en un seul endroit. Statut
 d'implémentation entre parenthèses pour chaque écran ; le detail de chacun reste dans sa propre
 section (référencée), cette liste ne fait que les enchaîner.
+
+**Le niveau courant de la partie (`partie.niveau`) est affiché sur chaque écran du parcours**
+(décision utilisateur, repérage pendant les essais manuels) : dans l'en-tête du Combat (à côté de
+l'Électricité), dans le titre de Station service/Choix de module/Aventure-Planète commerciale
+("... - Niveau N"), en sous-titre de VICTOIRE/DÉFAITE (Fin de combat), en plus des écrans qui
+l'affichaient déjà (Écran de partie, Choix du prochain niveau). PC : `FenetreCombat`/
+`EcranStationService`/`EcranChoixModule`/`EcranEtapePlaceholder`/`EcranFinCombat` reçoivent
+`niveau` (ou lisent `self.partie.niveau`) depuis `main.py`. Web : `partieActive.niveau` (déjà
+présent dans le JSON de `Partie`, aucun champ bridge supplémentaire nécessaire), lu directement par
+`web/app.js`. Non affiché à l'écran Victoire finale (le run est terminé à ce stade).
 
 1. **Sélection du joueur** (implémenté, §10.3) — choisir un profil existant ou en créer un →
    Écran de partie (étape 2). Bouton "Quitter le jeu" (**PC uniquement** : ferme l'application ;
