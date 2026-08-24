@@ -441,17 +441,27 @@ def candidats_recompense_partie_web(partie_json) -> str:
 
 def resoudre_victoire_partie_web(partie_json, id_carte) -> str:
     """Resout la victoire d'un combat pour une partie reelle : ajoute la carte choisie (id_carte,
-    ou None si aucun candidat n'etait propose) puis avance au niveau suivant, ou marque la partie
-    TERMINEE si c'etait le niveau Boss (pas encore d'ecran de victoire finale, specs.md 2.4) -
-    meme logique que main.py:_ouvrir_fin_combat cote PC. Renvoie la partie mise a jour
-    (web/app.js la re-sauvegarde dans localStorage)."""
+    ou None si aucun candidat n'etait propose), puis avance au niveau suivant - sauf si c'etait un
+    Boss, auquel cas le niveau n'avance pas encore et la partie reste EN_COURS : web/app.js doit
+    d'abord ouvrir l'ecran de victoire finale (cle "niveau_boss") avant de marquer la partie
+    TERMINEE (terminer_victoire_finale_web, une fois l'ecran ferme) - meme logique que
+    main.py:_ouvrir_fin_combat/_ouvrir_victoire_finale cote PC. Renvoie
+    {"partie": ..., "niveau_boss": bool}."""
     partie = partie_depuis_json(partie_json)
     if id_carte is not None:
         ajouter_carte(partie, id_carte)
-    if est_niveau_boss(partie.niveau):
-        marquer_terminee(partie)
-    else:
+    boss = est_niveau_boss(partie.niveau)
+    if not boss:
         avancer_niveau(partie)
+    return json.dumps({"partie": json.loads(partie_vers_json(partie)), "niveau_boss": boss})
+
+
+def terminer_victoire_finale_web(partie_json) -> str:
+    """Bouton "Continuer" de l'ecran de victoire finale (specs.md 2.4, etape 11) : marque la partie
+    TERMINEE, meme logique que main.py:_ouvrir_victoire_finale cote PC. Renvoie la partie mise a
+    jour (web/app.js la re-sauvegarde dans localStorage)."""
+    partie = partie_depuis_json(partie_json)
+    marquer_terminee(partie)
     return partie_vers_json(partie)
 
 

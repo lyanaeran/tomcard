@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "30";
+const VERSION_CACHE = "31";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -102,6 +102,7 @@ const IDS_ECRANS = [
     "ecran-choix-niveau",
     "ecran-station-service",
     "ecran-fin-combat",
+    "ecran-victoire-finale",
     "ecran-deck",
 ];
 
@@ -862,17 +863,16 @@ function terminerCombatPartie() {
     }
 }
 
-// Ajoute la carte choisie (ou aucune) au deck de la partie, avance au niveau suivant ou marque la
-// partie TERMINEE si c'etait le niveau Boss (specs.md 2.4), meme logique que
-// main.py:_ouvrir_fin_combat cote PC.
+// Ajoute la carte choisie (ou aucune) au deck de la partie, puis avance au niveau suivant - sauf
+// si c'etait un Boss, auquel cas l'ecran de victoire finale s'ouvre d'abord (specs.md 2.4, etape
+// 11) - meme logique que main.py:_ouvrir_fin_combat cote PC.
 function finaliserVictoirePartie(idCarte) {
-    const partie = appelerBridge("resoudre_victoire_partie_web", JSON.stringify(partieActive), idCarte);
-    sauvegarderPartieLocale(joueurCourant.id, partie);
-    if (partie.statut === "TERMINEE") {
-        partieActive = null;
-        afficherAccueilJoueur();
+    const resultat = appelerBridge("resoudre_victoire_partie_web", JSON.stringify(partieActive), idCarte);
+    sauvegarderPartieLocale(joueurCourant.id, resultat.partie);
+    if (resultat.niveau_boss) {
+        ouvrirVictoireFinalePartie(resultat.partie);
     } else {
-        ouvrirChoixNiveauPartie(partie);
+        ouvrirChoixNiveauPartie(resultat.partie);
     }
 }
 
@@ -889,6 +889,55 @@ function continuerApresFinCombat() {
     } else {
         finaliserVictoirePartie(null);
     }
+}
+
+// Ecran de victoire finale (specs.md 2.4, etape 11) : felicite le joueur a la victoire du Boss (le
+// run s'arrete reellement au Niveau 10 dans l'etat actuel, specs.md 2), affiche son deck complet
+// (meme rendu que l'ecran "Voir le deck" ci-dessous, mais scope aux elements de cet ecran pour ne
+// pas melanger les gestionnaires de clic des deux grilles) et propose un bouton "Continuer" qui
+// marque la partie TERMINEE et revient a l'ecran de partie - meme logique que
+// main.py:_ouvrir_victoire_finale cote PC.
+let cartesVictoireFinaleAffichees = [];
+
+function ouvrirVictoireFinalePartie(partie) {
+    partieActive = partie;
+    const cartes = appelerBridge("deck_partie_web", JSON.stringify(partie));
+    cartesVictoireFinaleAffichees = cartes;
+    document.getElementById("grille-victoire-finale").innerHTML = cartes
+        .map(
+            (carte, index) => `
+        <div class="carte-deck" data-index="${index}">
+            <span class="etoile-${carte.rarete.toLowerCase()}">★</span>
+            ${carte.quantite > 1 ? `<span class="carte-deck-quantite">×${carte.quantite}</span>` : ""}
+            <img src="${carte.image}" alt="${carte.nom}">
+            <div class="carte-deck-nom">${carte.nom}</div>
+            <div class="carte-deck-cout">⚡ ${carte.cout}</div>
+        </div>`
+        )
+        .join("");
+    document.getElementById("info-carte-victoire-finale").innerHTML = "";
+    document.querySelectorAll("#grille-victoire-finale .carte-deck").forEach((element) => {
+        element.addEventListener("click", () =>
+            afficherInfoCarteVictoireFinale(cartesVictoireFinaleAffichees[Number(element.dataset.index)])
+        );
+    });
+    masquerTousLesEcrans();
+    document.getElementById("ecran-victoire-finale").classList.remove("cachee");
+}
+
+function afficherInfoCarteVictoireFinale(carte) {
+    document.getElementById("info-carte-victoire-finale").innerHTML = `
+        <img src="${carte.image}" alt="${carte.nom}">
+        <div class="info-carte-nom">${carte.nom}</div>
+        <div class="info-carte-effet">${texteEffetCarte(carte)}</div>
+        <div class="info-carte-cout">⚡ ${carte.cout}</div>`;
+}
+
+function terminerVictoireFinale() {
+    const partie = appelerBridge("terminer_victoire_finale_web", JSON.stringify(partieActive));
+    sauvegarderPartieLocale(joueurCourant.id, partie);
+    partieActive = null;
+    afficherAccueilJoueur();
 }
 
 // Ecran "deck en entier" (appelable depuis plusieurs endroits du parcours, specs.md 6). Meme
@@ -1070,4 +1119,5 @@ document.getElementById("bouton-voir-deck-partie").addEventListener("click", voi
 document.getElementById("bouton-nouvelle-partie").addEventListener("click", nouvellePartie);
 document.getElementById("bouton-continuer-fin-combat").addEventListener("click", continuerApresFinCombat);
 document.getElementById("bouton-termine-station-service").addEventListener("click", terminerStationServicePartie);
+document.getElementById("bouton-continuer-victoire-finale").addEventListener("click", terminerVictoireFinale);
 demarrer();

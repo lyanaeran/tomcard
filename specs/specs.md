@@ -186,11 +186,10 @@ section (référencée), cette liste ne fait que les enchaîner.
 6. **Fin de combat** (implémenté en écran autonome, §6, **relié à l'enchaînement**) :
    - Victoire : choix d'une carte candidate (candidats tirés à partir des modules réellement
      équipés sur la partie, `specs_utilisees_partie`) met à jour le deck de la partie, puis → Choix
-     du prochain niveau (étape 3), sauf si le combat était un Boss → la partie est marquée
-     `TERMINEE` (pas encore d'écran de victoire finale dédié, voir étape 11 et §2 "le run s'arrête
-     réellement au Niveau 10 dans l'état actuel") → Écran de partie (étape 2). S'il n'y a aucun
-     candidat (pool vide pour tous les modules équipés), un bouton "Continuer" permet de passer
-     l'écran sans choisir de carte
+     du prochain niveau (étape 3), sauf si le combat était un Boss → Victoire finale (étape 11 ; le
+     niveau n'avance pas encore et la partie reste `EN_COURS` à ce stade, cf. étape 11). S'il n'y a
+     aucun candidat (pool vide pour tous les modules équipés), un bouton "Continuer" permet de
+     passer l'écran sans choisir de carte
    - Défaite : la partie est marquée `TERMINEE` (même statut qu'un abandon, décision utilisateur —
      pas de distinction victoire/défaite/abandon pour l'instant, cf. §10.3) → Écran de partie
      (étape 2), via un bouton "Continuer" (PC : clic n'importe où sur l'écran, cf.
@@ -206,13 +205,18 @@ section (référencée), cette liste ne fait que les enchaîner.
    "j'ai terminé" → Choix du prochain niveau (étape 3). Même comportement temporaire que l'étape 7
 10. **Boss** (niveau 10, puis tous les 10 niveaux à terme — §2.3), atteint via la proposition
     unique "Combattre le Boss !" de l'étape 3 : réutilise l'écran Combat pour l'instant, pas encore
-    d'ennemi de Boss dédié (§9.1) → Victoire : la partie est marquée `TERMINEE` directement (pas
-    encore d'écran de victoire finale dédié, voir étape 11) → Écran de partie (étape 2) ; Défaite :
-    même traitement qu'un combat normal (étape 6, branche Défaite)
-11. **Victoire finale** (à construire) : félicite le joueur, affiche son deck (réutilise l'écran
-    "deck en entier", §6) → bouton → Écran de partie (étape 2), partie désormais `TERMINEE`.
-    **Pas encore construit** : en attendant, une victoire de Boss saute directement à l'étape 2
-    (voir étape 10)
+    d'ennemi de Boss dédié (§9.1) → Victoire : Victoire finale (étape 11) ; Défaite : même
+    traitement qu'un combat normal (étape 6, branche Défaite)
+11. **Victoire finale** (**implémenté et relié à l'enchaînement**) : félicite le joueur, affiche son
+    deck complet (même rendu que l'écran "deck en entier", §6, dupliqué plutôt que réutilisé
+    littéralement — même convention que les autres écrans du parcours, chacun avec ses propres
+    petits helpers de disposition) → bouton "Continuer" marque la partie `TERMINEE` (elle était
+    restée `EN_COURS` depuis la résolution de l'étape 6) → Écran de partie (étape 2).
+    `src/ui/ecran_victoire_finale.py` (PC) + `main.py:_ouvrir_victoire_finale` ; côté web
+    `web/bridge.py` (`terminer_victoire_finale_web`, `resoudre_victoire_partie_web` renvoie
+    désormais `{"partie": ..., "niveau_boss": bool}` pour signaler à `web/app.js` quand ouvrir cet
+    écran plutôt que d'avancer directement) + `web/app.js` (`ouvrirVictoireFinalePartie`,
+    `terminerVictoireFinale`)
 
 ---
 
@@ -744,9 +748,9 @@ fond dédié.
   l'onglet/l'appli) le fait recommencer entièrement à la reprise, au même niveau
 - Planète commerciale et Aventure ne sont pas encore construites (§2.4, étapes 7 et 9) : les
   choisir depuis le Choix du prochain niveau rouvre simplement ce même écran
-- La victoire d'un combat de Boss marque la partie `TERMINEE` directement, faute d'écran de
-  victoire finale dédié (§2.4, étape 11) — le run s'arrête réellement au Niveau 10 dans l'état
-  actuel (voir §2)
+- Le run s'arrête réellement au Niveau 10 dans l'état actuel (décision utilisateur, provisoire,
+  voir §2) : la Victoire finale (§2.4, étape 11) marque la partie `TERMINEE` sans proposer de
+  continuation au-delà de ce niveau
 - La flotte ennemie d'un combat (Prime ou Boss) reste toujours tirée entièrement au hasard
   (`combat_depuis_partie`/`creer_flotte`), sans appliquer les règles de difficulté par niveau du
   §2.3/§3.2 (nombre d'ennemis, tailles S/M/L) — reste un tirage de démonstration

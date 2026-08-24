@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
     <title>Space Fight - prototype web</title>
-    <link rel="stylesheet" href="web/style.css?v=30">
-    <link rel="manifest" href="web/manifest.json?v=30">
+    <link rel="stylesheet" href="web/style.css?v=31">
+    <link rel="manifest" href="web/manifest.json?v=31">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0b1020">
@@ -74,12 +74,19 @@
         <p id="instruction-fin-combat" class="instruction cachee">Choisissez une carte a ajouter a votre deck.</p>
         <button id="bouton-continuer-fin-combat" class="cachee">Continuer</button>
     </div>
+    <div id="ecran-victoire-finale" class="cachee">
+        <h1>Victoire finale</h1>
+        <p class="instruction">Vous avez vaincu le Boss et termine ce run !</p>
+        <div id="grille-victoire-finale"></div>
+        <div id="info-carte-victoire-finale"></div>
+        <button id="bouton-continuer-victoire-finale">Continuer</button>
+    </div>
     <div id="ecran-deck" class="cachee">
         <h1>Deck</h1>
         <div id="grille-deck"></div>
         <div id="info-carte-deck"></div>
     </div>
     <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
-    <script src="web/app.js?v=30"></script>
+    <script src="web/app.js?v=31"></script>
 </body>
 </html>

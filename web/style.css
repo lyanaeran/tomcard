@@ -513,7 +513,8 @@ body {
    sur une case en-dessous (cible d'une carte armee, cf. cliquerCase). */
 #info-carte,
 #info-case,
-#info-carte-deck {
+#info-carte-deck,
+#info-carte-victoire-finale {
     position: fixed;
     top: 45%;
     left: 50%;
@@ -534,12 +535,14 @@ body {
 
 #info-carte:empty,
 #info-case:empty,
-#info-carte-deck:empty {
+#info-carte-deck:empty,
+#info-carte-victoire-finale:empty {
     display: none;
 }
 
 #info-carte img,
-#info-carte-deck img {
+#info-carte-deck img,
+#info-carte-victoire-finale img {
     width: 90px;
     aspect-ratio: 1 / 1;
     object-fit: contain;
@@ -1044,6 +1047,39 @@ body {
     color: #ffdc78;
 }
 
+/* Ecran de victoire finale (specs.md 2.4, etape 11). Fond de combat reutilise en placeholder
+   (deja applique globalement sur body) - decision utilisateur. Grille de cartes (#grille-victoire-
+   finale) et carte individuelle (.carte-deck) reutilisent le meme style que #ecran-deck. */
+#ecran-victoire-finale {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.2rem;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+#ecran-victoire-finale h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: normal;
+    color: #46be5a;
+}
+
+#ecran-victoire-finale .instruction {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+#grille-victoire-finale {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    max-width: 900px;
+}
+
 /* Selection/creation de profil joueur, puis accueil de ce joueur (specs.md 10.3) - nouveau point
    d'entree de l'app web (appele par demarrer() dans web/app.js). Fond de combat reutilise en
    placeholder, meme decision que les autres ecrans du parcours. */
@@ -1101,7 +1137,8 @@ body {
 #ecran-selection-joueur button,
 #ecran-accueil-joueur button,
 #ecran-fin-combat button,
-#bouton-termine-station-service {
+#bouton-termine-station-service,
+#bouton-continuer-victoire-finale {
     font-size: 1rem;
     padding: 0.6rem 1.4rem;
     border: none;

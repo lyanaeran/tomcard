@@ -3,7 +3,7 @@ Point d'entree du jeu Space Fight (PC) : selection du profil joueur (specs.md 10
 de ce joueur (partie en cours ou nouvelle partie), qui enchaine desormais reellement sur le reste du
 parcours (specs.md 2.4) : choix de module (Niveau 1) -> choix du prochain niveau -> combat (Prime ou
 Boss) ou Station service -> fin de combat / fin de Station service -> retour au choix du prochain
-niveau (ou fin de partie).
+niveau, ou victoire finale (Boss vaincu) -> fin de partie.
 
 Chaque ecran est une fenetre pyglet independante ; les transitions se font en fermant la fenetre
 courante et en ouvrant la suivante, verifiees a intervalle regulier via pyglet.clock (pas
@@ -12,8 +12,7 @@ d'evenement dedie pour "l'utilisateur a fait un choix" dans ces ecrans, cf. leur
 
 Limites connues (specs.md 2.4) : Planete commerciale/Aventure ne sont pas encore construites
 (choisir l'une de ces propositions rouvre simplement le choix du niveau, cf. _ouvrir_choix_niveau) ;
-la victoire du Boss marque simplement la partie TERMINEE, faute d'ecran de victoire finale ; la
-flotte ennemie d'un combat est toujours tiree au hasard (combat_depuis_partie), sans tenir compte
+la flotte ennemie d'un combat est toujours tiree au hasard (combat_depuis_partie), sans tenir compte
 des tailles/du nombre d'ennemis attendus au niveau courant (specs.md 2.3/3.2).
 """
 
@@ -55,6 +54,7 @@ from src.ui.ecran_deck import EcranDeck
 from src.ui.ecran_fin_combat import EcranFinCombat
 from src.ui.ecran_selection_joueur import EcranSelectionJoueur
 from src.ui.ecran_station_service import EcranStationService
+from src.ui.ecran_victoire_finale import EcranVictoireFinale
 from src.ui.fenetre import FenetreCombat
 
 INTERVALLE_VERIFICATION = 1 / 30
@@ -213,14 +213,27 @@ def _ouvrir_fin_combat(profil: Profil, partie: Partie, combat: Combat) -> None:
             ajouter_carte(partie, id_de_carte(fenetre.carte_choisie, cartes))
         if est_niveau_boss(partie.niveau):
             # Le run s'arrete reellement au Niveau 10 dans l'etat actuel (decision utilisateur,
-            # specs.md 2) - pas encore d'ecran de victoire finale dedie (specs.md 2.4, etape 11).
-            marquer_terminee(partie)
-            sauvegarder_partie(profil.id, partie)
-            _ouvrir_accueil(profil)
+            # specs.md 2).
+            _ouvrir_victoire_finale(profil, partie)
         else:
             avancer_niveau(partie)
             sauvegarder_partie(profil.id, partie)
             _ouvrir_choix_niveau(profil, partie)
+
+    pyglet.clock.schedule_interval(verifier, INTERVALLE_VERIFICATION)
+
+
+def _ouvrir_victoire_finale(profil: Profil, partie: Partie) -> None:
+    fenetre = EcranVictoireFinale(deck_de_la_partie(partie))
+
+    def verifier(_dt: float) -> None:
+        if not fenetre.termine:
+            return
+        pyglet.clock.unschedule(verifier)
+        fenetre.close()
+        marquer_terminee(partie)
+        sauvegarder_partie(profil.id, partie)
+        _ouvrir_accueil(profil)
 
     pyglet.clock.schedule_interval(verifier, INTERVALLE_VERIFICATION)
 
