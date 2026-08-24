@@ -57,9 +57,12 @@ class EcranFinCombat(pyglet.window.Window):
     """Ecran de fin de combat : Defaite (message), ou Victoire (choix d'une carte de
     recompense parmi les candidats, un par module utilise - specs.md 2.1/6)."""
 
-    def __init__(self, victoire: bool, candidats: list[tuple[SpecModule, Carte | None]] | None = None):
+    def __init__(
+        self, victoire: bool, candidats: list[tuple[SpecModule, Carte | None]] | None = None, niveau: int = 1
+    ):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.victoire = victoire
+        self.niveau = niveau
         # Seuls les modules avec un candidat reel sont affiches/cliquables (specs.md 2.1/6 :
         # un pool vide - aucune carte jouable non-Base pour ce module - n'a rien a proposer).
         self.candidats = [(spec, carte) for spec, carte in (candidats or []) if carte is not None]
@@ -96,6 +99,7 @@ class EcranFinCombat(pyglet.window.Window):
             color=(*COULEUR_DEFAITE, 255),
             batch=lot,
         )
+        niveau = self._dessiner_niveau(HAUTEUR_FENETRE - 170, lot)
         message = pyglet.text.Label(
             MESSAGE_DEFAITE,
             x=LARGEUR_FENETRE / 2,
@@ -116,7 +120,19 @@ class EcranFinCombat(pyglet.window.Window):
             color=(*COULEUR_TEXTE, 255),
             batch=lot,
         )
-        return [titre, message, instruction]
+        return [titre, niveau, message, instruction]
+
+    def _dessiner_niveau(self, y: float, lot: pyglet.graphics.Batch) -> pyglet.text.Label:
+        return pyglet.text.Label(
+            f"Niveau {self.niveau}",
+            x=LARGEUR_FENETRE / 2,
+            y=y,
+            anchor_x="center",
+            anchor_y="center",
+            font_size=16,
+            color=(*COULEUR_TEXTE, 255),
+            batch=lot,
+        )
 
     def _dessiner_victoire(self, lot: pyglet.graphics.Batch) -> list:
         elements = [
@@ -129,7 +145,8 @@ class EcranFinCombat(pyglet.window.Window):
                 font_size=40,
                 color=(*COULEUR_VICTOIRE, 255),
                 batch=lot,
-            )
+            ),
+            self._dessiner_niveau(HAUTEUR_FENETRE - 120, lot),
         ]
         total = len(self.candidats)
         for index, (spec, carte) in enumerate(self.candidats):

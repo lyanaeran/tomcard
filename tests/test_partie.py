@@ -126,10 +126,7 @@ def test_deux_appels_a_nouvelle_partie_ont_des_graines_et_ids_differents():
     assert partie1.graine != partie2.graine
 
 
-def test_combat_depuis_partie_reprend_le_vaisseau_et_le_deck_persistants(monkeypatch):
-    """Hors mode test (cf. test_combat_depuis_partie_en_mode_test_ignore_les_pv_persistes
-    ci-dessous pour son comportement) : les PV persistes de la partie sont repris tels quels."""
-    monkeypatch.setattr(partie_module, "MODE_TEST", False)
+def test_combat_depuis_partie_reprend_le_vaisseau_et_le_deck_persistants():
     partie = _partie_exemple()
 
     combat = combat_depuis_partie(partie, random.Random(1))
@@ -140,22 +137,19 @@ def test_combat_depuis_partie_reprend_le_vaisseau_et_le_deck_persistants(monkeyp
     assert len(combat.joueur.deck.pioche) + len(combat.joueur.deck.main) == 3
 
 
-def test_combat_depuis_partie_en_mode_test_ignore_les_pv_persistes():
-    """MODE_TEST (cf. src/gameplay/config_poc.py) doit s'appliquer aux modules du joueur d'un
-    vrai combat de parcours comme il s'applique deja a la flotte ennemie (creer_flotte) - sinon
-    le joueur ne beneficie pas des PV enormement augmentes penses pour les essais manuels."""
-    from src.gameplay.config_poc import PV_MODULE_MODE_TEST
-
+def test_combat_depuis_partie_reflete_les_degats_meme_en_mode_test():
+    """La persistance des PV entre combats (specs.md 2.2) doit rester testable en mode test
+    (MODE_TEST, cf. config_poc.py) : seule la valeur de depart d'un module tout juste equipe est
+    plus elevee (cf. test_equiper_module_utilise_pv_module_mode_test_par_defaut plus bas), pas la
+    persistance elle-meme - sinon Reparer/Ameliorer n'auraient plus aucune utilite a tester."""
     assert partie_module.MODE_TEST is True
     partie = _partie_exemple()
+    partie.vaisseau["base"].pv = 3  # simule des degats subis au combat precedent
 
     combat = combat_depuis_partie(partie, random.Random(1))
 
-    assert combat.joueur.vaisseau.base.pv == PV_MODULE_MODE_TEST
-    assert combat.joueur.vaisseau.base.pv_max == PV_MODULE_MODE_TEST
-    module_equipe = combat.joueur.vaisseau.module_en(Colonne.AVANT, Rangee.GAUCHE)
-    assert module_equipe.pv == PV_MODULE_MODE_TEST
-    assert module_equipe.pv_max == PV_MODULE_MODE_TEST
+    assert combat.joueur.vaisseau.base.pv == 3
+    assert combat.joueur.vaisseau.base.pv_max == 15
 
 
 def test_combat_depuis_partie_en_mode_test_donne_20_degats_aux_cartes_attaque_de_base():
@@ -177,7 +171,10 @@ def test_combat_depuis_partie_en_mode_test_donne_20_degats_aux_cartes_attaque_de
 # --- Progression (specs.md 2.4) ---
 
 
-def test_equiper_module_remplit_le_premier_emplacement_libre():
+def test_equiper_module_remplit_le_premier_emplacement_libre(monkeypatch):
+    """Hors mode test (cf. test_equiper_module_utilise_pv_module_mode_test_par_defaut ci-dessous
+    pour son comportement) : PV de depart = valeur normale du module (config/modules.json)."""
+    monkeypatch.setattr(partie_module, "MODE_TEST", False)
     partie = nouvelle_partie(random.Random(1))
     spec = next(s for s in charger_modules() if s.id != "MOD_1")
 
@@ -189,6 +186,23 @@ def test_equiper_module_remplit_le_premier_emplacement_libre():
     assert partie.vaisseau["avant_gauche"].pv_max == spec.points_de_vie
     assert partie.vaisseau["avant_gauche"].niveau_maj == 1
     assert partie.vaisseau["avant_droite"] is None
+
+
+def test_equiper_module_utilise_pv_module_mode_test_par_defaut():
+    """MODE_TEST (cf. src/gameplay/config_poc.py) donne une valeur de depart plus elevee aux
+    modules tout juste equipes, mais uniquement au moment de l'equipement : les PV persistent
+    ensuite normalement d'un combat a l'autre (cf.
+    test_combat_depuis_partie_reflete_les_degats_meme_en_mode_test)."""
+    from src.gameplay.config_poc import PV_MODULE_MODE_TEST
+
+    assert partie_module.MODE_TEST is True
+    partie = nouvelle_partie(random.Random(1))
+    spec = next(s for s in charger_modules() if s.id != "MOD_1")
+
+    equiper_module(partie, spec)
+
+    assert partie.vaisseau["avant_gauche"].pv == PV_MODULE_MODE_TEST
+    assert partie.vaisseau["avant_gauche"].pv_max == PV_MODULE_MODE_TEST
 
 
 def test_equiper_module_remplit_le_deuxieme_emplacement_si_le_premier_est_pris():

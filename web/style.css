@@ -84,6 +84,11 @@ body {
     font-size: 1.1rem;
 }
 
+#niveau-combat {
+    font-size: 1rem;
+    opacity: 0.85;
+}
+
 #boutons-entete {
     display: flex;
     gap: 0.5rem;
@@ -790,6 +795,7 @@ body {
 }
 
 .module-station {
+    position: relative;
     width: clamp(110px, 15vw, 150px);
     background: rgba(20, 24, 34, 0.75);
     border: 2px solid #5a6e91;
@@ -934,6 +940,12 @@ body {
 
 #titre-fin-combat.victoire {
     color: rgb(70, 190, 90);
+}
+
+#niveau-fin-combat {
+    margin: 0.2rem 0 0;
+    font-size: 1rem;
+    opacity: 0.85;
 }
 
 #message-defaite {

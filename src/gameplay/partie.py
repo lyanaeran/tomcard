@@ -156,6 +156,14 @@ def nouveau_profil(nom: str) -> Profil:
     return Profil(id=f"joueur_{_horodatage()}", nom=nom)
 
 
+def _pv_module_initial(spec: SpecModule) -> int:
+    """PV de depart d'un module tout juste equipe - PV_MODULE_MODE_TEST en mode test (cf.
+    config_poc.py), sinon la valeur normale (config/modules.json). Sert de point de depart
+    seulement : les PV persistent ensuite normalement d'un combat a l'autre (specs.md 2.2), y
+    compris en mode test - cf. combat_depuis_partie."""
+    return PV_MODULE_MODE_TEST if MODE_TEST else spec.points_de_vie
+
+
 def nouvelle_partie(aleatoire: random.Random | None = None) -> Partie:
     """Nouvelle partie au Niveau 1 (specs.md 2.3) : seul le module principal est equipe (le 2e
     slot est pourvu par le choix de module du Niveau 1, qui n'a pas encore eu lieu a ce stade),
@@ -166,10 +174,11 @@ def nouvelle_partie(aleatoire: random.Random | None = None) -> Partie:
     cartes = charger_cartes()
     spec_principal = next(spec for spec in modules if spec.id == ID_MODULE_PRINCIPAL)
     vaisseau: dict[str, EtatModule | None] = {position: None for position in POSITIONS_VAISSEAU}
+    pv_principal = _pv_module_initial(spec_principal)
     vaisseau["base"] = EtatModule(
         module_id=spec_principal.id,
-        pv=spec_principal.points_de_vie,
-        pv_max=spec_principal.points_de_vie,
+        pv=pv_principal,
+        pv_max=pv_principal,
         niveau_maj=1,
     )
     return Partie(
@@ -195,14 +204,17 @@ def combat_depuis_partie(partie: Partie, aleatoire: random.Random | None = None)
     """Construit un Combat a partir d'une partie sauvegardee : vaisseau et deck reels du joueur,
     mais flotte ennemie tiree au hasard - approximation temporaire (bouton "Continuer", decision
     utilisateur) en attendant que l'orchestration du parcours (specs.md 2.3/10.3) determine
-    precisement quel combat affronter a ce niveau.
+    precisement quel combat affronter a ce niveau. Les PV des modules du joueur sont repris tels
+    quels depuis la partie sauvegardee (persistance entre combats, specs.md 2.2) - y compris en
+    mode test (MODE_TEST, cf. config_poc.py), ou seule leur valeur de depart est plus elevee
+    (PV_MODULE_MODE_TEST, cf. equiper_module/nouvelle_partie) : la persistance elle-meme reste
+    testable (Reparer/Ameliorer en Station service, degats qui persistent d'un combat a l'autre).
 
-    En mode test (MODE_TEST, cf. config_poc.py), les modules du joueur demarrent ce combat a
-    PV_MODULE_MODE_TEST/PV_MODULE_MODE_TEST (pleine vie) et les cartes ATTAQUE de rarete Base de
-    son deck reel infligent VALEUR_ATTAQUE_BASE_MODE_TEST degats, sans tenir compte des PV/cartes
-    persistes de la partie - meme principe que la flotte ennemie (creer_flotte), pour pouvoir
-    enchainer les essais manuels du parcours sans jamais perdre. Rien n'est modifie dans la partie
-    sauvegardee pour autant (aucune ecriture ici)."""
+    En mode test, les cartes ATTAQUE de rarete Base du deck reel infligent
+    VALEUR_ATTAQUE_BASE_MODE_TEST degats plutot que leur valeur normale - meme principe que la
+    flotte ennemie (creer_flotte), pour pouvoir enchainer les essais manuels sans y passer
+    plusieurs tours. Rien n'est modifie dans la partie sauvegardee pour autant (aucune ecriture
+    ici)."""
     aleatoire = aleatoire or random.Random(partie.graine + partie.niveau)
     specs_par_id = {spec.id: spec for spec in charger_modules()}
     cartes = charger_cartes()
@@ -211,10 +223,8 @@ def combat_depuis_partie(partie: Partie, aleatoire: random.Random | None = None)
         if etat is None:
             return None
         spec = specs_par_id[etat.module_id]
-        pv_max = PV_MODULE_MODE_TEST if MODE_TEST else etat.pv_max
-        module = Module(pv_max=pv_max, nom=spec.nom, image=spec.image)
-        if not MODE_TEST:
-            module.pv = etat.pv
+        module = Module(pv_max=etat.pv_max, nom=spec.nom, image=spec.image)
+        module.pv = etat.pv
         return module
 
     base = _module(partie.vaisseau["base"])
@@ -246,9 +256,8 @@ def equiper_module(partie: Partie, spec: SpecModule) -> Partie:
     par le choix de module du Niveau 1 (un seul emplacement libre a ce stade). Modifie et renvoie
     `partie`."""
     position = next(p for p in POSITIONS_EQUIPABLES if partie.vaisseau[p] is None)
-    partie.vaisseau[position] = EtatModule(
-        module_id=spec.id, pv=spec.points_de_vie, pv_max=spec.points_de_vie, niveau_maj=1
-    )
+    pv = _pv_module_initial(spec)
+    partie.vaisseau[position] = EtatModule(module_id=spec.id, pv=pv, pv_max=pv, niveau_maj=1)
     return partie
 
 

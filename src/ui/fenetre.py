@@ -412,9 +412,12 @@ def _lignes_buffs(module: Module) -> list[str]:
 class FenetreCombat(pyglet.window.Window):
     """Fenetre principale : affiche le combat du POC et gere les clics/survols de souris."""
 
-    def __init__(self, combat: Combat | None = None):
+    def __init__(self, combat: Combat | None = None, niveau: int | None = None):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight - POC")
         self.combat = combat if combat is not None else creer_combat_poc()
+        # Niveau du parcours (specs.md 2.3), affiche dans l'entete - None en mode demo (POC,
+        # cf. main.py de reference dans specs/poc.md, gele) ou aucune partie ne l'accompagne.
+        self.niveau = niveau
         self.index_carte_selectionnee: int | None = None
         self.entite_survolee: Module | Ennemi | None = None
         self.popups: list[tuple[AnimationPopup, str, tuple[int, int, int], float, float]] = []
@@ -675,6 +678,18 @@ class FenetreCombat(pyglet.window.Window):
             group=GROUPE_SUPERPOSITION,
         )
         elements.append(texte)
+        if self.niveau is not None:
+            elements.append(
+                pyglet.text.Label(
+                    f"Niveau {self.niveau}",
+                    x=LARGEUR_FENETRE / 2,
+                    y=ENTETE_Y + ENTETE_HAUTEUR / 2,
+                    anchor_x="center",
+                    anchor_y="center",
+                    batch=lot,
+                    group=GROUPE_SUPERPOSITION,
+                )
+            )
         elements.extend(self._dessiner_bouton_fin_tour(lot))
         return elements
 

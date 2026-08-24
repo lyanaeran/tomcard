@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "34";
+const VERSION_CACHE = "35";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -540,6 +540,7 @@ function rendreBanniereFin() {
 function rendre() {
     document.getElementById("electricite").textContent =
         `⚡ ${etatCourant.electricite}/${etatCourant.electricite_max}`;
+    document.getElementById("niveau-combat").textContent = partieActive ? `Niveau ${partieActive.niveau}` : "";
     document.getElementById("compteurs-deck").textContent =
         `Pioche : ${etatCourant.pioche} - Defausse : ${etatCourant.defausse}`;
     document.getElementById("grille-joueur-conteneur").innerHTML = rendreGrilleJoueur();
@@ -567,7 +568,9 @@ function rendre() {
 // manuellement (console du navigateur) en attendant. nouveauChoixModule(graine) tire les
 // candidats via bridge.py puis affiche l'ecran ; choisirModule ne fait encore que logger le
 // choix, aucun etat de parcours a mettre a jour pour l'instant.
-function afficherChoixModule(candidats) {
+function afficherChoixModule(candidats, niveau = null) {
+    document.getElementById("titre-choix-module").textContent =
+        niveau !== null ? `Nouveau module - Niveau ${niveau}` : "Nouveau module";
     document.getElementById("candidats-module").innerHTML = candidats
         .map(
             (candidat, index) => `
@@ -607,7 +610,7 @@ window.nouveauChoixModule = nouveauChoixModule;
 // main.py:_traiter_action cote PC (Niveau 1 sans 2e module equipe = pas encore choisi).
 function ouvrirChoixModulePartie(partie) {
     partieActive = partie;
-    afficherChoixModule(appelerBridge("choix_module_partie_web", JSON.stringify(partie)));
+    afficherChoixModule(appelerBridge("choix_module_partie_web", JSON.stringify(partie)), partie.niveau);
 }
 
 // Ouvre le choix du prochain niveau pour une partie reelle - meme condition d'appel que
@@ -656,6 +659,7 @@ function instructionStationService() {
 }
 
 function rendreStationService() {
+    document.getElementById("titre-station-service").textContent = `Station service - Niveau ${partieActive.niveau}`;
     const vaisseau = appelerBridge("infos_vaisseau_web", JSON.stringify(partieActive));
     document.getElementById("modules-station-service").innerHTML = Object.entries(vaisseau)
         .map(([position, etat]) => {
@@ -708,17 +712,46 @@ function cliquerModuleStation(position, estVide) {
     rendreStationService();
 }
 
+// Popup de confirmation sur la carte du module apres Reparer/Ameliorer/Mettre a jour (demande
+// utilisateur), meme mecanisme que afficherPopups (combat) mais ancre sur .module-station plutot
+// que sur une case de combat - le texte est calcule a partir de l'etat avant/apres l'action (pas
+// de valeur de reglage dupliquee ici, cf. CLAUDE.md : src/gameplay/partie.py reste la seule
+// source de verite pour PV_AMELIORATION/PV_REPARATION).
+function afficherPopupStation(position, texte, classeCouleur) {
+    const element = document.querySelector(`.module-station[data-position="${position}"]`);
+    if (!element) return;
+    const bulle = document.createElement("div");
+    bulle.className = `popup ${classeCouleur}`;
+    bulle.textContent = texte;
+    element.appendChild(bulle);
+    setTimeout(() => bulle.remove(), DUREE_POPUP_MS);
+}
+
 function cliquerActionStation(action) {
     if (positionSelectionneeStation === null) return;
     if (action === "deplacer") {
         if (POSITIONS_DEPLACABLES_STATION.includes(positionSelectionneeStation)) {
             modeDeplacementStation = true;
         }
-    } else {
-        partieActive = appelerBridge(FONCTIONS_ACTION_STATION_SERVICE[action], JSON.stringify(partieActive), positionSelectionneeStation);
-        sauvegarderPartieLocale(joueurCourant.id, partieActive);
+        rendreStationService();
+        return;
     }
+    const position = positionSelectionneeStation;
+    const { pv: pvAvant, pv_max: pvMaxAvant } = partieActive.vaisseau[position];
+    partieActive = appelerBridge(FONCTIONS_ACTION_STATION_SERVICE[action], JSON.stringify(partieActive), position);
+    sauvegarderPartieLocale(joueurCourant.id, partieActive);
+    // Deselectionne une fois l'action appliquee (demande utilisateur) : le popup ci-dessous
+    // suffit a confirmer l'effet, pas besoin de garder le module arme pour une autre action.
+    positionSelectionneeStation = null;
     rendreStationService();
+    const etat = partieActive.vaisseau[position];
+    if (action === "reparer") {
+        afficherPopupStation(position, `+${etat.pv - pvAvant} PV`, "popup-soin");
+    } else if (action === "ameliorer") {
+        afficherPopupStation(position, `+${etat.pv_max - pvMaxAvant} PV max`, "popup-soin");
+    } else {
+        afficherPopupStation(position, `Niveau ${etat.niveau_maj}`, "popup-buff");
+    }
 }
 
 function terminerStationServicePartie() {
@@ -740,7 +773,7 @@ const TITRES_TYPE_ETAPE = {
 function ouvrirEtapePlaceholderPartie(partie, type) {
     partieActive = partie;
     const [image] = LIBELLES_TYPE_ETAPE[type];
-    document.getElementById("titre-etape-placeholder").textContent = TITRES_TYPE_ETAPE[type];
+    document.getElementById("titre-etape-placeholder").textContent = `${TITRES_TYPE_ETAPE[type]} - Niveau ${partie.niveau}`;
     document.getElementById("image-etape-placeholder").src = image;
     masquerTousLesEcrans();
     document.getElementById("ecran-etape-placeholder").classList.remove("cachee");
@@ -818,10 +851,13 @@ window.choixNiveau = choixNiveau;
 // manuel en attendant. nouvelleDefaite() n'a besoin d'aucune donnee (texte fixe) ;
 // nouvelleVictoire(graine) tire les candidats de recompense via bridge.py (un par module d'un
 // vaisseau tire au sort - demo, pas un vrai combat termine pour l'instant).
-function afficherFinCombat(victoire, candidats) {
+function afficherFinCombat(victoire, candidats, niveau = null) {
     const titre = document.getElementById("titre-fin-combat");
     titre.textContent = victoire ? "VICTOIRE" : "DEFAITE";
     titre.className = victoire ? "victoire" : "defaite";
+    const niveauElement = document.getElementById("niveau-fin-combat");
+    niveauElement.textContent = niveau !== null ? `Niveau ${niveau}` : "";
+    niveauElement.classList.toggle("cachee", niveau === null);
     document.getElementById("message-defaite").classList.toggle("cachee", victoire);
     document.getElementById("candidats-recompense").classList.toggle("cachee", !victoire);
     document.getElementById("instruction-fin-combat").classList.toggle("cachee", !victoire);
@@ -881,9 +917,9 @@ window.nouvelleDefaite = nouvelleDefaite;
 function terminerCombatPartie() {
     if (etatCourant.etat === "VICTOIRE") {
         const candidats = appelerBridge("candidats_recompense_partie_web", JSON.stringify(partieActive));
-        afficherFinCombat(true, candidats);
+        afficherFinCombat(true, candidats, partieActive.niveau);
     } else {
-        afficherFinCombat(false, []);
+        afficherFinCombat(false, [], partieActive.niveau);
     }
 }
 

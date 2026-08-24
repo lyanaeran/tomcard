@@ -50,9 +50,10 @@ class EcranEtapePlaceholder(pyglet.window.Window):
     """Etape sans contenu prepare (Aventure, Planete commerciale) : icone + message + bouton
     "J'ai termine" qui signale a l'appelant d'avancer au niveau suivant, sans autre effet."""
 
-    def __init__(self, type_etape: TypeEtape):
+    def __init__(self, type_etape: TypeEtape, niveau: int):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.type_etape = type_etape
+        self.niveau = niveau
         self.bouton_survole: bool = False
         self.termine: bool = False
 
@@ -68,7 +69,7 @@ class EcranEtapePlaceholder(pyglet.window.Window):
         elements = [_sprite_etire(FOND_IMAGE, 0, 0, LARGEUR_FENETRE, HAUTEUR_FENETRE, lot)]
         elements.append(
             pyglet.text.Label(
-                TITRES_TYPE_ETAPE[self.type_etape],
+                f"{TITRES_TYPE_ETAPE[self.type_etape]} - Niveau {self.niveau}",
                 x=LARGEUR_FENETRE / 2,
                 y=HAUTEUR_FENETRE - 60,
                 anchor_x="center",
