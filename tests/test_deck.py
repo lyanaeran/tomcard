@@ -74,3 +74,12 @@ def test_la_main_ne_depasse_jamais_la_capacite_maximale():
     deck.piocher_debut_de_tour()
 
     assert len(deck.main) == 3
+
+
+def test_toutes_cartes_regroupe_toutes_les_piles():
+    deck = _deck_poc()
+    deck.piocher_debut_de_tour()
+    deck.jouer(deck.main[0])
+
+    assert len(deck.toutes_cartes()) == 9
+    assert set(deck.toutes_cartes()) == set(deck.pioche) | set(deck.main) | set(deck.defausse)

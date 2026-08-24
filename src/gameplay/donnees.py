@@ -20,6 +20,7 @@ class SpecModule:
     nom: str
     image: str
     points_de_vie: int
+    description: str
     cartes: tuple[str, ...]
 
 
@@ -40,6 +41,22 @@ class SpecEnnemi:
 def _chemin_image(chemin_relatif: str) -> str:
     """Renvoie le chemin absolu d'une image reference dans un fichier de config."""
     return str(RACINE / chemin_relatif)
+
+
+# Module principal (config/modules.json) : son image complete (spec.image) sert de fond au
+# vaisseau entier en combat (src/ui/fenetre.py) et n'est donc pas adaptee a une case de la taille
+# des autres modules (Station service, accueil joueur, specs.md 2.2/10.3) - decision utilisateur.
+_ID_MODULE_PRINCIPAL = "MOD_1"
+_IMAGE_CASE_MODULE_PRINCIPAL = "assets/modules/principal_avant.png"
+
+
+def image_case_module(spec: SpecModule) -> str:
+    """Chemin de l'image a utiliser pour ce module dans une case de la taille des autres modules
+    (Station service, accueil joueur) : un recadrage dedie sur l'avant du vaisseau pour le module
+    principal, l'image normale (spec.image) pour tous les autres."""
+    if spec.id == _ID_MODULE_PRINCIPAL:
+        return _chemin_image(_IMAGE_CASE_MODULE_PRINCIPAL)
+    return spec.image
 
 
 def charger_cartes() -> dict[str, Carte]:
@@ -82,6 +99,7 @@ def charger_modules() -> list[SpecModule]:
             nom=entree["nom"],
             image=_chemin_image(entree["image"]),
             points_de_vie=entree["points_de_vie"],
+            description=entree["description"],
             cartes=tuple(entree["cartes"]),
         )
         for entree in donnees["modules"]

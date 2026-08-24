@@ -62,3 +62,8 @@ class Deck:
         self.pioche = self.defausse
         self.defausse = []
         self._aleatoire.shuffle(self.pioche)
+
+    def toutes_cartes(self) -> list[Carte]:
+        """Toutes les cartes actuellement possedees par le joueur, quelle que soit leur
+        pile (pioche/main/defausse/epuisees) - pour l'ecran "voir le deck en entier"."""
+        return self.pioche + self.main + self.defausse + self.cartes_epuisees

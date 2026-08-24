@@ -5,7 +5,7 @@ Tests unitaires pour le chargement des fichiers de configuration (src/gameplay/d
 from pathlib import Path
 
 from src.gameplay.carte import CibleCarte, TypeCarte
-from src.gameplay.donnees import charger_cartes, charger_ennemis, charger_modules
+from src.gameplay.donnees import charger_cartes, charger_ennemis, charger_modules, image_case_module
 
 
 def test_charger_cartes_renvoie_les_cartes_jouables_avec_images_existantes():
@@ -45,3 +45,20 @@ def test_charger_ennemis_renvoie_3_ennemis_avec_images_existantes():
         assert Path(ennemi.image).is_file()
         assert ennemi.degats_attaque > 0
         assert ennemi.points_de_vie > 0
+
+
+def test_image_case_module_recadre_le_module_principal():
+    modules = charger_modules()
+    principal = next(spec for spec in modules if spec.id == "MOD_1")
+
+    image = image_case_module(principal)
+
+    assert image != principal.image
+    assert Path(image).is_file()
+
+
+def test_image_case_module_inchangee_pour_un_module_equipable():
+    modules = charger_modules()
+    equipable = next(spec for spec in modules if spec.id != "MOD_1")
+
+    assert image_case_module(equipable) == equipable.image

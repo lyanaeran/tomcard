@@ -512,7 +512,9 @@ body {
    chacune ancree sur sa case). pointer-events:none pour laisser passer le tap
    sur une case en-dessous (cible d'une carte armee, cf. cliquerCase). */
 #info-carte,
-#info-case {
+#info-case,
+#info-carte-deck,
+#info-carte-victoire-finale {
     position: fixed;
     top: 45%;
     left: 50%;
@@ -532,11 +534,15 @@ body {
 }
 
 #info-carte:empty,
-#info-case:empty {
+#info-case:empty,
+#info-carte-deck:empty,
+#info-carte-victoire-finale:empty {
     display: none;
 }
 
-#info-carte img {
+#info-carte img,
+#info-carte-deck img,
+#info-carte-victoire-finale img {
     width: 90px;
     aspect-ratio: 1 / 1;
     object-fit: contain;
@@ -631,4 +637,604 @@ body {
     .popup {
         font-size: 0.85rem;
     }
+}
+
+/* Ecran de choix de module (parcours, Niveau 1 - specs.md 2.3). Fond de combat reutilise en
+   placeholder (deja applique globalement sur body, cf. le haut de ce fichier) - decision
+   utilisateur, a remplacer par un fond dedie. Pas encore reliee a une orchestration de parcours
+   (qui n'existe pas encore), cf. web/app.js. */
+#ecran-choix-module {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2.5rem;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+#ecran-choix-module h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: normal;
+}
+
+#ecran-choix-module .instruction {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+#candidats-module {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1.5rem;
+}
+
+.candidat-module {
+    width: clamp(160px, 22vw, 260px);
+    background: rgba(20, 24, 34, 0.75);
+    border: 2px solid #5a6e91;
+    border-radius: 10px;
+    padding: 1rem;
+    cursor: pointer;
+}
+
+.candidat-module:hover {
+    border-color: #ffffff;
+}
+
+.candidat-module img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1/1;
+    object-fit: contain;
+    margin-bottom: 0.5rem;
+}
+
+.candidat-module-nom {
+    font-weight: bold;
+    color: #ffdc78;
+    margin-bottom: 0.6rem;
+}
+
+.candidat-module-description {
+    font-size: 0.85rem;
+    color: #dcdce1;
+}
+
+/* Ecran "Choix du prochain niveau" (specs.md 2.3/2.4). Fond de combat reutilise en placeholder
+   (deja applique globalement sur body) - decision utilisateur, a remplacer par un fond dedie. Pas
+   encore reliee a une orchestration de parcours (qui n'existe pas encore), cf. web/app.js. */
+#ecran-choix-niveau {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2.5rem;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+#ecran-choix-niveau h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: normal;
+}
+
+#ecran-choix-niveau .instruction {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+#candidats-niveau {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1.5rem;
+}
+
+.candidat-niveau {
+    width: clamp(180px, 24vw, 280px);
+    background: rgba(20, 24, 34, 0.75);
+    border: 2px solid #5a6e91;
+    border-radius: 10px;
+    padding: 1rem;
+    cursor: pointer;
+}
+
+.candidat-niveau:hover {
+    border-color: #ffffff;
+}
+
+.candidat-niveau img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1/1.19;
+    object-fit: contain;
+    margin-bottom: 0.6rem;
+}
+
+.candidat-niveau-description {
+    font-size: 0.85rem;
+    color: #dcdce1;
+}
+
+/* Ecran Station service (specs.md 2.2). Fond de combat reutilise en placeholder (deja applique
+   globalement sur body) - decision utilisateur. Cartes module reprises de #vaisseau-accueil
+   (.module-accueil), rendues cliquables/selectionnables. */
+#ecran-station-service {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+#ecran-station-service h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: normal;
+}
+
+#modules-station-service {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.module-station {
+    width: clamp(110px, 15vw, 150px);
+    background: rgba(20, 24, 34, 0.75);
+    border: 2px solid #5a6e91;
+    border-radius: 10px;
+    padding: 0.8rem;
+    cursor: pointer;
+}
+
+.module-station.selectionnee {
+    border-color: #ffffff;
+}
+
+.module-station img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1/1;
+    object-fit: contain;
+    margin-bottom: 0.4rem;
+}
+
+.module-station-nom {
+    font-weight: bold;
+    font-size: 0.85rem;
+}
+
+.module-station-pv {
+    font-size: 0.8rem;
+    color: #dcdce1;
+}
+
+.module-station-niveau {
+    font-size: 0.75rem;
+    color: #ffdc78;
+}
+
+.module-station-vide {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: clamp(110px, 15vw, 150px);
+    min-height: 100px;
+    color: #7a7e8c;
+    font-size: 0.8rem;
+    border: 2px solid #3a3f52;
+    border-radius: 10px;
+    cursor: default;
+}
+
+#ecran-station-service .instruction {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+#actions-station-service {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+}
+
+/* Icones deja pourvues de leur cadre/nom incruste (fournies par l'utilisateur), aucun style de
+   bouton generique ici (pas dans le selecteur partage plus bas) - juste un contour au survol/a
+   l'armement de Deplacer, meme principe que src/ui/ecran_station_service.py cote PC. */
+.action-station {
+    width: clamp(70px, 9vw, 100px);
+    aspect-ratio: 511 / 532;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: 10px;
+    background: transparent;
+    cursor: pointer;
+}
+
+.action-station img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.action-station:hover,
+.action-station.armee {
+    border-color: #ffffff;
+}
+
+/* Ecran generique pour une etape sans contenu prepare (Aventure, Planete commerciale - specs.md
+   2.4 etapes 7/9, 9.1). Fond de combat reutilise en placeholder (deja applique globalement sur
+   body) - decision utilisateur. */
+#ecran-etape-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+#ecran-etape-placeholder h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: normal;
+}
+
+#ecran-etape-placeholder .instruction {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #dcdce1;
+}
+
+#image-etape-placeholder {
+    width: clamp(160px, 22vw, 240px);
+    aspect-ratio: 1/1;
+    object-fit: contain;
+}
+
+/* Ecran de fin de combat (parcours, specs.md 2.1/6). Fond de combat reutilise en placeholder
+   (deja applique globalement sur body) - decision utilisateur, a remplacer par un fond dedie.
+   Pas encore reliee a une orchestration de parcours, cf. web/app.js. Meme structure generale
+   que #ecran-choix-module (titre, contenu, instruction). */
+#ecran-fin-combat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+#titre-fin-combat {
+    margin: 0;
+    font-size: 2.2rem;
+    font-weight: normal;
+}
+
+#titre-fin-combat.defaite {
+    color: rgb(190, 40, 40);
+}
+
+#titre-fin-combat.victoire {
+    color: rgb(70, 190, 90);
+}
+
+#message-defaite {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+#ecran-fin-combat .instruction {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+#candidats-recompense {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1.2rem;
+}
+
+.candidat-recompense {
+    width: clamp(130px, 17vw, 180px);
+    background: rgba(20, 24, 34, 0.75);
+    border: 2px solid #5a6e91;
+    border-radius: 10px;
+    padding: 0.8rem;
+    cursor: pointer;
+}
+
+.candidat-recompense:hover {
+    border-color: #ffffff;
+}
+
+.candidat-recompense-entete {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.75rem;
+    color: #b4c8e6;
+}
+
+/* Memes couleurs que COULEUR_ETOILE_RARETE dans src/ui/fenetre.py. */
+.etoile-commune {
+    color: rgb(70, 190, 90);
+}
+
+.etoile-rare {
+    color: rgb(60, 130, 230);
+}
+
+.etoile-legendaire {
+    color: rgb(235, 150, 30);
+}
+
+.candidat-recompense img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1/1;
+    object-fit: contain;
+    margin-bottom: 0.4rem;
+}
+
+.candidat-recompense-nom {
+    font-weight: bold;
+}
+
+.candidat-recompense-cout {
+    font-size: 0.85rem;
+    color: #dcdce1;
+}
+
+.candidat-recompense-description {
+    font-size: 0.75rem;
+    color: #b4c8e6;
+    margin-top: 0.3rem;
+    line-height: 1.3;
+}
+
+/* Ecran "deck en entier" (appelable depuis plusieurs endroits du parcours, specs.md 6). Fond de
+   combat reutilise en placeholder (deja applique globalement sur body) - decision utilisateur,
+   a remplacer par un fond dedie. Pas encore reliee a un vrai bouton dans l'UI, cf. web/app.js. */
+#ecran-deck {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+#ecran-deck h1 {
+    margin: 0 0 1.5rem;
+    font-size: 1.8rem;
+    font-weight: normal;
+}
+
+#grille-deck {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    max-width: 900px;
+}
+
+.carte-deck {
+    position: relative;
+    width: clamp(90px, 12vw, 120px);
+    background: rgba(20, 24, 34, 0.75);
+    border: 2px solid #5a6e91;
+    border-radius: 8px;
+    padding: 0.5rem;
+    cursor: pointer;
+}
+
+.carte-deck:hover {
+    border-color: #ffffff;
+}
+
+.carte-deck img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1/1;
+    object-fit: contain;
+    margin-bottom: 0.3rem;
+}
+
+.carte-deck-nom {
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.carte-deck-cout {
+    font-size: 0.7rem;
+    color: #dcdce1;
+}
+
+.carte-deck-quantite {
+    position: absolute;
+    top: 0.3rem;
+    right: 0.4rem;
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: #ffdc78;
+}
+
+/* Ecran de victoire finale (specs.md 2.4, etape 11). Fond de combat reutilise en placeholder
+   (deja applique globalement sur body) - decision utilisateur. Grille de cartes (#grille-victoire-
+   finale) et carte individuelle (.carte-deck) reutilisent le meme style que #ecran-deck. */
+#ecran-victoire-finale {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.2rem;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+#ecran-victoire-finale h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: normal;
+    color: #46be5a;
+}
+
+#ecran-victoire-finale .instruction {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+#grille-victoire-finale {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    max-width: 900px;
+}
+
+/* Selection/creation de profil joueur, puis accueil de ce joueur (specs.md 10.3) - nouveau point
+   d'entree de l'app web (appele par demarrer() dans web/app.js). Fond de combat reutilise en
+   placeholder, meme decision que les autres ecrans du parcours. */
+#ecran-selection-joueur,
+#ecran-accueil-joueur {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+#ecran-selection-joueur h1,
+#ecran-accueil-joueur h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: normal;
+}
+
+#liste-joueurs {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    width: min(90vw, 320px);
+}
+
+.ligne-joueur {
+    padding: 0.8rem 1rem;
+    background: rgba(20, 24, 34, 0.75);
+    border: 2px solid #5a6e91;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.ligne-joueur:hover {
+    border-color: #ffffff;
+}
+
+#creation-joueur {
+    display: flex;
+    gap: 0.6rem;
+}
+
+#nom-nouveau-joueur {
+    padding: 0.6rem 0.8rem;
+    border-radius: 8px;
+    border: 2px solid #5a6e91;
+    background: rgba(20, 24, 34, 0.75);
+    color: white;
+    font-size: 1rem;
+}
+
+#ecran-selection-joueur button,
+#ecran-accueil-joueur button,
+#ecran-fin-combat button,
+#bouton-termine-station-service,
+#bouton-continuer-victoire-finale,
+#bouton-termine-etape-placeholder {
+    font-size: 1rem;
+    padding: 0.6rem 1.4rem;
+    border: none;
+    border-radius: 8px;
+    background: #4c6ef5;
+    color: white;
+    cursor: pointer;
+}
+
+#bouton-abandonner {
+    background: #c0392b;
+}
+
+#vaisseau-accueil {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.module-accueil {
+    width: clamp(110px, 15vw, 150px);
+    background: rgba(20, 24, 34, 0.75);
+    border: 2px solid #5a6e91;
+    border-radius: 10px;
+    padding: 0.8rem;
+}
+
+.module-accueil img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1/1;
+    object-fit: contain;
+    margin-bottom: 0.4rem;
+}
+
+.module-accueil-nom {
+    font-weight: bold;
+    font-size: 0.85rem;
+}
+
+.module-accueil-pv {
+    font-size: 0.8rem;
+    color: #dcdce1;
+}
+
+.module-accueil-niveau {
+    font-size: 0.75rem;
+    color: #ffdc78;
+}
+
+.module-accueil-vide {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100px;
+    color: #7a7e8c;
+    font-size: 0.8rem;
+}
+
+#boutons-partie-en-cours {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
 }

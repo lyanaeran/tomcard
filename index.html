@@ -4,14 +4,33 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
     <title>Space Fight - prototype web</title>
-    <link rel="stylesheet" href="web/style.css?v=20">
-    <link rel="manifest" href="web/manifest.json?v=20">
+    <link rel="stylesheet" href="web/style.css?v=32">
+    <link rel="manifest" href="web/manifest.json?v=32">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0b1020">
 </head>
 <body>
     <div id="statut-chargement">Chargement...</div>
+    <div id="ecran-selection-joueur" class="cachee">
+        <h1>Choisir un joueur</h1>
+        <div id="liste-joueurs"></div>
+        <div id="creation-joueur">
+            <input type="text" id="nom-nouveau-joueur" placeholder="Nom du nouveau joueur" maxlength="40">
+            <button id="bouton-creer-joueur">Creer</button>
+        </div>
+    </div>
+    <div id="ecran-accueil-joueur" class="cachee">
+        <h1 id="nom-joueur-accueil"></h1>
+        <p id="niveau-accueil" class="instruction"></p>
+        <div id="vaisseau-accueil" class="cachee"></div>
+        <div id="boutons-partie-en-cours" class="cachee">
+            <button id="bouton-continuer">Continuer</button>
+            <button id="bouton-abandonner">Abandonner la partie</button>
+            <button id="bouton-voir-deck-partie">Voir le deck</button>
+        </div>
+        <button id="bouton-nouvelle-partie" class="cachee">Nouvelle partie</button>
+    </div>
     <div id="app" class="cachee">
         <div id="entete">
             <span id="electricite"></span>
@@ -31,7 +50,49 @@
         <div id="info-case"></div>
         <div id="banniere"></div>
     </div>
+    <div id="ecran-choix-module" class="cachee">
+        <h1>Nouveau module</h1>
+        <div id="candidats-module"></div>
+        <p class="instruction">Choisissez un nouveau module pour votre vaisseau.</p>
+    </div>
+    <div id="ecran-choix-niveau" class="cachee">
+        <h1 id="titre-choix-niveau"></h1>
+        <div id="candidats-niveau"></div>
+        <p class="instruction">Choisissez la prochaine etape.</p>
+    </div>
+    <div id="ecran-station-service" class="cachee">
+        <h1>Station service</h1>
+        <div id="modules-station-service"></div>
+        <p id="instruction-station-service" class="instruction"></p>
+        <div id="actions-station-service"></div>
+        <button id="bouton-termine-station-service">J'ai termine</button>
+    </div>
+    <div id="ecran-etape-placeholder" class="cachee">
+        <h1 id="titre-etape-placeholder"></h1>
+        <img id="image-etape-placeholder" alt="">
+        <p class="instruction">Contenu pas encore defini pour cette etape.</p>
+        <button id="bouton-termine-etape-placeholder">J'ai termine</button>
+    </div>
+    <div id="ecran-fin-combat" class="cachee">
+        <h1 id="titre-fin-combat"></h1>
+        <p id="message-defaite" class="cachee">Pas d'inquietude : vos restes seront recycles, rien ne se perd dans l'espace.</p>
+        <div id="candidats-recompense" class="cachee"></div>
+        <p id="instruction-fin-combat" class="instruction cachee">Choisissez une carte a ajouter a votre deck.</p>
+        <button id="bouton-continuer-fin-combat" class="cachee">Continuer</button>
+    </div>
+    <div id="ecran-victoire-finale" class="cachee">
+        <h1>Victoire finale</h1>
+        <p class="instruction">Vous avez vaincu le Boss et termine ce run !</p>
+        <div id="grille-victoire-finale"></div>
+        <div id="info-carte-victoire-finale"></div>
+        <button id="bouton-continuer-victoire-finale">Continuer</button>
+    </div>
+    <div id="ecran-deck" class="cachee">
+        <h1>Deck</h1>
+        <div id="grille-deck"></div>
+        <div id="info-carte-deck"></div>
+    </div>
     <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
-    <script src="web/app.js?v=20"></script>
+    <script src="web/app.js?v=32"></script>
 </body>
 </html>

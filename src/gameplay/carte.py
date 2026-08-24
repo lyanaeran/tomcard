@@ -112,3 +112,13 @@ class Carte:
         a munitions_max) : chaque copie physique tiree dans un deck doit avoir son propre
         compteur de munitions, cf. specs.md paragraphe 3.6."""
         return dataclasses.replace(self, munitions_restantes=self.munitions_max)
+
+
+def regrouper_cartes(cartes: list[Carte]) -> list[tuple[Carte, int]]:
+    """Regroupe une liste de cartes par modele (meme nom = meme modele) en (carte, quantite),
+    premiere occurrence conservee comme representant - pour les ecrans affichant "le deck en
+    entier" sans repeter chaque exemplaire individuel (ex. 5 Attaque de base -> une entree x5)."""
+    groupes: dict[str, list[Carte]] = {}
+    for carte in cartes:
+        groupes.setdefault(carte.nom, []).append(carte)
+    return [(exemplaires[0], len(exemplaires)) for exemplaires in groupes.values()]

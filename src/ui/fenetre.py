@@ -302,6 +302,56 @@ def _pastilles_buffs_module(module: Module, cx_pv: float, cy: float, lot: pyglet
     return elements
 
 
+LIBELLES_CIBLE = {
+    CibleCarte.ENNEMI_UNIQUE: "un ennemi",
+    CibleCarte.ENNEMIS_MULTIPLES: "tous les ennemis",
+    CibleCarte.LIGNE_ENNEMIE: "la rangee ennemie visee (avant + arriere)",
+    CibleCarte.ALLIE_UNIQUE: "un module",
+    CibleCarte.ALLIES_MULTIPLES: "tous les modules",
+    CibleCarte.MODULE_PRINCIPAL: "le module principal",
+    CibleCarte.COLONNE_AVANT_ENNEMIE: "la ligne avant ennemie",
+    CibleCarte.COLONNE_ARRIERE_ENNEMIE: "la ligne arriere ennemie",
+    CibleCarte.COLONNE_AVANT_ALLIEE: "la ligne avant alliee",
+}
+
+
+def texte_effet_carte(carte: Carte) -> str:
+    """Description generee a partir des donnees de la carte (type, cible, valeur, duree),
+    reutilisable par tout ecran voulant afficher l'effet d'une carte en texte lisible (ecran de
+    fin de combat, futur ecran de deck...). Meme principe que texteEffetCarte dans web/app.js -
+    chaque plateforme sa version, PC et web ne partageant pas de code d'affichage."""
+    cible = LIBELLES_CIBLE[carte.cible]
+    if carte.type == TypeCarte.ATTAQUE:
+        return f"Inflige {carte.valeur} degats a {cible}."
+    if carte.type == TypeCarte.DEFENSE:
+        if carte.action == ActionCarte.BOUCLIER_POURCENTAGE_PV:
+            return f"Bouclier de {carte.valeur}% des PV de {cible}."
+        if carte.action == ActionCarte.ANNULATION_PROCHAINE_ATTAQUE:
+            return f"Annule la prochaine attaque sur {cible}."
+        return f"Bouclier de {carte.valeur} a {cible}."
+    if carte.type == TypeCarte.REPARATION:
+        return f"Repare {carte.valeur} PV a {cible}."
+    if carte.type == TypeCarte.OUTILS:
+        if carte.action == ActionCarte.GAIN_ELECTRICITE:
+            return f"Gagne {carte.valeur} ⚡."
+        if carte.action == ActionCarte.GAIN_ELECTRICITE_PAR_MODULE:
+            return f"Gagne {carte.valeur} ⚡ par module actif."
+        if carte.action == ActionCarte.PIOCHE_SUPPLEMENTAIRE:
+            return f"Pioche {carte.valeur} cartes supplementaires."
+    if carte.type == TypeCarte.DEBUFF:
+        if carte.action == ActionCarte.REDUCTION_DEGATS:
+            return f"Diminue les degats infliges par {cible} de {carte.valeur}, pendant {carte.duree} tour(s)."
+        if carte.action == ActionCarte.VULNERABILITE:
+            return f"Augmente les degats subis par {cible} de {carte.valeur}%, pendant {carte.duree} tour(s)."
+        if carte.action == ActionCarte.REDIRECTION_CIBLE:
+            return f"Detourne l'attaque de {cible} vers un autre ennemi tire au hasard, pendant {carte.duree} tour(s)."
+    if carte.type == TypeCarte.BUFF:
+        if carte.action == ActionCarte.BOUCLIER_PAR_TOUR:
+            duree = f" pendant {carte.duree} tour(s)" if carte.duree else ""
+            return f"{cible} gagne {carte.valeur} bouclier a chaque tour{duree}."
+    return f"Effet de {carte.valeur} a {cible}."
+
+
 def _texte_et_couleur_effet(carte: Carte, valeur_effective: int) -> tuple[str, tuple[int, int, int]]:
     """Texte (+/-valeur reellement appliquee) et couleur du popup associe a l'effet d'une carte jouee."""
     if carte.type == TypeCarte.ATTAQUE:

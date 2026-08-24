@@ -4,6 +4,7 @@ Tests unitaires pour la generation aleatoire du combat du POC (src/gameplay/conf
 
 import random
 
+from src.gameplay.carte import RareteCarte, TypeCarte
 from src.gameplay.combat import EtatCombat
 from src.gameplay.config_poc import (
     CARTES_PAR_MODULE_EQUIPE,
@@ -13,6 +14,7 @@ from src.gameplay.config_poc import (
     NOMBRE_MODULES_EQUIPES,
     PV_ENNEMI_MODE_TEST,
     PV_MODULE_MODE_TEST,
+    VALEUR_ATTAQUE_BASE_MODE_TEST,
     creer_combat_poc,
     creer_deck,
     creer_deck_mode_test,
@@ -167,6 +169,26 @@ def test_mode_test_actif_donne_200_pv_aux_modules_et_aux_ennemis():
     assert vaisseau.base.pv_max == PV_MODULE_MODE_TEST
     assert all(module.pv_max == PV_MODULE_MODE_TEST for module in vaisseau.modules_equipes().values())
     assert all(ennemi.pv_max == PV_ENNEMI_MODE_TEST for ennemi in flotte.ennemis_vivants())
+
+
+def test_creer_deck_mode_test_donne_20_degats_aux_cartes_attaque_de_base():
+    """Les cartes ATTAQUE de rarete Base (Laser, Laser percant, Bombardement) tuent un ennemi en
+    un coup en mode test (PV_ENNEMI_MODE_TEST), les autres cartes gardent leur valeur normale."""
+    cartes = charger_cartes()
+    aleatoire = random.Random(3)
+
+    deck = creer_deck_mode_test(cartes, aleatoire)
+
+    toutes = deck.pioche + deck.main + deck.defausse
+    attaques_base = [c for c in toutes if c.rarete == RareteCarte.BASE and c.type == TypeCarte.ATTAQUE]
+    autres = [c for c in toutes if c.rarete != RareteCarte.BASE or c.type != TypeCarte.ATTAQUE]
+
+    assert attaques_base  # au moins Laser/Laser percant/Bombardement
+    assert all(carte.valeur == VALEUR_ATTAQUE_BASE_MODE_TEST for carte in attaques_base)
+    assert VALEUR_ATTAQUE_BASE_MODE_TEST >= PV_ENNEMI_MODE_TEST
+    for carte in autres:
+        carte_originale = cartes[next(id_carte for id_carte, c in cartes.items() if c.nom == carte.nom)]
+        assert carte.valeur == carte_originale.valeur
 
 
 def test_creer_combat_poc_utilise_le_deck_mode_test_quand_actif():

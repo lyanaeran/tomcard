@@ -1,7 +1,9 @@
 # Space Fight
 
-Deckbuilder roguelike (thème vaisseaux spatiaux) inspiré de Slay the Spire. Actuellement un
-**POC de combat** jouable (pas de boucle de run complète).
+Deckbuilder roguelike (thème vaisseaux spatiaux) inspiré de Slay the Spire. Le **POC de combat**
+est jouable ; le développement porte maintenant sur le **parcours** (boucle de run), construit
+écran par écran (voir specs.md §2.3 et suivants) - pas encore d'orchestration reliant ces écrans
+entre eux ni au combat.
 
 ## Langue
 
@@ -12,18 +14,22 @@ variables, identifiants — reste en français, déjà la convention du projet).
 ## Documents de référence (à tenir à jour)
 
 - `specs/specs.md` — vision de conception globale du jeu complet (boucle de run, modules, cartes, etc.)
-- `specs/poc.md` — spec du POC de combat actuellement implémenté, dérivée de `specs/specs.md`
+- `specs/poc.md` — spec du POC de combat, dérivée de `specs/specs.md`. **Gelée depuis que le
+  développement a basculé sur le parcours (run) : ne plus la mettre à jour** (décision utilisateur),
+  y compris pour des changements côté combat — reste comme référence historique du POC tel qu'il
+  était. `specs/specs.md` est désormais le seul document vivant
 - `specs/cartes.xlsx` — registre éditable des cartes (une ligne par carte du tableau de conception,
   colonnes Rareté/Module/Catégorie/Cible/Coût/X/Y/Munition/Nom/Description/Jouable/Notes), miroir
   humainement modifiable de `config/cartes.json`. Pas rechargé par le code (`config/cartes.json`
   reste la seule source de vérité pour le moteur) : si l'un est modifié, reporter le changement dans
   l'autre à la main.
 
-**Les deux fichiers `specs.md`/`poc.md` doivent rester synchronisés avec le code.** Quand une décision de design est
-prise ou clarifiée en cours d'implémentation (ex. règle de ciblage, format d'une carte, retour
-visuel d'un effet), reporte-la dans `specs/poc.md` (détail POC) et, si c'est une décision de design
-réutilisable au-delà du POC, dans `specs/specs.md` aussi. Inversement, avant d'implémenter une
-fonctionnalité un peu ambiguë, relis la section concernée de ces deux fichiers.
+**`specs.md` doit rester synchronisé avec le code.** Quand une décision de design est prise ou
+clarifiée en cours d'implémentation (ex. règle de ciblage, format d'une carte, retour visuel d'un
+effet, mécanique du parcours), reporte-la dans `specs/specs.md`. Inversement, avant d'implémenter une
+fonctionnalité un peu ambiguë, relis la section concernée de ce fichier (et, pour un point qui touche
+encore le combat existant, jette aussi un œil à `specs/poc.md`, qui documente son état au moment du
+gel, sans qu'il soit nécessaire de le mettre à jour en retour).
 
 ## Deux façons de jouer (PC et web/iOS) — les deux doivent rester fonctionnelles
 
@@ -163,8 +169,8 @@ directement — pour que les tests et les captures d'écran restent reproductibl
 produit un grand nombre de branches mortes/orphelines dans ce projet, cf. plus bas) : tout le
 développement se fait sur `devjeux`, avec une PR `devjeux` → `main` par changement logique, plan de
 test dans la description. Toute valeur numérique inventée faute de spec précise (PV, dégâts,
-coûts...) doit être signalée comme telle dans la PR et dans `specs/poc.md` (voir l'avertissement en
-tête de `specs/poc.md`).
+coûts...) doit être signalée comme telle dans la PR et dans `specs/specs.md` (`specs/poc.md` est
+gelé, cf. plus haut).
 
 **Avant de pousser un commit supplémentaire sur `devjeux`, vérifier l'état de sa PR** (mergée/fermée
 ou encore ouverte). Pousser sur une branche dont la PR est déjà mergée ou fermée laisse le commit

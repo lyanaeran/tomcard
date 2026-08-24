@@ -15,9 +15,37 @@ import sys
 
 sys.path.insert(0, "/repo")
 
-from src.gameplay.carte import CIBLES_SANS_CLIC, ActionCarte, CibleCarte
-from src.gameplay.config_poc import creer_combat_poc
+from src.gameplay.carte import CIBLES_SANS_CLIC, ActionCarte, CibleCarte, regrouper_cartes
+from src.gameplay.config_poc import creer_combat_poc, creer_deck, creer_vaisseau
+from src.gameplay.donnees import charger_cartes, charger_modules, image_case_module
 from src.gameplay.module import Module
+from src.gameplay.parcours import (
+    aleatoire_pour_niveau,
+    est_niveau_boss,
+    modules_equipables,
+    tirer_candidats_module,
+    tirer_candidats_recompense,
+    tirer_propositions_niveau,
+)
+from src.gameplay.partie import (
+    ajouter_carte,
+    ameliorer_module,
+    avancer_niveau,
+    combat_depuis_partie,
+    deck_de_la_partie,
+    deplacer_module,
+    equiper_module,
+    id_de_carte,
+    marquer_terminee,
+    mettre_a_jour_module,
+    nouveau_profil,
+    nouvelle_partie,
+    partie_depuis_json,
+    partie_vers_json,
+    profil_vers_json,
+    reparer_module,
+    specs_utilisees_partie,
+)
 from src.gameplay.position import Colonne, Position, Rangee
 
 RACINE_FS = "/repo/"
@@ -224,6 +252,264 @@ def nouveau_combat(graine) -> str:
     aleatoire = random.Random(int(graine)) if graine is not None else random.Random()
     combat = creer_combat_poc(generateur_aleatoire=aleatoire)
     return json.dumps({"etat": _etat_dict(), "popups": []})
+
+
+def nouveau_choix_module(graine) -> str:
+    """Tire 3 modules candidats differents (specs.md 2.3, Niveau 1), graine optionnelle."""
+    aleatoire = random.Random(int(graine)) if graine is not None else random.Random()
+    pool = modules_equipables(charger_modules())
+    candidats = tirer_candidats_module(pool, aleatoire)
+    return json.dumps(
+        [
+            {"id": candidat.id, "nom": candidat.nom, "image": _chemin_web(candidat.image), "description": candidat.description}
+            for candidat in candidats
+        ]
+    )
+
+
+def _candidat_recompense_json(spec, carte, cartes: dict) -> dict:
+    return {
+        "module_nom": spec.nom,
+        "carte_nom": carte.nom,
+        "carte_id": id_de_carte(carte, cartes),
+        "image": _chemin_web(carte.image),
+        "cout": carte.cout,
+        "rarete": carte.rarete.name,
+        "valeur": carte.valeur,
+        "type": carte.type.name,
+        "cible": carte.cible.name,
+        "action": carte.action.name if carte.action else None,
+        "duree": carte.duree,
+    }
+
+
+def fin_combat_victoire(graine) -> str:
+    """Ecran de victoire (specs.md 2.1/6) : un candidat de recompense par module d'un vaisseau
+    tire au sort - demo, pas encore reliee a un vrai combat termine (cf. specs.md 2.3), meme
+    situation que nouveau_choix_module."""
+    aleatoire = random.Random(int(graine)) if graine is not None else random.Random()
+    _vaisseau, specs_utilisees = creer_vaisseau(charger_modules(), aleatoire)
+    cartes = charger_cartes()
+    candidats = tirer_candidats_recompense(specs_utilisees, cartes, aleatoire)
+    return json.dumps(
+        [_candidat_recompense_json(spec, carte, cartes) for spec, carte in candidats if carte is not None]
+    )
+
+
+def _carte_regroupee_json(carte, quantite: int) -> dict:
+    return {
+        "nom": carte.nom,
+        "image": _chemin_web(carte.image),
+        "cout": carte.cout,
+        "rarete": carte.rarete.name,
+        "valeur": carte.valeur,
+        "type": carte.type.name,
+        "cible": carte.cible.name,
+        "action": carte.action.name if carte.action else None,
+        "duree": carte.duree,
+        "quantite": quantite,
+    }
+
+
+def etat_deck(graine) -> str:
+    """Ecran "deck en entier" (appelable depuis plusieurs endroits, cf. specs.md 6) : cartes du
+    combat en cours si un combat est actif (combat.joueur.deck), sinon un deck de demonstration
+    tire au sort (graine optionnelle) - meme situation que nouveau_choix_module/
+    fin_combat_victoire pour l'instant : pas encore reliee a un vrai bouton dans l'UI."""
+    if combat is not None:
+        cartes = combat.joueur.deck.toutes_cartes()
+    else:
+        aleatoire = random.Random(int(graine)) if graine is not None else random.Random()
+        _vaisseau, specs_utilisees = creer_vaisseau(charger_modules(), aleatoire)
+        cartes = creer_deck(specs_utilisees, charger_cartes(), aleatoire).toutes_cartes()
+    return json.dumps([_carte_regroupee_json(carte, quantite) for carte, quantite in regrouper_cartes(cartes)])
+
+
+# --- Profils et parties (specs.md 10.3) : la persistance elle-meme (lister/lire/ecrire) est geree
+# cote JS via localStorage (web/app.js), Pyodide n'ayant pas acces a une FS persistante entre
+# recharges de page. Ces fonctions ne font que (de)serialiser et appliquer la logique de jeu pure
+# de src/gameplay/partie.py - jamais de lecture/ecriture disque ici.
+
+
+def creer_profil_web(nom) -> str:
+    return profil_vers_json(nouveau_profil(nom))
+
+
+def nouvelle_partie_web() -> str:
+    return partie_vers_json(nouvelle_partie())
+
+
+def infos_vaisseau_web(partie_json) -> str:
+    """Vaisseau d'une partie (JSON), enrichi de l'image/nom de chaque module - pour l'ecran
+    d'accueil joueur (src/ui/ecran_accueil_joueur.py cote PC, meme donnees ici pour le web)."""
+    partie = partie_depuis_json(partie_json)
+    specs_par_id = {spec.id: spec for spec in charger_modules()}
+    resultat = {}
+    for position, etat in partie.vaisseau.items():
+        if etat is None:
+            resultat[position] = None
+        else:
+            spec = specs_par_id[etat.module_id]
+            resultat[position] = {
+                "module_id": etat.module_id,
+                "pv": etat.pv,
+                "pv_max": etat.pv_max,
+                "niveau_maj": etat.niveau_maj,
+                "nom": spec.nom,
+                "image": _chemin_web(image_case_module(spec)),
+            }
+    return json.dumps(resultat)
+
+
+def deck_partie_web(partie_json) -> str:
+    """Deck reel d'une partie sauvegardee (par opposition a etat_deck, qui affiche le combat en
+    cours ou une demonstration) - pour le bouton "Voir le deck" de l'ecran d'accueil joueur."""
+    partie = partie_depuis_json(partie_json)
+    cartes = deck_de_la_partie(partie, charger_cartes())
+    return json.dumps([_carte_regroupee_json(carte, quantite) for carte, quantite in regrouper_cartes(cartes)])
+
+
+def abandonner_partie_web(partie_json) -> str:
+    """Marque une partie TERMINEE (decision utilisateur : comme une defaite, cf.
+    src/gameplay/partie.py:marquer_terminee) - web/app.js re-sauvegarde le resultat dans
+    localStorage."""
+    return partie_vers_json(marquer_terminee(partie_depuis_json(partie_json)))
+
+
+def choix_module_partie_web(partie_json) -> str:
+    """Candidats de choix de module (Niveau 1, specs.md 2.3) pour une partie qui vient d'etre
+    creee, tires a partir de sa graine (coherence avec specs.md 10.3 - meme logique que
+    nouveau_choix_module, mais deterministe par rapport a la graine de la partie plutot que
+    tire independamment)."""
+    partie = partie_depuis_json(partie_json)
+    pool = modules_equipables(charger_modules())
+    candidats = tirer_candidats_module(pool, random.Random(partie.graine))
+    return json.dumps(
+        [
+            {"id": candidat.id, "nom": candidat.nom, "image": _chemin_web(candidat.image), "description": candidat.description}
+            for candidat in candidats
+        ]
+    )
+
+
+def choisir_module_partie_web(partie_json, module_id) -> str:
+    """Equipe le module choisi (Niveau 1, specs.md 2.3/2.4) et avance au niveau suivant ; renvoie
+    la partie mise a jour (web/app.js la re-sauvegarde dans localStorage puis enchaine sur le
+    choix du niveau) - meme logique que main.py:_ouvrir_choix_module cote PC."""
+    partie = partie_depuis_json(partie_json)
+    specs_par_id = {spec.id: spec for spec in charger_modules()}
+    equiper_module(partie, specs_par_id[module_id])
+    avancer_niveau(partie)
+    return partie_vers_json(partie)
+
+
+def continuer_partie_web(partie_json) -> str:
+    """Demarre un combat a partir du vaisseau/deck reels de la partie (bouton "Continuer" de
+    l'ecran d'accueil joueur, ou choix d'une etape Prime/Boss depuis le choix du prochain niveau) :
+    la flotte ennemie reste tiree au hasard - approximation temporaire (decision utilisateur) en
+    attendant que le parcours applique les regles de difficulte par niveau (specs.md 2.3/3.2),
+    meme situation que main.py:_ouvrir_combat cote PC."""
+    global combat
+    partie = partie_depuis_json(partie_json)
+    combat = combat_depuis_partie(partie)
+    return json.dumps({"etat": _etat_dict(), "popups": []})
+
+
+def choix_niveau_web(partie_json) -> str:
+    """Ecran "Choix du prochain niveau" (specs.md 2.3/2.4) : 3 propositions d'etape tirees de
+    facon deterministe a partir de la graine et du niveau de la partie (ou une seule, BOSS, a un
+    niveau Boss - cf. src/gameplay/parcours.py:tirer_propositions_niveau)."""
+    partie = partie_depuis_json(partie_json)
+    aleatoire = aleatoire_pour_niveau(partie.graine, partie.niveau)
+    propositions = tirer_propositions_niveau(partie.niveau, aleatoire)
+    return json.dumps({"niveau": partie.niveau, "propositions": [type_etape.name for type_etape in propositions]})
+
+
+def candidats_recompense_partie_web(partie_json) -> str:
+    """Candidats de recompense de fin de combat (victoire) pour une partie reelle (specs.md 2.1/6),
+    un par module effectivement equipe sur cette partie (specs_utilisees_partie) plutot qu'un
+    vaisseau tire au sort comme fin_combat_victoire (demo) - meme logique que
+    main.py:_ouvrir_fin_combat cote PC."""
+    partie = partie_depuis_json(partie_json)
+    specs_par_id = {spec.id: spec for spec in charger_modules()}
+    cartes = charger_cartes()
+    candidats = tirer_candidats_recompense(specs_utilisees_partie(partie, specs_par_id), cartes, random.Random())
+    return json.dumps(
+        [_candidat_recompense_json(spec, carte, cartes) for spec, carte in candidats if carte is not None]
+    )
+
+
+def resoudre_victoire_partie_web(partie_json, id_carte) -> str:
+    """Resout la victoire d'un combat pour une partie reelle : ajoute la carte choisie (id_carte,
+    ou None si aucun candidat n'etait propose), puis avance au niveau suivant - sauf si c'etait un
+    Boss, auquel cas le niveau n'avance pas encore et la partie reste EN_COURS : web/app.js doit
+    d'abord ouvrir l'ecran de victoire finale (cle "niveau_boss") avant de marquer la partie
+    TERMINEE (terminer_victoire_finale_web, une fois l'ecran ferme) - meme logique que
+    main.py:_ouvrir_fin_combat/_ouvrir_victoire_finale cote PC. Renvoie
+    {"partie": ..., "niveau_boss": bool}."""
+    partie = partie_depuis_json(partie_json)
+    if id_carte is not None:
+        ajouter_carte(partie, id_carte)
+    boss = est_niveau_boss(partie.niveau)
+    if not boss:
+        avancer_niveau(partie)
+    return json.dumps({"partie": json.loads(partie_vers_json(partie)), "niveau_boss": boss})
+
+
+def terminer_victoire_finale_web(partie_json) -> str:
+    """Bouton "Continuer" de l'ecran de victoire finale (specs.md 2.4, etape 11) : marque la partie
+    TERMINEE, meme logique que main.py:_ouvrir_victoire_finale cote PC. Renvoie la partie mise a
+    jour (web/app.js la re-sauvegarde dans localStorage)."""
+    partie = partie_depuis_json(partie_json)
+    marquer_terminee(partie)
+    return partie_vers_json(partie)
+
+
+# --- Station service (specs.md 2.2) : 4 actions gratuites appliquees a un module equipe, meme
+# fonctions pures que main.py:_ouvrir_station_service cote PC (src/gameplay/partie.py). ---
+
+
+def reparer_module_web(partie_json, position) -> str:
+    partie = partie_depuis_json(partie_json)
+    reparer_module(partie, position)
+    return partie_vers_json(partie)
+
+
+def ameliorer_module_web(partie_json, position) -> str:
+    partie = partie_depuis_json(partie_json)
+    ameliorer_module(partie, position)
+    return partie_vers_json(partie)
+
+
+def mettre_a_jour_module_web(partie_json, position) -> str:
+    partie = partie_depuis_json(partie_json)
+    mettre_a_jour_module(partie, position)
+    return partie_vers_json(partie)
+
+
+def deplacer_module_web(partie_json, position_source, position_destination) -> str:
+    partie = partie_depuis_json(partie_json)
+    deplacer_module(partie, position_source, position_destination)
+    return partie_vers_json(partie)
+
+
+def terminer_station_service_web(partie_json) -> str:
+    """Bouton "J'ai termine" de l'ecran Station service : avance au niveau suivant (specs.md 2.4,
+    etape 8), meme logique que main.py:_ouvrir_station_service cote PC. Renvoie la partie mise a
+    jour (web/app.js la re-sauvegarde dans localStorage puis enchaine sur le choix du niveau)."""
+    partie = partie_depuis_json(partie_json)
+    avancer_niveau(partie)
+    return partie_vers_json(partie)
+
+
+def terminer_etape_placeholder_web(partie_json) -> str:
+    """Bouton "J'ai termine" de l'ecran generique Aventure/Planete commerciale (contenu pas encore
+    prepare, specs.md 2.4 etapes 7/9, 9.1) : avance au niveau suivant, meme logique que
+    main.py:_ouvrir_etape_placeholder cote PC. Renvoie la partie mise a jour (web/app.js la
+    re-sauvegarde dans localStorage puis enchaine sur le choix du niveau)."""
+    partie = partie_depuis_json(partie_json)
+    avancer_niveau(partie)
+    return partie_vers_json(partie)
 
 
 def _resoudre_cible(carte, id_cible):

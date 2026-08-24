@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "20";
+const VERSION_CACHE = "32";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -44,6 +44,8 @@ const FICHIERS_A_MONTER = [
     "src/gameplay/flotte.py",
     "src/gameplay/joueur.py",
     "src/gameplay/module.py",
+    "src/gameplay/parcours.py",
+    "src/gameplay/partie.py",
     "src/gameplay/position.py",
     "src/gameplay/vaisseau.py",
     "config/cartes.json",
@@ -54,6 +56,13 @@ const FICHIERS_A_MONTER = [
 let pyodide = null;
 let etatCourant = null;
 let indexCarteSelectionnee = null;
+
+// Partie reelle en cours d'orchestration (specs.md 2.4), ou null si les ecrans de parcours sont
+// ouverts en mode demonstration (window.nouveauChoixModule/choixNiveau/nouvelleVictoire/
+// nouvelleDefaite, appeles manuellement depuis la console) - meme distinction que main.py cote
+// PC, qui n'a pas cette ambiguite (toujours une vraie Partie). choisirModule/choisirEtape/
+// choisirRecompense branchent sur cette variable pour ne pas casser le mode demonstration.
+let partieActive = null;
 
 async function chargerSansCache(cheminRelatif) {
     const reponse = await fetch(`${cheminRelatif}?v=${VERSION_CACHE}`, { cache: "no-cache" });
@@ -83,6 +92,25 @@ function appelerBridge(nomFonction, ...args) {
     }
 }
 
+// Un seul ecran visible a la fois (specs.md 10.3 ajoute la selection/l'accueil joueur en amont
+// du combat) : chaque fonction afficherXxx masque tous les ecrans puis ne demasque que le sien.
+const IDS_ECRANS = [
+    "app",
+    "ecran-selection-joueur",
+    "ecran-accueil-joueur",
+    "ecran-choix-module",
+    "ecran-choix-niveau",
+    "ecran-station-service",
+    "ecran-etape-placeholder",
+    "ecran-fin-combat",
+    "ecran-victoire-finale",
+    "ecran-deck",
+];
+
+function masquerTousLesEcrans() {
+    IDS_ECRANS.forEach((id) => document.getElementById(id).classList.add("cachee"));
+}
+
 async function demarrer() {
     const statut = document.getElementById("statut-chargement");
     try {
@@ -90,9 +118,8 @@ async function demarrer() {
         pyodide = await loadPyodide();
         statut.textContent = "Montage du code du jeu...";
         await monterDepot(pyodide);
-        nouvelleGraine();
         statut.remove();
-        document.getElementById("app").classList.remove("cachee");
+        afficherSelectionJoueur();
         tenterVerrouillagePaysage();
         configurerPleinEcran();
     } catch (erreur) {
@@ -500,10 +527,13 @@ function rendreInfoCarte() {
 function rendreBanniereFin() {
     if (etatCourant.etat === "EN_COURS") return "";
     const texte = etatCourant.etat === "VICTOIRE" ? "Victoire !" : "Defaite";
+    // Pour une partie reelle, ce bouton enchaine sur le reste du parcours (fin de combat, cf.
+    // terminerCombatPartie) plutot que de relancer un combat de demonstration.
+    const libelleBouton = partieActive ? "Continuer" : "Rejouer";
     return `
         <div class="banniere-fin ${etatCourant.etat.toLowerCase()}">
             <span>${texte}</span>
-            <button id="bouton-rejouer">Rejouer</button>
+            <button id="bouton-rejouer">${libelleBouton}</button>
         </div>`;
 }
 
@@ -529,8 +559,590 @@ function rendre() {
         element.addEventListener("click", () => selectionnerCarte(carte));
     });
     const boutonRejouer = document.getElementById("bouton-rejouer");
-    if (boutonRejouer) boutonRejouer.addEventListener("click", nouvelleGraine);
+    if (boutonRejouer) boutonRejouer.addEventListener("click", partieActive ? terminerCombatPartie : nouvelleGraine);
+}
+
+// Ecran de choix de module (parcours, Niveau 1 - specs.md 2.3). Pas encore reliee a une
+// orchestration de parcours (qui n'existe pas encore) : exposee sur window pour etre appelee
+// manuellement (console du navigateur) en attendant. nouveauChoixModule(graine) tire les
+// candidats via bridge.py puis affiche l'ecran ; choisirModule ne fait encore que logger le
+// choix, aucun etat de parcours a mettre a jour pour l'instant.
+function afficherChoixModule(candidats) {
+    document.getElementById("candidats-module").innerHTML = candidats
+        .map(
+            (candidat, index) => `
+        <div class="candidat-module" data-index="${index}">
+            <img src="${candidat.image}" alt="${candidat.nom}">
+            <div class="candidat-module-nom">${candidat.nom}</div>
+            <div class="candidat-module-description">${candidat.description}</div>
+        </div>`
+        )
+        .join("");
+    document.querySelectorAll(".candidat-module").forEach((element) => {
+        element.addEventListener("click", () => choisirModule(candidats[Number(element.dataset.index)]));
+    });
+    masquerTousLesEcrans();
+    document.getElementById("ecran-choix-module").classList.remove("cachee");
+}
+
+function choisirModule(candidat) {
+    if (!partieActive) {
+        console.log("Module choisi :", candidat.nom);
+        return;
+    }
+    const partie = appelerBridge("choisir_module_partie_web", JSON.stringify(partieActive), candidat.id);
+    partieActive = partie;
+    sauvegarderPartieLocale(joueurCourant.id, partie);
+    ouvrirChoixNiveauPartie(partie);
+}
+
+function nouveauChoixModule(graine = null) {
+    afficherChoixModule(appelerBridge("nouveau_choix_module", graine));
+}
+
+window.nouveauChoixModule = nouveauChoixModule;
+
+// Ouvre le choix de module (Niveau 1) pour une partie reelle - appelee a la creation d'une
+// partie et par la reprise du bouton "Continuer" (cf. continuerPartie), meme condition que
+// main.py:_traiter_action cote PC (Niveau 1 sans 2e module equipe = pas encore choisi).
+function ouvrirChoixModulePartie(partie) {
+    partieActive = partie;
+    afficherChoixModule(appelerBridge("choix_module_partie_web", JSON.stringify(partie)));
+}
+
+// Ouvre le choix du prochain niveau pour une partie reelle - meme condition d'appel que
+// main.py:_ouvrir_choix_niveau cote PC.
+function ouvrirChoixNiveauPartie(partie) {
+    partieActive = partie;
+    afficherChoixNiveau(appelerBridge("choix_niveau_web", JSON.stringify(partie)));
+}
+
+// Ecran Station service (specs.md 2.2) : 4 actions gratuites (Reparer/Ameliorer/Mettre a jour/
+// Deplacer) appliquees a un module de la partie active, avant de revenir au choix du prochain
+// niveau (etape 8, specs.md 2.4). Meme regles que src/ui/ecran_station_service.py cote PC -
+// bridge.py n'applique que les fonctions pures de src/gameplay/partie.py, aucune regle dupliquee
+// ici (CLAUDE.md).
+const ACTIONS_STATION_SERVICE = [
+    ["reparer", "assets/station_service/reparer.png"],
+    ["ameliorer", "assets/station_service/ameliorer.png"],
+    ["mettre_a_jour", "assets/station_service/mettre_a_jour.png"],
+    ["deplacer", "assets/station_service/deplacer.png"],
+];
+const FONCTIONS_ACTION_STATION_SERVICE = {
+    reparer: "reparer_module_web",
+    ameliorer: "ameliorer_module_web",
+    mettre_a_jour: "mettre_a_jour_module_web",
+};
+// Deplacer ne s'applique jamais au module principal (specs.md 2.2), meme liste que
+// POSITIONS_DEPLACABLES cote PC.
+const POSITIONS_DEPLACABLES_STATION = ["avant_gauche", "avant_droite", "arriere_gauche", "arriere_droite"];
+
+let positionSelectionneeStation = null;
+let modeDeplacementStation = false;
+
+function ouvrirStationServicePartie(partie) {
+    partieActive = partie;
+    positionSelectionneeStation = null;
+    modeDeplacementStation = false;
+    rendreStationService();
+    masquerTousLesEcrans();
+    document.getElementById("ecran-station-service").classList.remove("cachee");
+}
+
+function instructionStationService() {
+    if (modeDeplacementStation) return "Cliquez l'emplacement de destination (ou recliquez le module pour annuler).";
+    if (positionSelectionneeStation === null) return "Selectionnez un module, puis une action.";
+    return "Selectionnez une action pour ce module.";
+}
+
+function rendreStationService() {
+    const vaisseau = appelerBridge("infos_vaisseau_web", JSON.stringify(partieActive));
+    document.getElementById("modules-station-service").innerHTML = Object.entries(vaisseau)
+        .map(([position, etat]) => {
+            if (!etat) {
+                return `<div class="module-station module-station-vide" data-position="${position}">Emplacement vide</div>`;
+            }
+            const selectionnee = position === positionSelectionneeStation ? " selectionnee" : "";
+            return `
+            <div class="module-station${selectionnee}" data-position="${position}">
+                <img src="${etat.image}" alt="${etat.nom}">
+                <div class="module-station-nom">${etat.nom}</div>
+                <div class="module-station-pv">${etat.pv} / ${etat.pv_max} PV</div>
+                <div class="module-station-niveau">Mise a jour : niveau ${etat.niveau_maj}</div>
+            </div>`;
+        })
+        .join("");
+    document.getElementById("actions-station-service").innerHTML = ACTIONS_STATION_SERVICE.map(([action, image]) => {
+        const armee = action === "deplacer" && modeDeplacementStation ? " armee" : "";
+        return `<button class="action-station${armee}" data-action="${action}"><img src="${image}" alt="${action}"></button>`;
+    }).join("");
+    document.getElementById("instruction-station-service").textContent = instructionStationService();
+
+    document.querySelectorAll(".module-station").forEach((element) => {
+        const estVide = element.classList.contains("module-station-vide");
+        element.addEventListener("click", () => cliquerModuleStation(element.dataset.position, estVide));
+    });
+    document.querySelectorAll(".action-station").forEach((element) => {
+        element.addEventListener("click", () => cliquerActionStation(element.dataset.action));
+    });
+}
+
+function cliquerModuleStation(position, estVide) {
+    if (modeDeplacementStation) {
+        if (position === positionSelectionneeStation) {
+            modeDeplacementStation = false;
+        } else if (POSITIONS_DEPLACABLES_STATION.includes(position)) {
+            partieActive = appelerBridge(
+                "deplacer_module_web",
+                JSON.stringify(partieActive),
+                positionSelectionneeStation,
+                position
+            );
+            sauvegarderPartieLocale(joueurCourant.id, partieActive);
+            modeDeplacementStation = false;
+            positionSelectionneeStation = null;
+        }
+    } else if (!estVide) {
+        positionSelectionneeStation = position;
+    }
+    rendreStationService();
+}
+
+function cliquerActionStation(action) {
+    if (positionSelectionneeStation === null) return;
+    if (action === "deplacer") {
+        if (POSITIONS_DEPLACABLES_STATION.includes(positionSelectionneeStation)) {
+            modeDeplacementStation = true;
+        }
+    } else {
+        partieActive = appelerBridge(FONCTIONS_ACTION_STATION_SERVICE[action], JSON.stringify(partieActive), positionSelectionneeStation);
+        sauvegarderPartieLocale(joueurCourant.id, partieActive);
+    }
+    rendreStationService();
+}
+
+function terminerStationServicePartie() {
+    const partie = appelerBridge("terminer_station_service_web", JSON.stringify(partieActive));
+    sauvegarderPartieLocale(joueurCourant.id, partie);
+    ouvrirChoixNiveauPartie(partie);
+}
+
+// Ecran generique pour une etape sans contenu prepare (Aventure, Planete commerciale - specs.md
+// 2.4 etapes 7/9, 9.1) : reutilise l'icone/description de LIBELLES_TYPE_ETAPE (definie plus bas,
+// pour l'ecran "Choix du prochain niveau") avec un message explicite et un bouton "J'ai termine"
+// qui avance simplement au niveau suivant - meme logique que
+// main.py:_ouvrir_etape_placeholder cote PC.
+const TITRES_TYPE_ETAPE = {
+    AVENTURE: "Aventure",
+    PLANETE_COMMERCIALE: "Planete commerciale",
+};
+
+function ouvrirEtapePlaceholderPartie(partie, type) {
+    partieActive = partie;
+    const [image] = LIBELLES_TYPE_ETAPE[type];
+    document.getElementById("titre-etape-placeholder").textContent = TITRES_TYPE_ETAPE[type];
+    document.getElementById("image-etape-placeholder").src = image;
+    masquerTousLesEcrans();
+    document.getElementById("ecran-etape-placeholder").classList.remove("cachee");
+}
+
+function terminerEtapePlaceholder() {
+    const partie = appelerBridge("terminer_etape_placeholder_web", JSON.stringify(partieActive));
+    sauvegarderPartieLocale(joueurCourant.id, partie);
+    ouvrirChoixNiveauPartie(partie);
+}
+
+// Ecran "Choix du prochain niveau" (specs.md 2.3/2.4) : 3 propositions d'etape d'ordinaire, ou
+// une seule (BOSS) a un niveau Boss (multiple de 10) - decision utilisateur, meme ecran de choix,
+// juste une seule carte "Combattre le Boss !" au lieu de 3. Pas encore reliee a une orchestration
+// de parcours (qui n'existe pas encore), exposee sur window pour test manuel en attendant.
+// Icones (deja leur propre cadre + nom incruste, images fournies par l'utilisateur) et
+// description par type d'etape - memes textes que le PC (src/ui/ecran_choix_niveau.py).
+const LIBELLES_TYPE_ETAPE = {
+    PRIME: ["assets/prochain_niveau/prime.png", "Combat, contrat de chasseur de primes."],
+    STATION_SERVICE: ["assets/prochain_niveau/station_service.png", "Entretien du vaisseau contre de l'Argent."],
+    PLANETE_COMMERCIALE: ["assets/prochain_niveau/planete_commerciale.png", "Achat de cartes contre de l'Argent."],
+    AVENTURE: ["assets/prochain_niveau/aventure.png", "Evenement inconnu."],
+    BOSS: ["assets/prochain_niveau/boss.png", "Combattre le Boss !"],
+};
+
+function afficherChoixNiveau(resultat) {
+    document.getElementById("titre-choix-niveau").textContent = `Niveau ${resultat.niveau}`;
+    document.getElementById("candidats-niveau").innerHTML = resultat.propositions
+        .map((type, index) => {
+            const [image, description] = LIBELLES_TYPE_ETAPE[type];
+            return `
+        <div class="candidat-niveau" data-index="${index}">
+            <img src="${image}" alt="${type}">
+            <div class="candidat-niveau-description">${description}</div>
+        </div>`;
+        })
+        .join("");
+    document.querySelectorAll(".candidat-niveau").forEach((element) => {
+        element.addEventListener("click", () => choisirEtape(resultat.propositions[Number(element.dataset.index)]));
+    });
+    masquerTousLesEcrans();
+    document.getElementById("ecran-choix-niveau").classList.remove("cachee");
+}
+
+// Types de proposition deja relies a un combat reel (specs.md 2.4) : Station service, Planete
+// commerciale et Aventure ne le sont pas encore, cf. choisirEtape - meme liste que
+// main.py:TYPES_COMBAT cote PC.
+const TYPES_COMBAT = new Set(["PRIME", "BOSS"]);
+
+function choisirEtape(type) {
+    if (!partieActive) {
+        console.log("Etape choisie :", type);
+        return;
+    }
+    if (TYPES_COMBAT.has(type)) {
+        appliquerResultat(appelerBridge("continuer_partie_web", JSON.stringify(partieActive)));
+        masquerTousLesEcrans();
+        document.getElementById("app").classList.remove("cachee");
+    } else if (type === "STATION_SERVICE") {
+        ouvrirStationServicePartie(partieActive);
+    } else {
+        // Aventure / Planete commerciale : contenu pas encore prepare (specs.md 2.4, 9.1).
+        ouvrirEtapePlaceholderPartie(partieActive, type);
+    }
+}
+
+function choixNiveau(partieJson) {
+    afficherChoixNiveau(appelerBridge("choix_niveau_web", partieJson));
+}
+
+window.choixNiveau = choixNiveau;
+
+// Ecran de fin de combat (parcours, specs.md 2.1/6). Meme situation que l'ecran de choix de
+// module : pas encore reliee a une orchestration de parcours, exposee sur window pour test
+// manuel en attendant. nouvelleDefaite() n'a besoin d'aucune donnee (texte fixe) ;
+// nouvelleVictoire(graine) tire les candidats de recompense via bridge.py (un par module d'un
+// vaisseau tire au sort - demo, pas un vrai combat termine pour l'instant).
+function afficherFinCombat(victoire, candidats) {
+    const titre = document.getElementById("titre-fin-combat");
+    titre.textContent = victoire ? "VICTOIRE" : "DEFAITE";
+    titre.className = victoire ? "victoire" : "defaite";
+    document.getElementById("message-defaite").classList.toggle("cachee", victoire);
+    document.getElementById("candidats-recompense").classList.toggle("cachee", !victoire);
+    document.getElementById("instruction-fin-combat").classList.toggle("cachee", !victoire);
+    // Rien a choisir en cas de defaite, ou de victoire sans aucun candidat (pool vide pour tous
+    // les modules utilises) : un bouton "Continuer" suffit, meme situation que
+    // src/ui/ecran_fin_combat.py cote PC.
+    document.getElementById("bouton-continuer-fin-combat").classList.toggle("cachee", victoire && candidats.length > 0);
+
+    if (victoire) {
+        document.getElementById("candidats-recompense").innerHTML = candidats
+            .map(
+                (candidat, index) => `
+        <div class="candidat-recompense" data-index="${index}">
+            <div class="candidat-recompense-entete">
+                <span class="etoile-${candidat.rarete.toLowerCase()}">★</span>
+                <span>${candidat.module_nom}</span>
+            </div>
+            <img src="${candidat.image}" alt="${candidat.carte_nom}">
+            <div class="candidat-recompense-nom">${candidat.carte_nom}</div>
+            <div class="candidat-recompense-cout">⚡ ${candidat.cout}</div>
+            <div class="candidat-recompense-description">${texteEffetCarte(candidat)}</div>
+        </div>`
+            )
+            .join("");
+        document.querySelectorAll(".candidat-recompense").forEach((element) => {
+            element.addEventListener("click", () => choisirRecompense(candidats[Number(element.dataset.index)]));
+        });
+    }
+
+    masquerTousLesEcrans();
+    document.getElementById("ecran-fin-combat").classList.remove("cachee");
+}
+
+function choisirRecompense(candidat) {
+    if (!partieActive) {
+        console.log("Carte choisie :", candidat.carte_nom);
+        return;
+    }
+    finaliserVictoirePartie(candidat.carte_id);
+}
+
+function nouvelleVictoire(graine = null) {
+    afficherFinCombat(true, appelerBridge("fin_combat_victoire", graine));
+}
+
+function nouvelleDefaite() {
+    afficherFinCombat(false, []);
+}
+
+window.nouvelleVictoire = nouvelleVictoire;
+window.nouvelleDefaite = nouvelleDefaite;
+
+// Fin d'un combat reel (specs.md 2.4) : appelee depuis la banniere de fin de combat (#app,
+// cf. rendreBanniereFin) quand une partie reelle est en cours - remplace le "Rejouer" du mode
+// demonstration par l'enchainement reel (fin de combat -> choix du niveau, ou defaite -> accueil),
+// meme role que main.py:_ouvrir_fin_combat cote PC.
+function terminerCombatPartie() {
+    if (etatCourant.etat === "VICTOIRE") {
+        const candidats = appelerBridge("candidats_recompense_partie_web", JSON.stringify(partieActive));
+        afficherFinCombat(true, candidats);
+    } else {
+        afficherFinCombat(false, []);
+    }
+}
+
+// Ajoute la carte choisie (ou aucune) au deck de la partie, puis avance au niveau suivant - sauf
+// si c'etait un Boss, auquel cas l'ecran de victoire finale s'ouvre d'abord (specs.md 2.4, etape
+// 11) - meme logique que main.py:_ouvrir_fin_combat cote PC.
+function finaliserVictoirePartie(idCarte) {
+    const resultat = appelerBridge("resoudre_victoire_partie_web", JSON.stringify(partieActive), idCarte);
+    sauvegarderPartieLocale(joueurCourant.id, resultat.partie);
+    if (resultat.niveau_boss) {
+        ouvrirVictoireFinalePartie(resultat.partie);
+    } else {
+        ouvrirChoixNiveauPartie(resultat.partie);
+    }
+}
+
+// Bouton "Continuer" de l'ecran de fin de combat (defaite, ou victoire sans aucun candidat de
+// recompense) : rien a choisir, un clic suffit a continuer - meme situation que
+// src/ui/ecran_fin_combat.py:on_mouse_press cote PC.
+function continuerApresFinCombat() {
+    if (!partieActive) return;
+    if (etatCourant.etat === "DEFAITE") {
+        const partie = appelerBridge("abandonner_partie_web", JSON.stringify(partieActive));
+        sauvegarderPartieLocale(joueurCourant.id, partie);
+        partieActive = null;
+        afficherAccueilJoueur();
+    } else {
+        finaliserVictoirePartie(null);
+    }
+}
+
+// Ecran de victoire finale (specs.md 2.4, etape 11) : felicite le joueur a la victoire du Boss (le
+// run s'arrete reellement au Niveau 10 dans l'etat actuel, specs.md 2), affiche son deck complet
+// (meme rendu que l'ecran "Voir le deck" ci-dessous, mais scope aux elements de cet ecran pour ne
+// pas melanger les gestionnaires de clic des deux grilles) et propose un bouton "Continuer" qui
+// marque la partie TERMINEE et revient a l'ecran de partie - meme logique que
+// main.py:_ouvrir_victoire_finale cote PC.
+let cartesVictoireFinaleAffichees = [];
+
+function ouvrirVictoireFinalePartie(partie) {
+    partieActive = partie;
+    const cartes = appelerBridge("deck_partie_web", JSON.stringify(partie));
+    cartesVictoireFinaleAffichees = cartes;
+    document.getElementById("grille-victoire-finale").innerHTML = cartes
+        .map(
+            (carte, index) => `
+        <div class="carte-deck" data-index="${index}">
+            <span class="etoile-${carte.rarete.toLowerCase()}">★</span>
+            ${carte.quantite > 1 ? `<span class="carte-deck-quantite">×${carte.quantite}</span>` : ""}
+            <img src="${carte.image}" alt="${carte.nom}">
+            <div class="carte-deck-nom">${carte.nom}</div>
+            <div class="carte-deck-cout">⚡ ${carte.cout}</div>
+        </div>`
+        )
+        .join("");
+    document.getElementById("info-carte-victoire-finale").innerHTML = "";
+    document.querySelectorAll("#grille-victoire-finale .carte-deck").forEach((element) => {
+        element.addEventListener("click", () =>
+            afficherInfoCarteVictoireFinale(cartesVictoireFinaleAffichees[Number(element.dataset.index)])
+        );
+    });
+    masquerTousLesEcrans();
+    document.getElementById("ecran-victoire-finale").classList.remove("cachee");
+}
+
+function afficherInfoCarteVictoireFinale(carte) {
+    document.getElementById("info-carte-victoire-finale").innerHTML = `
+        <img src="${carte.image}" alt="${carte.nom}">
+        <div class="info-carte-nom">${carte.nom}</div>
+        <div class="info-carte-effet">${texteEffetCarte(carte)}</div>
+        <div class="info-carte-cout">⚡ ${carte.cout}</div>`;
+}
+
+function terminerVictoireFinale() {
+    const partie = appelerBridge("terminer_victoire_finale_web", JSON.stringify(partieActive));
+    sauvegarderPartieLocale(joueurCourant.id, partie);
+    partieActive = null;
+    afficherAccueilJoueur();
+}
+
+// Ecran "deck en entier" (appelable depuis plusieurs endroits du parcours, specs.md 6). Meme
+// situation que les deux ecrans precedents : pas encore reliee a un vrai bouton dans l'UI,
+// exposee sur window pour test manuel. Pas d'infobulle au survol (web simplifie par rapport a
+// pyglet, cf. CLAUDE.md) : taper une carte affiche sa description dans un popup, meme principe
+// que #info-carte pour la main en combat.
+let cartesDeckAffichees = [];
+
+function afficherDeck(cartes) {
+    cartesDeckAffichees = cartes;
+    document.getElementById("grille-deck").innerHTML = cartes
+        .map(
+            (carte, index) => `
+        <div class="carte-deck" data-index="${index}">
+            <span class="etoile-${carte.rarete.toLowerCase()}">★</span>
+            ${carte.quantite > 1 ? `<span class="carte-deck-quantite">×${carte.quantite}</span>` : ""}
+            <img src="${carte.image}" alt="${carte.nom}">
+            <div class="carte-deck-nom">${carte.nom}</div>
+            <div class="carte-deck-cout">⚡ ${carte.cout}</div>
+        </div>`
+        )
+        .join("");
+    document.getElementById("info-carte-deck").innerHTML = "";
+    document.querySelectorAll(".carte-deck").forEach((element) => {
+        element.addEventListener("click", () => afficherInfoCarteDeck(cartesDeckAffichees[Number(element.dataset.index)]));
+    });
+    masquerTousLesEcrans();
+    document.getElementById("ecran-deck").classList.remove("cachee");
+}
+
+function afficherInfoCarteDeck(carte) {
+    document.getElementById("info-carte-deck").innerHTML = `
+        <img src="${carte.image}" alt="${carte.nom}">
+        <div class="info-carte-nom">${carte.nom}</div>
+        <div class="info-carte-effet">${texteEffetCarte(carte)}</div>
+        <div class="info-carte-cout">⚡ ${carte.cout}</div>`;
+}
+
+function voirDeck(graine = null) {
+    afficherDeck(appelerBridge("etat_deck", graine));
+}
+
+window.voirDeck = voirDeck;
+
+// Selection/creation de profil joueur, puis accueil de ce joueur (specs.md 10.3) : nouveau point
+// d'entree reel de l'app (appele par demarrer() ci-dessus, plus besoin de window.xxx() pour
+// tester manuellement). Persistance via localStorage (Pyodide n'a pas de FS persistante entre
+// recharges de page) : un index de profils (CLE_JOUEURS) + une entree de partie par joueur.
+const CLE_JOUEURS = "space_fight_joueurs";
+
+function clePartie(joueurId) {
+    return `space_fight_partie_${joueurId}`;
+}
+
+function listerJoueursLocal() {
+    try {
+        return JSON.parse(localStorage.getItem(CLE_JOUEURS) || "[]");
+    } catch {
+        return [];
+    }
+}
+
+function ajouterJoueurLocal(profil) {
+    const joueurs = listerJoueursLocal();
+    joueurs.push(profil);
+    localStorage.setItem(CLE_JOUEURS, JSON.stringify(joueurs));
+}
+
+function partieLocale(joueurId) {
+    const brut = localStorage.getItem(clePartie(joueurId));
+    return brut ? JSON.parse(brut) : null;
+}
+
+function sauvegarderPartieLocale(joueurId, partie) {
+    localStorage.setItem(clePartie(joueurId), JSON.stringify(partie));
+}
+
+let joueurCourant = null;
+
+function afficherSelectionJoueur() {
+    const joueurs = listerJoueursLocal();
+    document.getElementById("liste-joueurs").innerHTML = joueurs
+        .map((joueur, index) => `<div class="ligne-joueur" data-index="${index}">${joueur.nom}</div>`)
+        .join("");
+    document.querySelectorAll(".ligne-joueur").forEach((element) => {
+        element.addEventListener("click", () => choisirJoueur(joueurs[Number(element.dataset.index)]));
+    });
+    document.getElementById("nom-nouveau-joueur").value = "";
+    masquerTousLesEcrans();
+    document.getElementById("ecran-selection-joueur").classList.remove("cachee");
+}
+
+function creerNouveauJoueur() {
+    const champ = document.getElementById("nom-nouveau-joueur");
+    const nom = champ.value.trim();
+    if (!nom) return;
+    const profil = appelerBridge("creer_profil_web", nom);
+    ajouterJoueurLocal(profil);
+    choisirJoueur(profil);
+}
+
+function choisirJoueur(profil) {
+    joueurCourant = profil;
+    afficherAccueilJoueur();
+}
+
+function afficherAccueilJoueur() {
+    // Retour a l'accueil = plus aucune orchestration de parcours en cours (specs.md 2.4) :
+    // remet le mode demonstration par defaut pour les ecrans window.xxx() appeles manuellement.
+    partieActive = null;
+    const partie = partieLocale(joueurCourant.id);
+    const enCours = partie !== null && partie.statut === "EN_COURS";
+    document.getElementById("nom-joueur-accueil").textContent = joueurCourant.nom;
+    document.getElementById("niveau-accueil").textContent = enCours ? `Niveau ${partie.niveau}` : "";
+    document.getElementById("vaisseau-accueil").classList.toggle("cachee", !enCours);
+    document.getElementById("boutons-partie-en-cours").classList.toggle("cachee", !enCours);
+    document.getElementById("bouton-nouvelle-partie").classList.toggle("cachee", enCours);
+
+    if (enCours) {
+        const vaisseau = appelerBridge("infos_vaisseau_web", JSON.stringify(partie));
+        document.getElementById("vaisseau-accueil").innerHTML = Object.entries(vaisseau)
+            .map(([_position, etat]) => {
+                if (!etat) return `<div class="module-accueil module-accueil-vide">Emplacement vide</div>`;
+                return `
+                <div class="module-accueil">
+                    <img src="${etat.image}" alt="${etat.nom}">
+                    <div class="module-accueil-nom">${etat.nom}</div>
+                    <div class="module-accueil-pv">${etat.pv} / ${etat.pv_max} PV</div>
+                    <div class="module-accueil-niveau">Mise a jour : niveau ${etat.niveau_maj}</div>
+                </div>`;
+            })
+            .join("");
+    }
+
+    masquerTousLesEcrans();
+    document.getElementById("ecran-accueil-joueur").classList.remove("cachee");
+}
+
+function continuerPartie() {
+    const partie = partieLocale(joueurCourant.id);
+    // Reprend l'etape courante a partir de ce qui est deja connu (niveau + vaisseau) plutot que
+    // d'une "etape courante" dediee, pas encore ajoutee a la sauvegarde (decision utilisateur) :
+    // le Niveau 1 sans 2e module equipe reprend au choix de module, sinon on retire les
+    // propositions du niveau courant - meme condition que main.py:_traiter_action cote PC.
+    if (partie.niveau === 1 && partie.vaisseau.avant_gauche === null) {
+        ouvrirChoixModulePartie(partie);
+        return;
+    }
+    ouvrirChoixNiveauPartie(partie);
+}
+
+function abandonnerPartie() {
+    const partie = partieLocale(joueurCourant.id);
+    const misAJour = appelerBridge("abandonner_partie_web", JSON.stringify(partie));
+    sauvegarderPartieLocale(joueurCourant.id, misAJour);
+    afficherAccueilJoueur();
+}
+
+function voirDeckPartie() {
+    const partie = partieLocale(joueurCourant.id);
+    afficherDeck(appelerBridge("deck_partie_web", JSON.stringify(partie)));
+}
+
+function nouvellePartie() {
+    const partie = appelerBridge("nouvelle_partie_web");
+    sauvegarderPartieLocale(joueurCourant.id, partie);
+    ouvrirChoixModulePartie(partie);
 }
 
 document.getElementById("fin-tour").addEventListener("click", finirTour);
+document.getElementById("bouton-creer-joueur").addEventListener("click", creerNouveauJoueur);
+document.getElementById("nom-nouveau-joueur").addEventListener("keydown", (evenement) => {
+    if (evenement.key === "Enter") creerNouveauJoueur();
+});
+document.getElementById("bouton-continuer").addEventListener("click", continuerPartie);
+document.getElementById("bouton-abandonner").addEventListener("click", abandonnerPartie);
+document.getElementById("bouton-voir-deck-partie").addEventListener("click", voirDeckPartie);
+document.getElementById("bouton-nouvelle-partie").addEventListener("click", nouvellePartie);
+document.getElementById("bouton-continuer-fin-combat").addEventListener("click", continuerApresFinCombat);
+document.getElementById("bouton-termine-station-service").addEventListener("click", terminerStationServicePartie);
+document.getElementById("bouton-continuer-victoire-finale").addEventListener("click", terminerVictoireFinale);
+document.getElementById("bouton-termine-etape-placeholder").addEventListener("click", terminerEtapePlaceholder);
 demarrer();
