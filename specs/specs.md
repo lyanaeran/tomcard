@@ -86,6 +86,11 @@ actions une fois cette ressource implémentée.
   `mettre_a_jour.png`, `deplacer.png`) : déjà pourvues de leur propre cadre/nom incrusté (fournies
   par l'utilisateur, même principe que `assets/prochain_niveau/`), affichées seules sans étiquette de
   texte supplémentaire à côté
+- La carte du module principal utilise `assets/modules/principal_avant.png` (recadrage sur l'avant
+  du vaisseau, décision utilisateur) plutôt que l'image complète du vaisseau (`config/modules.json`,
+  utilisée telle quelle comme fond du vaisseau en combat) — sinon hors d'échelle par rapport aux
+  cases des autres modules. `src/gameplay/donnees.py:image_case_module()`, réutilisée par l'écran
+  d'accueil du joueur (§10.3) pour la même raison
 - `src/gameplay/partie.py` (`reparer_module`, `ameliorer_module`, `mettre_a_jour_module`,
   `deplacer_module`, fonctions pures partagées PC+web) ; `src/ui/ecran_station_service.py` (PC) ;
   `main.py:_ouvrir_station_service` (PC) ; côté web `web/bridge.py` (`reparer_module_web`/

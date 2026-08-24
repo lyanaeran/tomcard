@@ -16,7 +16,7 @@ configuration pensee pour les tests manuels - voir sa docstring.
 
 import random
 
-from src.gameplay.carte import Carte, RareteCarte
+from src.gameplay.carte import Carte, RareteCarte, TypeCarte
 from src.gameplay.combat import Combat
 from src.gameplay.deck import Deck
 from src.gameplay.donnees import SpecEnnemi, SpecModule, charger_cartes, charger_ennemis, charger_modules
@@ -28,14 +28,19 @@ from src.gameplay.position import Colonne, Position, Rangee
 from src.gameplay.vaisseau import Vaisseau
 
 # Mode test : bascule creer_combat_poc() dans une configuration pensee pour les tests manuels
-# plutot que pour le gameplay normal - PV enormement augmentes (survivre de nombreux tours sans
-# mourir) et un exemplaire de chaque carte jouable existante dans le deck (au lieu du tirage
-# aleatoire habituel par module equipe), quels que soient les modules tires au sort, pour pouvoir
-# essayer toutes les mecaniques en un seul combat. Remettre a False pour revenir au comportement
-# normal (production).
+# plutot que pour le gameplay normal - PV du joueur enormement augmentes (survivre de nombreux
+# tours sans mourir), PV ennemis abaisses et cartes de degats de base surpuissantes (tuer un
+# ennemi en un coup, pour enchainer les tests sans y passer plusieurs tours), et un exemplaire de
+# chaque carte jouable existante dans le deck (au lieu du tirage aleatoire habituel par module
+# equipe), quels que soient les modules tires au sort, pour pouvoir essayer toutes les mecaniques
+# en un seul combat. Remettre a False pour revenir au comportement normal (production).
 MODE_TEST = True
 PV_MODULE_MODE_TEST = 200
-PV_ENNEMI_MODE_TEST = 200
+PV_ENNEMI_MODE_TEST = 20
+# Valeur (degats) appliquee aux cartes ATTAQUE de rarete Base (Laser, Laser percant,
+# Bombardement) en mode test uniquement - superieure a PV_ENNEMI_MODE_TEST pour tuer un ennemi en
+# un coup. Les autres cartes gardent leur valeur normale (config/cartes.json).
+VALEUR_ATTAQUE_BASE_MODE_TEST = 20
 
 ELECTRICITE_PAR_TOUR = 5
 ID_MODULE_PRINCIPAL = "MOD_1"
@@ -135,8 +140,13 @@ def creer_deck(specs_utilisees: list[SpecModule], cartes: dict[str, Carte], alea
 def creer_deck_mode_test(cartes: dict[str, Carte], aleatoire: random.Random) -> Deck:
     """Mode test (cf. MODE_TEST) : un exemplaire de chaque carte jouable existante, quels que
     soient les modules tires au sort - pour pouvoir essayer toutes les mecaniques en un seul
-    combat plutot que de dependre du tirage aleatoire habituel."""
+    combat plutot que de dependre du tirage aleatoire habituel. Les cartes ATTAQUE de rarete Base
+    infligent VALEUR_ATTAQUE_BASE_MODE_TEST degats (tuer un ennemi en un coup, cf.
+    PV_ENNEMI_MODE_TEST) ; les autres cartes gardent leur valeur normale."""
     deck_cartes = [carte.copie() for carte in cartes.values()]
+    for carte in deck_cartes:
+        if carte.rarete == RareteCarte.BASE and carte.type == TypeCarte.ATTAQUE:
+            carte.valeur = VALEUR_ATTAQUE_BASE_MODE_TEST
     return Deck(cartes=deck_cartes, generateur_aleatoire=aleatoire)
 
 

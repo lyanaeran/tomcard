@@ -43,6 +43,22 @@ def _chemin_image(chemin_relatif: str) -> str:
     return str(RACINE / chemin_relatif)
 
 
+# Module principal (config/modules.json) : son image complete (spec.image) sert de fond au
+# vaisseau entier en combat (src/ui/fenetre.py) et n'est donc pas adaptee a une case de la taille
+# des autres modules (Station service, accueil joueur, specs.md 2.2/10.3) - decision utilisateur.
+_ID_MODULE_PRINCIPAL = "MOD_1"
+_IMAGE_CASE_MODULE_PRINCIPAL = "assets/modules/principal_avant.png"
+
+
+def image_case_module(spec: SpecModule) -> str:
+    """Chemin de l'image a utiliser pour ce module dans une case de la taille des autres modules
+    (Station service, accueil joueur) : un recadrage dedie sur l'avant du vaisseau pour le module
+    principal, l'image normale (spec.image) pour tous les autres."""
+    if spec.id == _ID_MODULE_PRINCIPAL:
+        return _chemin_image(_IMAGE_CASE_MODULE_PRINCIPAL)
+    return spec.image
+
+
 def charger_cartes() -> dict[str, Carte]:
     """Charge config/cartes.json. Renvoie un dict id de carte -> Carte.
 

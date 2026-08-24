@@ -12,7 +12,7 @@ dedie.
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.donnees import RACINE, charger_modules
+from src.gameplay.donnees import RACINE, charger_modules, image_case_module
 from src.gameplay.partie import (
     EtatModule,
     Partie,
@@ -211,7 +211,9 @@ class EcranStationService(pyglet.window.Window):
             color=(*COULEUR_SOUS_TITRE, 255),
             batch=lot,
         )
-        sprite = _sprite_ajuste(spec.image, cx - IMAGE_TAILLE / 2, y + hauteur - 40 - IMAGE_TAILLE, IMAGE_TAILLE, IMAGE_TAILLE, lot)
+        sprite = _sprite_ajuste(
+            image_case_module(spec), cx - IMAGE_TAILLE / 2, y + hauteur - 40 - IMAGE_TAILLE, IMAGE_TAILLE, IMAGE_TAILLE, lot
+        )
         nom = pyglet.text.Label(
             spec.nom,
             x=cx,

@@ -17,7 +17,7 @@ sys.path.insert(0, "/repo")
 
 from src.gameplay.carte import CIBLES_SANS_CLIC, ActionCarte, CibleCarte, regrouper_cartes
 from src.gameplay.config_poc import creer_combat_poc, creer_deck, creer_vaisseau
-from src.gameplay.donnees import charger_cartes, charger_modules
+from src.gameplay.donnees import charger_cartes, charger_modules, image_case_module
 from src.gameplay.module import Module
 from src.gameplay.parcours import (
     aleatoire_pour_niveau,
@@ -356,7 +356,7 @@ def infos_vaisseau_web(partie_json) -> str:
                 "pv_max": etat.pv_max,
                 "niveau_maj": etat.niveau_maj,
                 "nom": spec.nom,
-                "image": _chemin_web(spec.image),
+                "image": _chemin_web(image_case_module(spec)),
             }
     return json.dumps(resultat)
 
