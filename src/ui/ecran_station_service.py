@@ -14,6 +14,7 @@ from pyglet import shapes
 
 from src.gameplay.donnees import RACINE, charger_modules, image_case_module
 from src.gameplay.partie import (
+    PV_AMELIORATION,
     EtatModule,
     Partie,
     ameliorer_module,
@@ -21,7 +22,19 @@ from src.gameplay.partie import (
     mettre_a_jour_module,
     reparer_module,
 )
-from src.ui.fenetre import FOND_IMAGE, HAUTEUR_FENETRE, LARGEUR_FENETRE, _sprite_ajuste, _sprite_etire
+from src.ui.animation import AnimationPopup
+from src.ui.fenetre import (
+    COULEUR_OMBRE_POPUP,
+    COULEUR_POPUP_SOIN,
+    DECALAGE_OMBRE_POPUP,
+    FOND_IMAGE,
+    GROUPE_SUPERPOSITION,
+    HAUTEUR_FENETRE,
+    LARGEUR_FENETRE,
+    TAILLE_POLICE_POPUP,
+    _sprite_ajuste,
+    _sprite_etire,
+)
 
 COULEUR_TEXTE = (255, 255, 255)
 COULEUR_SOUS_TITRE = (200, 200, 205)
@@ -100,6 +113,17 @@ class EcranStationService(pyglet.window.Window):
         self.index_action_survolee: int | None = None
         self.bouton_termine_survole: bool = False
         self.termine: bool = False
+        # Popup +N/Niveau N affiche 2 secondes sur la carte du module apres Reparer/Ameliorer/
+        # Mettre a jour, meme mecanisme que les popups de degats/soin du combat (specs.md 2.2 :
+        # feedback visuel explicite demande par l'utilisateur pour comprendre l'effet applique).
+        self.popups: list[tuple[AnimationPopup, str, tuple[int, int, int], float, float]] = []
+        pyglet.clock.schedule_interval(self.update, 1 / 60.0)
+
+    def update(self, dt: float) -> None:
+        """Fait avancer les popups en cours (appele a chaque frame)."""
+        for animation, _texte, _couleur, _x, _y in self.popups:
+            animation.mettre_a_jour(dt)
+        self.popups = [popup for popup in self.popups if popup[0].est_active()]
 
     def on_draw(self) -> None:
         self.clear()
@@ -112,7 +136,7 @@ class EcranStationService(pyglet.window.Window):
         elements = [_sprite_etire(FOND_IMAGE, 0, 0, LARGEUR_FENETRE, HAUTEUR_FENETRE, lot)]
         elements.append(
             pyglet.text.Label(
-                "Station service",
+                f"Station service - Niveau {self.partie.niveau}",
                 x=LARGEUR_FENETRE / 2,
                 y=HAUTEUR_FENETRE - 40,
                 anchor_x="center",
@@ -128,6 +152,37 @@ class EcranStationService(pyglet.window.Window):
             elements.extend(self._dessiner_action(index, identifiant, libelle, chemin_icone, lot))
         elements.extend(self._dessiner_instruction(lot))
         elements.extend(self._dessiner_bouton_termine(lot))
+        elements.extend(self._dessiner_popups(lot))
+        return elements
+
+    def _dessiner_popups(self, lot: pyglet.graphics.Batch) -> list:
+        """Dessine chaque popup encore actif (meme rendu ombre+texte que le combat, cf.
+        FenetreCombat._dessiner_popups)."""
+        elements = []
+        for _animation, texte, couleur, x, y in self.popups:
+            ombre = pyglet.text.Label(
+                texte,
+                x=x + DECALAGE_OMBRE_POPUP,
+                y=y - DECALAGE_OMBRE_POPUP,
+                anchor_x="center",
+                anchor_y="center",
+                font_size=TAILLE_POLICE_POPUP,
+                color=(*COULEUR_OMBRE_POPUP, 255),
+                batch=lot,
+                group=GROUPE_SUPERPOSITION,
+            )
+            avant_plan = pyglet.text.Label(
+                texte,
+                x=x,
+                y=y,
+                anchor_x="center",
+                anchor_y="center",
+                font_size=TAILLE_POLICE_POPUP,
+                color=(*couleur, 255),
+                batch=lot,
+                group=GROUPE_SUPERPOSITION,
+            )
+            elements.extend([ombre, avant_plan])
         return elements
 
     def _instruction(self) -> str:
@@ -341,7 +396,30 @@ class EcranStationService(pyglet.window.Window):
             if self.position_selectionnee in POSITIONS_DEPLACABLES:
                 self.mode_deplacement = True
             return
+        index = next(i for i, (position, _libelle) in enumerate(POSITIONS_AFFICHEES) if position == self.position_selectionnee)
+        etat = self.partie.vaisseau[self.position_selectionnee]
+        pv_avant = etat.pv
         APPLICATEURS_ACTION[identifiant](self.partie, self.position_selectionnee)
+        self._ajouter_popup_action(index, identifiant, etat, pv_avant)
+        # Deselectionne une fois l'action appliquee (demande utilisateur) : le popup ci-dessus
+        # suffit a confirmer l'effet, pas besoin de garder le module arme pour une autre action.
+        self.position_selectionnee = None
+
+    def _ajouter_popup_action(self, index: int, identifiant: str, etat: EtatModule, pv_avant: int) -> None:
+        """Popup de confirmation sur la carte du module concerne (specs.md 2.2) : PV effectivement
+        gagnes pour Reparer (plafonne a pv_max, cf. reparer_module), PV max gagnes pour Ameliorer,
+        palier atteint pour Mettre a jour (plafonne a NIVEAU_MAJ_MAX, cf. mettre_a_jour_module)."""
+        if identifiant == "reparer":
+            texte = f"+{etat.pv - pv_avant} PV"
+        elif identifiant == "ameliorer":
+            texte = f"+{PV_AMELIORATION} PV max"
+        else:
+            texte = f"Niveau {etat.niveau_maj}"
+        couleur = COULEUR_POPUP_SOIN if identifiant in ("reparer", "ameliorer") else COULEUR_NIVEAU_MAJ
+        x, y, largeur, hauteur = self._rect_module(index)
+        animation = AnimationPopup()
+        animation.demarrer()
+        self.popups.append((animation, texte, couleur, x + largeur / 2, y + hauteur / 2))
 
     def _index_module_a(self, x: int, y: int) -> int | None:
         for index in range(len(POSITIONS_AFFICHEES)):
