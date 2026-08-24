@@ -154,9 +154,13 @@ section (référencée), cette liste ne fait que les enchaîner.
    (Prime → Combat, Station service → Station service, Planète commerciale → Planète commerciale,
    Aventure → Aventure). Tirage déterministe via `aleatoire_pour_niveau(graine, niveau)` (seed
    textuelle `"{graine}:{niveau}"`, cohérent avec le principe déjà décrit en §10.3).
-   `src/ui/ecran_choix_niveau.py` (PC, 3 cartes texte — nom + description, pas d'image dédiée pour
-   l'instant) ; `web/bridge.py` (`choix_niveau_web`), `web/app.js` (`choixNiveau`, exposée sur
-   `window` pour test manuel)
+   `src/ui/ecran_choix_niveau.py` (PC, 3 cartes avec icône dédiée par type — `assets/prochain_niveau/`,
+   image fournie par l'utilisateur, déjà son propre cadre/nom incrusté — et description sous
+   l'icône) ; `web/bridge.py` (`choix_niveau_web`), `web/app.js` (`choixNiveau`, exposée sur
+   `window` pour test manuel). Un 5ᵉ icône "Boss" fourni en même temps que ces 4 n'est pas encore
+   utilisé : le Boss n'est jamais une proposition tirée sur cet écran (§2.3/§2.4, niveau Boss = pas
+   de tirage) — probablement destiné à l'écran de Combat quand c'est un combat de Boss (étape 10),
+   pas encore construit
 4. **Choix de module, Niveau 1** (implémenté en écran autonome, §2.3 — **pas encore reconnecté à la
    partie**, voir §10.3 "Limites connues") : une fois un module choisi, doit mettre à jour la
    partie (2ᵉ emplacement du vaisseau) et son niveau (1 → 2), puis → Choix du prochain niveau

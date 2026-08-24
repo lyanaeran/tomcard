@@ -738,7 +738,7 @@ body {
     background: rgba(20, 24, 34, 0.75);
     border: 2px solid #5a6e91;
     border-radius: 10px;
-    padding: 1.5rem 1rem;
+    padding: 1rem;
     cursor: pointer;
 }
 
@@ -746,10 +746,11 @@ body {
     border-color: #ffffff;
 }
 
-.candidat-niveau-nom {
-    font-weight: bold;
-    font-size: 1.1rem;
-    color: #ffdc78;
+.candidat-niveau img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1/1.19;
+    object-fit: contain;
     margin-bottom: 0.6rem;
 }
 

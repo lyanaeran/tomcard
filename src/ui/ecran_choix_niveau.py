@@ -10,29 +10,36 @@ Fond de combat reutilise en placeholder (decision utilisateur), a remplacer par 
 import pyglet
 from pyglet import shapes
 
+from src.gameplay.donnees import RACINE
 from src.gameplay.parcours import TypeEtape
-from src.ui.fenetre import FOND_IMAGE, HAUTEUR_FENETRE, LARGEUR_FENETRE, _sprite_etire
+from src.ui.fenetre import FOND_IMAGE, HAUTEUR_FENETRE, LARGEUR_FENETRE, _sprite_ajuste, _sprite_etire
 
 COULEUR_FOND_CARTE = (20, 24, 34)
 COULEUR_CONTOUR_CARTE = (90, 110, 150)
 COULEUR_CONTOUR_CARTE_SURVOLEE = (255, 255, 255)
-COULEUR_NOM_ETAPE = (255, 220, 120)
 COULEUR_DESCRIPTION = (220, 220, 225)
 COULEUR_TEXTE = (255, 255, 255)
 OPACITE_FOND_CARTE = 190
 
-# Libelles/descriptions par type d'etape (specs.md 2), memes textes que le web (web/app.js).
+_DOSSIER_ICONES = RACINE / "assets" / "prochain_niveau"
+
+# Icone (deja son propre cadre + nom incruste, image fournie par l'utilisateur) et description
+# par type d'etape (specs.md 2), memes textes que le web (web/app.js). Pas d'icone pour un
+# 5eme type "Boss" fourni en meme temps que ces 4 : le Boss n'est jamais une proposition tiree
+# sur cet ecran (specs.md 2.3/2.4, niveau Boss = pas de tirage, directement au combat).
 LIBELLES_TYPE_ETAPE = {
-    TypeEtape.PRIME: ("Prime", "Combat, contrat de chasseur de primes."),
-    TypeEtape.STATION_SERVICE: ("Station service", "Entretien du vaisseau contre de l'Argent."),
-    TypeEtape.PLANETE_COMMERCIALE: ("Planete commerciale", "Achat de cartes contre de l'Argent."),
-    TypeEtape.AVENTURE: ("Aventure", "Evenement inconnu."),
+    TypeEtape.PRIME: (str(_DOSSIER_ICONES / "prime.png"), "Combat, contrat de chasseur de primes."),
+    TypeEtape.STATION_SERVICE: (str(_DOSSIER_ICONES / "station_service.png"), "Entretien du vaisseau contre de l'Argent."),
+    TypeEtape.PLANETE_COMMERCIALE: (str(_DOSSIER_ICONES / "planete_commerciale.png"), "Achat de cartes contre de l'Argent."),
+    TypeEtape.AVENTURE: (str(_DOSSIER_ICONES / "aventure.png"), "Evenement inconnu."),
 }
 
-LARGEUR_CARTE = 320
-HAUTEUR_CARTE = 220
-ESPACEMENT_CARTES = 60
-Y_HAUT = HAUTEUR_FENETRE - 160
+LARGEUR_CARTE = 280
+HAUTEUR_CARTE = 400
+IMAGE_TAILLE_LARGEUR = 240
+IMAGE_TAILLE_HAUTEUR = 290
+ESPACEMENT_CARTES = 50
+Y_HAUT = HAUTEUR_FENETRE - 140
 
 
 def _rect_candidat(index: int) -> tuple[float, float, float, float]:
@@ -110,32 +117,30 @@ class EcranChoixNiveau(pyglet.window.Window):
         )
         cadre.opacity = OPACITE_FOND_CARTE
         cx = x + largeur / 2
-        nom, description = LIBELLES_TYPE_ETAPE[type_etape]
+        image, description = LIBELLES_TYPE_ETAPE[type_etape]
 
-        nom_label = pyglet.text.Label(
-            nom,
-            x=cx,
-            y=y + hauteur - 40,
-            anchor_x="center",
-            anchor_y="center",
-            font_size=18,
-            color=(*COULEUR_NOM_ETAPE, 255),
-            batch=lot,
+        sprite = _sprite_ajuste(
+            image,
+            cx - IMAGE_TAILLE_LARGEUR / 2,
+            y + hauteur - 20 - IMAGE_TAILLE_HAUTEUR,
+            IMAGE_TAILLE_LARGEUR,
+            IMAGE_TAILLE_HAUTEUR,
+            lot,
         )
         description_label = pyglet.text.Label(
             description,
             x=cx,
-            y=y + hauteur - 80,
+            y=y + hauteur - 40 - IMAGE_TAILLE_HAUTEUR,
             anchor_x="center",
             anchor_y="top",
             font_size=13,
             color=(*COULEUR_DESCRIPTION, 255),
             multiline=True,
-            width=largeur - 40,
+            width=largeur - 30,
             align="center",
             batch=lot,
         )
-        return [cadre, nom_label, description_label]
+        return [cadre, sprite, description_label]
 
     def on_mouse_motion(self, x: int, y: int, dx: int, dy: int) -> None:
         self.index_survole = self._index_a(x, y)
