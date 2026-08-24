@@ -29,6 +29,7 @@ from src.gameplay.deck import Deck
 from src.gameplay.donnees import SpecModule, charger_cartes, charger_ennemis, charger_modules
 from src.gameplay.joueur import Joueur
 from src.gameplay.module import Module
+from src.gameplay.position import Colonne, Position, Rangee
 from src.gameplay.vaisseau import Vaisseau
 
 RACINE = Path(__file__).resolve().parents[2]
@@ -40,6 +41,16 @@ VERSION_FORMAT = 1
 # equipee) et les 4 emplacements equipables. None = emplacement vide.
 POSITIONS_EQUIPABLES = ("avant_gauche", "avant_droite", "arriere_gauche", "arriere_droite")
 POSITIONS_VAISSEAU = ("base",) + POSITIONS_EQUIPABLES
+
+# Correspondance entre les cles de partie.vaisseau (str) et les Position (Colonne/Rangee) du
+# Vaisseau de combat (src/gameplay/vaisseau.py) - meme ordre que POSITIONS_EQUIPABLES, utilisee
+# par synchroniser_vaisseau_depuis_combat pour reporter les PV de combat sur la partie.
+_POSITIONS_GAMEPLAY_PAR_CLE = {
+    "avant_gauche": Position(Colonne.AVANT, Rangee.GAUCHE),
+    "avant_droite": Position(Colonne.AVANT, Rangee.DROITE),
+    "arriere_gauche": Position(Colonne.ARRIERE, Rangee.GAUCHE),
+    "arriere_droite": Position(Colonne.ARRIERE, Rangee.DROITE),
+}
 
 STATUT_EN_COURS = "EN_COURS"
 STATUT_TERMINEE = "TERMINEE"
@@ -245,6 +256,26 @@ def combat_depuis_partie(partie: Partie, aleatoire: random.Random | None = None)
     joueur = Joueur(vaisseau=vaisseau, deck=deck, electricite_par_tour=ELECTRICITE_PAR_TOUR)
     flotte = creer_flotte(charger_ennemis(), aleatoire)
     return Combat(joueur=joueur, flotte=flotte, aleatoire=aleatoire)
+
+
+def synchroniser_vaisseau_depuis_combat(partie: Partie, vaisseau: Vaisseau) -> Partie:
+    """Reporte sur la partie sauvegardee les PV du vaisseau tel qu'il ressort d'un combat
+    (degats subis, soins recus) - operation inverse de combat_depuis_partie, indispensable pour
+    que les degats persistent reellement d'un combat a l'autre (specs.md 2.2/3.4). A appeler des
+    qu'un combat se termine (victoire), avant de sauvegarder la partie - `main.py:_ouvrir_combat`
+    (PC) et `web/bridge.py:resoudre_victoire_partie_web` (web).
+
+    Ne touche qu'aux PV : ni pv_max (ne change que via Ameliorer, Station service), ni le
+    bouclier (mecanique de combat ephemere, non persistee, absente d'EtatModule). Modifie et
+    renvoie `partie`."""
+    partie.vaisseau["base"].pv = vaisseau.base.pv
+    modules_equipes = vaisseau.modules_equipes()
+    for cle, position in _POSITIONS_GAMEPLAY_PAR_CLE.items():
+        etat = partie.vaisseau[cle]
+        module = modules_equipes.get(position)
+        if etat is not None and module is not None:
+            etat.pv = module.pv
+    return partie
 
 
 # --- Progression (specs.md 2.4) : fonctions pures utilisees par l'enchainement des ecrans, cote
