@@ -115,11 +115,24 @@ def _traiter_action(profil: Profil, partie: Partie | None, action: str) -> None:
         abandonner_partie(profil.id, partie)
         _ouvrir_accueil(profil)
     elif action == "voir_deck":
-        EcranDeck(deck_de_la_partie(partie))
+        _ouvrir_voir_deck(profil, partie)
     elif action == "nouvelle_partie":
         nouvelle = nouvelle_partie()
         sauvegarder_partie(profil.id, nouvelle)
         _ouvrir_choix_module(profil, nouvelle)
+
+
+def _ouvrir_voir_deck(profil: Profil, partie: Partie) -> None:
+    fenetre = EcranDeck(deck_de_la_partie(partie))
+
+    def verifier(_dt: float) -> None:
+        if not fenetre.termine:
+            return
+        pyglet.clock.unschedule(verifier)
+        fenetre.close()
+        _ouvrir_accueil(profil)
+
+    pyglet.clock.schedule_interval(verifier, INTERVALLE_VERIFICATION)
 
 
 def _ouvrir_choix_module(profil: Profil, partie: Partie) -> None:

@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "33";
+const VERSION_CACHE = "34";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -1126,6 +1126,12 @@ function voirDeckPartie() {
     afficherDeck(appelerBridge("deck_partie_web", JSON.stringify(partie)));
 }
 
+// Seul moyen de fermer l'ecran "deck en entier" et de revenir a l'ecran de partie (celui-ci a
+// deja ete masque en ouvrant l'ecran deck, cf. masquerTousLesEcrans dans afficherDeck).
+function retourDepuisDeck() {
+    afficherAccueilJoueur();
+}
+
 function nouvellePartie() {
     const partie = appelerBridge("nouvelle_partie_web");
     sauvegarderPartieLocale(joueurCourant.id, partie);
@@ -1145,4 +1151,5 @@ document.getElementById("bouton-continuer-fin-combat").addEventListener("click",
 document.getElementById("bouton-termine-station-service").addEventListener("click", terminerStationServicePartie);
 document.getElementById("bouton-continuer-victoire-finale").addEventListener("click", terminerVictoireFinale);
 document.getElementById("bouton-termine-etape-placeholder").addEventListener("click", terminerEtapePlaceholder);
+document.getElementById("bouton-retour-deck").addEventListener("click", retourDepuisDeck);
 demarrer();

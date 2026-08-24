@@ -714,7 +714,10 @@ fond dédié.
 - **Nouvelle partie** → écran de choix de module du Niveau 1 déjà existant (§2.3), candidats tirés à
   partir de la graine de la partie fraîchement créée
 - **Voir le deck** → écran "deck en entier" déjà existant (§6), alimenté par le deck réel de la
-  partie (pas une démonstration aléatoire)
+  partie (pas une démonstration aléatoire). L'Écran de partie ayant déjà été fermé/masqué à
+  l'ouverture, un bouton **Retour** (PC : `EcranDeck.termine` ; web : `#bouton-retour-deck`) est le
+  seul moyen d'y revenir — bug réel corrigé après un premier passage sans lui (aucune fermeture de
+  fenêtre native ne rouvrait quoi que ce soit sur PC, et aucune navigation possible sur web)
 - **Continuer** → reprend l'étape exacte où le joueur s'était arrêté (§2.4, étape 2) : Choix de
   module si Niveau 1 sans 2ᵉ module équipé, sinon Choix du prochain niveau pour le niveau courant.
   Un combat lancé depuis là (Prime ou Boss) reprend le vaisseau/deck réels de la partie, mais tire

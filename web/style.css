@@ -1012,9 +1012,9 @@ body {
     line-height: 1.3;
 }
 
-/* Ecran "deck en entier" (appelable depuis plusieurs endroits du parcours, specs.md 6). Fond de
-   combat reutilise en placeholder (deja applique globalement sur body) - decision utilisateur,
-   a remplacer par un fond dedie. Pas encore reliee a un vrai bouton dans l'UI, cf. web/app.js. */
+/* Ecran "deck en entier" (specs.md 6/10.3), ouvert depuis l'ecran de partie (bouton "Voir le
+   deck"). Fond de combat reutilise en placeholder (deja applique globalement sur body) -
+   decision utilisateur, a remplacer par un fond dedie. */
 #ecran-deck {
     display: flex;
     flex-direction: column;
@@ -1022,12 +1022,20 @@ body {
     min-height: 100vh;
     padding: 2rem 1rem;
     text-align: center;
+    position: relative;
 }
 
 #ecran-deck h1 {
     margin: 0 0 1.5rem;
     font-size: 1.8rem;
     font-weight: normal;
+}
+
+/* Seul moyen de fermer cet ecran et de revenir a l'ecran de partie, cf. web/app.js. */
+#bouton-retour-deck {
+    position: absolute;
+    top: 2rem;
+    right: 1rem;
 }
 
 #grille-deck {
@@ -1171,7 +1179,8 @@ body {
 #ecran-fin-combat button,
 #bouton-termine-station-service,
 #bouton-continuer-victoire-finale,
-#bouton-termine-etape-placeholder {
+#bouton-termine-etape-placeholder,
+#bouton-retour-deck {
     font-size: 1rem;
     padding: 0.6rem 1.4rem;
     border: none;
