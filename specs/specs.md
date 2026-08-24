@@ -65,23 +65,33 @@ actions une fois cette ressource implémentée.
 - **Les dégâts subis en combat persistent d'un combat à l'autre** (décision utilisateur — sinon
   Réparer n'aurait aucune utilité) : un module endommagé le reste au niveau suivant tant qu'il n'a
   pas été réparé. Format et couche de persistance hors-combat **implémentés** en §10.3 (`EtatModule`
-  dans `src/gameplay/partie.py` : PV actuels, PV max, niveau de mise à jour, par module équipé) —
-  reste à réutiliser cette couche dans l'écran Station service lui-même, qui n'est pas encore codé
-  (voir juste en dessous)
+  dans `src/gameplay/partie.py` : PV actuels, PV max, niveau de mise à jour, par module équipé),
+  réutilisés directement par les 4 actions ci-dessus (`reparer_module`/`ameliorer_module`/
+  `mettre_a_jour_module`/`deplacer_module`, fonctions pures partagées PC+web)
 
-#### Écran Station service (interface)
+#### Écran Station service (interface) — **implémenté**, relié à l'orchestration du parcours (§2.4)
 
-- Fond de combat réutilisé en placeholder (comme les 3 autres écrans du parcours déjà implémentés),
-  à remplacer par un fond dédié
-- Modules du vaisseau affichés comme en combat (grille 2×2 + module principal) : le joueur clique un
-  module pour le sélectionner (surbrillance), puis clique une des 4 actions pour l'appliquer au
-  module sélectionné
-- Icônes des 4 actions dans `assets/station_service/` : `reparer.png`, `ameliorer.png`,
-  `mettre_a_jour.png`, `deplacer.png`
-- **Pas encore implémenté** (spec uniquement à ce stade) : la couche de persistance hors-combat dont
-  il dépend existe désormais (§10.3), donc plus rien ne bloque son développement. Suivra le même
-  principe autonome que les écrans déjà implémentés (§2.3/§6/§10.3) — non relié à une orchestration
-  de parcours tant que celle-ci n'existe pas
+- Fond de combat réutilisé en placeholder (comme les autres écrans du parcours), à remplacer par un
+  fond dédié
+- Modules du vaisseau affichés en **ligne de 5 cartes** (principal + 4 équipables, une carte "Emplacement
+  vide" pour un slot non équipé) plutôt que dans la grille 2×2 façon combat envisagée initialement —
+  décision d'implémentation, reprend le layout déjà existant de l'écran d'accueil du joueur
+  (`POSITIONS_AFFICHEES`, §10.3) : le joueur clique une carte de module équipé pour la sélectionner
+  (contour en surbrillance), puis clique une des 4 actions pour l'appliquer au module sélectionné.
+  **Déplacer** : cliquer "Déplacer" arme le mode (icône encadrée en orange) en attendant un clic sur
+  l'emplacement de destination (vide ou occupé) parmi les 4 équipables ; recliquer le module source
+  annule l'armement. Un bouton "J'ai terminé" ferme l'écran → Choix du prochain niveau (étape 3),
+  avec avancement du niveau (comme une étape résolue, §2.4)
+- Icônes des 4 actions dans `assets/station_service/` (`reparer.png`, `ameliorer.png`,
+  `mettre_a_jour.png`, `deplacer.png`) : déjà pourvues de leur propre cadre/nom incrusté (fournies
+  par l'utilisateur, même principe que `assets/prochain_niveau/`), affichées seules sans étiquette de
+  texte supplémentaire à côté
+- `src/gameplay/partie.py` (`reparer_module`, `ameliorer_module`, `mettre_a_jour_module`,
+  `deplacer_module`, fonctions pures partagées PC+web) ; `src/ui/ecran_station_service.py` (PC) ;
+  `main.py:_ouvrir_station_service` (PC) ; côté web `web/bridge.py` (`reparer_module_web`/
+  `ameliorer_module_web`/`mettre_a_jour_module_web`/`deplacer_module_web`/
+  `terminer_station_service_web`) + `web/app.js` (`ouvrirStationServicePartie` et les fonctions
+  `cliquerModuleStation`/`cliquerActionStation`/`terminerStationServicePartie`)
 
 ### 2.3 Structure par niveaux
 
@@ -189,10 +199,9 @@ section (référencée), cette liste ne fait que les enchaîner.
    défini → Choix du prochain niveau (étape 3). **Écran pas encore construit** : en choisir la
    proposition depuis l'étape 3 ne fait pour l'instant que rouvrir le même choix du niveau (log
    console/terminal, `main.py:_ouvrir_choix_niveau` / `web/app.js:choisirEtape`)
-8. **Station service** (spec détaillée en §2.2, écran pas encore codé) : Réparer / Améliorer /
-   Mettre à jour / Déplacer un module, un bouton "j'ai terminé" → Choix du prochain niveau (étape 3).
-   Même comportement temporaire que l'étape 7 (rouvre le choix du niveau) en attendant que l'écran
-   soit construit
+8. **Station service** (détaillé en §2.2, **implémenté et relié à l'enchaînement**) : Réparer /
+   Améliorer / Mettre à jour / Déplacer un module, un bouton "j'ai terminé" avance le niveau et
+   revient au Choix du prochain niveau (étape 3), même principe que la fin d'un combat gagné
 9. **Planète commerciale** (contenu non préparé, §2/§9.1) : même principe qu'Aventure, un bouton
    "j'ai terminé" → Choix du prochain niveau (étape 3). Même comportement temporaire que l'étape 7
 10. **Boss** (niveau 10, puis tous les 10 niveaux à terme — §2.3), atteint via la proposition
@@ -525,12 +534,11 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
 - La Planète commerciale propose-t-elle des cartes pour tous les modules du pool, ou seulement pour les modules actuellement équipés ? (§2, §6)
 - **Persistance des modules hors combat/profils joueur** (§2.2/§10.3) : **implémentée** (profil +
   partie, un seul joueur à la fois, écrans de sélection de profil/accueil du joueur, `main.py` en
-  vrai point d'entrée), et l'orchestration du parcours (§2.4) relie désormais Choix de module,
-  Choix du prochain niveau, Combat et Fin de combat à cette sauvegarde. Reste bloquant pour relier
-  Station service (spec détaillée en §2.2, écran pas encore codé) et Planète commerciale/Aventure
-  (contenu non préparé) à un vrai parcours — voir §10.3 "Limites connues" pour le détail restant
-  (portée limitée aux points de passage entre étapes, flotte ennemie toujours tirée au hasard sans
-  tenir compte du niveau)
+  vrai point d'entrée), et l'orchestration du parcours (§2.4) relie désormais Choix de module, Choix
+  du prochain niveau, Combat, Fin de combat et Station service à cette sauvegarde. Reste bloquant
+  pour relier Planète commerciale/Aventure (contenu non préparé) à un vrai parcours — voir §10.3
+  "Limites connues" pour le détail restant (portée limitée aux points de passage entre étapes,
+  flotte ennemie toujours tirée au hasard sans tenir compte du niveau)
 - Statistiques et déblocages par profil (parties jouées/victoires/défaites, niveau max, module le
   plus choisi, déblocages en fin de partie) : sciemment pas encore implémentés (§10.3, décision
   utilisateur "pas de stat pour le moment") — à faire dans une passe dédiée
@@ -731,11 +739,11 @@ fond dédié.
 #### Limites connues (à lever plus tard)
 
 - **Portée volontairement limitée** : seuls les points de passage entre étapes sont sauvegardés
-  (juste après choix de module, juste après résolution d'une fin de combat) — un combat en cours
-  n'est pas sauvegardable ; le quitter en cours de route (fermer l'onglet/l'appli) le fait
-  recommencer entièrement à la reprise, au même niveau
-- Station service, Planète commerciale et Aventure ne sont pas encore construits (§2.4, étapes
-  7-9) : les choisir depuis le Choix du prochain niveau rouvre simplement ce même écran
+  (juste après choix de module, juste après résolution d'une fin de combat ou d'une Station
+  service) — un combat en cours n'est pas sauvegardable ; le quitter en cours de route (fermer
+  l'onglet/l'appli) le fait recommencer entièrement à la reprise, au même niveau
+- Planète commerciale et Aventure ne sont pas encore construites (§2.4, étapes 7 et 9) : les
+  choisir depuis le Choix du prochain niveau rouvre simplement ce même écran
 - La victoire d'un combat de Boss marque la partie `TERMINEE` directement, faute d'écran de
   victoire finale dédié (§2.4, étape 11) — le run s'arrête réellement au Niveau 10 dans l'état
   actuel (voir §2)
@@ -744,8 +752,9 @@ fond dédié.
   §2.3/§3.2 (nombre d'ennemis, tailles S/M/L) — reste un tirage de démonstration
 - Écart PC/web sur la conservation des parties `TERMINEE` (voir "Partie" plus haut) : à corriger si
   un écran d'historique est construit côté web
-- `argent` ne progresse jamais dans le flux actuel (aucune étape ne le fait varier, faute de
-  Station service/Planète commerciale construits)
+- `argent` ne progresse jamais dans le flux actuel (aucune étape ne le fait varier : la Station
+  service est reliée mais ses 4 actions restent gratuites tant que la ressource Argent n'existe pas
+  côté gameplay, §2.2/§9.1 ; Planète commerciale n'est pas construite)
 
 ### 10.4 Conventions de code
 

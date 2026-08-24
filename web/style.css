@@ -759,6 +759,119 @@ body {
     color: #dcdce1;
 }
 
+/* Ecran Station service (specs.md 2.2). Fond de combat reutilise en placeholder (deja applique
+   globalement sur body) - decision utilisateur. Cartes module reprises de #vaisseau-accueil
+   (.module-accueil), rendues cliquables/selectionnables. */
+#ecran-station-service {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+#ecran-station-service h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: normal;
+}
+
+#modules-station-service {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.module-station {
+    width: clamp(110px, 15vw, 150px);
+    background: rgba(20, 24, 34, 0.75);
+    border: 2px solid #5a6e91;
+    border-radius: 10px;
+    padding: 0.8rem;
+    cursor: pointer;
+}
+
+.module-station.selectionnee {
+    border-color: #ffffff;
+}
+
+.module-station img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1/1;
+    object-fit: contain;
+    margin-bottom: 0.4rem;
+}
+
+.module-station-nom {
+    font-weight: bold;
+    font-size: 0.85rem;
+}
+
+.module-station-pv {
+    font-size: 0.8rem;
+    color: #dcdce1;
+}
+
+.module-station-niveau {
+    font-size: 0.75rem;
+    color: #ffdc78;
+}
+
+.module-station-vide {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: clamp(110px, 15vw, 150px);
+    min-height: 100px;
+    color: #7a7e8c;
+    font-size: 0.8rem;
+    border: 2px solid #3a3f52;
+    border-radius: 10px;
+    cursor: default;
+}
+
+#ecran-station-service .instruction {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+#actions-station-service {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+}
+
+/* Icones deja pourvues de leur cadre/nom incruste (fournies par l'utilisateur), aucun style de
+   bouton generique ici (pas dans le selecteur partage plus bas) - juste un contour au survol/a
+   l'armement de Deplacer, meme principe que src/ui/ecran_station_service.py cote PC. */
+.action-station {
+    width: clamp(70px, 9vw, 100px);
+    aspect-ratio: 511 / 532;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: 10px;
+    background: transparent;
+    cursor: pointer;
+}
+
+.action-station img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.action-station:hover,
+.action-station.armee {
+    border-color: #ffffff;
+}
+
 /* Ecran de fin de combat (parcours, specs.md 2.1/6). Fond de combat reutilise en placeholder
    (deja applique globalement sur body) - decision utilisateur, a remplacer par un fond dedie.
    Pas encore reliee a une orchestration de parcours, cf. web/app.js. Meme structure generale
@@ -987,7 +1100,8 @@ body {
 
 #ecran-selection-joueur button,
 #ecran-accueil-joueur button,
-#ecran-fin-combat button {
+#ecran-fin-combat button,
+#bouton-termine-station-service {
     font-size: 1rem;
     padding: 0.6rem 1.4rem;
     border: none;

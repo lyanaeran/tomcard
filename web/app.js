@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "29";
+const VERSION_CACHE = "30";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -100,6 +100,7 @@ const IDS_ECRANS = [
     "ecran-accueil-joueur",
     "ecran-choix-module",
     "ecran-choix-niveau",
+    "ecran-station-service",
     "ecran-fin-combat",
     "ecran-deck",
 ];
@@ -614,6 +615,116 @@ function ouvrirChoixNiveauPartie(partie) {
     afficherChoixNiveau(appelerBridge("choix_niveau_web", JSON.stringify(partie)));
 }
 
+// Ecran Station service (specs.md 2.2) : 4 actions gratuites (Reparer/Ameliorer/Mettre a jour/
+// Deplacer) appliquees a un module de la partie active, avant de revenir au choix du prochain
+// niveau (etape 8, specs.md 2.4). Meme regles que src/ui/ecran_station_service.py cote PC -
+// bridge.py n'applique que les fonctions pures de src/gameplay/partie.py, aucune regle dupliquee
+// ici (CLAUDE.md).
+const ACTIONS_STATION_SERVICE = [
+    ["reparer", "assets/station_service/reparer.png"],
+    ["ameliorer", "assets/station_service/ameliorer.png"],
+    ["mettre_a_jour", "assets/station_service/mettre_a_jour.png"],
+    ["deplacer", "assets/station_service/deplacer.png"],
+];
+const FONCTIONS_ACTION_STATION_SERVICE = {
+    reparer: "reparer_module_web",
+    ameliorer: "ameliorer_module_web",
+    mettre_a_jour: "mettre_a_jour_module_web",
+};
+// Deplacer ne s'applique jamais au module principal (specs.md 2.2), meme liste que
+// POSITIONS_DEPLACABLES cote PC.
+const POSITIONS_DEPLACABLES_STATION = ["avant_gauche", "avant_droite", "arriere_gauche", "arriere_droite"];
+
+let positionSelectionneeStation = null;
+let modeDeplacementStation = false;
+
+function ouvrirStationServicePartie(partie) {
+    partieActive = partie;
+    positionSelectionneeStation = null;
+    modeDeplacementStation = false;
+    rendreStationService();
+    masquerTousLesEcrans();
+    document.getElementById("ecran-station-service").classList.remove("cachee");
+}
+
+function instructionStationService() {
+    if (modeDeplacementStation) return "Cliquez l'emplacement de destination (ou recliquez le module pour annuler).";
+    if (positionSelectionneeStation === null) return "Selectionnez un module, puis une action.";
+    return "Selectionnez une action pour ce module.";
+}
+
+function rendreStationService() {
+    const vaisseau = appelerBridge("infos_vaisseau_web", JSON.stringify(partieActive));
+    document.getElementById("modules-station-service").innerHTML = Object.entries(vaisseau)
+        .map(([position, etat]) => {
+            if (!etat) {
+                return `<div class="module-station module-station-vide" data-position="${position}">Emplacement vide</div>`;
+            }
+            const selectionnee = position === positionSelectionneeStation ? " selectionnee" : "";
+            return `
+            <div class="module-station${selectionnee}" data-position="${position}">
+                <img src="${etat.image}" alt="${etat.nom}">
+                <div class="module-station-nom">${etat.nom}</div>
+                <div class="module-station-pv">${etat.pv} / ${etat.pv_max} PV</div>
+                <div class="module-station-niveau">Mise a jour : niveau ${etat.niveau_maj}</div>
+            </div>`;
+        })
+        .join("");
+    document.getElementById("actions-station-service").innerHTML = ACTIONS_STATION_SERVICE.map(([action, image]) => {
+        const armee = action === "deplacer" && modeDeplacementStation ? " armee" : "";
+        return `<button class="action-station${armee}" data-action="${action}"><img src="${image}" alt="${action}"></button>`;
+    }).join("");
+    document.getElementById("instruction-station-service").textContent = instructionStationService();
+
+    document.querySelectorAll(".module-station").forEach((element) => {
+        const estVide = element.classList.contains("module-station-vide");
+        element.addEventListener("click", () => cliquerModuleStation(element.dataset.position, estVide));
+    });
+    document.querySelectorAll(".action-station").forEach((element) => {
+        element.addEventListener("click", () => cliquerActionStation(element.dataset.action));
+    });
+}
+
+function cliquerModuleStation(position, estVide) {
+    if (modeDeplacementStation) {
+        if (position === positionSelectionneeStation) {
+            modeDeplacementStation = false;
+        } else if (POSITIONS_DEPLACABLES_STATION.includes(position)) {
+            partieActive = appelerBridge(
+                "deplacer_module_web",
+                JSON.stringify(partieActive),
+                positionSelectionneeStation,
+                position
+            );
+            sauvegarderPartieLocale(joueurCourant.id, partieActive);
+            modeDeplacementStation = false;
+            positionSelectionneeStation = null;
+        }
+    } else if (!estVide) {
+        positionSelectionneeStation = position;
+    }
+    rendreStationService();
+}
+
+function cliquerActionStation(action) {
+    if (positionSelectionneeStation === null) return;
+    if (action === "deplacer") {
+        if (POSITIONS_DEPLACABLES_STATION.includes(positionSelectionneeStation)) {
+            modeDeplacementStation = true;
+        }
+    } else {
+        partieActive = appelerBridge(FONCTIONS_ACTION_STATION_SERVICE[action], JSON.stringify(partieActive), positionSelectionneeStation);
+        sauvegarderPartieLocale(joueurCourant.id, partieActive);
+    }
+    rendreStationService();
+}
+
+function terminerStationServicePartie() {
+    const partie = appelerBridge("terminer_station_service_web", JSON.stringify(partieActive));
+    sauvegarderPartieLocale(joueurCourant.id, partie);
+    ouvrirChoixNiveauPartie(partie);
+}
+
 // Ecran "Choix du prochain niveau" (specs.md 2.3/2.4) : 3 propositions d'etape d'ordinaire, ou
 // une seule (BOSS) a un niveau Boss (multiple de 10) - decision utilisateur, meme ecran de choix,
 // juste une seule carte "Combattre le Boss !" au lieu de 3. Pas encore reliee a une orchestration
@@ -661,9 +772,11 @@ function choisirEtape(type) {
         appliquerResultat(appelerBridge("continuer_partie_web", JSON.stringify(partieActive)));
         masquerTousLesEcrans();
         document.getElementById("app").classList.remove("cachee");
+    } else if (type === "STATION_SERVICE") {
+        ouvrirStationServicePartie(partieActive);
     } else {
-        // Station service / Planete commerciale / Aventure : pas encore construits
-        // (specs.md 2.4) - on ne perd pas la main, on rouvre le meme choix.
+        // Planete commerciale / Aventure : pas encore construits (specs.md 2.4) - on ne perd
+        // pas la main, on rouvre le meme choix.
         console.log(`${type} : ecran pas encore construit, retour au choix du niveau.`);
         ouvrirChoixNiveauPartie(partieActive);
     }
@@ -956,4 +1069,5 @@ document.getElementById("bouton-abandonner").addEventListener("click", abandonne
 document.getElementById("bouton-voir-deck-partie").addEventListener("click", voirDeckPartie);
 document.getElementById("bouton-nouvelle-partie").addEventListener("click", nouvellePartie);
 document.getElementById("bouton-continuer-fin-combat").addEventListener("click", continuerApresFinCombat);
+document.getElementById("bouton-termine-station-service").addEventListener("click", terminerStationServicePartie);
 demarrer();

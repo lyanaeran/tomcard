@@ -29,17 +29,21 @@ from src.gameplay.parcours import (
 )
 from src.gameplay.partie import (
     ajouter_carte,
+    ameliorer_module,
     avancer_niveau,
     combat_depuis_partie,
     deck_de_la_partie,
+    deplacer_module,
     equiper_module,
     id_de_carte,
     marquer_terminee,
+    mettre_a_jour_module,
     nouveau_profil,
     nouvelle_partie,
     partie_depuis_json,
     partie_vers_json,
     profil_vers_json,
+    reparer_module,
     specs_utilisees_partie,
 )
 from src.gameplay.position import Colonne, Position, Rangee
@@ -448,6 +452,43 @@ def resoudre_victoire_partie_web(partie_json, id_carte) -> str:
         marquer_terminee(partie)
     else:
         avancer_niveau(partie)
+    return partie_vers_json(partie)
+
+
+# --- Station service (specs.md 2.2) : 4 actions gratuites appliquees a un module equipe, meme
+# fonctions pures que main.py:_ouvrir_station_service cote PC (src/gameplay/partie.py). ---
+
+
+def reparer_module_web(partie_json, position) -> str:
+    partie = partie_depuis_json(partie_json)
+    reparer_module(partie, position)
+    return partie_vers_json(partie)
+
+
+def ameliorer_module_web(partie_json, position) -> str:
+    partie = partie_depuis_json(partie_json)
+    ameliorer_module(partie, position)
+    return partie_vers_json(partie)
+
+
+def mettre_a_jour_module_web(partie_json, position) -> str:
+    partie = partie_depuis_json(partie_json)
+    mettre_a_jour_module(partie, position)
+    return partie_vers_json(partie)
+
+
+def deplacer_module_web(partie_json, position_source, position_destination) -> str:
+    partie = partie_depuis_json(partie_json)
+    deplacer_module(partie, position_source, position_destination)
+    return partie_vers_json(partie)
+
+
+def terminer_station_service_web(partie_json) -> str:
+    """Bouton "J'ai termine" de l'ecran Station service : avance au niveau suivant (specs.md 2.4,
+    etape 8), meme logique que main.py:_ouvrir_station_service cote PC. Renvoie la partie mise a
+    jour (web/app.js la re-sauvegarde dans localStorage puis enchaine sur le choix du niveau)."""
+    partie = partie_depuis_json(partie_json)
+    avancer_niveau(partie)
     return partie_vers_json(partie)
 
 

@@ -1,0 +1,354 @@
+"""
+Ecran Station service ("garage") du parcours (specs.md 2.2) : repare/ameliore/met a jour/deplace
+les modules equipes d'une partie sauvegardee. Fenetre pyglet independante comme les autres ecrans
+du parcours, mute directement `partie.vaisseau` (src/gameplay/partie.py) - c'est a l'appelant de
+sauvegarder la partie une fois l'ecran ferme ("J'ai termine", specs.md 2.4 etape 8).
+
+Toutes les actions sont gratuites pour l'instant (pas de ressource Argent implementee, specs.md
+2.2/9.1). Fond de combat reutilise en placeholder (decision utilisateur), a remplacer par un fond
+dedie.
+"""
+
+import pyglet
+from pyglet import shapes
+
+from src.gameplay.donnees import RACINE, charger_modules
+from src.gameplay.partie import (
+    EtatModule,
+    Partie,
+    ameliorer_module,
+    deplacer_module,
+    mettre_a_jour_module,
+    reparer_module,
+)
+from src.ui.fenetre import FOND_IMAGE, HAUTEUR_FENETRE, LARGEUR_FENETRE, _sprite_ajuste, _sprite_etire
+
+COULEUR_TEXTE = (255, 255, 255)
+COULEUR_SOUS_TITRE = (200, 200, 205)
+COULEUR_FOND_CARTE = (20, 24, 34)
+COULEUR_CONTOUR_CARTE = (90, 110, 150)
+COULEUR_CONTOUR_SELECTIONNEE = (255, 255, 255)
+COULEUR_FOND_VIDE = (15, 17, 24)
+COULEUR_CONTOUR_VIDE = (60, 65, 80)
+COULEUR_NIVEAU_MAJ = (255, 220, 120)
+COULEUR_BOUTON = (60, 90, 160)
+COULEUR_BOUTON_SURVOLE = (90, 130, 210)
+COULEUR_BOUTON_ARME = (210, 160, 40)
+COULEUR_BOUTON_TERMINE = (70, 190, 90)
+COULEUR_BOUTON_TERMINE_SURVOLE = (100, 210, 115)
+OPACITE_FOND = 190
+
+# Meme ordre d'affichage que src/ui/ecran_accueil_joueur.py (specs.md 3.1/5).
+POSITIONS_AFFICHEES = (
+    ("base", "Principal"),
+    ("avant_gauche", "Avant gauche"),
+    ("avant_droite", "Avant droite"),
+    ("arriere_gauche", "Arriere gauche"),
+    ("arriere_droite", "Arriere droite"),
+)
+# Deplacer ne s'applique jamais au module principal (specs.md 2.2).
+POSITIONS_DEPLACABLES = tuple(position for position, _libelle in POSITIONS_AFFICHEES if position != "base")
+
+LARGEUR_CARTE_MODULE = 200
+HAUTEUR_CARTE_MODULE = 240
+IMAGE_TAILLE = 110
+ESPACEMENT_CARTE = 24
+Y_HAUT_GRILLE = HAUTEUR_FENETRE - 140
+
+LARGEUR_ACTION = 130
+HAUTEUR_ACTION = 135
+ESPACEMENT_ACTION = 24
+Y_ACTIONS = 150
+MARGE_ICONE_ACTION = 8
+
+LARGEUR_BOUTON_TERMINE = 220
+HAUTEUR_BOUTON_TERMINE = 46
+Y_BOUTON_TERMINE = 40
+
+# (identifiant, libelle, chemin de l'icone) - ordre d'affichage des 4 actions (specs.md 2.2).
+ACTIONS = (
+    ("reparer", "Reparer", str(RACINE / "assets" / "station_service" / "reparer.png")),
+    ("ameliorer", "Ameliorer", str(RACINE / "assets" / "station_service" / "ameliorer.png")),
+    ("mettre_a_jour", "Mettre a jour", str(RACINE / "assets" / "station_service" / "mettre_a_jour.png")),
+    ("deplacer", "Deplacer", str(RACINE / "assets" / "station_service" / "deplacer.png")),
+)
+
+APPLICATEURS_ACTION = {
+    "reparer": reparer_module,
+    "ameliorer": ameliorer_module,
+    "mettre_a_jour": mettre_a_jour_module,
+}
+
+
+def _point_dans_rectangle(px: float, py: float, x: float, y: float, largeur: float, hauteur: float) -> bool:
+    return x <= px <= x + largeur and y <= py <= y + hauteur
+
+
+class EcranStationService(pyglet.window.Window):
+    """Ecran Station service : selectionner un module puis une action, ou Deplacer (2 clics :
+    module source, puis emplacement destination). `partie` est mutee directement a chaque action -
+    "J'ai termine" (`self.termine`) signale a l'appelant qu'il peut la sauvegarder et enchainer."""
+
+    def __init__(self, partie: Partie):
+        super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
+        self.partie = partie
+        self.specs_par_id = {spec.id: spec for spec in charger_modules()}
+        self.position_selectionnee: str | None = None
+        # True = Deplacer arme (module source deja choisi), en attente d'un clic de destination.
+        self.mode_deplacement: bool = False
+        self.index_module_survole: int | None = None
+        self.index_action_survolee: int | None = None
+        self.bouton_termine_survole: bool = False
+        self.termine: bool = False
+
+    def on_draw(self) -> None:
+        self.clear()
+        lot = pyglet.graphics.Batch()
+        elements = self._dessiner(lot)
+        lot.draw()
+        del elements
+
+    def _dessiner(self, lot: pyglet.graphics.Batch) -> list:
+        elements = [_sprite_etire(FOND_IMAGE, 0, 0, LARGEUR_FENETRE, HAUTEUR_FENETRE, lot)]
+        elements.append(
+            pyglet.text.Label(
+                "Station service",
+                x=LARGEUR_FENETRE / 2,
+                y=HAUTEUR_FENETRE - 40,
+                anchor_x="center",
+                anchor_y="center",
+                font_size=26,
+                color=(*COULEUR_TEXTE, 255),
+                batch=lot,
+            )
+        )
+        for index, (position, libelle) in enumerate(POSITIONS_AFFICHEES):
+            elements.extend(self._dessiner_module(index, position, libelle, self.partie.vaisseau[position], lot))
+        for index, (identifiant, libelle, chemin_icone) in enumerate(ACTIONS):
+            elements.extend(self._dessiner_action(index, identifiant, libelle, chemin_icone, lot))
+        elements.extend(self._dessiner_instruction(lot))
+        elements.extend(self._dessiner_bouton_termine(lot))
+        return elements
+
+    def _instruction(self) -> str:
+        if self.mode_deplacement:
+            return "Cliquez l'emplacement de destination (ou recliquez le module pour annuler)."
+        if self.position_selectionnee is None:
+            return "Selectionnez un module, puis une action."
+        return "Selectionnez une action pour ce module."
+
+    def _dessiner_instruction(self, lot: pyglet.graphics.Batch) -> list:
+        return [
+            pyglet.text.Label(
+                self._instruction(),
+                x=LARGEUR_FENETRE / 2,
+                y=Y_ACTIONS + HAUTEUR_ACTION + 30,
+                anchor_x="center",
+                anchor_y="center",
+                font_size=16,
+                color=(*COULEUR_TEXTE, 255),
+                batch=lot,
+            )
+        ]
+
+    def _rect_module(self, index: int) -> tuple[float, float, float, float]:
+        total = len(POSITIONS_AFFICHEES)
+        largeur_totale = total * LARGEUR_CARTE_MODULE + (total - 1) * ESPACEMENT_CARTE
+        x_depart = (LARGEUR_FENETRE - largeur_totale) / 2
+        x = x_depart + index * (LARGEUR_CARTE_MODULE + ESPACEMENT_CARTE)
+        return x, Y_HAUT_GRILLE - HAUTEUR_CARTE_MODULE, LARGEUR_CARTE_MODULE, HAUTEUR_CARTE_MODULE
+
+    def _dessiner_module(
+        self, index: int, position: str, libelle: str, etat: EtatModule | None, lot: pyglet.graphics.Batch
+    ) -> list:
+        x, y, largeur, hauteur = self._rect_module(index)
+        cx = x + largeur / 2
+        survole = index == self.index_module_survole
+        selectionnee = position == self.position_selectionnee
+
+        if etat is None:
+            couleur_contour = COULEUR_CONTOUR_SELECTIONNEE if survole else COULEUR_CONTOUR_VIDE
+            cadre = shapes.BorderedRectangle(
+                x, y, largeur, hauteur, border=2, color=COULEUR_FOND_VIDE, border_color=couleur_contour, batch=lot
+            )
+            cadre.opacity = OPACITE_FOND
+            libelle_label = pyglet.text.Label(
+                libelle,
+                x=cx,
+                y=y + hauteur - 20,
+                anchor_x="center",
+                anchor_y="center",
+                font_size=13,
+                color=(*COULEUR_SOUS_TITRE, 255),
+                batch=lot,
+            )
+            vide = pyglet.text.Label(
+                "Emplacement vide",
+                x=cx,
+                y=y + hauteur / 2,
+                anchor_x="center",
+                anchor_y="center",
+                font_size=12,
+                color=(120, 124, 135, 255),
+                batch=lot,
+            )
+            return [cadre, libelle_label, vide]
+
+        spec = self.specs_par_id[etat.module_id]
+        couleur_contour = COULEUR_CONTOUR_SELECTIONNEE if (survole or selectionnee) else COULEUR_CONTOUR_CARTE
+        epaisseur = 4 if selectionnee else 2
+        cadre = shapes.BorderedRectangle(
+            x, y, largeur, hauteur, border=epaisseur, color=COULEUR_FOND_CARTE, border_color=couleur_contour, batch=lot
+        )
+        cadre.opacity = OPACITE_FOND
+        libelle_label = pyglet.text.Label(
+            libelle,
+            x=cx,
+            y=y + hauteur - 18,
+            anchor_x="center",
+            anchor_y="center",
+            font_size=12,
+            color=(*COULEUR_SOUS_TITRE, 255),
+            batch=lot,
+        )
+        sprite = _sprite_ajuste(spec.image, cx - IMAGE_TAILLE / 2, y + hauteur - 40 - IMAGE_TAILLE, IMAGE_TAILLE, IMAGE_TAILLE, lot)
+        nom = pyglet.text.Label(
+            spec.nom,
+            x=cx,
+            y=y + hauteur - 52 - IMAGE_TAILLE,
+            anchor_x="center",
+            anchor_y="center",
+            font_size=13,
+            color=(*COULEUR_TEXTE, 255),
+            batch=lot,
+        )
+        pv = pyglet.text.Label(
+            f"{etat.pv} / {etat.pv_max} PV",
+            x=cx,
+            y=y + 34,
+            anchor_x="center",
+            anchor_y="center",
+            font_size=12,
+            color=(*COULEUR_TEXTE, 255),
+            batch=lot,
+        )
+        niveau_maj = pyglet.text.Label(
+            f"Mise a jour : niveau {etat.niveau_maj}",
+            x=cx,
+            y=y + 14,
+            anchor_x="center",
+            anchor_y="center",
+            font_size=11,
+            color=(*COULEUR_NIVEAU_MAJ, 255),
+            batch=lot,
+        )
+        return [cadre, libelle_label, sprite, nom, pv, niveau_maj]
+
+    def _rect_action(self, index: int) -> tuple[float, float, float, float]:
+        total = len(ACTIONS)
+        largeur_totale = total * LARGEUR_ACTION + (total - 1) * ESPACEMENT_ACTION
+        x_depart = (LARGEUR_FENETRE - largeur_totale) / 2
+        x = x_depart + index * (LARGEUR_ACTION + ESPACEMENT_ACTION)
+        return x, Y_ACTIONS, LARGEUR_ACTION, HAUTEUR_ACTION
+
+    def _dessiner_action(
+        self, index: int, identifiant: str, libelle: str, chemin_icone: str, lot: pyglet.graphics.Batch
+    ) -> list:
+        # Icone deja pourvue de son cadre/nom incruste (fournie par l'utilisateur, meme principe
+        # que assets/prochain_niveau/), pas de texte supplementaire ici - meme convention que
+        # src/ui/ecran_choix_niveau.py. Cadre dessine derriere l'icone, sans groupe explicite
+        # (meme convention que _dessiner_module ci-dessus, l'icone masque le centre du cadre et
+        # ne laisse depasser que sa bordure).
+        x, y, largeur, hauteur = self._rect_action(index)
+        survole = index == self.index_action_survolee
+        armee = identifiant == "deplacer" and self.mode_deplacement
+        if armee:
+            couleur_contour = COULEUR_BOUTON_ARME
+        elif survole:
+            couleur_contour = COULEUR_CONTOUR_SELECTIONNEE
+        else:
+            couleur_contour = COULEUR_CONTOUR_CARTE
+        cadre = shapes.BorderedRectangle(
+            x, y, largeur, hauteur, border=3, color=COULEUR_FOND_CARTE, border_color=couleur_contour, batch=lot
+        )
+        icone = _sprite_ajuste(
+            chemin_icone,
+            x + MARGE_ICONE_ACTION,
+            y + MARGE_ICONE_ACTION,
+            largeur - 2 * MARGE_ICONE_ACTION,
+            hauteur - 2 * MARGE_ICONE_ACTION,
+            lot,
+        )
+        return [cadre, icone]
+
+    def _rect_bouton_termine(self) -> tuple[float, float, float, float]:
+        x = (LARGEUR_FENETRE - LARGEUR_BOUTON_TERMINE) / 2
+        return x, Y_BOUTON_TERMINE, LARGEUR_BOUTON_TERMINE, HAUTEUR_BOUTON_TERMINE
+
+    def _dessiner_bouton_termine(self, lot: pyglet.graphics.Batch) -> list:
+        x, y, largeur, hauteur = self._rect_bouton_termine()
+        couleur = COULEUR_BOUTON_TERMINE_SURVOLE if self.bouton_termine_survole else COULEUR_BOUTON_TERMINE
+        rectangle = shapes.Rectangle(x, y, largeur, hauteur, color=couleur, batch=lot)
+        texte = pyglet.text.Label(
+            "J'ai termine",
+            x=x + largeur / 2,
+            y=y + hauteur / 2,
+            anchor_x="center",
+            anchor_y="center",
+            font_size=15,
+            color=(*COULEUR_TEXTE, 255),
+            batch=lot,
+        )
+        return [rectangle, texte]
+
+    def on_mouse_motion(self, x: int, y: int, dx: int, dy: int) -> None:
+        self.index_module_survole = self._index_module_a(x, y)
+        self.index_action_survolee = self._index_action_a(x, y)
+        self.bouton_termine_survole = _point_dans_rectangle(x, y, *self._rect_bouton_termine())
+
+    def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
+        if _point_dans_rectangle(x, y, *self._rect_bouton_termine()):
+            self.termine = True
+            return
+        index_module = self._index_module_a(x, y)
+        if index_module is not None:
+            self._cliquer_module(POSITIONS_AFFICHEES[index_module][0])
+            return
+        index_action = self._index_action_a(x, y)
+        if index_action is not None:
+            self._cliquer_action(ACTIONS[index_action][0])
+
+    def _cliquer_module(self, position: str) -> None:
+        if self.mode_deplacement:
+            if position == self.position_selectionnee:
+                # Reclic sur le module source : annule le mode deplacement.
+                self.mode_deplacement = False
+                return
+            if position in POSITIONS_DEPLACABLES:
+                deplacer_module(self.partie, self.position_selectionnee, position)
+                self.mode_deplacement = False
+                self.position_selectionnee = None
+            return
+        if self.partie.vaisseau[position] is not None:
+            self.position_selectionnee = position
+
+    def _cliquer_action(self, identifiant: str) -> None:
+        if self.position_selectionnee is None:
+            return
+        if identifiant == "deplacer":
+            if self.position_selectionnee in POSITIONS_DEPLACABLES:
+                self.mode_deplacement = True
+            return
+        APPLICATEURS_ACTION[identifiant](self.partie, self.position_selectionnee)
+
+    def _index_module_a(self, x: int, y: int) -> int | None:
+        for index in range(len(POSITIONS_AFFICHEES)):
+            if _point_dans_rectangle(x, y, *self._rect_module(index)):
+                return index
+        return None
+
+    def _index_action_a(self, x: int, y: int) -> int | None:
+        for index in range(len(ACTIONS)):
+            if _point_dans_rectangle(x, y, *self._rect_action(index)):
+                return index
+        return None
