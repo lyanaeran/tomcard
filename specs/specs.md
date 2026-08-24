@@ -194,15 +194,19 @@ section (référencée), cette liste ne fait que les enchaîner.
      pas de distinction victoire/défaite/abandon pour l'instant, cf. §10.3) → Écran de partie
      (étape 2), via un bouton "Continuer" (PC : clic n'importe où sur l'écran, cf.
      `src/ui/ecran_fin_combat.py`)
-7. **Aventure** (contenu non préparé, §2/§9.1) : un bouton "j'ai terminé", une fois le contenu
-   défini → Choix du prochain niveau (étape 3). **Écran pas encore construit** : en choisir la
-   proposition depuis l'étape 3 ne fait pour l'instant que rouvrir le même choix du niveau (log
-   console/terminal, `main.py:_ouvrir_choix_niveau` / `web/app.js:choisirEtape`)
+7. **Aventure** (contenu non préparé, §2/§9.1, **relié à l'enchaînement via un écran générique**) :
+   un bouton "j'ai terminé" avance le niveau et revient au Choix du prochain niveau (étape 3), même
+   principe que Station service — en attendant un vrai contenu, l'écran se limite à afficher
+   l'icône/description déjà utilisées au Choix du prochain niveau avec un message "Contenu pas
+   encore défini pour cette étape." `src/ui/ecran_etape_placeholder.py` (PC, un seul écran
+   générique pour cette étape et l'étape 9) + `main.py:_ouvrir_etape_placeholder` ; côté web
+   `web/bridge.py` (`terminer_etape_placeholder_web`) + `web/app.js`
+   (`ouvrirEtapePlaceholderPartie`/`terminerEtapePlaceholder`)
 8. **Station service** (détaillé en §2.2, **implémenté et relié à l'enchaînement**) : Réparer /
    Améliorer / Mettre à jour / Déplacer un module, un bouton "j'ai terminé" avance le niveau et
    revient au Choix du prochain niveau (étape 3), même principe que la fin d'un combat gagné
-9. **Planète commerciale** (contenu non préparé, §2/§9.1) : même principe qu'Aventure, un bouton
-   "j'ai terminé" → Choix du prochain niveau (étape 3). Même comportement temporaire que l'étape 7
+9. **Planète commerciale** (contenu non préparé, §2/§9.1) : même principe qu'Aventure — même écran
+   générique, même comportement (étape 7)
 10. **Boss** (niveau 10, puis tous les 10 niveaux à terme — §2.3), atteint via la proposition
     unique "Combattre le Boss !" de l'étape 3 : réutilise l'écran Combat pour l'instant, pas encore
     d'ennemi de Boss dédié (§9.1) → Victoire : Victoire finale (étape 11) ; Défaite : même
@@ -743,11 +747,13 @@ fond dédié.
 #### Limites connues (à lever plus tard)
 
 - **Portée volontairement limitée** : seuls les points de passage entre étapes sont sauvegardés
-  (juste après choix de module, juste après résolution d'une fin de combat ou d'une Station
-  service) — un combat en cours n'est pas sauvegardable ; le quitter en cours de route (fermer
-  l'onglet/l'appli) le fait recommencer entièrement à la reprise, au même niveau
-- Planète commerciale et Aventure ne sont pas encore construites (§2.4, étapes 7 et 9) : les
-  choisir depuis le Choix du prochain niveau rouvre simplement ce même écran
+  (juste après choix de module, juste après résolution d'une fin de combat, d'une Station service
+  ou d'une étape Aventure/Planète commerciale) — un combat en cours n'est pas sauvegardable ; le
+  quitter en cours de route (fermer l'onglet/l'appli) le fait recommencer entièrement à la reprise,
+  au même niveau
+- Planète commerciale et Aventure n'ont pas encore de contenu propre (§2.4, étapes 7 et 9, §9.1) :
+  un seul écran générique (`EcranEtapePlaceholder`) les représente toutes les deux, sans autre
+  effet que d'avancer au niveau suivant
 - Le run s'arrête réellement au Niveau 10 dans l'état actuel (décision utilisateur, provisoire,
   voir §2) : la Victoire finale (§2.4, étape 11) marque la partie `TERMINEE` sans proposer de
   continuation au-delà de ce niveau

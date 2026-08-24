@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
     <title>Space Fight - prototype web</title>
-    <link rel="stylesheet" href="web/style.css?v=31">
-    <link rel="manifest" href="web/manifest.json?v=31">
+    <link rel="stylesheet" href="web/style.css?v=32">
+    <link rel="manifest" href="web/manifest.json?v=32">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0b1020">
@@ -67,6 +67,12 @@
         <div id="actions-station-service"></div>
         <button id="bouton-termine-station-service">J'ai termine</button>
     </div>
+    <div id="ecran-etape-placeholder" class="cachee">
+        <h1 id="titre-etape-placeholder"></h1>
+        <img id="image-etape-placeholder" alt="">
+        <p class="instruction">Contenu pas encore defini pour cette etape.</p>
+        <button id="bouton-termine-etape-placeholder">J'ai termine</button>
+    </div>
     <div id="ecran-fin-combat" class="cachee">
         <h1 id="titre-fin-combat"></h1>
         <p id="message-defaite" class="cachee">Pas d'inquietude : vos restes seront recycles, rien ne se perd dans l'espace.</p>
@@ -87,6 +93,6 @@
         <div id="info-carte-deck"></div>
     </div>
     <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
-    <script src="web/app.js?v=31"></script>
+    <script src="web/app.js?v=32"></script>
 </body>
 </html>

@@ -502,6 +502,16 @@ def terminer_station_service_web(partie_json) -> str:
     return partie_vers_json(partie)
 
 
+def terminer_etape_placeholder_web(partie_json) -> str:
+    """Bouton "J'ai termine" de l'ecran generique Aventure/Planete commerciale (contenu pas encore
+    prepare, specs.md 2.4 etapes 7/9, 9.1) : avance au niveau suivant, meme logique que
+    main.py:_ouvrir_etape_placeholder cote PC. Renvoie la partie mise a jour (web/app.js la
+    re-sauvegarde dans localStorage puis enchaine sur le choix du niveau)."""
+    partie = partie_depuis_json(partie_json)
+    avancer_niveau(partie)
+    return partie_vers_json(partie)
+
+
 def _resoudre_cible(carte, id_cible):
     if carte.cible in CIBLES_SANS_CLIC:
         return None

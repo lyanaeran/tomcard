@@ -875,6 +875,38 @@ body {
     border-color: #ffffff;
 }
 
+/* Ecran generique pour une etape sans contenu prepare (Aventure, Planete commerciale - specs.md
+   2.4 etapes 7/9, 9.1). Fond de combat reutilise en placeholder (deja applique globalement sur
+   body) - decision utilisateur. */
+#ecran-etape-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+#ecran-etape-placeholder h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: normal;
+}
+
+#ecran-etape-placeholder .instruction {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #dcdce1;
+}
+
+#image-etape-placeholder {
+    width: clamp(160px, 22vw, 240px);
+    aspect-ratio: 1/1;
+    object-fit: contain;
+}
+
 /* Ecran de fin de combat (parcours, specs.md 2.1/6). Fond de combat reutilise en placeholder
    (deja applique globalement sur body) - decision utilisateur, a remplacer par un fond dedie.
    Pas encore reliee a une orchestration de parcours, cf. web/app.js. Meme structure generale
@@ -1138,7 +1170,8 @@ body {
 #ecran-accueil-joueur button,
 #ecran-fin-combat button,
 #bouton-termine-station-service,
-#bouton-continuer-victoire-finale {
+#bouton-continuer-victoire-finale,
+#bouton-termine-etape-placeholder {
     font-size: 1rem;
     padding: 0.6rem 1.4rem;
     border: none;

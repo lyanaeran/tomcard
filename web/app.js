@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "31";
+const VERSION_CACHE = "32";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -101,6 +101,7 @@ const IDS_ECRANS = [
     "ecran-choix-module",
     "ecran-choix-niveau",
     "ecran-station-service",
+    "ecran-etape-placeholder",
     "ecran-fin-combat",
     "ecran-victoire-finale",
     "ecran-deck",
@@ -726,6 +727,31 @@ function terminerStationServicePartie() {
     ouvrirChoixNiveauPartie(partie);
 }
 
+// Ecran generique pour une etape sans contenu prepare (Aventure, Planete commerciale - specs.md
+// 2.4 etapes 7/9, 9.1) : reutilise l'icone/description de LIBELLES_TYPE_ETAPE (definie plus bas,
+// pour l'ecran "Choix du prochain niveau") avec un message explicite et un bouton "J'ai termine"
+// qui avance simplement au niveau suivant - meme logique que
+// main.py:_ouvrir_etape_placeholder cote PC.
+const TITRES_TYPE_ETAPE = {
+    AVENTURE: "Aventure",
+    PLANETE_COMMERCIALE: "Planete commerciale",
+};
+
+function ouvrirEtapePlaceholderPartie(partie, type) {
+    partieActive = partie;
+    const [image] = LIBELLES_TYPE_ETAPE[type];
+    document.getElementById("titre-etape-placeholder").textContent = TITRES_TYPE_ETAPE[type];
+    document.getElementById("image-etape-placeholder").src = image;
+    masquerTousLesEcrans();
+    document.getElementById("ecran-etape-placeholder").classList.remove("cachee");
+}
+
+function terminerEtapePlaceholder() {
+    const partie = appelerBridge("terminer_etape_placeholder_web", JSON.stringify(partieActive));
+    sauvegarderPartieLocale(joueurCourant.id, partie);
+    ouvrirChoixNiveauPartie(partie);
+}
+
 // Ecran "Choix du prochain niveau" (specs.md 2.3/2.4) : 3 propositions d'etape d'ordinaire, ou
 // une seule (BOSS) a un niveau Boss (multiple de 10) - decision utilisateur, meme ecran de choix,
 // juste une seule carte "Combattre le Boss !" au lieu de 3. Pas encore reliee a une orchestration
@@ -776,10 +802,8 @@ function choisirEtape(type) {
     } else if (type === "STATION_SERVICE") {
         ouvrirStationServicePartie(partieActive);
     } else {
-        // Planete commerciale / Aventure : pas encore construits (specs.md 2.4) - on ne perd
-        // pas la main, on rouvre le meme choix.
-        console.log(`${type} : ecran pas encore construit, retour au choix du niveau.`);
-        ouvrirChoixNiveauPartie(partieActive);
+        // Aventure / Planete commerciale : contenu pas encore prepare (specs.md 2.4, 9.1).
+        ouvrirEtapePlaceholderPartie(partieActive, type);
     }
 }
 
@@ -1120,4 +1144,5 @@ document.getElementById("bouton-nouvelle-partie").addEventListener("click", nouv
 document.getElementById("bouton-continuer-fin-combat").addEventListener("click", continuerApresFinCombat);
 document.getElementById("bouton-termine-station-service").addEventListener("click", terminerStationServicePartie);
 document.getElementById("bouton-continuer-victoire-finale").addEventListener("click", terminerVictoireFinale);
+document.getElementById("bouton-termine-etape-placeholder").addEventListener("click", terminerEtapePlaceholder);
 demarrer();

@@ -2,18 +2,19 @@
 Point d'entree du jeu Space Fight (PC) : selection du profil joueur (specs.md 10.3), puis l'accueil
 de ce joueur (partie en cours ou nouvelle partie), qui enchaine desormais reellement sur le reste du
 parcours (specs.md 2.4) : choix de module (Niveau 1) -> choix du prochain niveau -> combat (Prime ou
-Boss) ou Station service -> fin de combat / fin de Station service -> retour au choix du prochain
-niveau, ou victoire finale (Boss vaincu) -> fin de partie.
+Boss), Station service, ou Aventure/Planete commerciale (ecran generique, contenu pas encore
+prepare) -> retour au choix du prochain niveau, ou victoire finale (Boss vaincu) -> fin de partie.
 
 Chaque ecran est une fenetre pyglet independante ; les transitions se font en fermant la fenetre
 courante et en ouvrant la suivante, verifiees a intervalle regulier via pyglet.clock (pas
 d'evenement dedie pour "l'utilisateur a fait un choix" dans ces ecrans, cf. leurs attributs
 `profil_choisi`/`action`/`module_choisi`/`type_choisi`/`termine`).
 
-Limites connues (specs.md 2.4) : Planete commerciale/Aventure ne sont pas encore construites
-(choisir l'une de ces propositions rouvre simplement le choix du niveau, cf. _ouvrir_choix_niveau) ;
-la flotte ennemie d'un combat est toujours tiree au hasard (combat_depuis_partie), sans tenir compte
-des tailles/du nombre d'ennemis attendus au niveau courant (specs.md 2.3/3.2).
+Limites connues (specs.md 2.4) : Aventure et Planete commerciale n'ont pas encore de contenu propre
+(specs.md 9.1) - un seul ecran generique (EcranEtapePlaceholder) les represente toutes les deux pour
+l'instant, sans autre effet que d'avancer au niveau suivant ; la flotte ennemie d'un combat est
+toujours tiree au hasard (combat_depuis_partie), sans tenir compte des tailles/du nombre d'ennemis
+attendus au niveau courant (specs.md 2.3/3.2).
 """
 
 import random
@@ -51,6 +52,7 @@ from src.ui.ecran_accueil_joueur import EcranAccueilJoueur
 from src.ui.ecran_choix_module import EcranChoixModule
 from src.ui.ecran_choix_niveau import EcranChoixNiveau
 from src.ui.ecran_deck import EcranDeck
+from src.ui.ecran_etape_placeholder import EcranEtapePlaceholder
 from src.ui.ecran_fin_combat import EcranFinCombat
 from src.ui.ecran_selection_joueur import EcranSelectionJoueur
 from src.ui.ecran_station_service import EcranStationService
@@ -59,8 +61,9 @@ from src.ui.fenetre import FenetreCombat
 
 INTERVALLE_VERIFICATION = 1 / 30
 
-# Types de proposition deja relies a un ecran reel (specs.md 2.4) : Planete commerciale et
-# Aventure ne le sont pas encore, cf. _ouvrir_choix_niveau.
+# Types de proposition qui ouvrent un combat (specs.md 2.4) - les autres (Station service, ou
+# Aventure/Planete commerciale via EcranEtapePlaceholder) ont chacun leur propre branchement dans
+# _ouvrir_choix_niveau.
 TYPES_COMBAT = (TypeEtape.PRIME, TypeEtape.BOSS)
 
 
@@ -154,16 +157,29 @@ def _ouvrir_choix_niveau(profil: Profil, partie: Partie) -> None:
         elif type_choisi == TypeEtape.STATION_SERVICE:
             _ouvrir_station_service(profil, partie)
         else:
-            # Planete commerciale / Aventure : pas encore construits (specs.md 2.4) - on ne
-            # perd pas la main, on rouvre le meme choix.
-            print(f"{type_choisi.name} : ecran pas encore construit, retour au choix du niveau.")
-            _ouvrir_choix_niveau(profil, partie)
+            # Aventure / Planete commerciale : contenu pas encore prepare (specs.md 2.4, 9.1).
+            _ouvrir_etape_placeholder(profil, partie, type_choisi)
 
     pyglet.clock.schedule_interval(verifier, INTERVALLE_VERIFICATION)
 
 
 def _ouvrir_station_service(profil: Profil, partie: Partie) -> None:
     fenetre = EcranStationService(partie)
+
+    def verifier(_dt: float) -> None:
+        if not fenetre.termine:
+            return
+        pyglet.clock.unschedule(verifier)
+        fenetre.close()
+        avancer_niveau(partie)
+        sauvegarder_partie(profil.id, partie)
+        _ouvrir_choix_niveau(profil, partie)
+
+    pyglet.clock.schedule_interval(verifier, INTERVALLE_VERIFICATION)
+
+
+def _ouvrir_etape_placeholder(profil: Profil, partie: Partie, type_etape: TypeEtape) -> None:
+    fenetre = EcranEtapePlaceholder(type_etape)
 
     def verifier(_dt: float) -> None:
         if not fenetre.termine:
