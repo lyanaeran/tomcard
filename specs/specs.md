@@ -25,6 +25,10 @@ Un deckbuilder roguelike inspiré de Slay the Spire, où le joueur incarne un va
   - *(autres types d'étapes à imaginer)*
 - **Boss** : niveau 10, puis tous les 10 niveaux (20, 30, 40...) — voir §2.3
   - Victoire sur un boss → le joueur choisit **1 nouveau module parmi 2 propositions**, avec ses cartes de base associées (deck de départ propre au module — détail à trancher une fois le système de cartes approfondi, voir §7)
+  - **Le run s'arrête réellement au Niveau 10 dans l'état actuel** (décision utilisateur, provisoire,
+    voir §2.4) : gagner le Boss du niveau 10 mène à un écran de victoire finale, le run ne continue
+    pas au-delà pour l'instant — la récompense de Boss "1 module parmi 2" ci-dessus reste donc hors
+    champ tant que cette limite n'est pas repoussée (niveaux 20, 30..., voir §9.1)
 
 ### 2.1 Argent et récompenses de combat
 
@@ -117,6 +121,59 @@ remplace les pistes encore ouvertes en §2 pour la Station service et la cadence
   bloqué à 2 ?
 - La pondération par doublons déjà possédés s'applique-t-elle aussi au choix de module après un
   Boss (2 propositions, §2), ou seulement au Niveau 1 ?
+
+### 2.4 Enchaînement des écrans (orchestration du parcours)
+
+Vue d'ensemble de tous les écrans du jeu et de ce que chacun déclenche une fois son action
+terminée — schéma fourni par l'utilisateur, normalisé ici en un seul endroit. Statut
+d'implémentation entre parenthèses pour chaque écran ; le detail de chacun reste dans sa propre
+section (référencée), cette liste ne fait que les enchaîner.
+
+1. **Sélection du joueur** (implémenté, §10.3) — choisir un profil existant ou en créer un →
+   Écran de partie (étape 2). Bouton "Quitter le jeu" (**PC uniquement** : ferme l'application ;
+   pas d'équivalent fiable côté web, un onglet de navigateur ne peut pas se fermer par script dans
+   le cas général — décision utilisateur, écart PC/web assumé comme les autres déjà documentés
+   dans `CLAUDE.md`)
+2. **Écran de partie** (implémenté, §10.3 — nommé `EcranAccueilJoueur`/`afficherAccueilJoueur` dans
+   le code, "écran de partie" dans le vocabulaire de ce schéma) :
+   - Une partie `EN_COURS` existe : Continuer / Abandonner / Voir le deck, vaisseau et ses modules
+     affichés. **Continuer** → l'écran exact où le joueur s'était arrêté (choix du prochain niveau,
+     niveau en cours, combat...), une fois l'étape 3 construite ; **en attendant, approximation
+     temporaire déjà en place** (décision utilisateur) qui relance directement un combat avec le
+     vaisseau/deck réels mais une flotte tirée au hasard (`combat_depuis_partie`, §10.3)
+   - Pas de partie en cours : bouton "Nouvelle partie" → Choix de module, Niveau 1 (étape 4)
+   - Bouton "Quitter le jeu" (même remarque PC/web qu'à l'étape 1)
+3. **Choix du prochain niveau** (à construire) — à chaque niveau sauf le 1 et les niveaux Boss
+   (§2.3) : tire 3 propositions selon les probabilités et exceptions déjà définies en §2.3 (1/30
+   Station service, 1/30 Planète commerciale, 1/10 Aventure, sinon Prime ; Station service garantie
+   aux niveaux 5 et 9 ; niveau 10 et multiples de 10 sautent directement à l'écran Boss, étape 10,
+   sans tirage) → l'écran correspondant à la proposition choisie (Prime → Combat, Station service →
+   Station service, Planète commerciale → Planète commerciale, Aventure → Aventure)
+4. **Choix de module, Niveau 1** (implémenté en écran autonome, §2.3 — **pas encore reconnecté à la
+   partie**, voir §10.3 "Limites connues") : une fois un module choisi, doit mettre à jour la
+   partie (2ᵉ emplacement du vaisseau) et son niveau (1 → 2), puis → Choix du prochain niveau
+   (étape 3). Actuellement, choisir un module n'écrit encore rien dans la sauvegarde
+5. **Combat** (implémenté en écran indépendant, `FenetreCombat`/`#app` — **pas encore reconnecté à
+   l'enchaînement**) : une fois le combat terminé (victoire ou défaite) → Fin de combat (étape 6).
+   Actuellement, le combat reste affiché indéfiniment après sa fin, rien ne déclenche la suite
+6. **Fin de combat** (implémenté en écran autonome, §6 — **pas encore reconnecté**) :
+   - Victoire : choix d'une carte candidate, doit mettre à jour le deck de la partie, puis → Choix
+     du prochain niveau (étape 3), sauf si le combat était le Boss du niveau 10 → Victoire finale
+     (étape 11, voir §2 "le run s'arrête réellement au Niveau 10 dans l'état actuel")
+   - Défaite : la partie est marquée `TERMINEE` (même statut qu'un abandon, décision utilisateur —
+     pas de distinction victoire/défaite/abandon pour l'instant, cf. §10.3) → Écran de partie
+     (étape 2)
+7. **Aventure** (contenu non préparé, §2/§9.1) : un bouton "j'ai terminé", une fois le contenu
+   défini → Choix du prochain niveau (étape 3)
+8. **Station service** (spec détaillée en §2.2, écran pas encore codé) : Réparer / Améliorer /
+   Mettre à jour / Déplacer un module, un bouton "j'ai terminé" → Choix du prochain niveau (étape 3)
+9. **Planète commerciale** (contenu non préparé, §2/§9.1) : même principe qu'Aventure, un bouton
+   "j'ai terminé" → Choix du prochain niveau (étape 3)
+10. **Boss** (niveau 10, puis tous les 10 niveaux à terme — §2.3) : réutilise l'écran Combat pour
+    l'instant, pas encore d'ennemi de Boss dédié (§9.1) → Victoire : Victoire finale (étape 11) ;
+    Défaite : même traitement qu'un combat normal (étape 6, branche Défaite)
+11. **Victoire finale** (à construire) : félicite le joueur, affiche son deck (réutilise l'écran
+    "deck en entier", §6) → bouton → Écran de partie (étape 2), partie désormais `TERMINEE`
 
 ---
 
