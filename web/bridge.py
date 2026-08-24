@@ -45,6 +45,7 @@ from src.gameplay.partie import (
     profil_vers_json,
     reparer_module,
     specs_utilisees_partie,
+    synchroniser_vaisseau_depuis_combat,
 )
 from src.gameplay.position import Colonne, Position, Rangee
 
@@ -440,14 +441,18 @@ def candidats_recompense_partie_web(partie_json) -> str:
 
 
 def resoudre_victoire_partie_web(partie_json, id_carte) -> str:
-    """Resout la victoire d'un combat pour une partie reelle : ajoute la carte choisie (id_carte,
-    ou None si aucun candidat n'etait propose), puis avance au niveau suivant - sauf si c'etait un
+    """Resout la victoire d'un combat pour une partie reelle : reporte d'abord les PV du combat
+    qui vient de se terminer (`combat`, variable globale toujours celle de ce combat a ce stade -
+    cf. continuer_partie_web) sur la partie (specs.md 2.2/3.4 : persistance des PV entre combats,
+    meme logique que main.py:_ouvrir_combat cote PC), puis ajoute la carte choisie (id_carte, ou
+    None si aucun candidat n'etait propose), puis avance au niveau suivant - sauf si c'etait un
     Boss, auquel cas le niveau n'avance pas encore et la partie reste EN_COURS : web/app.js doit
     d'abord ouvrir l'ecran de victoire finale (cle "niveau_boss") avant de marquer la partie
     TERMINEE (terminer_victoire_finale_web, une fois l'ecran ferme) - meme logique que
     main.py:_ouvrir_fin_combat/_ouvrir_victoire_finale cote PC. Renvoie
     {"partie": ..., "niveau_boss": bool}."""
     partie = partie_depuis_json(partie_json)
+    synchroniser_vaisseau_depuis_combat(partie, combat.joueur.vaisseau)
     if id_carte is not None:
         ajouter_carte(partie, id_carte)
     boss = est_niveau_boss(partie.niveau)

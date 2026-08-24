@@ -42,6 +42,7 @@ from src.gameplay.partie import (
     reparer_module,
     sauvegarder_partie,
     specs_utilisees_partie,
+    synchroniser_vaisseau_depuis_combat,
 )
 
 
@@ -166,6 +167,33 @@ def test_combat_depuis_partie_en_mode_test_donne_20_degats_aux_cartes_attaque_de
     lasers = [carte for carte in toutes_les_cartes if carte.nom == "Laser"]
     assert len(lasers) == 2
     assert all(carte.valeur == VALEUR_ATTAQUE_BASE_MODE_TEST for carte in lasers)
+
+
+def test_synchroniser_vaisseau_depuis_combat_reporte_les_pv_sur_la_partie():
+    """Operation inverse de combat_depuis_partie : sans elle, les degats subis en combat ne
+    persistaient jamais reellement (bug constate en jeu - rien dans l'orchestration reelle,
+    main.py/web/bridge.py, ne reportait les PV de combat sur la partie sauvegardee)."""
+    partie = _partie_exemple()
+    combat = combat_depuis_partie(partie, random.Random(1))
+    combat.joueur.vaisseau.base.pv = 4
+    combat.joueur.vaisseau.module_en(Colonne.AVANT, Rangee.GAUCHE).pv = 6
+
+    synchroniser_vaisseau_depuis_combat(partie, combat.joueur.vaisseau)
+
+    assert partie.vaisseau["base"].pv == 4
+    assert partie.vaisseau["base"].pv_max == 15  # pv_max jamais touche
+    assert partie.vaisseau["avant_gauche"].pv == 6
+
+
+def test_synchroniser_vaisseau_depuis_combat_ignore_les_emplacements_vides():
+    partie = _partie_exemple()
+    combat = combat_depuis_partie(partie, random.Random(1))
+
+    synchroniser_vaisseau_depuis_combat(partie, combat.joueur.vaisseau)
+
+    assert partie.vaisseau["avant_droite"] is None
+    assert partie.vaisseau["arriere_gauche"] is None
+    assert partie.vaisseau["arriere_droite"] is None
 
 
 # --- Progression (specs.md 2.4) ---
