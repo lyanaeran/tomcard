@@ -44,9 +44,10 @@ def _point_dans_rectangle(px: float, py: float, x: float, y: float, largeur: flo
 class EcranChoixModule(pyglet.window.Window):
     """Ecran de choix d'un nouveau module parmi 3 candidats (specs.md 2.3, Niveau 1)."""
 
-    def __init__(self, candidats: list[SpecModule]):
+    def __init__(self, candidats: list[SpecModule], niveau: int = 1):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.candidats = candidats
+        self.niveau = niveau
         self.index_survole: int | None = None
         self.module_choisi: SpecModule | None = None
 
@@ -61,7 +62,7 @@ class EcranChoixModule(pyglet.window.Window):
         elements = [_sprite_etire(FOND_IMAGE, 0, 0, LARGEUR_FENETRE, HAUTEUR_FENETRE, lot)]
         elements.append(
             pyglet.text.Label(
-                "Nouveau module",
+                f"Nouveau module - Niveau {self.niveau}",
                 x=LARGEUR_FENETRE / 2,
                 y=HAUTEUR_FENETRE - 60,
                 anchor_x="center",
