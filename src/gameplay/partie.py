@@ -21,6 +21,7 @@ from src.gameplay.config_poc import (
     ID_MODULE_PRINCIPAL,
     MODE_TEST,
     PV_MODULE_MODE_TEST,
+    appliquer_degats_mode_test,
     creer_flotte,
     ids_deck_module_principal,
 )
@@ -197,10 +198,11 @@ def combat_depuis_partie(partie: Partie, aleatoire: random.Random | None = None)
     precisement quel combat affronter a ce niveau.
 
     En mode test (MODE_TEST, cf. config_poc.py), les modules du joueur demarrent ce combat a
-    PV_MODULE_MODE_TEST/PV_MODULE_MODE_TEST (pleine vie), sans tenir compte des PV persistes de
-    la partie - meme principe que la flotte ennemie (creer_flotte), pour pouvoir enchainer les
-    essais manuels du parcours sans jamais perdre. Les PV persistes ne sont pas modifies pour
-    autant (aucune ecriture ici)."""
+    PV_MODULE_MODE_TEST/PV_MODULE_MODE_TEST (pleine vie) et les cartes ATTAQUE de rarete Base de
+    son deck reel infligent VALEUR_ATTAQUE_BASE_MODE_TEST degats, sans tenir compte des PV/cartes
+    persistes de la partie - meme principe que la flotte ennemie (creer_flotte), pour pouvoir
+    enchainer les essais manuels du parcours sans jamais perdre. Rien n'est modifie dans la partie
+    sauvegardee pour autant (aucune ecriture ici)."""
     aleatoire = aleatoire or random.Random(partie.graine + partie.niveau)
     specs_par_id = {spec.id: spec for spec in charger_modules()}
     cartes = charger_cartes()
@@ -226,7 +228,10 @@ def combat_depuis_partie(partie: Partie, aleatoire: random.Random | None = None)
         arriere_gauche=_module(partie.vaisseau["arriere_gauche"]),
         arriere_droite=_module(partie.vaisseau["arriere_droite"]),
     )
-    deck = Deck(cartes=deck_de_la_partie(partie, cartes), generateur_aleatoire=aleatoire)
+    deck_cartes = deck_de_la_partie(partie, cartes)
+    if MODE_TEST:
+        appliquer_degats_mode_test(deck_cartes)
+    deck = Deck(cartes=deck_cartes, generateur_aleatoire=aleatoire)
     joueur = Joueur(vaisseau=vaisseau, deck=deck, electricite_par_tour=ELECTRICITE_PAR_TOUR)
     flotte = creer_flotte(charger_ennemis(), aleatoire)
     return Combat(joueur=joueur, flotte=flotte, aleatoire=aleatoire)

@@ -27,16 +27,20 @@ from src.gameplay.module import Module
 from src.gameplay.position import Colonne, Position, Rangee
 from src.gameplay.vaisseau import Vaisseau
 
-# Mode test : bascule creer_combat_poc() dans une configuration pensee pour les tests manuels
-# plutot que pour le gameplay normal - PV du joueur enormement augmentes (survivre de nombreux
-# tours sans mourir), PV ennemis abaisses et cartes de degats de base surpuissantes (tuer un
-# ennemi en un coup, pour enchainer les tests sans y passer plusieurs tours), et un exemplaire de
-# chaque carte jouable existante dans le deck (au lieu du tirage aleatoire habituel par module
-# equipe), quels que soient les modules tires au sort, pour pouvoir essayer toutes les mecaniques
-# en un seul combat. Remettre a False pour revenir au comportement normal (production).
+# Mode test : bascule creer_combat_poc() ET combat_depuis_partie() (src/gameplay/partie.py, vrai
+# combat du parcours) dans une configuration pensee pour les tests manuels plutot que pour le
+# gameplay normal - PV du joueur enormement augmentes (survivre de nombreux tours sans mourir),
+# PV et nombre d'ennemis abaisses, cartes de degats de base surpuissantes (tuer un ennemi en un
+# coup, pour enchainer les tests sans y passer plusieurs tours), et (creer_combat_poc()
+# uniquement) un exemplaire de chaque carte jouable existante dans le deck plutot que le tirage
+# aleatoire habituel par module equipe, pour pouvoir essayer toutes les mecaniques en un seul
+# combat. Remettre a False pour revenir au comportement normal (production).
 MODE_TEST = True
 PV_MODULE_MODE_TEST = 200
 PV_ENNEMI_MODE_TEST = 20
+# Nombre de cases ennemies peuplees (sur les 6 de la grille, POSITIONS_ENNEMIES) en mode test -
+# moins d'ennemis a vaincre par combat pour accelerer les essais manuels.
+NOMBRE_ENNEMIS_MODE_TEST = 2
 # Valeur (degats) appliquee aux cartes ATTAQUE de rarete Base (Laser, Laser percant,
 # Bombardement) en mode test uniquement - superieure a PV_ENNEMI_MODE_TEST pour tuer un ennemi en
 # un coup. Les autres cartes gardent leur valeur normale (config/cartes.json).
@@ -137,24 +141,33 @@ def creer_deck(specs_utilisees: list[SpecModule], cartes: dict[str, Carte], alea
     return Deck(cartes=deck_cartes, generateur_aleatoire=aleatoire)
 
 
+def appliquer_degats_mode_test(cartes: list[Carte]) -> None:
+    """Mode test (cf. MODE_TEST) : les cartes ATTAQUE de rarete Base (Laser, Laser percant,
+    Bombardement) infligent VALEUR_ATTAQUE_BASE_MODE_TEST degats (tuer un ennemi en un coup, cf.
+    PV_ENNEMI_MODE_TEST) ; les autres cartes gardent leur valeur normale. Modifie `cartes` en
+    place - reutilisee par creer_deck_mode_test() ci-dessous et par
+    src/gameplay/partie.py:combat_depuis_partie() (vrai combat du parcours, deck reel de la
+    partie plutot qu'un deck de demonstration)."""
+    for carte in cartes:
+        if carte.rarete == RareteCarte.BASE and carte.type == TypeCarte.ATTAQUE:
+            carte.valeur = VALEUR_ATTAQUE_BASE_MODE_TEST
+
+
 def creer_deck_mode_test(cartes: dict[str, Carte], aleatoire: random.Random) -> Deck:
     """Mode test (cf. MODE_TEST) : un exemplaire de chaque carte jouable existante, quels que
     soient les modules tires au sort - pour pouvoir essayer toutes les mecaniques en un seul
-    combat plutot que de dependre du tirage aleatoire habituel. Les cartes ATTAQUE de rarete Base
-    infligent VALEUR_ATTAQUE_BASE_MODE_TEST degats (tuer un ennemi en un coup, cf.
-    PV_ENNEMI_MODE_TEST) ; les autres cartes gardent leur valeur normale."""
+    combat plutot que de dependre du tirage aleatoire habituel."""
     deck_cartes = [carte.copie() for carte in cartes.values()]
-    for carte in deck_cartes:
-        if carte.rarete == RareteCarte.BASE and carte.type == TypeCarte.ATTAQUE:
-            carte.valeur = VALEUR_ATTAQUE_BASE_MODE_TEST
+    appliquer_degats_mode_test(deck_cartes)
     return Deck(cartes=deck_cartes, generateur_aleatoire=aleatoire)
 
 
 def creer_flotte(specs_ennemis: list[SpecEnnemi], aleatoire: random.Random) -> Flotte:
-    """Tire au sort un ennemi (avec remise) pour chacune des 6 cases de la grille ennemie."""
-    ennemis = {
-        position: _ennemi_depuis_spec(aleatoire.choice(specs_ennemis)) for position in POSITIONS_ENNEMIES
-    }
+    """Tire au sort un ennemi (avec remise) pour chacune des 6 cases de la grille ennemie - en
+    mode test, seules les NOMBRE_ENNEMIS_MODE_TEST premieres (POSITIONS_ENNEMIES) sont peuplees,
+    pour accelerer les essais manuels."""
+    positions = POSITIONS_ENNEMIES[:NOMBRE_ENNEMIS_MODE_TEST] if MODE_TEST else POSITIONS_ENNEMIES
+    ennemis = {position: _ennemi_depuis_spec(aleatoire.choice(specs_ennemis)) for position in positions}
     return Flotte(ennemis)
 
 
