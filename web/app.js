@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "32";
+const VERSION_CACHE = "33";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
