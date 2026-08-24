@@ -215,3 +215,8 @@ def test_tirer_propositions_niveau_ne_remplace_rien_si_deja_present():
     propositions = tirer_propositions_niveau(5, aleatoire)
 
     assert propositions.count(TypeEtape.STATION_SERVICE) == 3
+
+
+def test_tirer_propositions_niveau_boss_renvoie_une_seule_proposition_boss():
+    assert tirer_propositions_niveau(10, random.Random(1)) == [TypeEtape.BOSS]
+    assert tirer_propositions_niveau(20, random.Random(1)) == [TypeEtape.BOSS]

@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "27";
+const VERSION_CACHE = "28";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -582,20 +582,18 @@ function nouveauChoixModule(graine = null) {
 
 window.nouveauChoixModule = nouveauChoixModule;
 
-// Ecran "Choix du prochain niveau" (specs.md 2.3/2.4) : 3 propositions d'etape, pas encore reliee
-// a une orchestration de parcours (qui n'existe pas encore), exposee sur window pour test manuel
-// en attendant. Ne s'applique pas au Niveau 1 (choix de module) ni a un niveau Boss (multiple de
-// 10) - a verifier par l'appelant avant d'appeler choixNiveau, meme principe que
-// src/gameplay/parcours.py:est_niveau_boss cote PC.
+// Ecran "Choix du prochain niveau" (specs.md 2.3/2.4) : 3 propositions d'etape d'ordinaire, ou
+// une seule (BOSS) a un niveau Boss (multiple de 10) - decision utilisateur, meme ecran de choix,
+// juste une seule carte "Combattre le Boss !" au lieu de 3. Pas encore reliee a une orchestration
+// de parcours (qui n'existe pas encore), exposee sur window pour test manuel en attendant.
 // Icones (deja leur propre cadre + nom incruste, images fournies par l'utilisateur) et
-// description par type d'etape - memes textes que le PC (src/ui/ecran_choix_niveau.py). Pas
-// d'icone pour un 5eme type "Boss" fourni en meme temps que ces 4 : le Boss n'est jamais une
-// proposition tiree sur cet ecran (specs.md 2.3/2.4).
+// description par type d'etape - memes textes que le PC (src/ui/ecran_choix_niveau.py).
 const LIBELLES_TYPE_ETAPE = {
     PRIME: ["assets/prochain_niveau/prime.png", "Combat, contrat de chasseur de primes."],
     STATION_SERVICE: ["assets/prochain_niveau/station_service.png", "Entretien du vaisseau contre de l'Argent."],
     PLANETE_COMMERCIALE: ["assets/prochain_niveau/planete_commerciale.png", "Achat de cartes contre de l'Argent."],
     AVENTURE: ["assets/prochain_niveau/aventure.png", "Evenement inconnu."],
+    BOSS: ["assets/prochain_niveau/boss.png", "Combattre le Boss !"],
 };
 
 function afficherChoixNiveau(resultat) {

@@ -146,21 +146,23 @@ section (référencée), cette liste ne fait que les enchaîner.
 3. **Choix du prochain niveau** (**implémenté** en écran autonome, pas encore relié à
    l'enchaînement — tirage tranché en §2.3, `TypeEtape`/`tirer_propositions_niveau`/
    `est_niveau_boss`/`aleatoire_pour_niveau` dans `src/gameplay/parcours.py`) — à chaque niveau sauf
-   le 1 et les niveaux Boss (§2.3) : tire 3 propositions selon les probabilités et exceptions déjà
-   définies en §2.3 (1/30 Station service, 1/30 Planète commerciale, 1/10 Aventure, sinon Prime ;
-   Station service garantie aux niveaux 5 et 9 ; niveau 10 et multiples de 10 sautent directement à
-   l'écran Boss, étape 10, sans tirage — vérifié par l'appelant via `est_niveau_boss` avant
-   d'afficher cet écran, pas par l'écran lui-même) → l'écran correspondant à la proposition choisie
-   (Prime → Combat, Station service → Station service, Planète commerciale → Planète commerciale,
-   Aventure → Aventure). Tirage déterministe via `aleatoire_pour_niveau(graine, niveau)` (seed
-   textuelle `"{graine}:{niveau}"`, cohérent avec le principe déjà décrit en §10.3).
-   `src/ui/ecran_choix_niveau.py` (PC, 3 cartes avec icône dédiée par type — `assets/prochain_niveau/`,
-   image fournie par l'utilisateur, déjà son propre cadre/nom incrusté — et description sous
-   l'icône) ; `web/bridge.py` (`choix_niveau_web`), `web/app.js` (`choixNiveau`, exposée sur
-   `window` pour test manuel). Un 5ᵉ icône "Boss" fourni en même temps que ces 4 n'est pas encore
-   utilisé : le Boss n'est jamais une proposition tirée sur cet écran (§2.3/§2.4, niveau Boss = pas
-   de tirage) — probablement destiné à l'écran de Combat quand c'est un combat de Boss (étape 10),
-   pas encore construit
+   le 1 (§2.3) : tire les propositions selon les probabilités et exceptions déjà définies en §2.3
+   (1/30 Station service, 1/30 Planète commerciale, 1/10 Aventure, sinon Prime ; Station service
+   garantie aux niveaux 5 et 9). **Aux niveaux Boss (10, puis multiples de 10), le même écran
+   s'affiche mais avec une seule proposition forcée, `TypeEtape.BOSS`** (décision utilisateur : pas
+   d'enchaînement automatique direct vers le combat, le joueur confirme explicitement via un unique
+   bouton/carte "Combattre le Boss !") → l'écran correspondant à la proposition choisie (Prime →
+   Combat, Station service → Station service, Planète commerciale → Planète commerciale, Aventure →
+   Aventure, Boss → Combat de Boss, étape 10). Tirage déterministe via
+   `aleatoire_pour_niveau(graine, niveau)` (seed textuelle `"{graine}:{niveau}"`, cohérent avec le
+   principe déjà décrit en §10.3) — `est_niveau_boss` reste utile pour d'autres besoins (ex. décider
+   quel ennemi affronter une fois au Combat), mais n'a plus besoin d'être vérifié par l'appelant
+   avant d'afficher cet écran : `tirer_propositions_niveau` gère le cas Boss en interne.
+   `src/ui/ecran_choix_niveau.py` (PC, jusqu'à 5 cartes possibles au total — layout généralisé pour
+   accepter 1 ou 3 propositions — avec icône dédiée par type — `assets/prochain_niveau/`, images
+   fournies par l'utilisateur, déjà leur propre cadre/nom incrusté — et description sous l'icône) ;
+   `web/bridge.py` (`choix_niveau_web`), `web/app.js` (`choixNiveau`, exposée sur `window` pour test
+   manuel)
 4. **Choix de module, Niveau 1** (implémenté en écran autonome, §2.3 — **pas encore reconnecté à la
    partie**, voir §10.3 "Limites connues") : une fois un module choisi, doit mettre à jour la
    partie (2ᵉ emplacement du vaisseau) et son niveau (1 → 2), puis → Choix du prochain niveau
@@ -181,9 +183,10 @@ section (référencée), cette liste ne fait que les enchaîner.
    Mettre à jour / Déplacer un module, un bouton "j'ai terminé" → Choix du prochain niveau (étape 3)
 9. **Planète commerciale** (contenu non préparé, §2/§9.1) : même principe qu'Aventure, un bouton
    "j'ai terminé" → Choix du prochain niveau (étape 3)
-10. **Boss** (niveau 10, puis tous les 10 niveaux à terme — §2.3) : réutilise l'écran Combat pour
-    l'instant, pas encore d'ennemi de Boss dédié (§9.1) → Victoire : Victoire finale (étape 11) ;
-    Défaite : même traitement qu'un combat normal (étape 6, branche Défaite)
+10. **Boss** (niveau 10, puis tous les 10 niveaux à terme — §2.3), atteint via la proposition
+    unique "Combattre le Boss !" de l'étape 3 : réutilise l'écran Combat pour l'instant, pas encore
+    d'ennemi de Boss dédié (§9.1) → Victoire : Victoire finale (étape 11) ; Défaite : même
+    traitement qu'un combat normal (étape 6, branche Défaite)
 11. **Victoire finale** (à construire) : félicite le joueur, affiche son deck (réutilise l'écran
     "deck en entier", §6) → bouton → Écran de partie (étape 2), partie désormais `TERMINEE`
 

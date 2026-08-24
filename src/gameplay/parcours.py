@@ -92,10 +92,11 @@ def tirer_candidats_recompense(
 
 
 # Choix du prochain niveau (specs.md 2.3/2.4), pour tous les niveaux sauf le 1 (choix de module,
-# pas de tirage) et les niveaux Boss (multiples de 10, pas de tirage non plus - directement vers le
-# combat de Boss). Ne couvre pour l'instant que les niveaux 2 a 9 : le run s'arrete reellement au
-# Niveau 10 dans l'etat actuel (decision utilisateur, specs.md 2), donc le motif 5/9/10 n'a pas
-# encore besoin de se repeter par decennie (question encore ouverte, specs.md 9.1).
+# pas de tirage). Aux niveaux Boss (multiples de 10), une seule proposition forcee (TypeEtape.BOSS,
+# decision utilisateur : ecran de choix avec un seul bouton "Combattre le Boss !", pas d'enchainement
+# automatique direct vers le combat). Ne couvre pour l'instant que les niveaux 2 a 10 : le run
+# s'arrete reellement au Niveau 10 dans l'etat actuel (decision utilisateur, specs.md 2), donc le
+# motif 5/9/10 n'a pas encore besoin de se repeter par decennie (question encore ouverte, specs.md 9.1).
 
 
 class TypeEtape(Enum):
@@ -105,6 +106,7 @@ class TypeEtape(Enum):
     STATION_SERVICE = auto()
     PLANETE_COMMERCIALE = auto()
     AVENTURE = auto()
+    BOSS = auto()
 
 
 NOMBRE_PROPOSITIONS_NIVEAU = 3
@@ -115,8 +117,8 @@ NIVEAUX_STATION_GARANTIE = (5, 9)
 
 
 def est_niveau_boss(niveau: int) -> bool:
-    """Niveau 10, puis tous les 10 niveaux (specs.md 2.3) - pas de tirage de propositions a ces
-    niveaux, l'appelant doit aller directement au combat de Boss."""
+    """Niveau 10, puis tous les 10 niveaux (specs.md 2.3) - une seule proposition forcee
+    (TypeEtape.BOSS) plutot qu'un tirage, cf. tirer_propositions_niveau ci-dessous."""
     return niveau % 10 == 0
 
 
@@ -144,11 +146,15 @@ def tirer_type_etape(aleatoire: random.Random) -> TypeEtape:
 def tirer_propositions_niveau(
     niveau: int, aleatoire: random.Random, quantite: int = NOMBRE_PROPOSITIONS_NIVEAU
 ) -> list[TypeEtape]:
-    """3 propositions d'etape pour ce niveau (specs.md 2.3/2.4), tirees independamment (donc
-    parfois 2 ou 3 identiques). Aux niveaux 5 et 9, la Station service est garantie parmi les 3 :
+    """Propositions d'etape pour ce niveau (specs.md 2.3/2.4). Niveau Boss (cf. est_niveau_boss) :
+    une seule proposition forcee, TypeEtape.BOSS (decision utilisateur). Sinon, `quantite`
+    propositions tirees independamment (donc parfois identiques) parmi Prime/Station service/
+    Planete commerciale/Aventure. Aux niveaux 5 et 9, la Station service est garantie parmi les 3 :
     si le tirage independant n'en a pas produit, un emplacement tire au hasard est remplace par
     Station service plutot que d'en ajouter un 4e. Ne pas appeler pour le Niveau 1 (choix de
-    module, pas de tirage) ni pour un niveau Boss (cf. est_niveau_boss)."""
+    module, pas de tirage)."""
+    if est_niveau_boss(niveau):
+        return [TypeEtape.BOSS]
     propositions = [tirer_type_etape(aleatoire) for _ in range(quantite)]
     if niveau in NIVEAUX_STATION_GARANTIE and TypeEtape.STATION_SERVICE not in propositions:
         propositions[aleatoire.randrange(quantite)] = TypeEtape.STATION_SERVICE
