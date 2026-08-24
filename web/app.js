@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "28";
+const VERSION_CACHE = "29";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -56,6 +56,13 @@ const FICHIERS_A_MONTER = [
 let pyodide = null;
 let etatCourant = null;
 let indexCarteSelectionnee = null;
+
+// Partie reelle en cours d'orchestration (specs.md 2.4), ou null si les ecrans de parcours sont
+// ouverts en mode demonstration (window.nouveauChoixModule/choixNiveau/nouvelleVictoire/
+// nouvelleDefaite, appeles manuellement depuis la console) - meme distinction que main.py cote
+// PC, qui n'a pas cette ambiguite (toujours une vraie Partie). choisirModule/choisirEtape/
+// choisirRecompense branchent sur cette variable pour ne pas casser le mode demonstration.
+let partieActive = null;
 
 async function chargerSansCache(cheminRelatif) {
     const reponse = await fetch(`${cheminRelatif}?v=${VERSION_CACHE}`, { cache: "no-cache" });
@@ -517,10 +524,13 @@ function rendreInfoCarte() {
 function rendreBanniereFin() {
     if (etatCourant.etat === "EN_COURS") return "";
     const texte = etatCourant.etat === "VICTOIRE" ? "Victoire !" : "Defaite";
+    // Pour une partie reelle, ce bouton enchaine sur le reste du parcours (fin de combat, cf.
+    // terminerCombatPartie) plutot que de relancer un combat de demonstration.
+    const libelleBouton = partieActive ? "Continuer" : "Rejouer";
     return `
         <div class="banniere-fin ${etatCourant.etat.toLowerCase()}">
             <span>${texte}</span>
-            <button id="bouton-rejouer">Rejouer</button>
+            <button id="bouton-rejouer">${libelleBouton}</button>
         </div>`;
 }
 
@@ -546,7 +556,7 @@ function rendre() {
         element.addEventListener("click", () => selectionnerCarte(carte));
     });
     const boutonRejouer = document.getElementById("bouton-rejouer");
-    if (boutonRejouer) boutonRejouer.addEventListener("click", nouvelleGraine);
+    if (boutonRejouer) boutonRejouer.addEventListener("click", partieActive ? terminerCombatPartie : nouvelleGraine);
 }
 
 // Ecran de choix de module (parcours, Niveau 1 - specs.md 2.3). Pas encore reliee a une
@@ -573,7 +583,14 @@ function afficherChoixModule(candidats) {
 }
 
 function choisirModule(candidat) {
-    console.log("Module choisi :", candidat.nom);
+    if (!partieActive) {
+        console.log("Module choisi :", candidat.nom);
+        return;
+    }
+    const partie = appelerBridge("choisir_module_partie_web", JSON.stringify(partieActive), candidat.id);
+    partieActive = partie;
+    sauvegarderPartieLocale(joueurCourant.id, partie);
+    ouvrirChoixNiveauPartie(partie);
 }
 
 function nouveauChoixModule(graine = null) {
@@ -581,6 +598,21 @@ function nouveauChoixModule(graine = null) {
 }
 
 window.nouveauChoixModule = nouveauChoixModule;
+
+// Ouvre le choix de module (Niveau 1) pour une partie reelle - appelee a la creation d'une
+// partie et par la reprise du bouton "Continuer" (cf. continuerPartie), meme condition que
+// main.py:_traiter_action cote PC (Niveau 1 sans 2e module equipe = pas encore choisi).
+function ouvrirChoixModulePartie(partie) {
+    partieActive = partie;
+    afficherChoixModule(appelerBridge("choix_module_partie_web", JSON.stringify(partie)));
+}
+
+// Ouvre le choix du prochain niveau pour une partie reelle - meme condition d'appel que
+// main.py:_ouvrir_choix_niveau cote PC.
+function ouvrirChoixNiveauPartie(partie) {
+    partieActive = partie;
+    afficherChoixNiveau(appelerBridge("choix_niveau_web", JSON.stringify(partie)));
+}
 
 // Ecran "Choix du prochain niveau" (specs.md 2.3/2.4) : 3 propositions d'etape d'ordinaire, ou
 // une seule (BOSS) a un niveau Boss (multiple de 10) - decision utilisateur, meme ecran de choix,
@@ -615,8 +647,26 @@ function afficherChoixNiveau(resultat) {
     document.getElementById("ecran-choix-niveau").classList.remove("cachee");
 }
 
+// Types de proposition deja relies a un combat reel (specs.md 2.4) : Station service, Planete
+// commerciale et Aventure ne le sont pas encore, cf. choisirEtape - meme liste que
+// main.py:TYPES_COMBAT cote PC.
+const TYPES_COMBAT = new Set(["PRIME", "BOSS"]);
+
 function choisirEtape(type) {
-    console.log("Etape choisie :", type);
+    if (!partieActive) {
+        console.log("Etape choisie :", type);
+        return;
+    }
+    if (TYPES_COMBAT.has(type)) {
+        appliquerResultat(appelerBridge("continuer_partie_web", JSON.stringify(partieActive)));
+        masquerTousLesEcrans();
+        document.getElementById("app").classList.remove("cachee");
+    } else {
+        // Station service / Planete commerciale / Aventure : pas encore construits
+        // (specs.md 2.4) - on ne perd pas la main, on rouvre le meme choix.
+        console.log(`${type} : ecran pas encore construit, retour au choix du niveau.`);
+        ouvrirChoixNiveauPartie(partieActive);
+    }
 }
 
 function choixNiveau(partieJson) {
@@ -637,6 +687,10 @@ function afficherFinCombat(victoire, candidats) {
     document.getElementById("message-defaite").classList.toggle("cachee", victoire);
     document.getElementById("candidats-recompense").classList.toggle("cachee", !victoire);
     document.getElementById("instruction-fin-combat").classList.toggle("cachee", !victoire);
+    // Rien a choisir en cas de defaite, ou de victoire sans aucun candidat (pool vide pour tous
+    // les modules utilises) : un bouton "Continuer" suffit, meme situation que
+    // src/ui/ecran_fin_combat.py cote PC.
+    document.getElementById("bouton-continuer-fin-combat").classList.toggle("cachee", victoire && candidats.length > 0);
 
     if (victoire) {
         document.getElementById("candidats-recompense").innerHTML = candidats
@@ -664,7 +718,11 @@ function afficherFinCombat(victoire, candidats) {
 }
 
 function choisirRecompense(candidat) {
-    console.log("Carte choisie :", candidat.carte_nom);
+    if (!partieActive) {
+        console.log("Carte choisie :", candidat.carte_nom);
+        return;
+    }
+    finaliserVictoirePartie(candidat.carte_id);
 }
 
 function nouvelleVictoire(graine = null) {
@@ -677,6 +735,48 @@ function nouvelleDefaite() {
 
 window.nouvelleVictoire = nouvelleVictoire;
 window.nouvelleDefaite = nouvelleDefaite;
+
+// Fin d'un combat reel (specs.md 2.4) : appelee depuis la banniere de fin de combat (#app,
+// cf. rendreBanniereFin) quand une partie reelle est en cours - remplace le "Rejouer" du mode
+// demonstration par l'enchainement reel (fin de combat -> choix du niveau, ou defaite -> accueil),
+// meme role que main.py:_ouvrir_fin_combat cote PC.
+function terminerCombatPartie() {
+    if (etatCourant.etat === "VICTOIRE") {
+        const candidats = appelerBridge("candidats_recompense_partie_web", JSON.stringify(partieActive));
+        afficherFinCombat(true, candidats);
+    } else {
+        afficherFinCombat(false, []);
+    }
+}
+
+// Ajoute la carte choisie (ou aucune) au deck de la partie, avance au niveau suivant ou marque la
+// partie TERMINEE si c'etait le niveau Boss (specs.md 2.4), meme logique que
+// main.py:_ouvrir_fin_combat cote PC.
+function finaliserVictoirePartie(idCarte) {
+    const partie = appelerBridge("resoudre_victoire_partie_web", JSON.stringify(partieActive), idCarte);
+    sauvegarderPartieLocale(joueurCourant.id, partie);
+    if (partie.statut === "TERMINEE") {
+        partieActive = null;
+        afficherAccueilJoueur();
+    } else {
+        ouvrirChoixNiveauPartie(partie);
+    }
+}
+
+// Bouton "Continuer" de l'ecran de fin de combat (defaite, ou victoire sans aucun candidat de
+// recompense) : rien a choisir, un clic suffit a continuer - meme situation que
+// src/ui/ecran_fin_combat.py:on_mouse_press cote PC.
+function continuerApresFinCombat() {
+    if (!partieActive) return;
+    if (etatCourant.etat === "DEFAITE") {
+        const partie = appelerBridge("abandonner_partie_web", JSON.stringify(partieActive));
+        sauvegarderPartieLocale(joueurCourant.id, partie);
+        partieActive = null;
+        afficherAccueilJoueur();
+    } else {
+        finaliserVictoirePartie(null);
+    }
+}
 
 // Ecran "deck en entier" (appelable depuis plusieurs endroits du parcours, specs.md 6). Meme
 // situation que les deux ecrans precedents : pas encore reliee a un vrai bouton dans l'UI,
@@ -784,6 +884,9 @@ function choisirJoueur(profil) {
 }
 
 function afficherAccueilJoueur() {
+    // Retour a l'accueil = plus aucune orchestration de parcours en cours (specs.md 2.4) :
+    // remet le mode demonstration par defaut pour les ecrans window.xxx() appeles manuellement.
+    partieActive = null;
     const partie = partieLocale(joueurCourant.id);
     const enCours = partie !== null && partie.statut === "EN_COURS";
     document.getElementById("nom-joueur-accueil").textContent = joueurCourant.nom;
@@ -814,9 +917,15 @@ function afficherAccueilJoueur() {
 
 function continuerPartie() {
     const partie = partieLocale(joueurCourant.id);
-    appliquerResultat(appelerBridge("continuer_partie_web", JSON.stringify(partie)));
-    masquerTousLesEcrans();
-    document.getElementById("app").classList.remove("cachee");
+    // Reprend l'etape courante a partir de ce qui est deja connu (niveau + vaisseau) plutot que
+    // d'une "etape courante" dediee, pas encore ajoutee a la sauvegarde (decision utilisateur) :
+    // le Niveau 1 sans 2e module equipe reprend au choix de module, sinon on retire les
+    // propositions du niveau courant - meme condition que main.py:_traiter_action cote PC.
+    if (partie.niveau === 1 && partie.vaisseau.avant_gauche === null) {
+        ouvrirChoixModulePartie(partie);
+        return;
+    }
+    ouvrirChoixNiveauPartie(partie);
 }
 
 function abandonnerPartie() {
@@ -834,7 +943,7 @@ function voirDeckPartie() {
 function nouvellePartie() {
     const partie = appelerBridge("nouvelle_partie_web");
     sauvegarderPartieLocale(joueurCourant.id, partie);
-    afficherChoixModule(appelerBridge("choix_module_partie_web", JSON.stringify(partie)));
+    ouvrirChoixModulePartie(partie);
 }
 
 document.getElementById("fin-tour").addEventListener("click", finirTour);
@@ -846,4 +955,5 @@ document.getElementById("bouton-continuer").addEventListener("click", continuerP
 document.getElementById("bouton-abandonner").addEventListener("click", abandonnerPartie);
 document.getElementById("bouton-voir-deck-partie").addEventListener("click", voirDeckPartie);
 document.getElementById("bouton-nouvelle-partie").addEventListener("click", nouvellePartie);
+document.getElementById("bouton-continuer-fin-combat").addEventListener("click", continuerApresFinCombat);
 demarrer();

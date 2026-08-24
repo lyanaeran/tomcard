@@ -18,7 +18,7 @@ from src.gameplay.carte import Carte
 from src.gameplay.combat import Combat
 from src.gameplay.config_poc import ELECTRICITE_PAR_TOUR, ID_MODULE_PRINCIPAL, creer_flotte, ids_deck_module_principal
 from src.gameplay.deck import Deck
-from src.gameplay.donnees import charger_cartes, charger_ennemis, charger_modules
+from src.gameplay.donnees import SpecModule, charger_cartes, charger_ennemis, charger_modules
 from src.gameplay.joueur import Joueur
 from src.gameplay.module import Module
 from src.gameplay.vaisseau import Vaisseau
@@ -30,7 +30,8 @@ VERSION_FORMAT = 1
 
 # Un etat par emplacement du vaisseau (specs.md 3.1/5) : la base (module principal, toujours
 # equipee) et les 4 emplacements equipables. None = emplacement vide.
-POSITIONS_VAISSEAU = ("base", "avant_gauche", "avant_droite", "arriere_gauche", "arriere_droite")
+POSITIONS_EQUIPABLES = ("avant_gauche", "avant_droite", "arriere_gauche", "arriere_droite")
+POSITIONS_VAISSEAU = ("base",) + POSITIONS_EQUIPABLES
 
 STATUT_EN_COURS = "EN_COURS"
 STATUT_TERMINEE = "TERMINEE"
@@ -214,6 +215,55 @@ def combat_depuis_partie(partie: Partie, aleatoire: random.Random | None = None)
     joueur = Joueur(vaisseau=vaisseau, deck=deck, electricite_par_tour=ELECTRICITE_PAR_TOUR)
     flotte = creer_flotte(charger_ennemis(), aleatoire)
     return Combat(joueur=joueur, flotte=flotte, aleatoire=aleatoire)
+
+
+# --- Progression (specs.md 2.4) : fonctions pures utilisees par l'enchainement des ecrans, cote
+# PC (main.py) comme cote web (web/bridge.py) ---
+
+
+def equiper_module(partie: Partie, spec: SpecModule) -> Partie:
+    """Equipe ce module sur le premier emplacement libre du vaisseau (specs.md 2.3/5) - utilise
+    par le choix de module du Niveau 1 (un seul emplacement libre a ce stade). Modifie et renvoie
+    `partie`."""
+    position = next(p for p in POSITIONS_EQUIPABLES if partie.vaisseau[p] is None)
+    partie.vaisseau[position] = EtatModule(
+        module_id=spec.id, pv=spec.points_de_vie, pv_max=spec.points_de_vie, niveau_maj=1
+    )
+    return partie
+
+
+def avancer_niveau(partie: Partie) -> Partie:
+    """Fait passer la partie au niveau suivant (specs.md 2.4), une fois l'etape du niveau courant
+    resolue (module choisi, combat gagne, etape de service terminee...). Modifie et renvoie
+    `partie`."""
+    partie.niveau += 1
+    return partie
+
+
+def id_de_carte(carte: Carte, cartes: dict[str, Carte]) -> str:
+    """Retrouve l'id d'une Carte dans le dict cartes.json, par identite d'objet : pool_module/
+    pool_toutes_cartes (src/gameplay/parcours.py) renvoient des references directes vers ce dict,
+    jamais des copies, donc `is` est fiable ici."""
+    return next(id_carte for id_carte, c in cartes.items() if c is carte)
+
+
+def ajouter_carte(partie: Partie, id_carte: str) -> Partie:
+    """Ajoute une carte au deck possede de la partie (recompense de fin de combat, specs.md 6).
+    Modifie et renvoie `partie`."""
+    partie.deck.append(id_carte)
+    return partie
+
+
+def specs_utilisees_partie(partie: Partie, specs_par_id: dict[str, SpecModule]) -> list[SpecModule]:
+    """Specs des modules actuellement equipes sur cette partie, module principal en premier
+    (meme ordre que creer_vaisseau/tirer_candidats_recompense, specs.md 6) - pour tirer une
+    recompense de fin de combat a partir d'une partie sauvegardee plutot que d'un vaisseau tire au
+    hasard."""
+    return [
+        specs_par_id[partie.vaisseau[position].module_id]
+        for position in POSITIONS_VAISSEAU
+        if partie.vaisseau[position] is not None
+    ]
 
 
 # --- I/O fichier (PC uniquement) ---

@@ -65,6 +65,10 @@ class EcranFinCombat(pyglet.window.Window):
         self.candidats = [(spec, carte) for spec, carte in (candidats or []) if carte is not None]
         self.index_survole: int | None = None
         self.carte_choisie: Carte | None = None
+        # True une fois que l'ecran peut etre ferme : defaite (clic n'importe ou), ou victoire
+        # avec une carte choisie (ou sans aucun candidat a choisir, cf. on_mouse_press) - un seul
+        # signal a surveiller par l'appelant quelle que soit la branche (specs.md 2.4).
+        self.termine: bool = False
 
     def on_draw(self) -> None:
         self.clear()
@@ -102,7 +106,17 @@ class EcranFinCombat(pyglet.window.Window):
             color=(*COULEUR_TEXTE, 255),
             batch=lot,
         )
-        return [titre, message]
+        instruction = pyglet.text.Label(
+            "Cliquez pour continuer.",
+            x=LARGEUR_FENETRE / 2,
+            y=100,
+            anchor_x="center",
+            anchor_y="center",
+            font_size=16,
+            color=(*COULEUR_TEXTE, 255),
+            batch=lot,
+        )
+        return [titre, message, instruction]
 
     def _dessiner_victoire(self, lot: pyglet.graphics.Batch) -> list:
         elements = [
@@ -216,11 +230,15 @@ class EcranFinCombat(pyglet.window.Window):
         self.index_survole = self._index_a(x, y)
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
-        if not self.victoire:
+        if not self.victoire or not self.candidats:
+            # Defaite, ou victoire sans aucun candidat (pool vide pour tous les modules utilises) :
+            # un clic n'importe ou suffit a continuer, il n'y a rien a choisir.
+            self.termine = True
             return
         index = self._index_a(x, y)
         if index is not None:
             self.carte_choisie = self.candidats[index][1]
+            self.termine = True
 
     def _index_a(self, x: int, y: int) -> int | None:
         if not self.victoire:

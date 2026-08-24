@@ -8,6 +8,7 @@ import pytest
 
 from src.gameplay.position import Colonne, Rangee
 
+from src.gameplay.donnees import charger_cartes, charger_modules
 from src.gameplay import partie as partie_module
 from src.gameplay.partie import (
     STATUT_EN_COURS,
@@ -15,9 +16,13 @@ from src.gameplay.partie import (
     EtatModule,
     Partie,
     abandonner_partie,
+    ajouter_carte,
+    avancer_niveau,
     combat_depuis_partie,
     creer_profil,
     deck_de_la_partie,
+    equiper_module,
+    id_de_carte,
     lister_profils,
     nouvelle_partie,
     nouveau_profil,
@@ -29,6 +34,7 @@ from src.gameplay.partie import (
     profil_depuis_json,
     profil_vers_json,
     sauvegarder_partie,
+    specs_utilisees_partie,
 )
 
 
@@ -122,6 +128,82 @@ def test_combat_depuis_partie_reprend_le_vaisseau_et_le_deck_persistants():
     assert combat.joueur.vaisseau.base.pv_max == 15
     assert combat.joueur.vaisseau.module_en(Colonne.AVANT, Rangee.GAUCHE).pv == 10
     assert len(combat.joueur.deck.pioche) + len(combat.joueur.deck.main) == 3
+
+
+# --- Progression (specs.md 2.4) ---
+
+
+def test_equiper_module_remplit_le_premier_emplacement_libre():
+    partie = nouvelle_partie(random.Random(1))
+    spec = next(s for s in charger_modules() if s.id != "MOD_1")
+
+    equiper_module(partie, spec)
+
+    assert partie.vaisseau["avant_gauche"] is not None
+    assert partie.vaisseau["avant_gauche"].module_id == spec.id
+    assert partie.vaisseau["avant_gauche"].pv == spec.points_de_vie
+    assert partie.vaisseau["avant_gauche"].pv_max == spec.points_de_vie
+    assert partie.vaisseau["avant_gauche"].niveau_maj == 1
+    assert partie.vaisseau["avant_droite"] is None
+
+
+def test_equiper_module_remplit_le_deuxieme_emplacement_si_le_premier_est_pris():
+    partie = nouvelle_partie(random.Random(1))
+    specs = [s for s in charger_modules() if s.id != "MOD_1"]
+
+    equiper_module(partie, specs[0])
+    equiper_module(partie, specs[1])
+
+    assert partie.vaisseau["avant_gauche"].module_id == specs[0].id
+    assert partie.vaisseau["avant_droite"].module_id == specs[1].id
+
+
+def test_avancer_niveau_incremente():
+    partie = nouvelle_partie(random.Random(1))
+
+    avancer_niveau(partie)
+
+    assert partie.niveau == 2
+
+
+def test_id_de_carte_retrouve_l_id_par_identite():
+    cartes = charger_cartes()
+    id_attendu, carte = next(iter(cartes.items()))
+
+    assert id_de_carte(carte, cartes) == id_attendu
+
+
+def test_ajouter_carte_etend_le_deck():
+    partie = nouvelle_partie(random.Random(1))
+    taille_avant = len(partie.deck)
+
+    ajouter_carte(partie, "CRT_20")
+
+    assert len(partie.deck) == taille_avant + 1
+    assert partie.deck[-1] == "CRT_20"
+
+
+def test_specs_utilisees_partie_module_principal_en_premier():
+    partie = nouvelle_partie(random.Random(1))
+    specs_par_id = {spec.id: spec for spec in charger_modules()}
+    spec_secondaire = next(s for s in charger_modules() if s.id != "MOD_1")
+    equiper_module(partie, spec_secondaire)
+
+    specs = specs_utilisees_partie(partie, specs_par_id)
+
+    assert specs[0].id == "MOD_1"
+    assert specs[1].id == spec_secondaire.id
+    assert len(specs) == 2
+
+
+def test_specs_utilisees_partie_ignore_les_emplacements_vides():
+    partie = nouvelle_partie(random.Random(1))
+    specs_par_id = {spec.id: spec for spec in charger_modules()}
+
+    specs = specs_utilisees_partie(partie, specs_par_id)
+
+    assert len(specs) == 1
+    assert specs[0].id == "MOD_1"
 
 
 @pytest.fixture

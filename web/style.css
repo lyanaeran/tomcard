@@ -986,7 +986,8 @@ body {
 }
 
 #ecran-selection-joueur button,
-#ecran-accueil-joueur button {
+#ecran-accueil-joueur button,
+#ecran-fin-combat button {
     font-size: 1rem;
     padding: 0.6rem 1.4rem;
     border: none;

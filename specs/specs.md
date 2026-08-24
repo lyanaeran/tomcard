@@ -91,10 +91,13 @@ remplace les pistes encore ouvertes en §2 pour la Station service et la cadence
 - **Niveau 1** — **Choix de module**, obligatoire, pas de tirage d'étape : 3 modules **différents**
   tirés au sort parmi le pool, le joueur en choisit un (2ᵉ slot équipé, en plus du module de base —
   voir §5). C'est ce choix qui pourvoit le 2ᵉ des "2 slots" de départ mentionnés en §5.
-  **Implémenté** en écran autonome, pas encore relié à une orchestration de parcours (qui n'existe
-  pas encore) : `src/gameplay/parcours.py` (tirage), `src/ui/ecran_choix_module.py` (PC),
-  `web/app.js` (`nouveauChoixModule`, exposée sur `window` pour test manuel en attendant un vrai
-  déclencheur) + `web/bridge.py` (`nouveau_choix_module`). Chaque module a désormais un champ
+  **Implémenté** et relié à l'orchestration du parcours (§2.4) pour une vraie partie :
+  `src/gameplay/parcours.py` (tirage), `src/ui/ecran_choix_module.py` (PC),
+  `main.py:_ouvrir_choix_module` (equipe le module choisi, avance le niveau, sauvegarde) ;
+  côté web `web/bridge.py:choisir_module_partie_web` + `web/app.js:ouvrirChoixModulePartie`/
+  `choisirModule`. Reste aussi accessible en démonstration isolée (candidats tirés indépendamment
+  d'une partie) via `web/app.js` (`nouveauChoixModule`, exposée sur `window`) + `web/bridge.py`
+  (`nouveau_choix_module`), utilisée quand `partieActive` est `null`. Chaque module a désormais un champ
   `description` dans `config/modules.json` (type de carte débloqué, sans révéler les cartes) —
   fond de combat réutilisé en placeholder (décision utilisateur), à remplacer par un fond dédié
 - **Niveaux 5 et 9** — 3 propositions dont une **Station service garantie** (les 2 autres tirées
@@ -137,14 +140,16 @@ section (référencée), cette liste ne fait que les enchaîner.
 2. **Écran de partie** (implémenté, §10.3 — nommé `EcranAccueilJoueur`/`afficherAccueilJoueur` dans
    le code, "écran de partie" dans le vocabulaire de ce schéma) :
    - Une partie `EN_COURS` existe : Continuer / Abandonner / Voir le deck, vaisseau et ses modules
-     affichés. **Continuer** → l'écran exact où le joueur s'était arrêté (choix du prochain niveau,
-     niveau en cours, combat...), une fois l'étape 3 construite ; **en attendant, approximation
-     temporaire déjà en place** (décision utilisateur) qui relance directement un combat avec le
-     vaisseau/deck réels mais une flotte tirée au hasard (`combat_depuis_partie`, §10.3)
+     affichés. **Continuer** → reprend l'étape exacte où le joueur s'était arrêté, déduite des
+     seuls champs déjà présents dans la sauvegarde plutôt que d'une "étape courante" dédiée
+     (décision utilisateur) : Niveau 1 sans 2ᵉ module équipé (`vaisseau.avant_gauche` vide) → Choix
+     de module (étape 4) ; sinon → Choix du prochain niveau (étape 3) pour le niveau courant. La
+     flotte ennemie d'un combat repris ainsi reste tirée au hasard (`combat_depuis_partie`, §10.3),
+     cf. "Limites connues" en §10.3
    - Pas de partie en cours : bouton "Nouvelle partie" → Choix de module, Niveau 1 (étape 4)
    - Bouton "Quitter le jeu" (même remarque PC/web qu'à l'étape 1)
-3. **Choix du prochain niveau** (**implémenté** en écran autonome, pas encore relié à
-   l'enchaînement — tirage tranché en §2.3, `TypeEtape`/`tirer_propositions_niveau`/
+3. **Choix du prochain niveau** (**implémenté** et relié à l'enchaînement — tirage tranché en §2.3,
+   `TypeEtape`/`tirer_propositions_niveau`/
    `est_niveau_boss`/`aleatoire_pour_niveau` dans `src/gameplay/parcours.py`) — à chaque niveau sauf
    le 1 (§2.3) : tire les propositions selon les probabilités et exceptions déjà définies en §2.3
    (1/30 Station service, 1/30 Planète commerciale, 1/10 Aventure, sinon Prime ; Station service
@@ -163,32 +168,42 @@ section (référencée), cette liste ne fait que les enchaîner.
    fournies par l'utilisateur, déjà leur propre cadre/nom incrusté — et description sous l'icône) ;
    `web/bridge.py` (`choix_niveau_web`), `web/app.js` (`choixNiveau`, exposée sur `window` pour test
    manuel)
-4. **Choix de module, Niveau 1** (implémenté en écran autonome, §2.3 — **pas encore reconnecté à la
-   partie**, voir §10.3 "Limites connues") : une fois un module choisi, doit mettre à jour la
-   partie (2ᵉ emplacement du vaisseau) et son niveau (1 → 2), puis → Choix du prochain niveau
-   (étape 3). Actuellement, choisir un module n'écrit encore rien dans la sauvegarde
-5. **Combat** (implémenté en écran indépendant, `FenetreCombat`/`#app` — **pas encore reconnecté à
-   l'enchaînement**) : une fois le combat terminé (victoire ou défaite) → Fin de combat (étape 6).
-   Actuellement, le combat reste affiché indéfiniment après sa fin, rien ne déclenche la suite
-6. **Fin de combat** (implémenté en écran autonome, §6 — **pas encore reconnecté**) :
-   - Victoire : choix d'une carte candidate, doit mettre à jour le deck de la partie, puis → Choix
-     du prochain niveau (étape 3), sauf si le combat était le Boss du niveau 10 → Victoire finale
-     (étape 11, voir §2 "le run s'arrête réellement au Niveau 10 dans l'état actuel")
+4. **Choix de module, Niveau 1** (implémenté en écran autonome, §2.3, **relié à la partie**) : une
+   fois un module choisi, met à jour la partie (2ᵉ emplacement du vaisseau) et son niveau (1 → 2),
+   puis → Choix du prochain niveau (étape 3)
+5. **Combat** (implémenté en écran indépendant, `FenetreCombat`/`#app`, **relié à l'enchaînement**) :
+   une fois le combat terminé (victoire ou défaite) → Fin de combat (étape 6)
+6. **Fin de combat** (implémenté en écran autonome, §6, **relié à l'enchaînement**) :
+   - Victoire : choix d'une carte candidate (candidats tirés à partir des modules réellement
+     équipés sur la partie, `specs_utilisees_partie`) met à jour le deck de la partie, puis → Choix
+     du prochain niveau (étape 3), sauf si le combat était un Boss → la partie est marquée
+     `TERMINEE` (pas encore d'écran de victoire finale dédié, voir étape 11 et §2 "le run s'arrête
+     réellement au Niveau 10 dans l'état actuel") → Écran de partie (étape 2). S'il n'y a aucun
+     candidat (pool vide pour tous les modules équipés), un bouton "Continuer" permet de passer
+     l'écran sans choisir de carte
    - Défaite : la partie est marquée `TERMINEE` (même statut qu'un abandon, décision utilisateur —
      pas de distinction victoire/défaite/abandon pour l'instant, cf. §10.3) → Écran de partie
-     (étape 2)
+     (étape 2), via un bouton "Continuer" (PC : clic n'importe où sur l'écran, cf.
+     `src/ui/ecran_fin_combat.py`)
 7. **Aventure** (contenu non préparé, §2/§9.1) : un bouton "j'ai terminé", une fois le contenu
-   défini → Choix du prochain niveau (étape 3)
+   défini → Choix du prochain niveau (étape 3). **Écran pas encore construit** : en choisir la
+   proposition depuis l'étape 3 ne fait pour l'instant que rouvrir le même choix du niveau (log
+   console/terminal, `main.py:_ouvrir_choix_niveau` / `web/app.js:choisirEtape`)
 8. **Station service** (spec détaillée en §2.2, écran pas encore codé) : Réparer / Améliorer /
-   Mettre à jour / Déplacer un module, un bouton "j'ai terminé" → Choix du prochain niveau (étape 3)
+   Mettre à jour / Déplacer un module, un bouton "j'ai terminé" → Choix du prochain niveau (étape 3).
+   Même comportement temporaire que l'étape 7 (rouvre le choix du niveau) en attendant que l'écran
+   soit construit
 9. **Planète commerciale** (contenu non préparé, §2/§9.1) : même principe qu'Aventure, un bouton
-   "j'ai terminé" → Choix du prochain niveau (étape 3)
+   "j'ai terminé" → Choix du prochain niveau (étape 3). Même comportement temporaire que l'étape 7
 10. **Boss** (niveau 10, puis tous les 10 niveaux à terme — §2.3), atteint via la proposition
     unique "Combattre le Boss !" de l'étape 3 : réutilise l'écran Combat pour l'instant, pas encore
-    d'ennemi de Boss dédié (§9.1) → Victoire : Victoire finale (étape 11) ; Défaite : même
-    traitement qu'un combat normal (étape 6, branche Défaite)
+    d'ennemi de Boss dédié (§9.1) → Victoire : la partie est marquée `TERMINEE` directement (pas
+    encore d'écran de victoire finale dédié, voir étape 11) → Écran de partie (étape 2) ; Défaite :
+    même traitement qu'un combat normal (étape 6, branche Défaite)
 11. **Victoire finale** (à construire) : félicite le joueur, affiche son deck (réutilise l'écran
-    "deck en entier", §6) → bouton → Écran de partie (étape 2), partie désormais `TERMINEE`
+    "deck en entier", §6) → bouton → Écran de partie (étape 2), partie désormais `TERMINEE`.
+    **Pas encore construit** : en attendant, une victoire de Boss saute directement à l'étape 2
+    (voir étape 10)
 
 ---
 
@@ -329,11 +344,15 @@ Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fi
     (deck de départ uniquement). Si le pool d'un module n'a aucune carte au palier tiré, on
     redescend au palier inférieur (Légendaire → Rare → Commune) plutôt que de ne rien proposer
   - Remplace l'ancien mécanisme "1 carte parmi 3 propositions pondérées par rareté, avec choix du module destinataire" : le choix du module destinataire se fait maintenant implicitement en choisissant la candidate
-  - **Implémenté** en écran de fin de combat autonome (Victoire/Défaite), pas encore relié à une
-    orchestration de parcours (qui n'existe pas encore, cf. §2.3) : `src/gameplay/parcours.py`
+  - **Implémenté** en écran de fin de combat autonome (Victoire/Défaite), **relié à l'orchestration
+    du parcours** (§2.4) pour une vraie partie : `src/gameplay/parcours.py`
     (`tirer_candidats_recompense` et les fonctions de tirage par palier), `src/ui/ecran_fin_combat.py`
-    (PC), `web/app.js` (`nouvelleVictoire`/`nouvelleDefaite`, exposées sur `window` pour test
-    manuel) + `web/bridge.py` (`fin_combat_victoire`). Défaite : titre rouge "DEFAITE" + message
+    (PC), `main.py:_ouvrir_fin_combat` ; côté web `web/bridge.py:candidats_recompense_partie_web`/
+    `resoudre_victoire_partie_web` + `web/app.js:terminerCombatPartie`/`choisirRecompense`. Reste
+    aussi accessible en démonstration isolée (candidats tirés depuis un vaisseau tiré au sort plutôt
+    qu'une vraie partie) via `web/app.js` (`nouvelleVictoire`/`nouvelleDefaite`, exposées sur
+    `window`) + `web/bridge.py` (`fin_combat_victoire`), utilisée quand `partieActive` est `null`.
+    Défaite : titre rouge "DEFAITE" + message
     "Pas d'inquietude : vos restes seront recycles, rien ne se perd dans l'espace." (fond de
     combat réutilisé en placeholder, décision utilisateur, à remplacer par un fond dédié)
   - Chaque carte candidate affiche son coût en électricité sous forme d'emoji (⚡N, plutôt qu'un
@@ -342,9 +361,9 @@ Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fi
     (réutilisable par d'autres écrans, notamment le futur écran de deck complet, §6 plus bas),
     `texteEffetCarte()` déjà existant dans `web/app.js` côté web (réutilisé tel quel, `bridge.py`
     enrichi des champs `type`/`cible`/`action`/`duree`/`valeur` par candidate)
-- **Écran "deck en entier"** : consultable depuis plusieurs endroits du parcours (pas encore
-  déterminé précisément lesquels, l'orchestration du parcours n'existe pas encore, cf. §2.3) —
-  grille de toutes les cartes actuellement possédées par le joueur, regroupées par modèle (une
+- **Écran "deck en entier"** : consultable depuis plusieurs endroits du parcours (pour l'instant
+  uniquement depuis l'Écran de partie via "Voir le deck", §10.3 — pas encore depuis les autres
+  écrans du parcours) — grille de toutes les cartes actuellement possédées par le joueur, regroupées par modèle (une
   entrée par carte différente, avec un badge ×N si plusieurs exemplaires) plutôt qu'une case par
   exemplaire individuel
   - `Deck.toutes_cartes()` (`src/gameplay/deck.py`) réunit pioche + main + défausse + cartes
@@ -506,10 +525,12 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
 - La Planète commerciale propose-t-elle des cartes pour tous les modules du pool, ou seulement pour les modules actuellement équipés ? (§2, §6)
 - **Persistance des modules hors combat/profils joueur** (§2.2/§10.3) : **implémentée** (profil +
   partie, un seul joueur à la fois, écrans de sélection de profil/accueil du joueur, `main.py` en
-  vrai point d'entrée). Reste bloquant pour relier l'écran Station service à un vrai parcours tant
-  que l'orchestration générale du parcours (§9.2) n'existe pas — voir §10.3 "Limites connues" pour le
-  détail de ce qui n'est pas encore reconnecté (choix de module de Niveau 1, fin de combat, portée
-  limitée aux points de passage entre étapes)
+  vrai point d'entrée), et l'orchestration du parcours (§2.4) relie désormais Choix de module,
+  Choix du prochain niveau, Combat et Fin de combat à cette sauvegarde. Reste bloquant pour relier
+  Station service (spec détaillée en §2.2, écran pas encore codé) et Planète commerciale/Aventure
+  (contenu non préparé) à un vrai parcours — voir §10.3 "Limites connues" pour le détail restant
+  (portée limitée aux points de passage entre étapes, flotte ennemie toujours tirée au hasard sans
+  tenir compte du niveau)
 - Statistiques et déblocages par profil (parties jouées/victoires/défaites, niveau max, module le
   plus choisi, déblocages en fin de partie) : sciemment pas encore implémentés (§10.3, décision
   utilisateur "pas de stat pour le moment") — à faire dans une passe dédiée
@@ -638,20 +659,19 @@ utilisateur), plus des écrans autonomes non reliés comme les précédents.
   - `statut` : `EN_COURS` ou `TERMINEE` (décision utilisateur : une défaite ou un abandon **ne
     supprime pas** le fichier PC, marqué `TERMINEE` pour un futur écran de récapitulatif de run —
     une nouvelle partie crée un nouvel `id`)
-  - `graine` : graine maîtresse du run (décision utilisateur). Combinée au `niveau`, elle permettra
-    de **retirer à l'identique** les 3 propositions d'étape d'un niveau (§2.3) sans les stocker
-    littéralement, une fois l'orchestration du parcours écrite — cohérent avec la convention
-    `random.Random` déjà utilisée partout dans le moteur (voir "Déterminisme du tirage aléatoire"
-    dans `CLAUDE.md`). Utilisée dès maintenant pour tirer les 3 candidats du choix de module de
-    Niveau 1 d'une nouvelle partie, et comme graine de repli pour le combat approximatif du bouton
-    "Continuer" (voir plus bas)
-  - `niveau` : niveau courant (1 pour une partie neuve, incrémenté une fois l'orchestration du
-    parcours écrite — aucun écran ne le fait progresser pour l'instant)
+  - `graine` : graine maîtresse du run (décision utilisateur). Combinée au `niveau`
+    (`aleatoire_pour_niveau(graine, niveau)`, §2.3), elle **retire à l'identique** les propositions
+    d'étape d'un niveau sans les stocker littéralement — cohérent avec la convention `random.Random` déjà utilisée partout dans le moteur (voir
+    "Déterminisme du tirage aléatoire" dans `CLAUDE.md`). Utilisée pour tirer les 3 candidats du
+    choix de module de Niveau 1 d'une nouvelle partie, les propositions du choix du prochain niveau,
+    et comme graine de repli pour le combat approximatif du bouton "Continuer" (voir plus bas)
+  - `niveau` : niveau courant (1 pour une partie neuve, incrémenté par `avancer_niveau()` à chaque
+    étape résolue — choix de module, combat gagné — cf. §2.4)
   - `vaisseau` : un état par emplacement (base + 4 équipables, §5) — `module_id` (référence
     `config/modules.json`), `pv`/`pv_max` (§2.2), `niveau_maj` (palier de mise à jour, 1 à 3, §2.2) ;
     `null` si l'emplacement est vide. Une partie neuve n'a que `base` d'équipé (deck/PV du module
     principal, `config_poc.ids_deck_module_principal`) — le 2ᵉ emplacement est rempli au choix du
-    Niveau 1, mais ce choix n'est pas encore reconnecté à la partie (voir "Limites connues" plus bas)
+    Niveau 1 (`equiper_module()`, §2.4)
   - `deck` : ids de cartes possédées (`config/cartes.json`), doublons répétés dans la liste — même
     principe que `regrouper_cartes()` (§6) pour l'affichage, mais stockage à plat ici
 
@@ -674,13 +694,19 @@ fond dédié.
   partir de la graine de la partie fraîchement créée
 - **Voir le deck** → écran "deck en entier" déjà existant (§6), alimenté par le deck réel de la
   partie (pas une démonstration aléatoire)
-- **Continuer** (bouton "Rouvre directement le combat", décision utilisateur) : reprend le vaisseau
-  et le deck réels de la partie sauvegardée, mais tire une **flotte ennemie au hasard** — car
-  l'orchestration du parcours (§2.3/§9.2) qui devrait déterminer précisément le prochain combat
-  n'existe pas encore. `combat_depuis_partie()` dans `src/gameplay/partie.py`, à corriger une fois
-  cette orchestration écrite
+- **Continuer** → reprend l'étape exacte où le joueur s'était arrêté (§2.4, étape 2) : Choix de
+  module si Niveau 1 sans 2ᵉ module équipé, sinon Choix du prochain niveau pour le niveau courant.
+  Un combat lancé depuis là (Prime ou Boss) reprend le vaisseau/deck réels de la partie, mais tire
+  toujours une **flotte ennemie au hasard** — l'orchestration ne détermine pas encore précisément
+  quel combat affronter à ce niveau (nombre/taille d'ennemis selon §3.2, voir §10.3 "Limites
+  connues"). `combat_depuis_partie()` dans `src/gameplay/partie.py`
 - **Abandonner la partie** : marque la partie `TERMINEE` (`marquer_terminee()`) et revient à
   l'écran d'accueil, qui affiche alors le bouton "Nouvelle partie"
+- **Enchaînement complet d'une vraie partie** (§2.4, étapes 2 à 6) : `main.py` (PC, une fonction
+  `_ouvrir_xxx` par écran, transitions détectées via `pyglet.clock.schedule_interval`) ; côté web,
+  `web/app.js` garde une variable `partieActive` (la `Partie` en cours d'orchestration, ou `null`
+  en mode démonstration) que `choisirModule`/`choisirEtape`/`choisirRecompense` consultent pour
+  choisir entre persistance réelle et comportement de démonstration (`console.log`) inchangé
 
 #### Implémentation
 
@@ -704,18 +730,22 @@ fond dédié.
 
 #### Limites connues (à lever plus tard)
 
-- **Portée volontairement limitée** : seuls les points de passage entre étapes seraient sauvegardés
-  une fois l'orchestration du parcours écrite (juste après tirage des propositions, ou juste après
-  résolution d'une étape) — un combat ou un passage en Station service en cours n'est pas
-  sauvegardable
-- Le choix de module du Niveau 1 (à la suite de "Nouvelle partie") n'est **pas encore reconnecté** à
-  la partie : choisir un module n'écrit encore rien dans `vaisseau.avant_gauche` de la sauvegarde —
-  à faire une fois l'écran de choix de module lui-même relié à une vraie suite
-- Idem pour la fin du combat "Continuer" (victoire/défaite, récompense) : ne met encore rien à jour
-  dans la partie sauvegardée
+- **Portée volontairement limitée** : seuls les points de passage entre étapes sont sauvegardés
+  (juste après choix de module, juste après résolution d'une fin de combat) — un combat en cours
+  n'est pas sauvegardable ; le quitter en cours de route (fermer l'onglet/l'appli) le fait
+  recommencer entièrement à la reprise, au même niveau
+- Station service, Planète commerciale et Aventure ne sont pas encore construits (§2.4, étapes
+  7-9) : les choisir depuis le Choix du prochain niveau rouvre simplement ce même écran
+- La victoire d'un combat de Boss marque la partie `TERMINEE` directement, faute d'écran de
+  victoire finale dédié (§2.4, étape 11) — le run s'arrête réellement au Niveau 10 dans l'état
+  actuel (voir §2)
+- La flotte ennemie d'un combat (Prime ou Boss) reste toujours tirée entièrement au hasard
+  (`combat_depuis_partie`/`creer_flotte`), sans appliquer les règles de difficulté par niveau du
+  §2.3/§3.2 (nombre d'ennemis, tailles S/M/L) — reste un tirage de démonstration
 - Écart PC/web sur la conservation des parties `TERMINEE` (voir "Partie" plus haut) : à corriger si
   un écran d'historique est construit côté web
-- `niveau`/`argent` ne progressent jamais dans le flux actuel, faute d'orchestration du parcours
+- `argent` ne progresse jamais dans le flux actuel (aucune étape ne le fait varier, faute de
+  Station service/Planète commerciale construits)
 
 ### 10.4 Conventions de code
 

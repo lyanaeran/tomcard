@@ -1,37 +1,65 @@
 """
 Point d'entree du jeu Space Fight (PC) : selection du profil joueur (specs.md 10.3), puis l'accueil
-de ce joueur (partie en cours ou nouvelle partie), qui renvoie vers les ecrans du parcours deja
-construits (choix de module, combat, deck).
+de ce joueur (partie en cours ou nouvelle partie), qui enchaine desormais reellement sur le reste du
+parcours (specs.md 2.4) : choix de module (Niveau 1) -> choix du prochain niveau -> combat (Prime ou
+Boss) -> fin de combat -> retour au choix du prochain niveau (ou fin de partie).
 
 Chaque ecran est une fenetre pyglet independante ; les transitions se font en fermant la fenetre
 courante et en ouvrant la suivante, verifiees a intervalle regulier via pyglet.clock (pas
 d'evenement dedie pour "l'utilisateur a fait un choix" dans ces ecrans, cf. leurs attributs
-`profil_choisi`/`action`/`module_choisi`).
+`profil_choisi`/`action`/`module_choisi`/`type_choisi`/`termine`).
+
+Limites connues (specs.md 2.4) : Station service/Planete commerciale/Aventure ne sont pas encore
+construits (choisir l'une de ces propositions rouvre simplement le choix du niveau, cf.
+_ouvrir_choix_niveau) ; la victoire du Boss marque simplement la partie TERMINEE, faute d'ecran de
+victoire finale ; la flotte ennemie d'un combat est toujours tiree au hasard (combat_depuis_partie),
+sans tenir compte des tailles/du nombre d'ennemis attendus au niveau courant (specs.md 2.3/3.2).
 """
 
 import random
 
 import pyglet
 
-from src.gameplay.donnees import charger_modules
+from src.gameplay.combat import Combat, EtatCombat
+from src.gameplay.donnees import charger_cartes, charger_modules
+from src.gameplay.parcours import (
+    TypeEtape,
+    aleatoire_pour_niveau,
+    est_niveau_boss,
+    modules_equipables,
+    tirer_candidats_module,
+    tirer_candidats_recompense,
+    tirer_propositions_niveau,
+)
 from src.gameplay.partie import (
     Partie,
     Profil,
     abandonner_partie,
+    ajouter_carte,
+    avancer_niveau,
     combat_depuis_partie,
     deck_de_la_partie,
+    equiper_module,
+    id_de_carte,
+    marquer_terminee,
     nouvelle_partie,
     partie_en_cours,
     sauvegarder_partie,
+    specs_utilisees_partie,
 )
-from src.gameplay.parcours import modules_equipables, tirer_candidats_module
 from src.ui.ecran_accueil_joueur import EcranAccueilJoueur
 from src.ui.ecran_choix_module import EcranChoixModule
+from src.ui.ecran_choix_niveau import EcranChoixNiveau
 from src.ui.ecran_deck import EcranDeck
+from src.ui.ecran_fin_combat import EcranFinCombat
 from src.ui.ecran_selection_joueur import EcranSelectionJoueur
 from src.ui.fenetre import FenetreCombat
 
 INTERVALLE_VERIFICATION = 1 / 30
+
+# Types de proposition deja relies a un ecran reel (specs.md 2.4) : Station service, Planete
+# commerciale et Aventure ne le sont pas encore, cf. _ouvrir_choix_niveau.
+TYPES_COMBAT = (TypeEtape.PRIME, TypeEtape.BOSS)
 
 
 def main() -> None:
@@ -70,10 +98,14 @@ def _ouvrir_accueil(profil: Profil) -> None:
 
 def _traiter_action(profil: Profil, partie: Partie | None, action: str) -> None:
     if action == "continuer":
-        # Approximation temporaire (decision utilisateur) : reprend le vaisseau/deck reels du
-        # joueur, mais tire une flotte ennemie au hasard, faute d'orchestration du parcours
-        # (specs.md 2.3/10.3) capable de determiner precisement le prochain combat.
-        FenetreCombat(combat_depuis_partie(partie))
+        # Reprend l'etape courante a partir de ce qui est deja connu (niveau + vaisseau) plutot
+        # que d'une "etape courante" dediee, pas encore ajoutee a la sauvegarde (decision
+        # utilisateur) : le Niveau 1 sans 2e module equipe reprend au choix de module, sinon on
+        # retire les propositions du niveau courant (deterministe, cf. aleatoire_pour_niveau).
+        if partie.niveau == 1 and partie.vaisseau["avant_gauche"] is None:
+            _ouvrir_choix_module(profil, partie)
+        else:
+            _ouvrir_choix_niveau(profil, partie)
     elif action == "abandonner":
         abandonner_partie(profil.id, partie)
         _ouvrir_accueil(profil)
@@ -82,9 +114,96 @@ def _traiter_action(profil: Profil, partie: Partie | None, action: str) -> None:
     elif action == "nouvelle_partie":
         nouvelle = nouvelle_partie()
         sauvegarder_partie(profil.id, nouvelle)
-        pool = modules_equipables(charger_modules())
-        candidats = tirer_candidats_module(pool, random.Random(nouvelle.graine))
-        EcranChoixModule(candidats)
+        _ouvrir_choix_module(profil, nouvelle)
+
+
+def _ouvrir_choix_module(profil: Profil, partie: Partie) -> None:
+    pool = modules_equipables(charger_modules())
+    candidats = tirer_candidats_module(pool, random.Random(partie.graine))
+    fenetre = EcranChoixModule(candidats)
+
+    def verifier(_dt: float) -> None:
+        if fenetre.module_choisi is None:
+            return
+        pyglet.clock.unschedule(verifier)
+        spec = fenetre.module_choisi
+        fenetre.close()
+        equiper_module(partie, spec)
+        avancer_niveau(partie)
+        sauvegarder_partie(profil.id, partie)
+        _ouvrir_choix_niveau(profil, partie)
+
+    pyglet.clock.schedule_interval(verifier, INTERVALLE_VERIFICATION)
+
+
+def _ouvrir_choix_niveau(profil: Profil, partie: Partie) -> None:
+    aleatoire = aleatoire_pour_niveau(partie.graine, partie.niveau)
+    propositions = tirer_propositions_niveau(partie.niveau, aleatoire)
+    fenetre = EcranChoixNiveau(partie.niveau, propositions)
+
+    def verifier(_dt: float) -> None:
+        if fenetre.type_choisi is None:
+            return
+        pyglet.clock.unschedule(verifier)
+        type_choisi = fenetre.type_choisi
+        fenetre.close()
+        if type_choisi in TYPES_COMBAT:
+            _ouvrir_combat(profil, partie)
+        else:
+            # Station service / Planete commerciale / Aventure : pas encore construits
+            # (specs.md 2.4) - on ne perd pas la main, on rouvre le meme choix.
+            print(f"{type_choisi.name} : ecran pas encore construit, retour au choix du niveau.")
+            _ouvrir_choix_niveau(profil, partie)
+
+    pyglet.clock.schedule_interval(verifier, INTERVALLE_VERIFICATION)
+
+
+def _ouvrir_combat(profil: Profil, partie: Partie) -> None:
+    combat = combat_depuis_partie(partie)
+    fenetre = FenetreCombat(combat)
+
+    def verifier(_dt: float) -> None:
+        if combat.etat == EtatCombat.EN_COURS:
+            return
+        pyglet.clock.unschedule(verifier)
+        fenetre.close()
+        _ouvrir_fin_combat(profil, partie, combat)
+
+    pyglet.clock.schedule_interval(verifier, INTERVALLE_VERIFICATION)
+
+
+def _ouvrir_fin_combat(profil: Profil, partie: Partie, combat: Combat) -> None:
+    victoire = combat.etat == EtatCombat.VICTOIRE
+    cartes = charger_cartes()
+    candidats = []
+    if victoire:
+        specs_par_id = {spec.id: spec for spec in charger_modules()}
+        candidats = tirer_candidats_recompense(specs_utilisees_partie(partie, specs_par_id), cartes, random.Random())
+    fenetre = EcranFinCombat(victoire, candidats)
+
+    def verifier(_dt: float) -> None:
+        if not fenetre.termine:
+            return
+        pyglet.clock.unschedule(verifier)
+        fenetre.close()
+        if not victoire:
+            abandonner_partie(profil.id, partie)  # meme statut TERMINEE qu'un abandon (specs.md 10.3)
+            _ouvrir_accueil(profil)
+            return
+        if fenetre.carte_choisie is not None:
+            ajouter_carte(partie, id_de_carte(fenetre.carte_choisie, cartes))
+        if est_niveau_boss(partie.niveau):
+            # Le run s'arrete reellement au Niveau 10 dans l'etat actuel (decision utilisateur,
+            # specs.md 2) - pas encore d'ecran de victoire finale dedie (specs.md 2.4, etape 11).
+            marquer_terminee(partie)
+            sauvegarder_partie(profil.id, partie)
+            _ouvrir_accueil(profil)
+        else:
+            avancer_niveau(partie)
+            sauvegarder_partie(profil.id, partie)
+            _ouvrir_choix_niveau(profil, partie)
+
+    pyglet.clock.schedule_interval(verifier, INTERVALLE_VERIFICATION)
 
 
 if __name__ == "__main__":
