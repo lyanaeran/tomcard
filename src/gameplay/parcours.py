@@ -1,9 +1,11 @@
 """
-Logique du parcours (run), hors combat (specs.md paragraphe 2/2.3/2.1/6). Pour l'instant : le
-tirage des candidats du Niveau 1 (choix de module) et celui des recompenses de fin de combat.
+Logique du parcours (run), hors combat (specs.md paragraphe 2/2.3/2.1/2.4/6). Pour l'instant : le
+tirage des candidats du Niveau 1 (choix de module), celui des recompenses de fin de combat, et
+celui des propositions d'etape des autres niveaux (specs.md 2.4, ecran "Choix du prochain niveau").
 """
 
 import random
+from enum import Enum, auto
 
 from src.gameplay.carte import Carte, RareteCarte
 from src.gameplay.config_poc import ID_MODULE_PRINCIPAL
@@ -87,3 +89,67 @@ def tirer_candidats_recompense(
     for spec in specs_equipes:
         resultats.append((spec, tirer_carte_recompense(pool_module(spec, cartes), aleatoire)))
     return resultats
+
+
+# Choix du prochain niveau (specs.md 2.3/2.4), pour tous les niveaux sauf le 1 (choix de module,
+# pas de tirage) et les niveaux Boss (multiples de 10, pas de tirage non plus - directement vers le
+# combat de Boss). Ne couvre pour l'instant que les niveaux 2 a 9 : le run s'arrete reellement au
+# Niveau 10 dans l'etat actuel (decision utilisateur, specs.md 2), donc le motif 5/9/10 n'a pas
+# encore besoin de se repeter par decennie (question encore ouverte, specs.md 9.1).
+
+
+class TypeEtape(Enum):
+    """Type d'etape propose au joueur a un niveau donne (specs.md 2/2.4)."""
+
+    PRIME = auto()
+    STATION_SERVICE = auto()
+    PLANETE_COMMERCIALE = auto()
+    AVENTURE = auto()
+
+
+NOMBRE_PROPOSITIONS_NIVEAU = 3
+PROBABILITE_STATION_SERVICE = 1 / 30
+PROBABILITE_PLANETE_COMMERCIALE = 1 / 30
+PROBABILITE_AVENTURE = 1 / 10
+NIVEAUX_STATION_GARANTIE = (5, 9)
+
+
+def est_niveau_boss(niveau: int) -> bool:
+    """Niveau 10, puis tous les 10 niveaux (specs.md 2.3) - pas de tirage de propositions a ces
+    niveaux, l'appelant doit aller directement au combat de Boss."""
+    return niveau % 10 == 0
+
+
+def aleatoire_pour_niveau(graine: int, niveau: int) -> random.Random:
+    """Generateur aleatoire deterministe pour un niveau donne d'une partie (specs.md 10.3) :
+    memes graine+niveau -> memes propositions tirees, sans avoir a les stocker litteralement dans
+    la sauvegarde. Graine textuelle (random.Random n'accepte pas un tuple en seed) plutot qu'une
+    combinaison arithmetique, pour eviter tout risque de collision entre graine/niveau."""
+    return random.Random(f"{graine}:{niveau}")
+
+
+def tirer_type_etape(aleatoire: random.Random) -> TypeEtape:
+    """1/30 Station service, 1/30 Planete commerciale, 1/10 Aventure, sinon (5/6) Prime
+    (specs.md 2.3)."""
+    tirage = aleatoire.random()
+    if tirage < PROBABILITE_STATION_SERVICE:
+        return TypeEtape.STATION_SERVICE
+    if tirage < PROBABILITE_STATION_SERVICE + PROBABILITE_PLANETE_COMMERCIALE:
+        return TypeEtape.PLANETE_COMMERCIALE
+    if tirage < PROBABILITE_STATION_SERVICE + PROBABILITE_PLANETE_COMMERCIALE + PROBABILITE_AVENTURE:
+        return TypeEtape.AVENTURE
+    return TypeEtape.PRIME
+
+
+def tirer_propositions_niveau(
+    niveau: int, aleatoire: random.Random, quantite: int = NOMBRE_PROPOSITIONS_NIVEAU
+) -> list[TypeEtape]:
+    """3 propositions d'etape pour ce niveau (specs.md 2.3/2.4), tirees independamment (donc
+    parfois 2 ou 3 identiques). Aux niveaux 5 et 9, la Station service est garantie parmi les 3 :
+    si le tirage independant n'en a pas produit, un emplacement tire au hasard est remplace par
+    Station service plutot que d'en ajouter un 4e. Ne pas appeler pour le Niveau 1 (choix de
+    module, pas de tirage) ni pour un niveau Boss (cf. est_niveau_boss)."""
+    propositions = [tirer_type_etape(aleatoire) for _ in range(quantite)]
+    if niveau in NIVEAUX_STATION_GARANTIE and TypeEtape.STATION_SERVICE not in propositions:
+        propositions[aleatoire.randrange(quantite)] = TypeEtape.STATION_SERVICE
+    return propositions

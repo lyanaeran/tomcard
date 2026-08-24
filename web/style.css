@@ -701,6 +701,63 @@ body {
     color: #dcdce1;
 }
 
+/* Ecran "Choix du prochain niveau" (specs.md 2.3/2.4). Fond de combat reutilise en placeholder
+   (deja applique globalement sur body) - decision utilisateur, a remplacer par un fond dedie. Pas
+   encore reliee a une orchestration de parcours (qui n'existe pas encore), cf. web/app.js. */
+#ecran-choix-niveau {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2.5rem;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+#ecran-choix-niveau h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: normal;
+}
+
+#ecran-choix-niveau .instruction {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+#candidats-niveau {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1.5rem;
+}
+
+.candidat-niveau {
+    width: clamp(180px, 24vw, 280px);
+    background: rgba(20, 24, 34, 0.75);
+    border: 2px solid #5a6e91;
+    border-radius: 10px;
+    padding: 1.5rem 1rem;
+    cursor: pointer;
+}
+
+.candidat-niveau:hover {
+    border-color: #ffffff;
+}
+
+.candidat-niveau-nom {
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: #ffdc78;
+    margin-bottom: 0.6rem;
+}
+
+.candidat-niveau-description {
+    font-size: 0.85rem;
+    color: #dcdce1;
+}
+
 /* Ecran de fin de combat (parcours, specs.md 2.1/6). Fond de combat reutilise en placeholder
    (deja applique globalement sur body) - decision utilisateur, a remplacer par un fond dedie.
    Pas encore reliee a une orchestration de parcours, cf. web/app.js. Meme structure generale

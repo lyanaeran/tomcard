@@ -19,7 +19,13 @@ from src.gameplay.carte import CIBLES_SANS_CLIC, ActionCarte, CibleCarte, regrou
 from src.gameplay.config_poc import creer_combat_poc, creer_deck, creer_vaisseau
 from src.gameplay.donnees import charger_cartes, charger_modules
 from src.gameplay.module import Module
-from src.gameplay.parcours import modules_equipables, tirer_candidats_module, tirer_candidats_recompense
+from src.gameplay.parcours import (
+    aleatoire_pour_niveau,
+    modules_equipables,
+    tirer_candidats_module,
+    tirer_candidats_recompense,
+    tirer_propositions_niveau,
+)
 from src.gameplay.partie import (
     combat_depuis_partie,
     deck_de_la_partie,
@@ -383,6 +389,17 @@ def continuer_partie_web(partie_json) -> str:
     partie = partie_depuis_json(partie_json)
     combat = combat_depuis_partie(partie)
     return json.dumps({"etat": _etat_dict(), "popups": []})
+
+
+def choix_niveau_web(partie_json) -> str:
+    """Ecran "Choix du prochain niveau" (specs.md 2.3/2.4) : 3 propositions d'etape tirees de
+    facon deterministe a partir de la graine et du niveau de la partie (ne s'applique pas au
+    Niveau 1 ni a un niveau Boss, cf. src/gameplay/parcours.py:est_niveau_boss - a verifier cote
+    appelant avant d'appeler cette fonction)."""
+    partie = partie_depuis_json(partie_json)
+    aleatoire = aleatoire_pour_niveau(partie.graine, partie.niveau)
+    propositions = tirer_propositions_niveau(partie.niveau, aleatoire)
+    return json.dumps({"niveau": partie.niveau, "propositions": [type_etape.name for type_etape in propositions]})
 
 
 def _resoudre_cible(carte, id_cible):

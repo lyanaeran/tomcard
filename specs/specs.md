@@ -143,12 +143,20 @@ section (référencée), cette liste ne fait que les enchaîner.
      vaisseau/deck réels mais une flotte tirée au hasard (`combat_depuis_partie`, §10.3)
    - Pas de partie en cours : bouton "Nouvelle partie" → Choix de module, Niveau 1 (étape 4)
    - Bouton "Quitter le jeu" (même remarque PC/web qu'à l'étape 1)
-3. **Choix du prochain niveau** (à construire) — à chaque niveau sauf le 1 et les niveaux Boss
-   (§2.3) : tire 3 propositions selon les probabilités et exceptions déjà définies en §2.3 (1/30
-   Station service, 1/30 Planète commerciale, 1/10 Aventure, sinon Prime ; Station service garantie
-   aux niveaux 5 et 9 ; niveau 10 et multiples de 10 sautent directement à l'écran Boss, étape 10,
-   sans tirage) → l'écran correspondant à la proposition choisie (Prime → Combat, Station service →
-   Station service, Planète commerciale → Planète commerciale, Aventure → Aventure)
+3. **Choix du prochain niveau** (**implémenté** en écran autonome, pas encore relié à
+   l'enchaînement — tirage tranché en §2.3, `TypeEtape`/`tirer_propositions_niveau`/
+   `est_niveau_boss`/`aleatoire_pour_niveau` dans `src/gameplay/parcours.py`) — à chaque niveau sauf
+   le 1 et les niveaux Boss (§2.3) : tire 3 propositions selon les probabilités et exceptions déjà
+   définies en §2.3 (1/30 Station service, 1/30 Planète commerciale, 1/10 Aventure, sinon Prime ;
+   Station service garantie aux niveaux 5 et 9 ; niveau 10 et multiples de 10 sautent directement à
+   l'écran Boss, étape 10, sans tirage — vérifié par l'appelant via `est_niveau_boss` avant
+   d'afficher cet écran, pas par l'écran lui-même) → l'écran correspondant à la proposition choisie
+   (Prime → Combat, Station service → Station service, Planète commerciale → Planète commerciale,
+   Aventure → Aventure). Tirage déterministe via `aleatoire_pour_niveau(graine, niveau)` (seed
+   textuelle `"{graine}:{niveau}"`, cohérent avec le principe déjà décrit en §10.3).
+   `src/ui/ecran_choix_niveau.py` (PC, 3 cartes texte — nom + description, pas d'image dédiée pour
+   l'instant) ; `web/bridge.py` (`choix_niveau_web`), `web/app.js` (`choixNiveau`, exposée sur
+   `window` pour test manuel)
 4. **Choix de module, Niveau 1** (implémenté en écran autonome, §2.3 — **pas encore reconnecté à la
    partie**, voir §10.3 "Limites connues") : une fois un module choisi, doit mettre à jour la
    partie (2ᵉ emplacement du vaisseau) et son niveau (1 → 2), puis → Choix du prochain niveau

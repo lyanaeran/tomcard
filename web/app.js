@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "25";
+const VERSION_CACHE = "26";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -92,6 +92,7 @@ const IDS_ECRANS = [
     "ecran-selection-joueur",
     "ecran-accueil-joueur",
     "ecran-choix-module",
+    "ecran-choix-niveau",
     "ecran-fin-combat",
     "ecran-deck",
 ];
@@ -580,6 +581,47 @@ function nouveauChoixModule(graine = null) {
 }
 
 window.nouveauChoixModule = nouveauChoixModule;
+
+// Ecran "Choix du prochain niveau" (specs.md 2.3/2.4) : 3 propositions d'etape, pas encore reliee
+// a une orchestration de parcours (qui n'existe pas encore), exposee sur window pour test manuel
+// en attendant. Ne s'applique pas au Niveau 1 (choix de module) ni a un niveau Boss (multiple de
+// 10) - a verifier par l'appelant avant d'appeler choixNiveau, meme principe que
+// src/gameplay/parcours.py:est_niveau_boss cote PC.
+const LIBELLES_TYPE_ETAPE = {
+    PRIME: ["Prime", "Combat, contrat de chasseur de primes."],
+    STATION_SERVICE: ["Station service", "Entretien du vaisseau contre de l'Argent."],
+    PLANETE_COMMERCIALE: ["Planete commerciale", "Achat de cartes contre de l'Argent."],
+    AVENTURE: ["Aventure", "Evenement inconnu."],
+};
+
+function afficherChoixNiveau(resultat) {
+    document.getElementById("titre-choix-niveau").textContent = `Niveau ${resultat.niveau}`;
+    document.getElementById("candidats-niveau").innerHTML = resultat.propositions
+        .map((type, index) => {
+            const [nom, description] = LIBELLES_TYPE_ETAPE[type];
+            return `
+        <div class="candidat-niveau" data-index="${index}">
+            <div class="candidat-niveau-nom">${nom}</div>
+            <div class="candidat-niveau-description">${description}</div>
+        </div>`;
+        })
+        .join("");
+    document.querySelectorAll(".candidat-niveau").forEach((element) => {
+        element.addEventListener("click", () => choisirEtape(resultat.propositions[Number(element.dataset.index)]));
+    });
+    masquerTousLesEcrans();
+    document.getElementById("ecran-choix-niveau").classList.remove("cachee");
+}
+
+function choisirEtape(type) {
+    console.log("Etape choisie :", type);
+}
+
+function choixNiveau(partieJson) {
+    afficherChoixNiveau(appelerBridge("choix_niveau_web", partieJson));
+}
+
+window.choixNiveau = choixNiveau;
 
 // Ecran de fin de combat (parcours, specs.md 2.1/6). Meme situation que l'ecran de choix de
 // module : pas encore reliee a une orchestration de parcours, exposee sur window pour test
