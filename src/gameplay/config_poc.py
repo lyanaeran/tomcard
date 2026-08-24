@@ -1,7 +1,7 @@
 """
 Generation aleatoire du combat du POC a partir des fichiers de config/ (cf. poc.md).
 
-A chaque combat : le module principal est fixe (deck de base fige, cf. `_deck_module_principal`),
+A chaque combat : le module principal est fixe (deck de base fige, cf. `deck_module_principal`),
 4 modules differents sont tires au sort parmi les autres et places sur les 4 emplacements, les 6
 cases ennemies sont tirees au sort (avec remise), et 3 cartes de chaque module equipe sont tirees
 au sort dans leur pool respectif. Une fois dans le deck, une carte n'est plus liee au module dont
@@ -85,17 +85,24 @@ def tirer_cartes(pool_ids: tuple, quantite: int, cartes: dict[str, Carte], aleat
     return [cartes[aleatoire.choice(pool_ids)].copie() for _ in range(quantite)]
 
 
-def _deck_module_principal(spec_principal: SpecModule, cartes: dict[str, Carte]) -> list[Carte]:
-    """Deck de base fixe du module principal (12 cartes, pas de tirage aleatoire) : chaque
-    carte de rarete Base de sa pool une fois, sauf Laser et Bouclier en 4 exemplaires."""
-    deck_cartes = []
+def ids_deck_module_principal(spec_principal: SpecModule, cartes: dict[str, Carte]) -> list[str]:
+    """Ids des cartes du deck de base du module principal (meme regle que deck_module_principal,
+    sous forme d'ids plutot que d'exemplaires Carte - utilise par la persistance du parcours,
+    cf. src/gameplay/partie.py)."""
+    ids = []
     for id_carte in spec_principal.cartes:
         carte = cartes[id_carte]
         if carte.rarete != RareteCarte.BASE:
             continue
         quantite = 4 if carte.nom in NOMS_QUADRUPLES_MODULE_PRINCIPAL else 1
-        deck_cartes += [carte.copie() for _ in range(quantite)]
-    return deck_cartes
+        ids += [id_carte] * quantite
+    return ids
+
+
+def deck_module_principal(spec_principal: SpecModule, cartes: dict[str, Carte]) -> list[Carte]:
+    """Deck de base fixe du module principal (12 cartes, pas de tirage aleatoire) : chaque
+    carte de rarete Base de sa pool une fois, sauf Laser et Bouclier en 4 exemplaires."""
+    return [cartes[id_carte].copie() for id_carte in ids_deck_module_principal(spec_principal, cartes)]
 
 
 def creer_vaisseau(specs_modules: list[SpecModule], aleatoire: random.Random) -> tuple[Vaisseau, list[SpecModule]]:
@@ -117,9 +124,9 @@ def creer_vaisseau(specs_modules: list[SpecModule], aleatoire: random.Random) ->
 
 def creer_deck(specs_utilisees: list[SpecModule], cartes: dict[str, Carte], aleatoire: random.Random) -> Deck:
     """Deck de base fixe du module principal (le premier de la liste, 12 cartes, cf.
-    `_deck_module_principal`) + 3 cartes tirees au sort dans la pool de chaque autre module."""
+    `deck_module_principal`) + 3 cartes tirees au sort dans la pool de chaque autre module."""
     spec_principal, *specs_equipes = specs_utilisees
-    deck_cartes = _deck_module_principal(spec_principal, cartes)
+    deck_cartes = deck_module_principal(spec_principal, cartes)
     for spec in specs_equipes:
         deck_cartes += tirer_cartes(spec.cartes, CARTES_PAR_MODULE_EQUIPE, cartes, aleatoire)
     return Deck(cartes=deck_cartes, generateur_aleatoire=aleatoire)

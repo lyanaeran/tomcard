@@ -20,6 +20,16 @@ from src.gameplay.config_poc import creer_combat_poc, creer_deck, creer_vaisseau
 from src.gameplay.donnees import charger_cartes, charger_modules
 from src.gameplay.module import Module
 from src.gameplay.parcours import modules_equipables, tirer_candidats_module, tirer_candidats_recompense
+from src.gameplay.partie import (
+    combat_depuis_partie,
+    deck_de_la_partie,
+    marquer_terminee,
+    nouveau_profil,
+    nouvelle_partie,
+    partie_depuis_json,
+    partie_vers_json,
+    profil_vers_json,
+)
 from src.gameplay.position import Colonne, Position, Rangee
 
 RACINE_FS = "/repo/"
@@ -268,6 +278,21 @@ def fin_combat_victoire(graine) -> str:
     )
 
 
+def _carte_regroupee_json(carte, quantite: int) -> dict:
+    return {
+        "nom": carte.nom,
+        "image": _chemin_web(carte.image),
+        "cout": carte.cout,
+        "rarete": carte.rarete.name,
+        "valeur": carte.valeur,
+        "type": carte.type.name,
+        "cible": carte.cible.name,
+        "action": carte.action.name if carte.action else None,
+        "duree": carte.duree,
+        "quantite": quantite,
+    }
+
+
 def etat_deck(graine) -> str:
     """Ecran "deck en entier" (appelable depuis plusieurs endroits, cf. specs.md 6) : cartes du
     combat en cours si un combat est actif (combat.joueur.deck), sinon un deck de demonstration
@@ -279,23 +304,85 @@ def etat_deck(graine) -> str:
         aleatoire = random.Random(int(graine)) if graine is not None else random.Random()
         _vaisseau, specs_utilisees = creer_vaisseau(charger_modules(), aleatoire)
         cartes = creer_deck(specs_utilisees, charger_cartes(), aleatoire).toutes_cartes()
+    return json.dumps([_carte_regroupee_json(carte, quantite) for carte, quantite in regrouper_cartes(cartes)])
+
+
+# --- Profils et parties (specs.md 10.3) : la persistance elle-meme (lister/lire/ecrire) est geree
+# cote JS via localStorage (web/app.js), Pyodide n'ayant pas acces a une FS persistante entre
+# recharges de page. Ces fonctions ne font que (de)serialiser et appliquer la logique de jeu pure
+# de src/gameplay/partie.py - jamais de lecture/ecriture disque ici.
+
+
+def creer_profil_web(nom) -> str:
+    return profil_vers_json(nouveau_profil(nom))
+
+
+def nouvelle_partie_web() -> str:
+    return partie_vers_json(nouvelle_partie())
+
+
+def infos_vaisseau_web(partie_json) -> str:
+    """Vaisseau d'une partie (JSON), enrichi de l'image/nom de chaque module - pour l'ecran
+    d'accueil joueur (src/ui/ecran_accueil_joueur.py cote PC, meme donnees ici pour le web)."""
+    partie = partie_depuis_json(partie_json)
+    specs_par_id = {spec.id: spec for spec in charger_modules()}
+    resultat = {}
+    for position, etat in partie.vaisseau.items():
+        if etat is None:
+            resultat[position] = None
+        else:
+            spec = specs_par_id[etat.module_id]
+            resultat[position] = {
+                "module_id": etat.module_id,
+                "pv": etat.pv,
+                "pv_max": etat.pv_max,
+                "niveau_maj": etat.niveau_maj,
+                "nom": spec.nom,
+                "image": _chemin_web(spec.image),
+            }
+    return json.dumps(resultat)
+
+
+def deck_partie_web(partie_json) -> str:
+    """Deck reel d'une partie sauvegardee (par opposition a etat_deck, qui affiche le combat en
+    cours ou une demonstration) - pour le bouton "Voir le deck" de l'ecran d'accueil joueur."""
+    partie = partie_depuis_json(partie_json)
+    cartes = deck_de_la_partie(partie, charger_cartes())
+    return json.dumps([_carte_regroupee_json(carte, quantite) for carte, quantite in regrouper_cartes(cartes)])
+
+
+def abandonner_partie_web(partie_json) -> str:
+    """Marque une partie TERMINEE (decision utilisateur : comme une defaite, cf.
+    src/gameplay/partie.py:marquer_terminee) - web/app.js re-sauvegarde le resultat dans
+    localStorage."""
+    return partie_vers_json(marquer_terminee(partie_depuis_json(partie_json)))
+
+
+def choix_module_partie_web(partie_json) -> str:
+    """Candidats de choix de module (Niveau 1, specs.md 2.3) pour une partie qui vient d'etre
+    creee, tires a partir de sa graine (coherence avec specs.md 10.3 - meme logique que
+    nouveau_choix_module, mais deterministe par rapport a la graine de la partie plutot que
+    tire independamment)."""
+    partie = partie_depuis_json(partie_json)
+    pool = modules_equipables(charger_modules())
+    candidats = tirer_candidats_module(pool, random.Random(partie.graine))
     return json.dumps(
         [
-            {
-                "nom": carte.nom,
-                "image": _chemin_web(carte.image),
-                "cout": carte.cout,
-                "rarete": carte.rarete.name,
-                "valeur": carte.valeur,
-                "type": carte.type.name,
-                "cible": carte.cible.name,
-                "action": carte.action.name if carte.action else None,
-                "duree": carte.duree,
-                "quantite": quantite,
-            }
-            for carte, quantite in regrouper_cartes(cartes)
+            {"id": candidat.id, "nom": candidat.nom, "image": _chemin_web(candidat.image), "description": candidat.description}
+            for candidat in candidats
         ]
     )
+
+
+def continuer_partie_web(partie_json) -> str:
+    """Bouton "Continuer" de l'ecran d'accueil joueur : reprend le vaisseau/deck reels de la
+    partie, mais tire une flotte ennemie au hasard - approximation temporaire (decision
+    utilisateur) en attendant l'orchestration du parcours (specs.md 2.3/10.3), meme situation que
+    src/ui/ecran_accueil_joueur.py + main.py cote PC."""
+    global combat
+    partie = partie_depuis_json(partie_json)
+    combat = combat_depuis_partie(partie)
+    return json.dumps({"etat": _etat_dict(), "popups": []})
 
 
 def _resoudre_cible(carte, id_cible):

@@ -872,3 +872,126 @@ body {
     font-weight: bold;
     color: #ffdc78;
 }
+
+/* Selection/creation de profil joueur, puis accueil de ce joueur (specs.md 10.3) - nouveau point
+   d'entree de l'app web (appele par demarrer() dans web/app.js). Fond de combat reutilise en
+   placeholder, meme decision que les autres ecrans du parcours. */
+#ecran-selection-joueur,
+#ecran-accueil-joueur {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+#ecran-selection-joueur h1,
+#ecran-accueil-joueur h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: normal;
+}
+
+#liste-joueurs {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    width: min(90vw, 320px);
+}
+
+.ligne-joueur {
+    padding: 0.8rem 1rem;
+    background: rgba(20, 24, 34, 0.75);
+    border: 2px solid #5a6e91;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.ligne-joueur:hover {
+    border-color: #ffffff;
+}
+
+#creation-joueur {
+    display: flex;
+    gap: 0.6rem;
+}
+
+#nom-nouveau-joueur {
+    padding: 0.6rem 0.8rem;
+    border-radius: 8px;
+    border: 2px solid #5a6e91;
+    background: rgba(20, 24, 34, 0.75);
+    color: white;
+    font-size: 1rem;
+}
+
+#ecran-selection-joueur button,
+#ecran-accueil-joueur button {
+    font-size: 1rem;
+    padding: 0.6rem 1.4rem;
+    border: none;
+    border-radius: 8px;
+    background: #4c6ef5;
+    color: white;
+    cursor: pointer;
+}
+
+#bouton-abandonner {
+    background: #c0392b;
+}
+
+#vaisseau-accueil {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.module-accueil {
+    width: clamp(110px, 15vw, 150px);
+    background: rgba(20, 24, 34, 0.75);
+    border: 2px solid #5a6e91;
+    border-radius: 10px;
+    padding: 0.8rem;
+}
+
+.module-accueil img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1/1;
+    object-fit: contain;
+    margin-bottom: 0.4rem;
+}
+
+.module-accueil-nom {
+    font-weight: bold;
+    font-size: 0.85rem;
+}
+
+.module-accueil-pv {
+    font-size: 0.8rem;
+    color: #dcdce1;
+}
+
+.module-accueil-niveau {
+    font-size: 0.75rem;
+    color: #ffdc78;
+}
+
+.module-accueil-vide {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100px;
+    color: #7a7e8c;
+    font-size: 0.8rem;
+}
+
+#boutons-partie-en-cours {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+}

@@ -60,11 +60,10 @@ actions une fois cette ressource implémentée.
   cohérent avec les doublons de modules autorisés (§2.3/§5)
 - **Les dégâts subis en combat persistent d'un combat à l'autre** (décision utilisateur — sinon
   Réparer n'aurait aucune utilité) : un module endommagé le reste au niveau suivant tant qu'il n'a
-  pas été réparé. Implique une nouvelle couche de persistance hors-combat (PV actuels, PV max, niveau
-  de mise à jour, position — par module équipé) qui **n'existe pas encore** dans `src/gameplay/` :
-  `Vaisseau`/`Module` sont aujourd'hui recréés à neuf à chaque combat (`creer_vaisseau`/
-  `creer_combat_poc`, tirage aléatoire des modules équipés). Format et principes de cette
-  persistance tranchés en §10.3 (fichier de sauvegarde par partie) — pas encore implémentée
+  pas été réparé. Format et couche de persistance hors-combat **implémentés** en §10.3 (`EtatModule`
+  dans `src/gameplay/partie.py` : PV actuels, PV max, niveau de mise à jour, par module équipé) —
+  reste à réutiliser cette couche dans l'écran Station service lui-même, qui n'est pas encore codé
+  (voir juste en dessous)
 
 #### Écran Station service (interface)
 
@@ -75,10 +74,10 @@ actions une fois cette ressource implémentée.
   module sélectionné
 - Icônes des 4 actions dans `assets/station_service/` : `reparer.png`, `ameliorer.png`,
   `mettre_a_jour.png`, `deplacer.png`
-- **Pas encore implémenté** (spec uniquement à ce stade) : dépend de la couche de persistance
-  hors-combat décrite ci-dessus, qui n'existe pas encore. Une fois posée, cet écran suivra le même
-  principe autonome que les 3 écrans déjà implémentés (§2.3/§6) — non relié à une orchestration de
-  parcours tant que celle-ci n'existe pas
+- **Pas encore implémenté** (spec uniquement à ce stade) : la couche de persistance hors-combat dont
+  il dépend existe désormais (§10.3), donc plus rien ne bloque son développement. Suivra le même
+  principe autonome que les écrans déjà implémentés (§2.3/§6/§10.3) — non relié à une orchestration
+  de parcours tant que celle-ci n'existe pas
 
 ### 2.3 Structure par niveaux
 
@@ -433,20 +432,20 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
 - Montants exacts d'Argent : récompense de combat (§2.1) ; coût des 4 actions de Station service —
   **temporairement gratuites** le temps que la ressource Argent soit implémentée (§2.2)
 - La Planète commerciale propose-t-elle des cartes pour tous les modules du pool, ou seulement pour les modules actuellement équipés ? (§2, §6)
-- **Persistance des modules hors combat** (§2.2) : format et principes tranchés, voir §10.3 (fichier
-  de sauvegarde par partie, plusieurs parties possibles, graine + niveau plutôt que stockage littéral
-  des propositions tirées) — **pas encore implémenté**. Bloquant pour relier l'écran Station service
-  à un vrai parcours, et de toute façon nécessaire pour l'orchestration générale du parcours (§9.2).
-  Portée volontairement limitée aux points de passage entre étapes (§10.3) : un combat ou un passage
-  en Station service en cours n'est pas sauvegardable pour l'instant
-- Écran de création/sélection de **profil joueur**, et écran de sélection de **partie** au sein d'un
-  profil (§10.3) : aucun des deux n'est encore conçu, nécessaires maintenant que plusieurs profils
-  et plusieurs parties par profil peuvent coexister
+- **Persistance des modules hors combat/profils joueur** (§2.2/§10.3) : **implémentée** (profil +
+  partie, un seul joueur à la fois, écrans de sélection de profil/accueil du joueur, `main.py` en
+  vrai point d'entrée). Reste bloquant pour relier l'écran Station service à un vrai parcours tant
+  que l'orchestration générale du parcours (§9.2) n'existe pas — voir §10.3 "Limites connues" pour le
+  détail de ce qui n'est pas encore reconnecté (choix de module de Niveau 1, fin de combat, portée
+  limitée aux points de passage entre étapes)
+- Statistiques et déblocages par profil (parties jouées/victoires/défaites, niveau max, module le
+  plus choisi, déblocages en fin de partie) : sciemment pas encore implémentés (§10.3, décision
+  utilisateur "pas de stat pour le moment") — à faire dans une passe dédiée
 - **Condition de victoire d'une partie** (§10.3) : la structure par niveaux actuelle (§2.3) enchaîne
-  les Boss indéfiniment tous les 10 niveaux, sans fin de run définie — la statistique `victoires` du
-  profil (§10.3) ne peut pas être incrémentée tant que "gagner une partie" n'a pas de définition
-  (dernier Boss d'une liste finie ? Palier de niveau à atteindre ? Le run est-il pensé comme sans fin,
-  façon high-score, auquel cas `victoires` n'aurait peut-être pas de sens et resterait toujours à 0 ?)
+  les Boss indéfiniment tous les 10 niveaux, sans fin de run définie — bloquant pour une future
+  statistique `victoires` (dernier Boss d'une liste finie ? Palier de niveau à atteindre ? Le run
+  est-il pensé comme sans fin, façon high-score, auquel cas `victoires` n'aurait peut-être pas de
+  sens ?)
 - Améliorer (Station service, §2.2) : y a-t-il un plafond de PV max, ou est-ce répétable indéfiniment ?
 - Filtrage du pool de récompense par palier de mise à jour débloqué (§2.2/§6) : à réconcilier avec le
   mécanisme de repli au palier inférieur déjà implémenté dans `tirer_carte_recompense`, qui suppose
@@ -494,6 +493,7 @@ src/
   ui/          → tout ce qui concerne l'affichage avec pyglet (PC)
   gameplay/    → logique de jeu, partagee par les deux facons de jouer
 index.html, web/ → affichage web/iPhone (Pyodide), voir README.md
+saves/         → sauvegardes de partie (PC uniquement, §10.3), ignore par git
 tests/
 pyproject.toml
 ```
@@ -506,113 +506,144 @@ pyproject.toml
 ### 10.3 Persistance du parcours (profils et sauvegardes)
 
 Nécessaire pour que les dégâts/niveau de mise à jour des modules (§2.2) et l'avancement dans le
-parcours (§2.3) survivent d'un combat à l'autre — n'existe pas encore, décisions utilisateur
-ci-dessous. **Les sauvegardes sont rattachées à un joueur** (décision utilisateur) : pas de
-compte/login, mais plusieurs **profils locaux nommés** peuvent coexister sur un même appareil,
-chacun avec ses propres parties, statistiques et déblocages.
+parcours (§2.3) survivent d'un combat à l'autre. **Les sauvegardes sont rattachées à un joueur**
+(décision utilisateur) : pas de compte/login, mais plusieurs **profils locaux nommés** peuvent
+coexister sur un même appareil. **Un joueur ne peut avoir qu'une seule partie EN_COURS à la fois**
+(décision utilisateur) — remplace la piste antérieure de plusieurs parties actives en parallèle par
+profil ; ses anciennes parties `TERMINEE` restent sur disque (pour de futures statistiques, voir
+plus bas) mais ne sont pas sélectionnables, il n'y a donc **pas besoin d'écran de sélection de
+partie** (contrairement à ce qui avait été envisagé).
+
+**Implémenté** — `main.py`/`index.html` sont désormais le **vrai point d'entrée du jeu** (décision
+utilisateur), plus des écrans autonomes non reliés comme les précédents.
 
 #### Profil joueur
 
-- PC : `saves/<joueur_id>/profil.json` ; web : `localStorage` (une entrée par joueur, plus une clé
-  d'index listant les joueurs existants — `localStorage` ne permet pas de lister des entrées
-  directement)
+- PC : `saves/<joueur_id>/profil.json` ; web : `localStorage` (une entrée par joueur, sous la clé
+  `space_fight_joueurs`, contenant directement la liste des profils plutôt qu'un index séparé — plus
+  simple tant que les profils restent de petits objets)
+- **Contenu actuel** : `{"version": 1, "id": "joueur_20260823_140000", "nom": "Alice"}`
+- **Statistiques et déblocages évoqués par l'utilisateur (parties jouées/victoires/défaites, niveau
+  max atteint, module le plus choisi, déblocages en fin de partie) : sciemment laissés de côté pour
+  l'instant** (décision utilisateur explicite, "pas de stat pour le moment") — pas de champ dans le
+  JSON actuel, à ajouter dans une passe dédiée. Pistes envisagées à ce moment-là : compteurs mis à
+  jour au fil du jeu plutôt que recalculés depuis l'historique (`parties_jouees`, `defaites`,
+  `niveau_max`, `modules_choisis` par `module_id`) ; `victoires` reste bloqué tant qu'une condition
+  de victoire de run n'est pas définie (voir §9.1) ; `deblocages` en liste vide, mécanique à
+  imaginer
+
+#### Partie (une sauvegarde, rattachée à un profil)
+
+- PC : `saves/<joueur_id>/parties/<partie_id>.json` (un fichier par partie, y compris les
+  `TERMINEE` conservées) ; web : `localStorage`, une entrée `space_fight_partie_<joueur_id>` — une
+  seule a la fois (cf. "un joueur ne peut avoir qu'une seule partie EN_COURS" plus haut : les
+  parties `TERMINEE` ne sont pour l'instant pas conservées côté web, contrairement à PC — écart
+  volontaire tant qu'aucun écran n'affiche l'historique, voir §9.1)
 - **Contenu** :
   ```json
   {
     "version": 1,
-    "id": "joueur_20260823_140000",
-    "nom": "Alice",
-    "statistiques": {
-      "parties_jouees": 12,
-      "defaites": 9,
-      "victoires": 0,
-      "niveau_max": 23,
-      "modules_choisis": {"MOD_2": 5, "MOD_3": 8}
-    },
-    "deblocages": []
-  }
-  ```
-  - `nom` : choisi par le joueur à la création du profil (nouvel écran de création/sélection de
-    profil, affiché au lancement du jeu — n'existe pas encore)
-  - `statistiques` — décision utilisateur, mises à jour au fil du jeu plutôt que recalculées en
-    parcourant les parties archivées :
-    - `parties_jouees` : incrémenté à la création d'une nouvelle partie (§ "Partie" ci-dessous)
-    - `defaites` : incrémenté quand une partie passe au statut `TERMINEE` (vaisseau détruit)
-    - `victoires` : **point ouvert** (voir §9.1) — la boucle de parcours actuelle (§2.3) n'a pas de
-      condition de victoire finale (Boss tous les 10 niveaux, indéfiniment) ; à définir avant de
-      pouvoir incrémenter ce compteur pour de vrai
-    - `niveau_max` : plus haut niveau jamais atteint par ce joueur, toutes parties confondues (mis à
-      jour dès qu'un niveau est dépassé, y compris dans une partie encore `EN_COURS` — pas besoin
-      d'attendre la fin de la partie)
-    - `modules_choisis` : compteur par `module_id`, incrémenté à chaque choix de module (Niveau 1,
-      victoire de Boss, §2.3) — permet de dériver "le module le plus choisi" sans reparcourir
-      l'historique des parties
-  - `deblocages` : liste vide pour l'instant, format à définir plus tard (mécanique encore à
-    imaginer — décision utilisateur de ne pas bloquer la persistance dessus)
-
-#### Partie (une sauvegarde, rattachée à un profil)
-
-- PC : `saves/<joueur_id>/parties/<partie_id>.json` ; web : `localStorage`, une entrée par partie
-  (clé préfixée par le joueur), plus une clé d'index par joueur listant ses parties
-- **Contenu** (inchangé par rapport à la version précédente de cette section, simplement rattaché à
-  un joueur via l'arborescence/le préfixe de clé plutôt qu'un champ dans le JSON lui-même) :
-  ```json
-  {
-    "version": 1,
     "id": "partie_20260823_142301",
-    "nom": "Partie du 23 aout",
+    "nom": "Partie du 23/08/2026",
     "statut": "EN_COURS",
     "graine": 918273645,
-    "niveau": 7,
-    "argent": 120,
+    "niveau": 1,
+    "argent": 0,
     "vaisseau": {
       "base":           {"module_id": "MOD_1", "pv": 15, "pv_max": 15, "niveau_maj": 1},
-      "avant_gauche":   {"module_id": "MOD_3", "pv": 10, "pv_max": 18, "niveau_maj": 2},
+      "avant_gauche":   null,
       "avant_droite":   null,
-      "arriere_gauche": {"module_id": "MOD_2", "pv": 9,  "pv_max": 9,  "niveau_maj": 1},
+      "arriere_gauche": null,
       "arriere_droite": null
     },
-    "deck": ["CRT_7", "CRT_7", "CRT_9", "CRT_15", "CRT_20"]
+    "deck": ["CRT_7", "CRT_7", "CRT_7", "CRT_7", "CRT_8", "CRT_9", "CRT_10", "CRT_10", "CRT_10", "CRT_10", "CRT_11", "CRT_12"]
   }
   ```
   - `version` : version du format, pour d'éventuelles migrations futures
   - `id` : identifiant unique (nom de fichier PC / suffixe de clé localStorage web)
-  - `nom` : nom affiché dans un futur écran de sélection de partie (généré automatiquement pour
-    l'instant, ex. à partir de la date — pas de renommage par le joueur prévu dans un premier temps)
-  - `statut` : `EN_COURS` ou `TERMINEE` (décision utilisateur : une défaite **ne supprime pas** le
-    fichier, marqué `TERMINEE` pour un futur écran de récapitulatif de run — une nouvelle partie créera
-    un nouvel `id` plutôt que d'écraser une partie terminée)
-  - `graine` : graine maîtresse du run (décision utilisateur). Combinée au `niveau`, elle permet de
-    **retirer à l'identique** les 3 propositions d'étape d'un niveau (§2.3) sans les stocker
-    littéralement — cohérent avec la convention `random.Random` déjà utilisée partout dans le moteur
-    (voir "Déterminisme du tirage aléatoire" dans `CLAUDE.md`). Contrepartie acceptée : un changement futur
-    des probabilités de tirage (§2.3) changerait aussi les propositions déjà tirées d'anciennes
-    sauvegardes rechargées
-  - `niveau` : niveau courant (celui dont les propositions doivent être retirées/re-choisies) — sert
-    aussi à mettre à jour `niveau_max` du profil
+  - `nom` : affiché dans les futurs écrans d'historique (généré automatiquement pour l'instant à
+    partir de la date — pas de renommage par le joueur prévu dans un premier temps)
+  - `statut` : `EN_COURS` ou `TERMINEE` (décision utilisateur : une défaite ou un abandon **ne
+    supprime pas** le fichier PC, marqué `TERMINEE` pour un futur écran de récapitulatif de run —
+    une nouvelle partie crée un nouvel `id`)
+  - `graine` : graine maîtresse du run (décision utilisateur). Combinée au `niveau`, elle permettra
+    de **retirer à l'identique** les 3 propositions d'étape d'un niveau (§2.3) sans les stocker
+    littéralement, une fois l'orchestration du parcours écrite — cohérent avec la convention
+    `random.Random` déjà utilisée partout dans le moteur (voir "Déterminisme du tirage aléatoire"
+    dans `CLAUDE.md`). Utilisée dès maintenant pour tirer les 3 candidats du choix de module de
+    Niveau 1 d'une nouvelle partie, et comme graine de repli pour le combat approximatif du bouton
+    "Continuer" (voir plus bas)
+  - `niveau` : niveau courant (1 pour une partie neuve, incrémenté une fois l'orchestration du
+    parcours écrite — aucun écran ne le fait progresser pour l'instant)
   - `vaisseau` : un état par emplacement (base + 4 équipables, §5) — `module_id` (référence
     `config/modules.json`), `pv`/`pv_max` (§2.2), `niveau_maj` (palier de mise à jour, 1 à 3, §2.2) ;
-    `null` si l'emplacement est vide
+    `null` si l'emplacement est vide. Une partie neuve n'a que `base` d'équipé (deck/PV du module
+    principal, `config_poc.ids_deck_module_principal`) — le 2ᵉ emplacement est rempli au choix du
+    Niveau 1, mais ce choix n'est pas encore reconnecté à la partie (voir "Limites connues" plus bas)
   - `deck` : ids de cartes possédées (`config/cartes.json`), doublons répétés dans la liste — même
     principe que `regrouper_cartes()` (§6) pour l'affichage, mais stockage à plat ici
 
-#### Portée et implémentation
+#### Écrans (implémentés, PC + web)
 
-- **Portée volontairement limitée** : seuls les points de passage entre étapes sont sauvegardés
-  (juste après tirage des propositions, ou juste après résolution d'une étape) — un combat ou un
-  passage en Station service **en cours** n'est pas sauvegardable dans l'immédiat ; quitter en plein
-  milieu fait perdre cette étape (repart au dernier point de passage sauvegardé au rechargement)
-- **Implémentation proposée** (pas encore faite) : nouveau `src/gameplay/partie.py` — dataclasses
-  `Joueur`/`Partie` + fonctions pures de sérialisation JSON (testables sans I/O, même principe que le
-  reste de `src/gameplay/`) ; un petit wrapper d'I/O fichier côté PC ; `web/bridge.py` expose les
-  mêmes fonctions de (dé)sérialisation, `web/app.js` se charge de la lecture/écriture `localStorage`.
-  Attention au nom `Joueur` déjà utilisé par `src/gameplay/joueur.py` pour l'état **de combat**
-  (vaisseau + deck + électricité, §3.3) — à renommer l'un des deux pour éviter la confusion (ex.
-  `ProfilJoueur` pour le nouveau, ou trouver un autre nom) — détail à trancher à l'implémentation
-- **Conséquence non résolue** : deux niveaux de sélection à construire, aucun des deux n'existe
-  encore — un écran de création/sélection de **profil** (au lancement du jeu) et un écran de
-  sélection de **partie** au sein d'un profil (lister/choisir/créer) — à concevoir comme les écrans
-  du parcours déjà implémentés (§2.3/§6)
+Fond de combat réutilisé en placeholder (comme les autres écrans du parcours), à remplacer par un
+fond dédié.
+
+- **Sélection/création de profil** — liste des profils existants (clic pour choisir) + création
+  d'un profil par un nom (Entrée/bouton "Créer"). `src/ui/ecran_selection_joueur.py` (PC, saisie de
+  texte gérée manuellement via `on_text`/`on_key_press`, pas de widget pyglet dédié) ; `web/app.js`
+  (`afficherSelectionJoueur`/`creerNouveauJoueur`) + `web/bridge.py` (`creer_profil_web`)
+- **Accueil du joueur** — si une partie `EN_COURS` existe : niveau, vaisseau (grille des modules
+  équipés avec PV/PV max/niveau de mise à jour, ou "Emplacement vide"), boutons **Continuer** /
+  **Abandonner la partie** / **Voir le deck**. Sinon : bouton **Nouvelle partie**.
+  `src/ui/ecran_accueil_joueur.py` (PC) ; `web/app.js` (`afficherAccueilJoueur` et les handlers de
+  chaque bouton) + `web/bridge.py` (`infos_vaisseau_web`, `deck_partie_web`, `abandonner_partie_web`,
+  `nouvelle_partie_web`, `choix_module_partie_web`, `continuer_partie_web`)
+- **Nouvelle partie** → écran de choix de module du Niveau 1 déjà existant (§2.3), candidats tirés à
+  partir de la graine de la partie fraîchement créée
+- **Voir le deck** → écran "deck en entier" déjà existant (§6), alimenté par le deck réel de la
+  partie (pas une démonstration aléatoire)
+- **Continuer** (bouton "Rouvre directement le combat", décision utilisateur) : reprend le vaisseau
+  et le deck réels de la partie sauvegardée, mais tire une **flotte ennemie au hasard** — car
+  l'orchestration du parcours (§2.3/§9.2) qui devrait déterminer précisément le prochain combat
+  n'existe pas encore. `combat_depuis_partie()` dans `src/gameplay/partie.py`, à corriger une fois
+  cette orchestration écrite
+- **Abandonner la partie** : marque la partie `TERMINEE` (`marquer_terminee()`) et revient à
+  l'écran d'accueil, qui affiche alors le bouton "Nouvelle partie"
+
+#### Implémentation
+
+- `src/gameplay/partie.py` (nouveau) : dataclasses `Profil`/`Partie`/`EtatModule`, sérialisation
+  JSON pure (`profil_vers_json`/`profil_depuis_json`, `partie_vers_json`/`partie_depuis_json`,
+  testables sans I/O), `nouveau_profil`/`nouvelle_partie`/`combat_depuis_partie`/`marquer_terminee`,
+  et l'I/O fichier PC (`lister_profils`, `creer_profil`, `sauvegarder_partie`, `partie_en_cours`,
+  `abandonner_partie`, sous `saves/`, nouveau dossier ajouté au `.gitignore`)
+  - Nom `Profil` retenu plutôt que `Joueur` (déjà pris par `src/gameplay/joueur.py`, l'état de
+    combat éphémère vaisseau + deck + électricité, §3.3) — pas de collision
+  - `config_poc.deck_module_principal` factorisé en `ids_deck_module_principal` (renvoie des ids
+    plutôt que des `Carte`) pour être réutilisable par `nouvelle_partie` sans dupliquer la règle
+- `web/bridge.py` : les fonctions ci-dessus n'effectuent **aucune I/O** (Pyodide n'a pas de FS
+  persistante entre rechargements de page) — elles ne font que (dé)sérialiser et appliquer la
+  logique pure de `partie.py` ; la lecture/écriture `localStorage` est entièrement gérée côté
+  `web/app.js`
+- `main.py` : ouvre `EcranSelectionJoueur`, puis `EcranAccueilJoueur`, puis l'écran suivant selon
+  l'action choisie — chaque écran étant une fenêtre pyglet indépendante, les transitions ferment la
+  fenêtre courante et ouvrent la suivante, détectées via `pyglet.clock.schedule_interval` (pas
+  d'événement dédié "l'utilisateur a fait un choix" sur ces fenêtres)
+
+#### Limites connues (à lever plus tard)
+
+- **Portée volontairement limitée** : seuls les points de passage entre étapes seraient sauvegardés
+  une fois l'orchestration du parcours écrite (juste après tirage des propositions, ou juste après
+  résolution d'une étape) — un combat ou un passage en Station service en cours n'est pas
+  sauvegardable
+- Le choix de module du Niveau 1 (à la suite de "Nouvelle partie") n'est **pas encore reconnecté** à
+  la partie : choisir un module n'écrit encore rien dans `vaisseau.avant_gauche` de la sauvegarde —
+  à faire une fois l'écran de choix de module lui-même relié à une vraie suite
+- Idem pour la fin du combat "Continuer" (victoire/défaite, récompense) : ne met encore rien à jour
+  dans la partie sauvegardée
+- Écart PC/web sur la conservation des parties `TERMINEE` (voir "Partie" plus haut) : à corriger si
+  un écran d'historique est construit côté web
+- `niveau`/`argent` ne progressent jamais dans le flux actuel, faute d'orchestration du parcours
 
 ### 10.4 Conventions de code
 

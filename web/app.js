@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "24";
+const VERSION_CACHE = "25";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -45,6 +45,7 @@ const FICHIERS_A_MONTER = [
     "src/gameplay/joueur.py",
     "src/gameplay/module.py",
     "src/gameplay/parcours.py",
+    "src/gameplay/partie.py",
     "src/gameplay/position.py",
     "src/gameplay/vaisseau.py",
     "config/cartes.json",
@@ -84,6 +85,21 @@ function appelerBridge(nomFonction, ...args) {
     }
 }
 
+// Un seul ecran visible a la fois (specs.md 10.3 ajoute la selection/l'accueil joueur en amont
+// du combat) : chaque fonction afficherXxx masque tous les ecrans puis ne demasque que le sien.
+const IDS_ECRANS = [
+    "app",
+    "ecran-selection-joueur",
+    "ecran-accueil-joueur",
+    "ecran-choix-module",
+    "ecran-fin-combat",
+    "ecran-deck",
+];
+
+function masquerTousLesEcrans() {
+    IDS_ECRANS.forEach((id) => document.getElementById(id).classList.add("cachee"));
+}
+
 async function demarrer() {
     const statut = document.getElementById("statut-chargement");
     try {
@@ -91,9 +107,8 @@ async function demarrer() {
         pyodide = await loadPyodide();
         statut.textContent = "Montage du code du jeu...";
         await monterDepot(pyodide);
-        nouvelleGraine();
         statut.remove();
-        document.getElementById("app").classList.remove("cachee");
+        afficherSelectionJoueur();
         tenterVerrouillagePaysage();
         configurerPleinEcran();
     } catch (erreur) {
@@ -552,7 +567,7 @@ function afficherChoixModule(candidats) {
     document.querySelectorAll(".candidat-module").forEach((element) => {
         element.addEventListener("click", () => choisirModule(candidats[Number(element.dataset.index)]));
     });
-    document.getElementById("app").classList.add("cachee");
+    masquerTousLesEcrans();
     document.getElementById("ecran-choix-module").classList.remove("cachee");
 }
 
@@ -600,7 +615,7 @@ function afficherFinCombat(victoire, candidats) {
         });
     }
 
-    document.getElementById("app").classList.add("cachee");
+    masquerTousLesEcrans();
     document.getElementById("ecran-fin-combat").classList.remove("cachee");
 }
 
@@ -644,7 +659,7 @@ function afficherDeck(cartes) {
     document.querySelectorAll(".carte-deck").forEach((element) => {
         element.addEventListener("click", () => afficherInfoCarteDeck(cartesDeckAffichees[Number(element.dataset.index)]));
     });
-    document.getElementById("app").classList.add("cachee");
+    masquerTousLesEcrans();
     document.getElementById("ecran-deck").classList.remove("cachee");
 }
 
@@ -662,5 +677,129 @@ function voirDeck(graine = null) {
 
 window.voirDeck = voirDeck;
 
+// Selection/creation de profil joueur, puis accueil de ce joueur (specs.md 10.3) : nouveau point
+// d'entree reel de l'app (appele par demarrer() ci-dessus, plus besoin de window.xxx() pour
+// tester manuellement). Persistance via localStorage (Pyodide n'a pas de FS persistante entre
+// recharges de page) : un index de profils (CLE_JOUEURS) + une entree de partie par joueur.
+const CLE_JOUEURS = "space_fight_joueurs";
+
+function clePartie(joueurId) {
+    return `space_fight_partie_${joueurId}`;
+}
+
+function listerJoueursLocal() {
+    try {
+        return JSON.parse(localStorage.getItem(CLE_JOUEURS) || "[]");
+    } catch {
+        return [];
+    }
+}
+
+function ajouterJoueurLocal(profil) {
+    const joueurs = listerJoueursLocal();
+    joueurs.push(profil);
+    localStorage.setItem(CLE_JOUEURS, JSON.stringify(joueurs));
+}
+
+function partieLocale(joueurId) {
+    const brut = localStorage.getItem(clePartie(joueurId));
+    return brut ? JSON.parse(brut) : null;
+}
+
+function sauvegarderPartieLocale(joueurId, partie) {
+    localStorage.setItem(clePartie(joueurId), JSON.stringify(partie));
+}
+
+let joueurCourant = null;
+
+function afficherSelectionJoueur() {
+    const joueurs = listerJoueursLocal();
+    document.getElementById("liste-joueurs").innerHTML = joueurs
+        .map((joueur, index) => `<div class="ligne-joueur" data-index="${index}">${joueur.nom}</div>`)
+        .join("");
+    document.querySelectorAll(".ligne-joueur").forEach((element) => {
+        element.addEventListener("click", () => choisirJoueur(joueurs[Number(element.dataset.index)]));
+    });
+    document.getElementById("nom-nouveau-joueur").value = "";
+    masquerTousLesEcrans();
+    document.getElementById("ecran-selection-joueur").classList.remove("cachee");
+}
+
+function creerNouveauJoueur() {
+    const champ = document.getElementById("nom-nouveau-joueur");
+    const nom = champ.value.trim();
+    if (!nom) return;
+    const profil = appelerBridge("creer_profil_web", nom);
+    ajouterJoueurLocal(profil);
+    choisirJoueur(profil);
+}
+
+function choisirJoueur(profil) {
+    joueurCourant = profil;
+    afficherAccueilJoueur();
+}
+
+function afficherAccueilJoueur() {
+    const partie = partieLocale(joueurCourant.id);
+    const enCours = partie !== null && partie.statut === "EN_COURS";
+    document.getElementById("nom-joueur-accueil").textContent = joueurCourant.nom;
+    document.getElementById("niveau-accueil").textContent = enCours ? `Niveau ${partie.niveau}` : "";
+    document.getElementById("vaisseau-accueil").classList.toggle("cachee", !enCours);
+    document.getElementById("boutons-partie-en-cours").classList.toggle("cachee", !enCours);
+    document.getElementById("bouton-nouvelle-partie").classList.toggle("cachee", enCours);
+
+    if (enCours) {
+        const vaisseau = appelerBridge("infos_vaisseau_web", JSON.stringify(partie));
+        document.getElementById("vaisseau-accueil").innerHTML = Object.entries(vaisseau)
+            .map(([_position, etat]) => {
+                if (!etat) return `<div class="module-accueil module-accueil-vide">Emplacement vide</div>`;
+                return `
+                <div class="module-accueil">
+                    <img src="${etat.image}" alt="${etat.nom}">
+                    <div class="module-accueil-nom">${etat.nom}</div>
+                    <div class="module-accueil-pv">${etat.pv} / ${etat.pv_max} PV</div>
+                    <div class="module-accueil-niveau">Mise a jour : niveau ${etat.niveau_maj}</div>
+                </div>`;
+            })
+            .join("");
+    }
+
+    masquerTousLesEcrans();
+    document.getElementById("ecran-accueil-joueur").classList.remove("cachee");
+}
+
+function continuerPartie() {
+    const partie = partieLocale(joueurCourant.id);
+    appliquerResultat(appelerBridge("continuer_partie_web", JSON.stringify(partie)));
+    masquerTousLesEcrans();
+    document.getElementById("app").classList.remove("cachee");
+}
+
+function abandonnerPartie() {
+    const partie = partieLocale(joueurCourant.id);
+    const misAJour = appelerBridge("abandonner_partie_web", JSON.stringify(partie));
+    sauvegarderPartieLocale(joueurCourant.id, misAJour);
+    afficherAccueilJoueur();
+}
+
+function voirDeckPartie() {
+    const partie = partieLocale(joueurCourant.id);
+    afficherDeck(appelerBridge("deck_partie_web", JSON.stringify(partie)));
+}
+
+function nouvellePartie() {
+    const partie = appelerBridge("nouvelle_partie_web");
+    sauvegarderPartieLocale(joueurCourant.id, partie);
+    afficherChoixModule(appelerBridge("choix_module_partie_web", JSON.stringify(partie)));
+}
+
 document.getElementById("fin-tour").addEventListener("click", finirTour);
+document.getElementById("bouton-creer-joueur").addEventListener("click", creerNouveauJoueur);
+document.getElementById("nom-nouveau-joueur").addEventListener("keydown", (evenement) => {
+    if (evenement.key === "Enter") creerNouveauJoueur();
+});
+document.getElementById("bouton-continuer").addEventListener("click", continuerPartie);
+document.getElementById("bouton-abandonner").addEventListener("click", abandonnerPartie);
+document.getElementById("bouton-voir-deck-partie").addEventListener("click", voirDeckPartie);
+document.getElementById("bouton-nouvelle-partie").addEventListener("click", nouvellePartie);
 demarrer();
