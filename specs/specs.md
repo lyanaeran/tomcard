@@ -439,8 +439,14 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
   à un vrai parcours, et de toute façon nécessaire pour l'orchestration générale du parcours (§9.2).
   Portée volontairement limitée aux points de passage entre étapes (§10.3) : un combat ou un passage
   en Station service en cours n'est pas sauvegardable pour l'instant
-- Écran de sélection de partie (lister/choisir/créer une sauvegarde, §10.3) : pas encore conçu,
-  nécessaire maintenant que plusieurs parties peuvent coexister
+- Écran de création/sélection de **profil joueur**, et écran de sélection de **partie** au sein d'un
+  profil (§10.3) : aucun des deux n'est encore conçu, nécessaires maintenant que plusieurs profils
+  et plusieurs parties par profil peuvent coexister
+- **Condition de victoire d'une partie** (§10.3) : la structure par niveaux actuelle (§2.3) enchaîne
+  les Boss indéfiniment tous les 10 niveaux, sans fin de run définie — la statistique `victoires` du
+  profil (§10.3) ne peut pas être incrémentée tant que "gagner une partie" n'a pas de définition
+  (dernier Boss d'une liste finie ? Palier de niveau à atteindre ? Le run est-il pensé comme sans fin,
+  façon high-score, auquel cas `victoires` n'aurait peut-être pas de sens et resterait toujours à 0 ?)
 - Améliorer (Station service, §2.2) : y a-t-il un plafond de PV max, ou est-ce répétable indéfiniment ?
 - Filtrage du pool de récompense par palier de mise à jour débloqué (§2.2/§6) : à réconcilier avec le
   mécanisme de repli au palier inférieur déjà implémenté dans `tirer_carte_recompense`, qui suppose
@@ -497,18 +503,59 @@ pyproject.toml
 - Séparation stricte entre `src/ui` (affichage PC) et `src/gameplay` (logique de jeu, partagée avec la version web)
 - `src/gameplay` reste la seule source de vérité des règles de jeu : la version web ne fait que l'exécuter et l'afficher, elle ne réimplémente aucune règle
 
-### 10.3 Persistance du parcours (sauvegarde)
+### 10.3 Persistance du parcours (profils et sauvegardes)
 
 Nécessaire pour que les dégâts/niveau de mise à jour des modules (§2.2) et l'avancement dans le
 parcours (§2.3) survivent d'un combat à l'autre — n'existe pas encore, décisions utilisateur
-ci-dessous.
+ci-dessous. **Les sauvegardes sont rattachées à un joueur** (décision utilisateur) : pas de
+compte/login, mais plusieurs **profils locaux nommés** peuvent coexister sur un même appareil,
+chacun avec ses propres parties, statistiques et déblocages.
 
-- **Un fichier JSON par partie** (plusieurs parties possibles en parallèle — décision utilisateur) :
-  PC `saves/<id>.json` (nouveau dossier à la racine, ajouté au `.gitignore` : ce sont des
-  sauvegardes de partie, pas du contenu de jeu comme `config/`) ; web une entrée `localStorage` par
-  id, plus une clé d'index listant les ids existants (`localStorage` ne permet pas de lister des
-  entrées directement)
+#### Profil joueur
+
+- PC : `saves/<joueur_id>/profil.json` ; web : `localStorage` (une entrée par joueur, plus une clé
+  d'index listant les joueurs existants — `localStorage` ne permet pas de lister des entrées
+  directement)
 - **Contenu** :
+  ```json
+  {
+    "version": 1,
+    "id": "joueur_20260823_140000",
+    "nom": "Alice",
+    "statistiques": {
+      "parties_jouees": 12,
+      "defaites": 9,
+      "victoires": 0,
+      "niveau_max": 23,
+      "modules_choisis": {"MOD_2": 5, "MOD_3": 8}
+    },
+    "deblocages": []
+  }
+  ```
+  - `nom` : choisi par le joueur à la création du profil (nouvel écran de création/sélection de
+    profil, affiché au lancement du jeu — n'existe pas encore)
+  - `statistiques` — décision utilisateur, mises à jour au fil du jeu plutôt que recalculées en
+    parcourant les parties archivées :
+    - `parties_jouees` : incrémenté à la création d'une nouvelle partie (§ "Partie" ci-dessous)
+    - `defaites` : incrémenté quand une partie passe au statut `TERMINEE` (vaisseau détruit)
+    - `victoires` : **point ouvert** (voir §9.1) — la boucle de parcours actuelle (§2.3) n'a pas de
+      condition de victoire finale (Boss tous les 10 niveaux, indéfiniment) ; à définir avant de
+      pouvoir incrémenter ce compteur pour de vrai
+    - `niveau_max` : plus haut niveau jamais atteint par ce joueur, toutes parties confondues (mis à
+      jour dès qu'un niveau est dépassé, y compris dans une partie encore `EN_COURS` — pas besoin
+      d'attendre la fin de la partie)
+    - `modules_choisis` : compteur par `module_id`, incrémenté à chaque choix de module (Niveau 1,
+      victoire de Boss, §2.3) — permet de dériver "le module le plus choisi" sans reparcourir
+      l'historique des parties
+  - `deblocages` : liste vide pour l'instant, format à définir plus tard (mécanique encore à
+    imaginer — décision utilisateur de ne pas bloquer la persistance dessus)
+
+#### Partie (une sauvegarde, rattachée à un profil)
+
+- PC : `saves/<joueur_id>/parties/<partie_id>.json` ; web : `localStorage`, une entrée par partie
+  (clé préfixée par le joueur), plus une clé d'index par joueur listant ses parties
+- **Contenu** (inchangé par rapport à la version précédente de cette section, simplement rattaché à
+  un joueur via l'arborescence/le préfixe de clé plutôt qu'un champ dans le JSON lui-même) :
   ```json
   {
     "version": 1,
@@ -541,24 +588,31 @@ ci-dessous.
     (voir "Déterminisme du tirage aléatoire" dans `CLAUDE.md`). Contrepartie acceptée : un changement futur
     des probabilités de tirage (§2.3) changerait aussi les propositions déjà tirées d'anciennes
     sauvegardes rechargées
-  - `niveau` : niveau courant (celui dont les propositions doivent être retirées/re-choisies)
+  - `niveau` : niveau courant (celui dont les propositions doivent être retirées/re-choisies) — sert
+    aussi à mettre à jour `niveau_max` du profil
   - `vaisseau` : un état par emplacement (base + 4 équipables, §5) — `module_id` (référence
     `config/modules.json`), `pv`/`pv_max` (§2.2), `niveau_maj` (palier de mise à jour, 1 à 3, §2.2) ;
     `null` si l'emplacement est vide
   - `deck` : ids de cartes possédées (`config/cartes.json`), doublons répétés dans la liste — même
     principe que `regrouper_cartes()` (§6) pour l'affichage, mais stockage à plat ici
+
+#### Portée et implémentation
+
 - **Portée volontairement limitée** : seuls les points de passage entre étapes sont sauvegardés
   (juste après tirage des propositions, ou juste après résolution d'une étape) — un combat ou un
   passage en Station service **en cours** n'est pas sauvegardable dans l'immédiat ; quitter en plein
   milieu fait perdre cette étape (repart au dernier point de passage sauvegardé au rechargement)
-- **Implémentation proposée** (pas encore faite) : nouveau `src/gameplay/partie.py` — dataclass
-  `Partie` + fonctions pures `partie_vers_json`/`partie_depuis_json` (testables sans I/O, même
-  principe que le reste de `src/gameplay/`) ; un petit wrapper d'I/O fichier côté PC ; `web/bridge.py`
-  expose les mêmes fonctions de (dé)sérialisation, `web/app.js` se charge de la lecture/écriture
-  `localStorage`
-- **Conséquence non résolue** : plusieurs sauvegardes possibles implique un écran de sélection de
-  partie (lister/choisir/créer), qui n'existe pas encore — à concevoir comme les écrans du parcours
-  déjà implémentés (§2.3/§6)
+- **Implémentation proposée** (pas encore faite) : nouveau `src/gameplay/partie.py` — dataclasses
+  `Joueur`/`Partie` + fonctions pures de sérialisation JSON (testables sans I/O, même principe que le
+  reste de `src/gameplay/`) ; un petit wrapper d'I/O fichier côté PC ; `web/bridge.py` expose les
+  mêmes fonctions de (dé)sérialisation, `web/app.js` se charge de la lecture/écriture `localStorage`.
+  Attention au nom `Joueur` déjà utilisé par `src/gameplay/joueur.py` pour l'état **de combat**
+  (vaisseau + deck + électricité, §3.3) — à renommer l'un des deux pour éviter la confusion (ex.
+  `ProfilJoueur` pour le nouveau, ou trouver un autre nom) — détail à trancher à l'implémentation
+- **Conséquence non résolue** : deux niveaux de sélection à construire, aucun des deux n'existe
+  encore — un écran de création/sélection de **profil** (au lancement du jeu) et un écran de
+  sélection de **partie** au sein d'un profil (lister/choisir/créer) — à concevoir comme les écrans
+  du parcours déjà implémentés (§2.3/§6)
 
 ### 10.4 Conventions de code
 
