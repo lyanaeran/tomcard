@@ -138,7 +138,7 @@ def _ouvrir_voir_deck(profil: Profil, partie: Partie) -> None:
 def _ouvrir_choix_module(profil: Profil, partie: Partie) -> None:
     pool = modules_equipables(charger_modules())
     candidats = tirer_candidats_module(pool, random.Random(partie.graine))
-    fenetre = EcranChoixModule(candidats)
+    fenetre = EcranChoixModule(candidats, niveau=partie.niveau)
 
     def verifier(_dt: float) -> None:
         if fenetre.module_choisi is None:
@@ -192,7 +192,7 @@ def _ouvrir_station_service(profil: Profil, partie: Partie) -> None:
 
 
 def _ouvrir_etape_placeholder(profil: Profil, partie: Partie, type_etape: TypeEtape) -> None:
-    fenetre = EcranEtapePlaceholder(type_etape)
+    fenetre = EcranEtapePlaceholder(type_etape, niveau=partie.niveau)
 
     def verifier(_dt: float) -> None:
         if not fenetre.termine:
@@ -208,7 +208,7 @@ def _ouvrir_etape_placeholder(profil: Profil, partie: Partie, type_etape: TypeEt
 
 def _ouvrir_combat(profil: Profil, partie: Partie) -> None:
     combat = combat_depuis_partie(partie)
-    fenetre = FenetreCombat(combat)
+    fenetre = FenetreCombat(combat, niveau=partie.niveau)
 
     def verifier(_dt: float) -> None:
         if combat.etat == EtatCombat.EN_COURS:
@@ -227,7 +227,7 @@ def _ouvrir_fin_combat(profil: Profil, partie: Partie, combat: Combat) -> None:
     if victoire:
         specs_par_id = {spec.id: spec for spec in charger_modules()}
         candidats = tirer_candidats_recompense(specs_utilisees_partie(partie, specs_par_id), cartes, random.Random())
-    fenetre = EcranFinCombat(victoire, candidats)
+    fenetre = EcranFinCombat(victoire, candidats, niveau=partie.niveau)
 
     def verifier(_dt: float) -> None:
         if not fenetre.termine:
