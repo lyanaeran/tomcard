@@ -1,5 +1,21 @@
 """
-Chargement des fichiers de configuration (config/*.json, cf. poc.md).
+Chargement des fichiers de configuration (config/*.json).
+
+Format de chaque fichier (contenu declaratif du jeu, cf. specs.md paragraphe 10.2) :
+
+- modules.json : un module par entree - id (MOD_N), nom, image (chemin sous assets/modules/),
+  points_de_vie, description (type de carte debloque, sans reveler les cartes - utilisee par
+  l'ecran de choix de module du parcours, specs.md 2.3), cartes (liste d'ids CRT_N jouables).
+- ennemis.json : un ennemi par entree - id (ENM_N), nom, image (assets/ennemis/), points_de_vie,
+  action : chaine "TYPE,valeur,cible" (ex. "ATK,8,AUTO") - seul TYPE=ATK (attaque) est interprete
+  ici pour l'instant, les autres types ignores ; cible vaut toujours AUTO (ciblage automatique,
+  cf. ciblage.py), prevu pour accueillir d'autres modes plus tard si besoin.
+- cartes.json : une carte par entree - id (CRT_N), nom, image (assets/cartes/), cout (electricite),
+  rarete (Base/Commune/Rare/Legendaire, cf. RareteCarte), munition (nombre de munitions, absent/
+  null = illimitees, cf. carte.py), effet (absent = carte non jouable, ignoree par charger_cartes) :
+  objet {type, cible, valeur, action?, duree?} - type/cible/action reprennent les valeurs de
+  TypeCarte/CibleCarte/ActionCarte (cf. carte.py pour le detail de chaque valeur), duree est le
+  nombre de tours d'un effet Debuff/Buff (absente/null pour un Buff persistant).
 """
 
 import json
@@ -28,7 +44,7 @@ class SpecModule:
 class SpecEnnemi:
     """Description d'un ennemi, telle que lue dans config/ennemis.json.
 
-    Seule l'action ATK (attaque) est supportee pour l'instant, cf. poc.md.
+    Seule l'action ATK (attaque) est supportee pour l'instant (cf. module docstring ci-dessus).
     """
 
     id: str

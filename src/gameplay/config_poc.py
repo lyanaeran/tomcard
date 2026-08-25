@@ -1,5 +1,5 @@
 """
-Generation aleatoire du combat du POC a partir des fichiers de config/ (cf. poc.md).
+Generation aleatoire du combat du POC a partir des fichiers de config/.
 
 A chaque combat : le module principal est fixe (deck de base fige, cf. `deck_module_principal`),
 4 modules differents sont tires au sort parmi les autres et places sur les 4 emplacements, les 6
@@ -172,7 +172,7 @@ def creer_flotte(specs_ennemis: list[SpecEnnemi], aleatoire: random.Random) -> F
 
 
 def creer_combat_poc(generateur_aleatoire: random.Random | None = None) -> Combat:
-    """Genere un combat aleatoire (modules, ennemis, deck) a partir de config/ (poc.md)."""
+    """Genere un combat aleatoire (modules, ennemis, deck) a partir de config/."""
     aleatoire = generateur_aleatoire or random.Random()
     cartes = charger_cartes()
     specs_modules = charger_modules()

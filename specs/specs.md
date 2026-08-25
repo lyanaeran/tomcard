@@ -466,7 +466,7 @@ Troisième axe, indépendant du type — n'importe quel type (pas seulement Atta
 | **Alliés multiples / vaisseau entier** | Plusieurs modules ciblés, ou tout le vaisseau |
 | **Ennemi unique** | Une cible ennemie, avec contraintes de rang possibles (rang avant uniquement, n'importe quel rang...) |
 | **Ennemis multiples** | Motif fixe (ligne, colonne, rang entier) ou aléatoire, jusqu'à tous les ennemis |
-| **Ligne ennemie** | Cas particulier d'"ennemis multiples" pour les cartes perçantes (§3.1) : touche l'avant et l'arrière de la rangée de la cible cliquée (2 ennemis au plus), cf. poc.md §4 |
+| **Ligne ennemie** | Cas particulier d'"ennemis multiples" pour les cartes perçantes (§3.1) : touche l'avant et l'arrière de la rangée de la cible cliquée (2 ennemis au plus) |
 
 ### 7.3 Rareté
 
@@ -542,7 +542,7 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
 - **Modules du joueur et ennemis** : images **carrées**
 - **Module de base** : exception, forme différente (plus grande, fond dédié qui englobe les 5 emplacements)
 - **Cartes** : format **rectangulaire**
-- **PV / Bouclier** : affichés par de petites pastilles rondes (rouge pour les PV, bleue pour le Bouclier) flottant juste au-dessus de chaque case, jamais superposées à l'image (validé en POC, voir poc.md §8)
+- **PV / Bouclier** : affichés par de petites pastilles rondes (rouge pour les PV, bleue pour le Bouclier) flottant juste au-dessus de chaque case, jamais superposées à l'image (validé en POC)
 - **Munitions restantes** (§3.6) : affichées sur la carte comme le coût en électricité, dans une pastille ronde **verte** — uniquement pour les cartes à munitions limitées (rien affiché pour les munitions illimitées, comportement par défaut)
 
 ### 8.3 Interaction de jeu d'une carte
@@ -555,10 +555,10 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
    sur tout un camp) : la cible précise du clic ne compte pas pour l'effet, mais **un clic de
    confirmation reste nécessaire** sur n'importe quelle case vivante du bon camp (allié ou ennemi) —
    pas de résolution automatique au seul clic sur la carte, pour éviter qu'un clic accidentel ne la
-   joue (validé dans le POC, voir poc.md §4). **Ce flux de clic/tap doit rester identique entre la
+   joue (validé dans le POC). **Ce flux de clic/tap doit rester identique entre la
    version PC et la version web/iOS** (cf. CLAUDE.md, "Deux façons de jouer")
 4. **Fin de tour** : un bouton cliquable "Fin de tour" permet au joueur de terminer son tour à tout moment, même s'il lui reste de l'électricité ou des cartes jouables
-5. **Retour visuel des effets** : chaque effet résolu (carte jouée ou attaque ennemie) affiche un popup `+N`/`-N` pendant quelques secondes sur la ou les cases touchées, avec le montant **réellement appliqué** (plafonné par les PV+Bouclier restants pour les dégâts, par le PV max pour le soin) plutôt que la valeur nominale de la carte — validé en POC, voir poc.md §8
+5. **Retour visuel des effets** : chaque effet résolu (carte jouée ou attaque ennemie) affiche un popup `+N`/`-N` pendant quelques secondes sur la ou les cases touchées, avec le montant **réellement appliqué** (plafonné par les PV+Bouclier restants pour les dégâts, par le PV max pour le soin) plutôt que la valeur nominale de la carte — validé en POC
 
 ---
 
@@ -638,7 +638,7 @@ pyproject.toml
 ```
 
 - `assets/` : uniquement des images pour le moment ; le son sera ajouté plus tard si besoin
-- `config/` : contenu du jeu décrit en JSON (modules, ennemis, cartes), référençant les images d'`assets/` — détail du format en poc.md
+- `config/` : contenu du jeu décrit en JSON (modules, ennemis, cartes), référençant les images d'`assets/` — détail du format dans la docstring de `src/gameplay/donnees.py`
 - Séparation stricte entre `src/ui` (affichage PC) et `src/gameplay` (logique de jeu, partagée avec la version web)
 - `src/gameplay` reste la seule source de vérité des règles de jeu : la version web ne fait que l'exécuter et l'afficher, elle ne réimplémente aucune règle
 
@@ -841,7 +841,7 @@ En important le tableau de conception de cartes de l'utilisateur dans `config/ca
 PR "config : import des cartes Module principal, Lanceur de missiles, Blindage"), seules 6 des 38
 cartes du tableau correspondaient à ce que le moteur (`src/gameplay/carte.py`, `combat.py`) savait
 exécuter à l'époque. Ce nombre a augmenté au fil des mécaniques ajoutées ci-dessous (22/38 jouables
-au moment de la rédaction la plus récente de cette section, cf. poc.md §4) ; les cartes restantes
+au moment de la rédaction la plus récente de cette section) ; les cartes restantes
 sont stockées pour référence (champ `_non_jouable`) mais inertes en jeu tant que leur mécanique
 n'est pas implémentée. Cette section recense les mécaniques qui leur manquent, groupées par nature
 plutôt que par carte, pour servir de feuille de route à une future extension du moteur.
@@ -940,9 +940,9 @@ Déjà nommés en §7.1. État d'implémentation dans `combat.py` :
   (0 dégât, y compris si elle dépasserait PV+bouclier cumulés), puis se consomme — dès la première
   attaque reçue après la pose, même si plusieurs ennemis attaquent ce module dans le même tour —
   seule la **première** attaque résolue sur ce module est annulée, dans l'ordre de résolution du
-  tour ennemi (`Combat._tour_ennemi`, poc.md §3 : colonne Avant de haut en bas puis colonne
+  tour ennemi (`Combat._tour_ennemi` : colonne Avant de haut en bas puis colonne
   Arrière de haut en bas), les suivantes s'appliquent normalement. L'intention affichée au
-  survol/tap d'un ennemi (poc.md §8) montre toujours sa **vraie** attaque, jamais 0 à cause d'un
+  survol/tap d'un ennemi montre toujours sa **vraie** attaque, jamais 0 à cause d'un
   leurre potentiellement actif sur sa cible : elle reflète ce que cet ennemi ferait pris
   isolément, pas le résultat final après résolution de tout le tour (qui dépend de l'ordre).
   Pastille dédiée (cyan) distincte des pastilles de buff, affichée tant que le leurre n'a pas

@@ -1,7 +1,7 @@
 # Space Fight
 
-Deckbuilder roguelike (thème vaisseaux spatiaux) inspiré de Slay the Spire. Actuellement un
-**POC de combat** jouable (pas de boucle de run complète) — voir `specs/poc.md` pour le détail du POC et
+Deckbuilder roguelike (thème vaisseaux spatiaux) inspiré de Slay the Spire. Le **POC de combat** est
+jouable ; le développement porte maintenant sur le **parcours** (boucle de run) — voir
 `specs/specs.md` pour la vision de conception globale du jeu complet.
 
 Le jeu se lance de **deux façons**, qui partagent exactement la même logique de jeu
@@ -15,7 +15,7 @@ python main.py
 ```
 
 Fenêtre native, affichage géré par [pyglet](https://pyglet.readthedocs.io/) (`src/ui/fenetre.py`).
-C'est la version de référence : la plus fidèle à `specs/poc.md`/`specs/specs.md`.
+C'est la version de référence : la plus fidèle à `specs/specs.md`.
 
 ## 2. Version web (navigateur / iPhone)
 
@@ -33,7 +33,7 @@ navigateur. `web/bridge.py` fait le lien entre ce moteur Python et l'affichage H
   tout fichier/dossier commençant par `_` (`src/__init__.py`, `src/gameplay/__init__.py`), causant
   des 404.
 
-Cette version a quelques simplifications visuelles assumées par rapport à `specs/poc.md` (détaillées dans
+Cette version a quelques simplifications visuelles assumées par rapport à `specs/specs.md` (détaillées dans
 les commentaires de `web/app.js`/`web/style.css`) : pas d'infobulle au survol (remplacée par un tap
 sur une case sans carte sélectionnée), taille des cases pilotée par la hauteur d'écran plutôt que
 mesurée pixel près, etc.

@@ -4,7 +4,7 @@
 // dessiner l'etat renvoye par web/bridge.py en HTML/CSS. Popups +/-N, pastilles
 // PV/Bouclier flottantes (memes couleurs que RAYON_PASTILLE/COULEUR_PASTILLE_*
 // dans src/ui/fenetre.py), infobulle au tap (equivalent tactile du survol
-// souris, poc.md paragraphe 8), modules positionnes sur l'image du vaisseau
+// souris), modules positionnes sur l'image du vaisseau
 // (memes reperes que _EMPLACEMENTS_MODULES_IMAGE) et layout paysage (specs.md
 // 8.1) repris. Simplification assumee : taille des cases pilotee par la
 // hauteur d'ecran plutot que mesuree pixel pres comme sur pc.
@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "35";
+const VERSION_CACHE = "36";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -285,7 +285,7 @@ function afficherInfobulle(idCase, typeCase) {
 }
 
 // Tap sur une case : si aucune carte n'est selectionnee, affiche son infobulle
-// (equivalent tactile du survol souris de poc.md) ; sinon, cible la carte
+// (equivalent tactile du survol souris) ; sinon, cible la carte
 // selectionnee normalement.
 function attacherPressionCase(element, idCase, typeCase) {
     element.addEventListener("click", (evenement) => {
@@ -333,7 +333,7 @@ function rendrePastilles(objet, typeCase) {
 
 // Pastilles du module de base : centrees en haut de l'image du vaisseau
 // (equivalent du repere pare-brise de src/ui/fenetre.py), pas dans un coin
-// comme les autres cases (poc.md paragraphe 8).
+// comme les autres cases.
 function rendrePastillesBase(base) {
     if (base.detruit) return "";
     const buffs = rendrePastillesBuffs(base);
@@ -457,7 +457,7 @@ const LIBELLES_ACTION_DEBUFF = {
     REDIRECTION_CIBLE: (carte, cible) => `Detourne l'attaque de ${cible} vers un autre ennemi tire au hasard, pendant ${carte.duree} tour(s).`,
 };
 
-// Libelle d'un debuff actif sur un ennemi (poc.md/specs.md 12.1/12.4), affiche dans son
+// Libelle d'un debuff actif sur un ennemi (specs.md 12.1/12.4), affiche dans son
 // infobulle. Chaque debuff est independant : la valeur affichee est celle de cette
 // instance uniquement, plusieurs debuffs du meme type peuvent apparaitre en meme temps.
 const LIBELLES_ACTION_DEBUFF_ACTIF = {

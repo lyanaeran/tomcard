@@ -1,5 +1,5 @@
 """
-Ciblage automatique des ennemis (poc.md paragraphe 3).
+Ciblage automatique des ennemis.
 
 La rangee (ligne) est le critere principal, avant/arriere le critere secondaire :
 un ennemi regarde d'abord sa propre rangee (avant puis arriere de cette rangee),

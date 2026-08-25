@@ -13,11 +13,10 @@ variables, identifiants — reste en français, déjà la convention du projet).
 
 ## Documents de référence (à tenir à jour)
 
-- `specs/specs.md` — vision de conception globale du jeu complet (boucle de run, modules, cartes, etc.)
-- `specs/poc.md` — spec du POC de combat, dérivée de `specs/specs.md`. **Gelée depuis que le
-  développement a basculé sur le parcours (run) : ne plus la mettre à jour** (décision utilisateur),
-  y compris pour des changements côté combat — reste comme référence historique du POC tel qu'il
-  était. `specs/specs.md` est désormais le seul document vivant
+- `specs/specs.md` — vision de conception globale du jeu complet (boucle de run, modules, cartes,
+  etc.), document vivant et seule source de vérité pour le design (le POC de combat y est
+  documenté au même titre que le reste, plus de spec séparée depuis que le développement a basculé
+  sur le parcours)
 - `specs/cartes.xlsx` — registre éditable des cartes (une ligne par carte du tableau de conception,
   colonnes Rareté/Module/Catégorie/Cible/Coût/X/Y/Munition/Nom/Description/Jouable/Notes), miroir
   humainement modifiable de `config/cartes.json`. Pas rechargé par le code (`config/cartes.json`
@@ -27,9 +26,7 @@ variables, identifiants — reste en français, déjà la convention du projet).
 **`specs.md` doit rester synchronisé avec le code.** Quand une décision de design est prise ou
 clarifiée en cours d'implémentation (ex. règle de ciblage, format d'une carte, retour visuel d'un
 effet, mécanique du parcours), reporte-la dans `specs/specs.md`. Inversement, avant d'implémenter une
-fonctionnalité un peu ambiguë, relis la section concernée de ce fichier (et, pour un point qui touche
-encore le combat existant, jette aussi un œil à `specs/poc.md`, qui documente son état au moment du
-gel, sans qu'il soit nécessaire de le mettre à jour en retour).
+fonctionnalité un peu ambiguë, relis la section concernée de ce fichier.
 
 ## Deux façons de jouer (PC et web/iOS) — les deux doivent rester fonctionnelles
 
@@ -38,13 +35,13 @@ chacune leur propre couche d'affichage. Voir `README.md` pour les instructions d
 détaillées.
 
 - **PC (pyglet)** : `python main.py`, affichage natif via `src/ui/fenetre.py`. Version de référence,
-  la plus fidèle à `specs/poc.md`/`specs/specs.md`.
+  la plus fidèle à `specs/specs.md`.
 - **Web (navigateur / iPhone)** : `index.html` + `web/` (`app.js`, `style.css`, `bridge.py`).
   Exécute `src/gameplay/` tel quel dans le navigateur via [Pyodide](https://pyodide.org/) (Python
   compilé en WebAssembly) ; `web/bridge.py` sérialise l'état du combat en JSON pour l'affichage
   HTML/CSS/JS. UI volontairement simplifiée par rapport à pyglet (pas d'infobulle au survol, taille
   des cases pilotée par la hauteur d'écran...) — ces écarts sont documentés dans les commentaires de
-  `web/app.js`/`web/style.css`, pas dans `specs/poc.md`/`specs/specs.md` qui décrivent la version de référence.
+  `web/app.js`/`web/style.css`, pas dans `specs/specs.md` qui décrit la version de référence.
 
 **Ces deux façons de jouer doivent rester fonctionnelles en permanence.** En particulier :
 
@@ -59,7 +56,7 @@ détaillées.
 - **Le flux d'interaction (nombre de clics/taps pour jouer une carte) doit rester identique entre PC
   et web**, même pour les cartes "sans clic de ciblage" (Alliés/Ennemis multiples, Module principal) :
   sélectionner la carte puis confirmer par un clic/tap sur une case vivante du bon camp — jamais de
-  résolution automatique au seul clic sur la carte, cf. specs.md §8.3/poc.md §4. Toute divergence de
+  résolution automatique au seul clic sur la carte, cf. specs.md §8.3. Toute divergence de
   ce flux entre `src/ui/fenetre.py` (`_essayer_de_cibler`) et `web/app.js` (`cliquerCase`) est un bug.
 - **Tout changement doit être testé sur PC et sur web/iOS avant d'être considéré terminé** — pas
   seulement vérifié par lecture de code des deux côtés. Un changement qui touche `src/gameplay/` ou
@@ -100,7 +97,7 @@ Séparation stricte, cf. `specs/specs.md` §10 :
 
 - Une responsabilité claire par classe
 - Commentaires en français, **ASCII uniquement (sans accents ni cédilles)** — cette règle ne
-  s'applique qu'au code, pas à `specs/specs.md`/`specs/poc.md`/`CLAUDE.md` qui utilisent l'orthographe normale
+  s'applique qu'au code, pas à `specs/specs.md`/`CLAUDE.md` qui utilisent l'orthographe normale
 - Docstrings courtes, une ligne si possible
 - `src/gameplay` ne doit jamais importer `pyglet` ; si une fonction a besoin d'affichage, elle
   appartient à `src/ui`
@@ -169,8 +166,7 @@ directement — pour que les tests et les captures d'écran restent reproductibl
 produit un grand nombre de branches mortes/orphelines dans ce projet, cf. plus bas) : tout le
 développement se fait sur `devjeux`, avec une PR `devjeux` → `main` par changement logique, plan de
 test dans la description. Toute valeur numérique inventée faute de spec précise (PV, dégâts,
-coûts...) doit être signalée comme telle dans la PR et dans `specs/specs.md` (`specs/poc.md` est
-gelé, cf. plus haut).
+coûts...) doit être signalée comme telle dans la PR et dans `specs/specs.md`.
 
 **Avant de pousser un commit supplémentaire sur `devjeux`, vérifier l'état de sa PR** (mergée/fermée
 ou encore ouverte). Pousser sur une branche dont la PR est déjà mergée ou fermée laisse le commit
