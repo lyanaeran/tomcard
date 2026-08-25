@@ -47,6 +47,7 @@ from src.gameplay.partie import (
     partie_en_cours,
     sauvegarder_partie,
     specs_utilisees_partie,
+    synchroniser_vaisseau_depuis_combat,
 )
 from src.ui.ecran_accueil_joueur import EcranAccueilJoueur
 from src.ui.ecran_choix_module import EcranChoixModule
@@ -215,6 +216,9 @@ def _ouvrir_combat(profil: Profil, partie: Partie) -> None:
             return
         pyglet.clock.unschedule(verifier)
         fenetre.close()
+        # Reporte les degats subis pendant le combat sur la partie sauvegardee (specs.md 2.2/3.4 :
+        # persistance des PV entre deux combats), avant tout enchainement/sauvegarde ulterieur.
+        synchroniser_vaisseau_depuis_combat(partie, combat.joueur.vaisseau)
         _ouvrir_fin_combat(profil, partie, combat)
 
     pyglet.clock.schedule_interval(verifier, INTERVALLE_VERIFICATION)
