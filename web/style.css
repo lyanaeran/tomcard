@@ -163,7 +163,7 @@ body {
 /* Grille joueur : le module de base (assets/modules/principal.png) est affiche
    en grand, les 4 modules equipes sont positionnes par-dessus dans les
    emplacements mesures sur cette image (EMPLACEMENTS_MODULES dans app.js,
-   memes reperes que src/ui/fenetre.py), comme dans la version pc (poc.md 8).
+   memes reperes que src/ui/fenetre.py), comme dans la version pc.
    Largeur derivee de --taille-case pour qu'un emplacement de module (18.51%
    de cette largeur) fasse la meme taille qu'une case ennemie. */
 .grille.grille-joueur {
@@ -415,7 +415,7 @@ body {
     border-radius: 8px;
 }
 
-/* Popups +/-N sur une cible touchee, affiches 2 secondes (poc.md paragraphe 8) */
+/* Popups +/-N sur une cible touchee, affiches 2 secondes */
 .popup {
     position: absolute;
     left: 50%;

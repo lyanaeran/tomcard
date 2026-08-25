@@ -159,7 +159,7 @@ def test_deux_combats_successifs_ont_des_ennemis_independants():
     assert combat_2.flotte.ennemis_vivants()[0].pv > 0
 
 
-# --- Mode test (poc.md "Mode test") ---
+# --- Mode test ---
 
 
 def test_creer_deck_mode_test_contient_un_exemplaire_de_chaque_carte_jouable():
@@ -174,7 +174,7 @@ def test_creer_deck_mode_test_contient_un_exemplaire_de_chaque_carte_jouable():
 
 
 def test_mode_test_actif_donne_200_pv_aux_modules_et_aux_ennemis():
-    """MODE_TEST est la variable de bascule pour les tests manuels (cf. poc.md "Mode test") :
+    """MODE_TEST est la variable de bascule pour les tests manuels (cf. sa docstring) :
     ce test verifie son effet quand elle est active, comme actuellement configure."""
     assert MODE_TEST is True
     specs_modules = charger_modules()

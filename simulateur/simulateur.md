@@ -2,7 +2,7 @@
 
 > **État actuel : proposition de conception, rien n'est encore implémenté.** Ce document sert de
 > base de discussion avant tout code. À mettre à jour au fur et à mesure des décisions prises, comme
-> `specs/poc.md` pour le POC de combat.
+> `specs/specs.md` pour le reste du jeu.
 
 ## 1. Objectif
 

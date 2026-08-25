@@ -1,6 +1,6 @@
 """
-Fenetre pyglet du combat du POC (grille 2x3, plusieurs modules et ennemis,
-cf. poc.md et specs.md paragraphe 8). Utilise les images de assets/.
+Fenetre pyglet du combat (grille 2x3, plusieurs modules et ennemis,
+cf. specs.md paragraphe 8). Utilise les images de assets/.
 """
 
 import pyglet
@@ -95,7 +95,7 @@ COULEUR_BOUTON = (90, 90, 95)
 COULEUR_SURVOL = (255, 255, 255)
 OPACITE_DETRUIT = 70
 
-# Image de fond (specs.md/poc.md paragraphe 8), etiree pour remplir toute la
+# Image de fond (specs.md paragraphe 8), etiree pour remplir toute la
 # fenetre (deformation acceptee, decision utilisateur) - meme fichier que la
 # version web (assets/fond.PNG).
 FOND_IMAGE = str(RACINE / "assets" / "fond.PNG")
@@ -416,7 +416,7 @@ class FenetreCombat(pyglet.window.Window):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight - POC")
         self.combat = combat if combat is not None else creer_combat_poc()
         # Niveau du parcours (specs.md 2.3), affiche dans l'entete - None en mode demo (POC,
-        # cf. main.py de reference dans specs/poc.md, gele) ou aucune partie ne l'accompagne.
+        # cf. config_poc.py) ou aucune partie ne l'accompagne.
         self.niveau = niveau
         self.index_carte_selectionnee: int | None = None
         self.entite_survolee: Module | Ennemi | None = None
@@ -696,7 +696,7 @@ class FenetreCombat(pyglet.window.Window):
     def _dessiner_survol(self, lot: pyglet.graphics.Batch) -> list:
         """Affiche une infobulle (nom, PV/PV max, Bouclier) sur le module/ennemi survole.
 
-        Pour un ennemi, ajoute aussi son intention (cible visee et degats), cf. poc.md paragraphe 3.
+        Pour un ennemi, ajoute aussi son intention (cible visee et degats, cf. ciblage.py).
         Pour un module, ajoute le detail de ses buffs actifs (specs.md 12.3/12.5).
         """
         if self.combat.etat != EtatCombat.EN_COURS:

@@ -5,8 +5,8 @@ ce fichier ne fait que traduire son etat en JSON et router les actions du joueur
 
 POC experimental (branche web-ui-poc) : layout simplifie, pas de survol tactile (une
 infobulle s'affiche au tap a la place). Les popups +/-N et l'intention des ennemis
-(poc.md paragraphe 8) sont repris a partir de ce que combat.py calcule deja, sans
-dupliquer la logique de ciblage/degats.
+sont repris a partir de ce que combat.py calcule deja, sans dupliquer la logique de
+ciblage/degats.
 """
 
 import json
@@ -101,7 +101,7 @@ def _module_json(module, id_case: str):
 
 
 def _intention_json(ennemi):
-    """Intention de cet ennemi (poc.md paragraphe 8) : module vise et degats que cet
+    """Intention de cet ennemi : module vise et degats que cet
     ennemi infligerait, calcules avec la meme fonction que fenetre.py (previsualiser_cible
     + degats_attaque_effectifs, aucune logique dupliquee).
 
@@ -219,7 +219,7 @@ def _id_ennemi(ennemi) -> str | None:
 
 
 def _popup(cible, type_carte: str, valeur: int, action: str | None) -> dict | None:
-    """Construit le popup +/-N pour une cible touchee (poc.md paragraphe 8)."""
+    """Construit le popup +/-N pour une cible touchee."""
     if isinstance(cible, Module):
         id_case, camp = _id_module(cible), "allie"
     else:

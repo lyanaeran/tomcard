@@ -303,7 +303,7 @@ def test_plusieurs_ennemis_attaquent_dans_le_meme_tour():
 
 
 def test_ordre_de_resolution_avant_haut_bas_puis_arriere_haut_bas():
-    """L'ordre de resolution des attaques (poc.md paragraphe 3) determine notamment quelle
+    """L'ordre de resolution des attaques (cf. Combat._tour_ennemi) determine notamment quelle
     attaque un Leurre annule quand plusieurs ennemis visent le meme module (specs.md 12.6)."""
     positions_ordonnees = [
         Position(Colonne.AVANT, Rangee.GAUCHE),

@@ -1,5 +1,5 @@
 """
-Moteur du combat entre le vaisseau du joueur et une flotte d'ennemis (cf. poc.md).
+Moteur du combat entre le vaisseau du joueur et une flotte d'ennemis (cf. specs.md paragraphe 8).
 """
 
 import random
@@ -231,8 +231,8 @@ class Combat:
         return carte.valeur
 
     def _tour_ennemi(self) -> list[tuple[Position, Ennemi, Module | Ennemi, int]]:
-        """Chaque ennemi vivant attaque sa cible, dans l'ordre de la grille (poc.md paragraphe
-        3) : la colonne Avant de haut en bas (Gauche, Mid, Droite), puis la colonne Arriere de
+        """Chaque ennemi vivant attaque sa cible, dans l'ordre de la grille : la colonne Avant
+        de haut en bas (Gauche, Mid, Droite), puis la colonne Arriere de
         haut en bas - ordre garanti par Flotte.positions() (dict construit dans cet ordre par
         creer_flotte(), cf. config_poc.POSITIONS_ENNEMIES). Cet ordre determine notamment quelle
         attaque est annulee quand un Leurre (specs.md 12.6) protege un module vise par plusieurs
