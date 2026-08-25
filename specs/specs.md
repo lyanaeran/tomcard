@@ -68,6 +68,15 @@ actions une fois cette ressource implémentée.
   dans `src/gameplay/partie.py` : PV actuels, PV max, niveau de mise à jour, par module équipé),
   réutilisés directement par les 4 actions ci-dessus (`reparer_module`/`ameliorer_module`/
   `mettre_a_jour_module`/`deplacer_module`, fonctions pures partagées PC+web)
+- **Report des PV de combat sur la partie sauvegardée** : `combat_depuis_partie()` construit le
+  `Combat` à partir des PV persistés, mais l'opération inverse est nécessaire pour que les dégâts
+  subis *pendant* ce combat soient effectivement conservés — sans elle, la persistance ci-dessus
+  restait inerte en jeu réel (bug constaté par l'utilisateur, corrigé). `synchroniser_vaisseau_depuis_combat(partie, vaisseau)`
+  (`src/gameplay/partie.py`) reporte les PV du `Vaisseau` de combat sur `partie.vaisseau[...]` (pas
+  `pv_max`, ni le bouclier, mécanique de combat éphémère absente d'`EtatModule`) — appelée dès la fin
+  d'un combat gagné, avant tout enchaînement/sauvegarde ultérieur : `main.py:_ouvrir_combat` (PC),
+  `web/bridge.py:resoudre_victoire_partie_web` (web, à partir de la variable globale `combat` encore
+  celle du combat qui vient de se terminer à ce stade)
 
 #### Écran Station service (interface) — **implémenté**, relié à l'orchestration du parcours (§2.4)
 
