@@ -32,7 +32,13 @@ Un deckbuilder roguelike inspiré de Slay the Spire, où le joueur incarne un va
 
 ### 2.1 Argent et récompenses de combat
 
-- Après chaque combat gagné, le joueur gagne de l'**Argent** — nouvelle ressource de run, distincte de l'Électricité (ressource de combat, voir §3). Montant exact à définir (§9.1)
+- Après chaque combat gagné, le joueur gagne de l'**Argent** — nouvelle ressource de run, distincte
+  de l'Électricité (ressource de combat, voir §3). **Implémenté** : 5 € galactiques par ennemi de la
+  flotte affrontée (`ARGENT_PAR_ENNEMI_TUE`, `src/gameplay/partie.py:gagner_argent_combat`), appelée
+  juste après `synchroniser_vaisseau_depuis_combat` (§2.2) — `main.py:_ouvrir_combat` (PC),
+  `web/bridge.py:resoudre_victoire_partie_web` (web). Compte un ennemi par case de la flotte
+  (`Flotte.positions()`), pas de fusion des ennemis L sur 2 cases pour l'instant (§3.2/§9.1). Une
+  partie démarre avec `ARGENT_DEPART` = 7 € (`nouvelle_partie`)
 - Il gagne aussi une carte : voir §6 pour le mécanisme de choix (candidate par module équipé). **Récompense garantie** à chaque victoire (pas probabiliste) — écran de fin de combat implémenté, voir §6
 - En cas de défaite, écran dédié avec message de défaite (pas de choix de carte) — implémenté, voir §6
 - Le joueur choisit ensuite l'étape suivante parmi celles qui apparaissent (Prime, Station service, Planète commerciale ou Aventure) — l'offre n'est pas forcément la même à chaque fois (voir §9.1)
@@ -52,9 +58,17 @@ Quatre actions indépendantes, appliquées à un module choisi par le joueur (vo
   sélectionne le module à déplacer, clique "Déplacer", puis clique l'emplacement de destination :
   vide, le module y est simplement déplacé ; occupé, les deux modules échangent leur position
 
-**Toutes les actions sont gratuites pour l'instant** (décision utilisateur, provisoire) : la ressource
-Argent n'existe pas encore côté gameplay (§2.1/§9.1) — un coût en Argent sera réintroduit sur ces 4
-actions une fois cette ressource implémentée.
+**Chaque action coûte `COUT_ACTION_STATION_SERVICE` = 20 €** (`src/gameplay/partie.py`), déduits de
+`partie.argent` au moment où l'action s'applique (Déplacer : au clic de destination, pas à
+l'armement). Si l'Argent est insuffisant, l'action est refusée sans rien modifier — les 4 fonctions
+(`reparer_module`/`ameliorer_module`/`mettre_a_jour_module`/`deplacer_module`) renvoient un booléen
+de succès plutôt que la `Partie` (rétro-incompatibilité assumée, aucun appelant n'utilisait la valeur
+de retour). Écran Station service (PC et web) : prix affiché sous chaque action, icône grisée et
+popup rouge "Argent insuffisant !" au clic si `partie.argent < COUT_ACTION_STATION_SERVICE` (armement
+de Déplacer bloqué dans ce cas, pas seulement son exécution) ; Argent total affiché dans le titre de
+l'écran ("... - Niveau N - X €"). Côté web, `COUT_ACTION_STATION_SERVICE` est exposé par
+`web/bridge.py:cout_action_station_service_web()` plutôt que dupliqué en dur dans `web/app.js`
+(CLAUDE.md).
 
 - Réparer/Améliorer/Mettre à jour s'appliquent au **module principal** comme aux modules équipés.
   Déplacer ne s'applique pas au principal (toujours en position Mid, pas d'emplacement équivalent à
@@ -567,8 +581,9 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
 ### 9.1 Design / gameplay
 
 - Contenu exact de la Planète commerciale (uniquement des cartes, ou aussi d'autres bonus ?) et de l'Aventure (entièrement à définir, voir §2)
-- Montants exacts d'Argent : récompense de combat (§2.1) ; coût des 4 actions de Station service —
-  **temporairement gratuites** le temps que la ressource Argent soit implémentée (§2.2)
+- Montants d'Argent (récompense de combat, coût des actions de Station service, Argent de départ) :
+  **tranchés et implémentés**, voir §2.1/§2.2 — valeurs inventées faute de spec précise à l'origine
+  de cette décision, à ajuster en playtest si besoin
 - La Planète commerciale propose-t-elle des cartes pour tous les modules du pool, ou seulement pour les modules actuellement équipés ? (§2, §6)
 - **Persistance des modules hors combat/profils joueur** (§2.2/§10.3) : **implémentée** (profil +
   partie, un seul joueur à la fois, écrans de sélection de profil/accueil du joueur, `main.py` en
@@ -795,9 +810,8 @@ fond dédié.
   §2.3/§3.2 (nombre d'ennemis, tailles S/M/L) — reste un tirage de démonstration
 - Écart PC/web sur la conservation des parties `TERMINEE` (voir "Partie" plus haut) : à corriger si
   un écran d'historique est construit côté web
-- `argent` ne progresse jamais dans le flux actuel (aucune étape ne le fait varier : la Station
-  service est reliée mais ses 4 actions restent gratuites tant que la ressource Argent n'existe pas
-  côté gameplay, §2.2/§9.1 ; Planète commerciale n'est pas construite)
+- `argent` progresse désormais via les combats gagnés et la Station service (§2.1/§2.2) ; la Planète
+  commerciale n'a toujours aucun effet dessus, son contenu n'étant pas construit (§9.1)
 
 ### 10.4 Conventions de code
 

@@ -1,12 +1,11 @@
 """
 Ecran Station service ("garage") du parcours (specs.md 2.2) : repare/ameliore/met a jour/deplace
 les modules equipes d'une partie sauvegardee. Fenetre pyglet independante comme les autres ecrans
-du parcours, mute directement `partie.vaisseau` (src/gameplay/partie.py) - c'est a l'appelant de
-sauvegarder la partie une fois l'ecran ferme ("J'ai termine", specs.md 2.4 etape 8).
+du parcours, mute directement `partie.vaisseau`/`partie.argent` (src/gameplay/partie.py) - c'est a
+l'appelant de sauvegarder la partie une fois l'ecran ferme ("J'ai termine", specs.md 2.4 etape 8).
 
-Toutes les actions sont gratuites pour l'instant (pas de ressource Argent implementee, specs.md
-2.2/9.1). Fond de combat reutilise en placeholder (decision utilisateur), a remplacer par un fond
-dedie.
+Chaque action coute COUT_ACTION_STATION_SERVICE d'Argent (specs.md 2.1/2.2). Fond de combat
+reutilise en placeholder (decision utilisateur), a remplacer par un fond dedie.
 """
 
 import pyglet
@@ -14,6 +13,7 @@ from pyglet import shapes
 
 from src.gameplay.donnees import RACINE, charger_modules, image_case_module
 from src.gameplay.partie import (
+    COUT_ACTION_STATION_SERVICE,
     PV_AMELIORATION,
     EtatModule,
     Partie,
@@ -25,6 +25,7 @@ from src.gameplay.partie import (
 from src.ui.animation import AnimationPopup
 from src.ui.fenetre import (
     COULEUR_OMBRE_POPUP,
+    COULEUR_POPUP_DEGATS,
     COULEUR_POPUP_SOIN,
     DECALAGE_OMBRE_POPUP,
     FOND_IMAGE,
@@ -136,7 +137,7 @@ class EcranStationService(pyglet.window.Window):
         elements = [_sprite_etire(FOND_IMAGE, 0, 0, LARGEUR_FENETRE, HAUTEUR_FENETRE, lot)]
         elements.append(
             pyglet.text.Label(
-                f"Station service - Niveau {self.partie.niveau}",
+                f"Station service - Niveau {self.partie.niveau} - {self.partie.argent} €",
                 x=LARGEUR_FENETRE / 2,
                 y=HAUTEUR_FENETRE - 40,
                 anchor_x="center",
@@ -319,6 +320,7 @@ class EcranStationService(pyglet.window.Window):
         x, y, largeur, hauteur = self._rect_action(index)
         survole = index == self.index_action_survolee
         armee = identifiant == "deplacer" and self.mode_deplacement
+        abordable = self.partie.argent >= COUT_ACTION_STATION_SERVICE
         if armee:
             couleur_contour = COULEUR_BOUTON_ARME
         elif survole:
@@ -336,7 +338,19 @@ class EcranStationService(pyglet.window.Window):
             hauteur - 2 * MARGE_ICONE_ACTION,
             lot,
         )
-        return [cadre, icone]
+        if not abordable:
+            icone.opacity = 110
+        prix = pyglet.text.Label(
+            f"{COUT_ACTION_STATION_SERVICE} €",
+            x=x + largeur / 2,
+            y=y - 14,
+            anchor_x="center",
+            anchor_y="center",
+            font_size=12,
+            color=(*COULEUR_NIVEAU_MAJ, 255) if abordable else (140, 90, 90, 255),
+            batch=lot,
+        )
+        return [cadre, icone, prix]
 
     def _rect_bouton_termine(self) -> tuple[float, float, float, float]:
         x = (LARGEUR_FENETRE - LARGEUR_BOUTON_TERMINE) / 2
@@ -382,6 +396,8 @@ class EcranStationService(pyglet.window.Window):
                 self.mode_deplacement = False
                 return
             if position in POSITIONS_DEPLACABLES:
+                # succes toujours vrai ici : l'Argent est deja verifie a l'armement de Deplacer
+                # (_cliquer_action), rien ne peut le faire baisser entre-temps.
                 deplacer_module(self.partie, self.position_selectionnee, position)
                 self.mode_deplacement = False
                 self.position_selectionnee = None
@@ -392,11 +408,14 @@ class EcranStationService(pyglet.window.Window):
     def _cliquer_action(self, identifiant: str) -> None:
         if self.position_selectionnee is None:
             return
+        index = next(i for i, (position, _libelle) in enumerate(POSITIONS_AFFICHEES) if position == self.position_selectionnee)
+        if self.partie.argent < COUT_ACTION_STATION_SERVICE:
+            self._ajouter_popup_argent_insuffisant(index)
+            return
         if identifiant == "deplacer":
             if self.position_selectionnee in POSITIONS_DEPLACABLES:
                 self.mode_deplacement = True
             return
-        index = next(i for i, (position, _libelle) in enumerate(POSITIONS_AFFICHEES) if position == self.position_selectionnee)
         etat = self.partie.vaisseau[self.position_selectionnee]
         pv_avant = etat.pv
         APPLICATEURS_ACTION[identifiant](self.partie, self.position_selectionnee)
@@ -420,6 +439,14 @@ class EcranStationService(pyglet.window.Window):
         animation = AnimationPopup()
         animation.demarrer()
         self.popups.append((animation, texte, couleur, x + largeur / 2, y + hauteur / 2))
+
+    def _ajouter_popup_argent_insuffisant(self, index: int) -> None:
+        """Popup d'echec sur la carte du module cible quand l'Argent est insuffisant pour l'action
+        (specs.md 2.1/2.2, COUT_ACTION_STATION_SERVICE)."""
+        x, y, largeur, hauteur = self._rect_module(index)
+        animation = AnimationPopup()
+        animation.demarrer()
+        self.popups.append((animation, "Argent insuffisant !", COULEUR_POPUP_DEGATS, x + largeur / 2, y + hauteur / 2))
 
     def _index_module_a(self, x: int, y: int) -> int | None:
         for index in range(len(POSITIONS_AFFICHEES)):
