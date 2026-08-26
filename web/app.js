@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "36";
+const VERSION_CACHE = "37";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -642,11 +642,18 @@ const POSITIONS_DEPLACABLES_STATION = ["avant_gauche", "avant_droite", "arriere_
 
 let positionSelectionneeStation = null;
 let modeDeplacementStation = false;
+// Prix d'une action de Station service (specs.md 2.1/2.2) : recupere une seule fois depuis
+// bridge.py (COUT_ACTION_STATION_SERVICE, src/gameplay/partie.py) plutot que duplique ici en dur
+// (CLAUDE.md - src/gameplay reste la seule source de verite).
+let coutActionStationService = null;
 
 function ouvrirStationServicePartie(partie) {
     partieActive = partie;
     positionSelectionneeStation = null;
     modeDeplacementStation = false;
+    if (coutActionStationService === null) {
+        coutActionStationService = appelerBridge("cout_action_station_service_web");
+    }
     rendreStationService();
     masquerTousLesEcrans();
     document.getElementById("ecran-station-service").classList.remove("cachee");
@@ -659,7 +666,8 @@ function instructionStationService() {
 }
 
 function rendreStationService() {
-    document.getElementById("titre-station-service").textContent = `Station service - Niveau ${partieActive.niveau}`;
+    document.getElementById("titre-station-service").textContent =
+        `Station service - Niveau ${partieActive.niveau} - ${partieActive.argent} €`;
     const vaisseau = appelerBridge("infos_vaisseau_web", JSON.stringify(partieActive));
     document.getElementById("modules-station-service").innerHTML = Object.entries(vaisseau)
         .map(([position, etat]) => {
@@ -676,9 +684,14 @@ function rendreStationService() {
             </div>`;
         })
         .join("");
+    const abordable = partieActive.argent >= coutActionStationService;
     document.getElementById("actions-station-service").innerHTML = ACTIONS_STATION_SERVICE.map(([action, image]) => {
         const armee = action === "deplacer" && modeDeplacementStation ? " armee" : "";
-        return `<button class="action-station${armee}" data-action="${action}"><img src="${image}" alt="${action}"></button>`;
+        const desactivee = abordable ? "" : " desactivee";
+        return `<button class="action-station${armee}${desactivee}" data-action="${action}">
+            <img src="${image}" alt="${action}">
+            <span class="prix-action-station">${coutActionStationService} €</span>
+        </button>`;
     }).join("");
     document.getElementById("instruction-station-service").textContent = instructionStationService();
 
@@ -696,12 +709,15 @@ function cliquerModuleStation(position, estVide) {
         if (position === positionSelectionneeStation) {
             modeDeplacementStation = false;
         } else if (POSITIONS_DEPLACABLES_STATION.includes(position)) {
-            partieActive = appelerBridge(
+            // succes toujours vrai ici : l'Argent est deja verifie a l'armement de Deplacer
+            // (cliquerActionStation), rien ne peut le faire baisser entre-temps.
+            const resultat = appelerBridge(
                 "deplacer_module_web",
                 JSON.stringify(partieActive),
                 positionSelectionneeStation,
                 position
             );
+            partieActive = resultat.partie;
             sauvegarderPartieLocale(joueurCourant.id, partieActive);
             modeDeplacementStation = false;
             positionSelectionneeStation = null;
@@ -729,6 +745,13 @@ function afficherPopupStation(position, texte, classeCouleur) {
 
 function cliquerActionStation(action) {
     if (positionSelectionneeStation === null) return;
+    // Argent insuffisant (specs.md 2.1/2.2) : bloque l'action, meme pour l'armement de Deplacer
+    // (son cout n'est preleve qu'a la destination, cliquerModuleStation, mais rien ne doit pouvoir
+    // s'armer sans avoir de quoi payer).
+    if (partieActive.argent < coutActionStationService) {
+        afficherPopupStation(positionSelectionneeStation, "Argent insuffisant !", "popup-degats");
+        return;
+    }
     if (action === "deplacer") {
         if (POSITIONS_DEPLACABLES_STATION.includes(positionSelectionneeStation)) {
             modeDeplacementStation = true;
@@ -738,7 +761,8 @@ function cliquerActionStation(action) {
     }
     const position = positionSelectionneeStation;
     const { pv: pvAvant, pv_max: pvMaxAvant } = partieActive.vaisseau[position];
-    partieActive = appelerBridge(FONCTIONS_ACTION_STATION_SERVICE[action], JSON.stringify(partieActive), position);
+    const resultat = appelerBridge(FONCTIONS_ACTION_STATION_SERVICE[action], JSON.stringify(partieActive), position);
+    partieActive = resultat.partie;
     sauvegarderPartieLocale(joueurCourant.id, partieActive);
     // Deselectionne une fois l'action appliquee (demande utilisateur) : le popup ci-dessous
     // suffit a confirmer l'effet, pas besoin de garder le module arme pour une autre action.

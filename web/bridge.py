@@ -28,6 +28,7 @@ from src.gameplay.parcours import (
     tirer_propositions_niveau,
 )
 from src.gameplay.partie import (
+    COUT_ACTION_STATION_SERVICE,
     ajouter_carte,
     ameliorer_module,
     avancer_niveau,
@@ -35,6 +36,7 @@ from src.gameplay.partie import (
     deck_de_la_partie,
     deplacer_module,
     equiper_module,
+    gagner_argent_combat,
     id_de_carte,
     marquer_terminee,
     mettre_a_jour_module,
@@ -453,6 +455,7 @@ def resoudre_victoire_partie_web(partie_json, id_carte) -> str:
     {"partie": ..., "niveau_boss": bool}."""
     partie = partie_depuis_json(partie_json)
     synchroniser_vaisseau_depuis_combat(partie, combat.joueur.vaisseau)
+    gagner_argent_combat(partie, combat)  # specs.md 2.1 : Argent par ennemi tue
     if id_carte is not None:
         ajouter_carte(partie, id_carte)
     boss = est_niveau_boss(partie.niveau)
@@ -470,32 +473,42 @@ def terminer_victoire_finale_web(partie_json) -> str:
     return partie_vers_json(partie)
 
 
-# --- Station service (specs.md 2.2) : 4 actions gratuites appliquees a un module equipe, meme
-# fonctions pures que main.py:_ouvrir_station_service cote PC (src/gameplay/partie.py). ---
+# --- Station service (specs.md 2.2) : 4 actions couttant chacune COUT_ACTION_STATION_SERVICE
+# d'Argent, appliquees a un module equipe, memes fonctions pures que main.py:EcranStationService
+# cote PC (src/gameplay/partie.py). Chaque fonction renvoie {"partie": ..., "succes": bool} :
+# succes=False (Argent insuffisant, cf. src/gameplay/partie.py) laisse la partie inchangee,
+# web/app.js doit alors afficher un retour "Argent insuffisant" plutot que l'effet normal. ---
+
+
+def cout_action_station_service_web() -> str:
+    """Expose COUT_ACTION_STATION_SERVICE (src/gameplay/partie.py) pour l'affichage du prix par
+    action avant meme de la jouer - seule source de verite (CLAUDE.md), web/app.js ne duplique
+    jamais cette valeur."""
+    return json.dumps(COUT_ACTION_STATION_SERVICE)
 
 
 def reparer_module_web(partie_json, position) -> str:
     partie = partie_depuis_json(partie_json)
-    reparer_module(partie, position)
-    return partie_vers_json(partie)
+    succes = reparer_module(partie, position)
+    return json.dumps({"partie": json.loads(partie_vers_json(partie)), "succes": succes})
 
 
 def ameliorer_module_web(partie_json, position) -> str:
     partie = partie_depuis_json(partie_json)
-    ameliorer_module(partie, position)
-    return partie_vers_json(partie)
+    succes = ameliorer_module(partie, position)
+    return json.dumps({"partie": json.loads(partie_vers_json(partie)), "succes": succes})
 
 
 def mettre_a_jour_module_web(partie_json, position) -> str:
     partie = partie_depuis_json(partie_json)
-    mettre_a_jour_module(partie, position)
-    return partie_vers_json(partie)
+    succes = mettre_a_jour_module(partie, position)
+    return json.dumps({"partie": json.loads(partie_vers_json(partie)), "succes": succes})
 
 
 def deplacer_module_web(partie_json, position_source, position_destination) -> str:
     partie = partie_depuis_json(partie_json)
-    deplacer_module(partie, position_source, position_destination)
-    return partie_vers_json(partie)
+    succes = deplacer_module(partie, position_source, position_destination)
+    return json.dumps({"partie": json.loads(partie_vers_json(partie)), "succes": succes})
 
 
 def terminer_station_service_web(partie_json) -> str:

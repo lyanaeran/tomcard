@@ -11,6 +11,9 @@ from src.gameplay.position import Colonne, Rangee
 from src.gameplay.donnees import charger_cartes, charger_modules
 from src.gameplay import partie as partie_module
 from src.gameplay.partie import (
+    ARGENT_DEPART,
+    ARGENT_PAR_ENNEMI_TUE,
+    COUT_ACTION_STATION_SERVICE,
     NIVEAU_MAJ_MAX,
     PV_AMELIORATION,
     PV_REPARATION,
@@ -27,6 +30,7 @@ from src.gameplay.partie import (
     deck_de_la_partie,
     deplacer_module,
     equiper_module,
+    gagner_argent_combat,
     id_de_carte,
     lister_profils,
     mettre_a_jour_module,
@@ -94,7 +98,7 @@ def test_nouvelle_partie_commence_au_niveau_1_avec_seulement_le_module_principal
 
     assert partie.niveau == 1
     assert partie.statut == STATUT_EN_COURS
-    assert partie.argent == 0
+    assert partie.argent == ARGENT_DEPART
     assert partie.vaisseau["base"] is not None
     assert partie.vaisseau["base"].module_id == "MOD_1"
     assert partie.vaisseau["avant_gauche"] is None
@@ -194,6 +198,19 @@ def test_synchroniser_vaisseau_depuis_combat_ignore_les_emplacements_vides():
     assert partie.vaisseau["avant_droite"] is None
     assert partie.vaisseau["arriere_gauche"] is None
     assert partie.vaisseau["arriere_droite"] is None
+
+
+def test_gagner_argent_combat_ajoute_argent_par_ennemi_de_la_flotte():
+    """specs.md 2.1 : ARGENT_PAR_ENNEMI_TUE par ennemi de la flotte affrontee - une victoire
+    suppose que tous ces ennemis sont detruits, la flotte n'existe qu'a raison d'un ennemi par
+    case peuplee (pas de fusion d'un ennemi L sur plusieurs cases, cf. specs.md 3.2/9.1)."""
+    partie = _partie_exemple()
+    combat = combat_depuis_partie(partie, random.Random(1))
+    nombre_ennemis = len(combat.flotte.positions())
+
+    gagner_argent_combat(partie, combat)
+
+    assert partie.argent == 50 + ARGENT_PAR_ENNEMI_TUE * nombre_ennemis
 
 
 # --- Progression (specs.md 2.4) ---
@@ -298,9 +315,11 @@ def test_specs_utilisees_partie_ignore_les_emplacements_vides():
 def test_reparer_module_restaure_les_pv_plafonne_au_max():
     partie = _partie_exemple()
 
-    reparer_module(partie, "avant_gauche")
+    succes = reparer_module(partie, "avant_gauche")
 
+    assert succes is True
     assert partie.vaisseau["avant_gauche"].pv == min(10 + PV_REPARATION, 18)
+    assert partie.argent == 50 - COUT_ACTION_STATION_SERVICE
 
 
 def test_reparer_module_ne_depasse_jamais_le_pv_max():
@@ -312,21 +331,37 @@ def test_reparer_module_ne_depasse_jamais_le_pv_max():
     assert partie.vaisseau["base"].pv == partie.vaisseau["base"].pv_max
 
 
+def test_action_station_service_refusee_si_argent_insuffisant():
+    """specs.md 2.1/2.2 : aucune action n'est appliquee, l'Argent n'est pas non plus deduit."""
+    partie = _partie_exemple()
+    partie.argent = COUT_ACTION_STATION_SERVICE - 1
+
+    succes = reparer_module(partie, "avant_gauche")
+
+    assert succes is False
+    assert partie.vaisseau["avant_gauche"].pv == 10
+    assert partie.argent == COUT_ACTION_STATION_SERVICE - 1
+
+
 def test_ameliorer_module_augmente_pv_max_et_pv_actuels():
     partie = _partie_exemple()
 
-    ameliorer_module(partie, "avant_gauche")
+    succes = ameliorer_module(partie, "avant_gauche")
 
+    assert succes is True
     assert partie.vaisseau["avant_gauche"].pv_max == 18 + PV_AMELIORATION
     assert partie.vaisseau["avant_gauche"].pv == 10 + PV_AMELIORATION
+    assert partie.argent == 50 - COUT_ACTION_STATION_SERVICE
 
 
 def test_mettre_a_jour_module_incremente_le_palier():
     partie = _partie_exemple()
 
-    mettre_a_jour_module(partie, "avant_gauche")
+    succes = mettre_a_jour_module(partie, "avant_gauche")
 
+    assert succes is True
     assert partie.vaisseau["avant_gauche"].niveau_maj == 3
+    assert partie.argent == 50 - COUT_ACTION_STATION_SERVICE
 
 
 def test_mettre_a_jour_module_plafonne_a_niveau_maj_max():
@@ -340,18 +375,22 @@ def test_mettre_a_jour_module_plafonne_a_niveau_maj_max():
 
 def test_deplacer_module_echange_deux_emplacements_occupes():
     partie = nouvelle_partie(random.Random(1))
+    partie.argent = 50
     specs = [s for s in charger_modules() if s.id != "MOD_1"]
     equiper_module(partie, specs[0])
     equiper_module(partie, specs[1])
 
-    deplacer_module(partie, "avant_gauche", "avant_droite")
+    succes = deplacer_module(partie, "avant_gauche", "avant_droite")
 
+    assert succes is True
     assert partie.vaisseau["avant_gauche"].module_id == specs[1].id
     assert partie.vaisseau["avant_droite"].module_id == specs[0].id
+    assert partie.argent == 50 - COUT_ACTION_STATION_SERVICE
 
 
 def test_deplacer_module_vers_un_emplacement_vide():
     partie = nouvelle_partie(random.Random(1))
+    partie.argent = 50
     spec = next(s for s in charger_modules() if s.id != "MOD_1")
     equiper_module(partie, spec)
 

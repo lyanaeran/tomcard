@@ -175,11 +175,14 @@ def _pv_module_initial(spec: SpecModule) -> int:
     return PV_MODULE_MODE_TEST if MODE_TEST else spec.points_de_vie
 
 
+ARGENT_DEPART = 7
+
+
 def nouvelle_partie(aleatoire: random.Random | None = None) -> Partie:
     """Nouvelle partie au Niveau 1 (specs.md 2.3) : seul le module principal est equipe (le 2e
     slot est pourvu par le choix de module du Niveau 1, qui n'a pas encore eu lieu a ce stade),
-    avec son deck de depart fixe (config_poc.ids_deck_module_principal). Argent a 0 (montant de
-    depart pas encore defini, specs.md 9.1)."""
+    avec son deck de depart fixe (config_poc.ids_deck_module_principal). Argent a ARGENT_DEPART
+    (specs.md 2.1/9.1)."""
     aleatoire = aleatoire or random.Random()
     modules = charger_modules()
     cartes = charger_cartes()
@@ -198,7 +201,7 @@ def nouvelle_partie(aleatoire: random.Random | None = None) -> Partie:
         statut=STATUT_EN_COURS,
         graine=aleatoire.randrange(2**31),
         niveau=1,
-        argent=0,
+        argent=ARGENT_DEPART,
         vaisseau=vaisseau,
         deck=ids_deck_module_principal(spec_principal, cartes),
     )
@@ -278,6 +281,19 @@ def synchroniser_vaisseau_depuis_combat(partie: Partie, vaisseau: Vaisseau) -> P
     return partie
 
 
+ARGENT_PAR_ENNEMI_TUE = 5
+
+
+def gagner_argent_combat(partie: Partie, combat: Combat) -> Partie:
+    """Recompense en Argent d'une victoire (specs.md 2.1) : ARGENT_PAR_ENNEMI_TUE par ennemi de la
+    flotte affrontee (combat.flotte.positions(), qui compte aussi les ennemis detruits - une
+    victoire suppose que toute la flotte l'est). A appeler uniquement apres une victoire
+    (combat.etat == EtatCombat.VICTOIRE), au meme moment que synchroniser_vaisseau_depuis_combat.
+    Modifie et renvoie `partie`."""
+    partie.argent += ARGENT_PAR_ENNEMI_TUE * len(combat.flotte.positions())
+    return partie
+
+
 # --- Progression (specs.md 2.4) : fonctions pures utilisees par l'enchainement des ecrans, cote
 # PC (main.py) comme cote web (web/bridge.py) ---
 
@@ -326,52 +342,77 @@ def specs_utilisees_partie(partie: Partie, specs_par_id: dict[str, SpecModule]) 
     ]
 
 
-# --- Station service (garage), specs.md 2.2 : 4 actions gratuites pour l'instant (pas de
-# ressource Argent implementee) appliquees a un module equipe de la partie, partagees PC/web ---
+# --- Station service (garage), specs.md 2.2 : 4 actions couttant chacune COUT_ACTION_STATION_
+# SERVICE en Argent, appliquees a un module equipe de la partie, partagees PC/web ---
 
 PV_REPARATION = 20
 PV_AMELIORATION = 10
 NIVEAU_MAJ_MAX = 3
+COUT_ACTION_STATION_SERVICE = 20
 
 
-def reparer_module(partie: Partie, position: str) -> Partie:
+def _payer_action_station_service(partie: Partie) -> bool:
+    """Deduit COUT_ACTION_STATION_SERVICE de l'Argent de la partie si elle en a assez (specs.md
+    2.1/2.2). Ne modifie rien et renvoie False si l'Argent est insuffisant - a l'appelant de ne
+    pas appliquer l'effet de l'action dans ce cas."""
+    if partie.argent < COUT_ACTION_STATION_SERVICE:
+        return False
+    partie.argent -= COUT_ACTION_STATION_SERVICE
+    return True
+
+
+def reparer_module(partie: Partie, position: str) -> bool:
     """Restaure PV_REPARATION PV au module de cet emplacement, plafonne a son pv_max (specs.md
-    2.2). S'applique au module principal comme aux modules equipes. Modifie et renvoie `partie`."""
+    2.2), contre COUT_ACTION_STATION_SERVICE d'Argent (specs.md 2.1). S'applique au module
+    principal comme aux modules equipes. Modifie `partie` et renvoie True si l'Argent etait
+    suffisant, sinon ne fait rien et renvoie False."""
+    if not _payer_action_station_service(partie):
+        return False
     etat = partie.vaisseau[position]
     etat.pv = min(etat.pv + PV_REPARATION, etat.pv_max)
-    return partie
+    return True
 
 
-def ameliorer_module(partie: Partie, position: str) -> Partie:
+def ameliorer_module(partie: Partie, position: str) -> bool:
     """Augmente le pv_max du module de cet emplacement de PV_AMELIORATION, et ses PV actuels du
-    meme montant (specs.md 2.2 : pas seulement le plafond). S'applique au module principal comme
-    aux modules equipes. Modifie et renvoie `partie`."""
+    meme montant (specs.md 2.2 : pas seulement le plafond), contre COUT_ACTION_STATION_SERVICE
+    d'Argent (specs.md 2.1). S'applique au module principal comme aux modules equipes. Modifie
+    `partie` et renvoie True si l'Argent etait suffisant, sinon ne fait rien et renvoie False."""
+    if not _payer_action_station_service(partie):
+        return False
     etat = partie.vaisseau[position]
     etat.pv_max += PV_AMELIORATION
     etat.pv += PV_AMELIORATION
-    return partie
+    return True
 
 
-def mettre_a_jour_module(partie: Partie, position: str) -> Partie:
+def mettre_a_jour_module(partie: Partie, position: str) -> bool:
     """Fait progresser d'un palier le niveau de mise a jour du module de cet emplacement (1 a
     NIVEAU_MAJ_MAX, specs.md 2.2/6) - determine le palier de rarete propose en recompense/a la
-    Planete commerciale. S'applique au module principal comme aux modules equipes. Modifie et
-    renvoie `partie`."""
+    Planete commerciale - contre COUT_ACTION_STATION_SERVICE d'Argent (specs.md 2.1). S'applique
+    au module principal comme aux modules equipes. Modifie `partie` et renvoie True si l'Argent
+    etait suffisant, sinon ne fait rien et renvoie False."""
+    if not _payer_action_station_service(partie):
+        return False
     etat = partie.vaisseau[position]
     etat.niveau_maj = min(etat.niveau_maj + 1, NIVEAU_MAJ_MAX)
-    return partie
+    return True
 
 
-def deplacer_module(partie: Partie, position_source: str, position_destination: str) -> Partie:
+def deplacer_module(partie: Partie, position_source: str, position_destination: str) -> bool:
     """Echange les modules de deux emplacements equipables (specs.md 2.2 : vide, le module y est
-    simplement deplace ; occupe, les deux modules echangent leur position). Ne s'applique jamais
-    au module principal ('base') - a l'appelant (ecran Station service) de ne jamais transmettre
-    cette position. Modifie et renvoie `partie`."""
+    simplement deplace ; occupe, les deux modules echangent leur position), contre
+    COUT_ACTION_STATION_SERVICE d'Argent (specs.md 2.1). Ne s'applique jamais au module principal
+    ('base') - a l'appelant (ecran Station service) de ne jamais transmettre cette position.
+    Modifie `partie` et renvoie True si l'Argent etait suffisant, sinon ne fait rien et renvoie
+    False."""
+    if not _payer_action_station_service(partie):
+        return False
     partie.vaisseau[position_source], partie.vaisseau[position_destination] = (
         partie.vaisseau[position_destination],
         partie.vaisseau[position_source],
     )
-    return partie
+    return True
 
 
 # --- I/O fichier (PC uniquement) ---

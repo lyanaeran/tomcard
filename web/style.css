@@ -860,6 +860,7 @@ body {
    bouton generique ici (pas dans le selecteur partage plus bas) - juste un contour au survol/a
    l'armement de Deplacer, meme principe que src/ui/ecran_station_service.py cote PC. */
 .action-station {
+    position: relative;
     width: clamp(70px, 9vw, 100px);
     aspect-ratio: 511 / 532;
     padding: 0;
@@ -879,6 +880,24 @@ body {
 .action-station:hover,
 .action-station.armee {
     border-color: #ffffff;
+}
+
+/* Prix de l'action (specs.md 2.1/2.2), en badge sur l'icone deja pourvue de son cadre/nom
+   incruste (cf. commentaire plus haut) - pas de place dediee dans l'image elle-meme. */
+.prix-action-station {
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: #ffdc78;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+    pointer-events: none;
+}
+
+.action-station.desactivee {
+    opacity: 0.45;
 }
 
 /* Ecran generique pour une etape sans contenu prepare (Aventure, Planete commerciale - specs.md

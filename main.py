@@ -41,6 +41,7 @@ from src.gameplay.partie import (
     combat_depuis_partie,
     deck_de_la_partie,
     equiper_module,
+    gagner_argent_combat,
     id_de_carte,
     marquer_terminee,
     nouvelle_partie,
@@ -219,6 +220,8 @@ def _ouvrir_combat(profil: Profil, partie: Partie) -> None:
         # Reporte les degats subis pendant le combat sur la partie sauvegardee (specs.md 2.2/3.4 :
         # persistance des PV entre deux combats), avant tout enchainement/sauvegarde ulterieur.
         synchroniser_vaisseau_depuis_combat(partie, combat.joueur.vaisseau)
+        if combat.etat == EtatCombat.VICTOIRE:
+            gagner_argent_combat(partie, combat)  # specs.md 2.1 : Argent par ennemi tue
         _ouvrir_fin_combat(profil, partie, combat)
 
     pyglet.clock.schedule_interval(verifier, INTERVALLE_VERIFICATION)
