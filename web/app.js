@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "45";
+const VERSION_CACHE = "46";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -1181,12 +1181,12 @@ function rendreAventurePolice() {
         description.textContent = DESCRIPTION_POLICE;
         const carte = carteActuellePolice;
         carteActuelle.innerHTML = `
-            <div class="choix-aventure carte-actuelle-aventure">
-                <div class="choix-aventure-image">${carte.image ? `<img src="${carte.image}" alt="${carte.nom}">` : ""}</div>
-                <div class="choix-aventure-texte">
-                    <div class="choix-aventure-titre">${carte.nom}</div>
-                    <div class="choix-aventure-description">${texteEffetCarte(carte)}</div>
-                </div>
+            <div class="candidat-recompense carte-actuelle-police">
+                <span class="etoile-${carte.rarete.toLowerCase()}">★</span>
+                <img src="${carte.image}" alt="${carte.nom}">
+                <div class="candidat-recompense-nom">${carte.nom}</div>
+                <div class="candidat-recompense-cout">⚡ ${carte.cout}</div>
+                <div class="candidat-recompense-description">${texteEffetCarte(carte)}</div>
             </div>`;
 
         const { cout_mettre_aux_normes } = constantesAventurePolice;

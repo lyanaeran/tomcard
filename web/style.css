@@ -1054,17 +1054,13 @@ body {
     max-width: 700px;
 }
 
-#carte-actuelle-aventure-police {
-    width: 100%;
-    max-width: 820px;
-}
-
-.carte-actuelle-aventure {
+/* Carte tiree affichee seule, comme une carte en combat (image en haut, texte en dessous) plutot
+   que la ligne image+texte des choix en dessous - pour ne pas donner l'impression que c'est
+   elle-meme une option cliquable (specs.md 2.5). Reutilise .candidat-recompense (deja ce format,
+   utilise pour la carte offerte de l'Aventure Asteroides et les recompenses de fin de combat). */
+.carte-actuelle-police,
+.carte-actuelle-police:hover {
     cursor: default;
-}
-
-.carte-actuelle-aventure .choix-aventure-image,
-.carte-actuelle-aventure .choix-aventure-texte {
     border-color: #ebc83c;
 }
 

@@ -48,18 +48,24 @@ CHOIX = (
     ("detourner", _ICONE_DETOURNER, "Detourner l'attention", "Tire une autre carte (une seule fois)."),
 )
 
-# Ligne de la carte tiree (meme gabarit que les lignes de choix, mais non cliquable, en valeur
-# d'exemple pour la carte actuelle plutot qu'une action) et lignes de choix empilees en dessous -
-# meme convention que les autres Aventures (specs.md 2.5).
+# Carte tiree affichee seule au-dessus des choix, comme une carte en combat (image en haut, texte
+# en dessous) plutot que la ligne image+texte des choix en dessous - pour ne pas donner
+# l'impression que c'est elle-meme une option cliquable (specs.md 2.5). Meme composition que
+# _dessiner_carte_offerte de l'Aventure Astéroïdes (etoile + image + nom + description empiles).
+LARGEUR_CARTE_ACTUELLE = 240
+HAUTEUR_CARTE_ACTUELLE = 250
+IMAGE_CARTE_ACTUELLE_TAILLE = 130
+X_CARTE_ACTUELLE = (LARGEUR_FENETRE - LARGEUR_CARTE_ACTUELLE) / 2
+Y_HAUT_CARTE_ACTUELLE = 675
+
+# Lignes de choix empilees en dessous - meme convention que les autres Aventures (specs.md 2.5).
 LARGEUR_LIGNE = 820
-HAUTEUR_LIGNE_CARTE = 110
 HAUTEUR_LIGNE_CHOIX = 110
 TAILLE_IMAGE = 100
 ESPACEMENT_IMAGE_TEXTE = 16
 ESPACEMENT_LIGNES_CHOIX = 16
-ESPACEMENT_CARTE_CHOIX = 36
-Y_HAUT_CARTE = 660
-Y_HAUT_CHOIX = Y_HAUT_CARTE - HAUTEUR_LIGNE_CARTE - ESPACEMENT_CARTE_CHOIX
+ESPACEMENT_CARTE_CHOIX = 30
+Y_HAUT_CHOIX = Y_HAUT_CARTE_ACTUELLE - HAUTEUR_CARTE_ACTUELLE - ESPACEMENT_CARTE_CHOIX
 
 LARGEUR_BOUTON = 220
 HAUTEUR_BOUTON = 46
@@ -73,11 +79,6 @@ def _point_dans_rectangle(px: float, py: float, x: float, y: float, largeur: flo
 def _rect_bouton() -> tuple[float, float, float, float]:
     x = (LARGEUR_FENETRE - LARGEUR_BOUTON) / 2
     return x, Y_BOUTON, LARGEUR_BOUTON, HAUTEUR_BOUTON
-
-
-def _rect_carte_actuelle() -> tuple[float, float, float, float]:
-    x = (LARGEUR_FENETRE - LARGEUR_LIGNE) / 2
-    return x, Y_HAUT_CARTE - HAUTEUR_LIGNE_CARTE, LARGEUR_LIGNE, HAUTEUR_LIGNE_CARTE
 
 
 def _rect_choix(index: int) -> tuple[float, float, float, float]:
@@ -163,7 +164,7 @@ class EcranAventurePolice(pyglet.window.Window):
                     pyglet.text.Label(
                         self.message_erreur,
                         x=LARGEUR_FENETRE / 2,
-                        y=130,
+                        y=15,
                         anchor_x="center",
                         anchor_y="center",
                         font_size=15,
@@ -176,37 +177,35 @@ class EcranAventurePolice(pyglet.window.Window):
         return elements
 
     def _dessiner_carte_actuelle(self, lot: pyglet.graphics.Batch) -> list:
+        """Carte tiree, seule et non cliquable, dans le meme format qu'une carte en combat (image
+        en haut, texte en dessous) - pour ne pas la confondre avec les choix en dessous."""
         carte = self._carte_actuelle()
-        x, y, largeur, hauteur = _rect_carte_actuelle()
-        y_image = y + (hauteur - TAILLE_IMAGE) / 2
-        cadre_image = shapes.BorderedRectangle(
-            x, y_image, TAILLE_IMAGE, TAILLE_IMAGE, border=2, color=COULEUR_FOND_CARTE,
+        x, y = X_CARTE_ACTUELLE, Y_HAUT_CARTE_ACTUELLE - HAUTEUR_CARTE_ACTUELLE
+        largeur, hauteur = LARGEUR_CARTE_ACTUELLE, HAUTEUR_CARTE_ACTUELLE
+        cx = x + largeur / 2
+        cadre = shapes.BorderedRectangle(
+            x, y, largeur, hauteur, border=2, color=COULEUR_FOND_CARTE,
             border_color=COULEUR_CONTOUR_CARTE_ACTUELLE, batch=lot,
         )
-        cadre_image.opacity = OPACITE_FOND
-        sprite = _sprite_ajuste(carte.image, x, y_image, TAILLE_IMAGE, TAILLE_IMAGE, lot)
+        cadre.opacity = OPACITE_FOND
         etoile = pyglet.text.Label(
-            "★", x=x + 14, y=y_image + TAILLE_IMAGE - 14, anchor_x="center", anchor_y="center",
-            font_size=16, color=(*COULEUR_ETOILE_RARETE[carte.rarete], 255), batch=lot,
+            "★", x=x + 16, y=y + hauteur - 16, anchor_x="center", anchor_y="center",
+            font_size=18, color=(*COULEUR_ETOILE_RARETE[carte.rarete], 255), batch=lot,
         )
-
-        x_texte = x + TAILLE_IMAGE + ESPACEMENT_IMAGE_TEXTE
-        largeur_texte = largeur - TAILLE_IMAGE - ESPACEMENT_IMAGE_TEXTE
-        cadre_texte = shapes.BorderedRectangle(
-            x_texte, y, largeur_texte, hauteur, border=2, color=COULEUR_FOND_CARTE,
-            border_color=COULEUR_CONTOUR_CARTE_ACTUELLE, batch=lot,
+        taille_image = IMAGE_CARTE_ACTUELLE_TAILLE
+        sprite = _sprite_ajuste(
+            carte.image, cx - taille_image / 2, y + hauteur - 30 - taille_image, taille_image, taille_image, lot
         )
-        cadre_texte.opacity = OPACITE_FOND
         nom = pyglet.text.Label(
-            f"{carte.nom}  (⚡{carte.cout})", x=x_texte + 20, y=y + hauteur - 30, anchor_x="left", anchor_y="center",
-            font_size=16, color=(*COULEUR_NOM, 255), batch=lot,
+            f"{carte.nom}  (⚡{carte.cout})", x=cx, y=y + hauteur - 48 - taille_image,
+            anchor_x="center", anchor_y="center", font_size=15, color=(*COULEUR_NOM, 255), batch=lot,
         )
         description = pyglet.text.Label(
-            texte_effet_carte(carte), x=x_texte + 20, y=y + hauteur - 52, anchor_x="left", anchor_y="top",
-            font_size=13, color=(*COULEUR_TEXTE, 255), multiline=True, width=largeur_texte - 40,
-            align="left", batch=lot,
+            texte_effet_carte(carte), x=cx, y=y + hauteur - 70 - taille_image,
+            anchor_x="center", anchor_y="top", font_size=12, color=(*COULEUR_TEXTE, 255),
+            multiline=True, width=largeur - 24, align="center", batch=lot,
         )
-        return [cadre_image, sprite, etoile, cadre_texte, nom, description]
+        return [cadre, etoile, sprite, nom, description]
 
     def _dessiner_ligne_choix(
         self, index: int, image: str | None, titre: str, description: str, lot: pyglet.graphics.Batch
