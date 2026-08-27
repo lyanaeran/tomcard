@@ -67,9 +67,9 @@ de succès plutôt que la `Partie` (rétro-incompatibilité assumée, aucun appe
 de retour). Écran Station service (PC et web) : prix affiché sous chaque action, icône grisée et
 popup rouge "Argent insuffisant !" au clic si `partie.argent < COUT_ACTION_STATION_SERVICE` (armement
 de Déplacer bloqué dans ce cas, pas seulement son exécution) ; Argent total affiché dans le titre de
-l'écran ("... - Niveau N - X €"). Côté web, `COUT_ACTION_STATION_SERVICE`/`PV_REPARATION`/
-`PV_AMELIORATION` sont exposés par `web/bridge.py:constantes_station_service_web()` plutôt que
-dupliqués en dur dans `web/app.js` (CLAUDE.md).
+l'écran ("... - Niveau N - X €"). Côté web, `COUT_ACTION_STATION_SERVICE` est exposé par
+`web/bridge.py:cout_action_station_service_web()` plutôt que dupliqué en dur dans `web/app.js`
+(CLAUDE.md).
 
 - Réparer/Améliorer/Mettre à jour s'appliquent au **module principal** comme aux modules équipés.
   Déplacer ne s'applique pas au principal (toujours en position Mid, pas d'emplacement équivalent à
@@ -112,12 +112,16 @@ dupliqués en dur dans `web/app.js` (CLAUDE.md).
   dupliquée côté web (décision utilisateur, feedback demandé pendant les essais manuels). Le module
   sélectionné est ensuite **désélectionné automatiquement** (le popup suffit à confirmer l'effet) ;
   **Déplacer** garde son comportement propre (armement/clic de destination, cf. ci-dessus)
-- Icônes des 4 actions dans `assets/station_service/` (`reparer.png`, `ameliorer.png`,
-  `mettre_a_jour.png`, `deplacer.png`), fournies par l'utilisateur **sans texte incrusté** (même
-  principe que `assets/prochain_niveau/`) : les 4 actions sont présentées **empilées verticalement,
-  image à gauche et rectangle de texte (titre + description + coût) à droite**, même convention que
-  les choix d'Aventure (§2.5) — plutôt qu'une rangée d'icônes seules avec juste le prix en dessous
-  (mise en page initiale, abandonnée une fois les icônes fournies sans texte)
+- **Icônes des 4 actions : rangée d'icônes déjà pourvues de leur propre cadre/nom incrusté**
+  (`assets/station_service/avec_texte/reparer.png`/`ameliorer.png`/`mettre_a_jour.png`/
+  `deplacer.png`), affichées seules avec juste le prix en dessous — décision utilisateur : un
+  essai de mise en page "empilée verticalement, image sans texte à gauche + titre/description à
+  droite" (même convention que les choix d'Aventure, §2.5) a été tenté avec les versions sans texte
+  de `assets/station_service/` (celles réutilisées telles quelles par les Aventures Trois
+  lunes/Police), puis abandonné pour cet écran uniquement, jugé moins lisible ; anciennes icônes
+  avec texte restaurées depuis l'historique git dans un sous-dossier dédié (`avec_texte/`) plutôt
+  que redemandées à l'utilisateur — Choix du prochain niveau et Station service ne partagent donc
+  plus la même présentation, contrairement à ce qu'un essai précédent visait
 - La carte du module principal utilise `assets/modules/principal_avant.png` (recadrage sur l'avant
   du vaisseau, décision utilisateur) plutôt que l'image complète du vaisseau (`config/modules.json`,
   utilisée telle quelle comme fond du vaisseau en combat) — sinon hors d'échelle par rapport aux
@@ -298,9 +302,10 @@ déterministe, comme les récompenses de fin de combat).
 
 Forme retenue pour l'écran Aventure : un écran dédié par Aventure (pas l'écran générique),
 affichant description + 2-3 choix cliquables — même présentation que l'écran Choix du prochain
-niveau (§2.4 étape 3) et les actions de Station service (§2.2), désormais identique aux trois (choix
-empilés verticalement, image sans texte incrusté à gauche, titre + description à droite) plutôt
-qu'une mise en page différente par écran. Une Aventure scénarisée
+niveau (§2.4 étape 3, choix empilés verticalement, image sans texte incrusté à gauche, titre +
+description à droite) plutôt qu'une mise en page différente par écran. Exception : la Station
+service (§2.2) est revenue à sa rangée d'icônes avec texte incrusté (décision utilisateur, cf.
+§2.2), les 2 écrans n'ont donc plus tout à fait la même présentation. Une Aventure scénarisée
 en plusieurs temps (Astéroïdes ci-dessous) reste un **seul écran** dont le contenu affiché change à
 mesure que le joueur avance (état interne à l'écran, comme `EcranStationService` se redessine après
 chaque action) plutôt que plusieurs écrans/fenêtres séparés — décision utilisateur : pas de moteur

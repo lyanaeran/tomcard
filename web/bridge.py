@@ -39,7 +39,6 @@ from src.gameplay.partie import (
     COUT_METTRE_AUX_NORMES,
     DEGATS_ASTEROIDES,
     PV_AMELIORATION,
-    PV_REPARATION,
     PV_REPARATION_VAISSEAU,
     ajouter_carte,
     ameliorer_module,
@@ -521,17 +520,11 @@ def terminer_victoire_finale_web(partie_json) -> str:
 # web/app.js doit alors afficher un retour "Argent insuffisant" plutot que l'effet normal. ---
 
 
-def constantes_station_service_web() -> str:
-    """Expose COUT_ACTION_STATION_SERVICE/PV_REPARATION/PV_AMELIORATION (src/gameplay/partie.py)
-    pour le texte des actions avant meme de les jouer - seule source de verite (CLAUDE.md),
-    web/app.js ne duplique jamais ces valeurs."""
-    return json.dumps(
-        {
-            "cout_action": COUT_ACTION_STATION_SERVICE,
-            "pv_reparation": PV_REPARATION,
-            "pv_amelioration": PV_AMELIORATION,
-        }
-    )
+def cout_action_station_service_web() -> str:
+    """Expose COUT_ACTION_STATION_SERVICE (src/gameplay/partie.py) pour l'affichage du prix par
+    action avant meme de la jouer - seule source de verite (CLAUDE.md), web/app.js ne duplique
+    jamais cette valeur."""
+    return json.dumps(COUT_ACTION_STATION_SERVICE)
 
 
 def reparer_module_web(partie_json, position) -> str:

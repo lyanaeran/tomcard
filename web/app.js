@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "47";
+const VERSION_CACHE = "48";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -628,15 +628,18 @@ function ouvrirChoixNiveauPartie(partie) {
 // niveau (etape 8, specs.md 2.4). Meme regles que src/ui/ecran_station_service.py cote PC -
 // bridge.py n'applique que les fonctions pures de src/gameplay/partie.py, aucune regle dupliquee
 // ici (CLAUDE.md).
-// Images sans texte incruste (fournies par l'utilisateur) ; titre + description desormais
-// redessines a cote, dans le rectangle de texte (meme convention que les choix d'Aventure) -
-// description/cout construits dans rendreStationService, une fois constantesStationService connue.
-const ICONES_ACTION_STATION_SERVICE = {
-    reparer: "assets/station_service/reparer.png",
-    ameliorer: "assets/station_service/ameliorer.png",
-    mettre_a_jour: "assets/station_service/mettre_a_jour.png",
-    deplacer: "assets/station_service/deplacer.png",
-};
+// Icones avec cadre/nom incruste (assets/station_service/avec_texte/) - decision utilisateur :
+// cet ecran garde sa grille d'icones seules (pas la ligne image+texte des Aventures/Choix du
+// prochain niveau/specs.md 2.5), donc les versions sans texte de assets/station_service/
+// (reutilisees telles quelles par les Aventures Trois lunes/Police) ne conviennent plus ici sans
+// ajouter un texte redondant - anciennes icones restaurees depuis l'historique git, pour cet
+// ecran uniquement. Memes chemins que main.py:ecran_station_service.py:ACTIONS cote PC.
+const ACTIONS_STATION_SERVICE = [
+    ["reparer", "assets/station_service/avec_texte/reparer.png"],
+    ["ameliorer", "assets/station_service/avec_texte/ameliorer.png"],
+    ["mettre_a_jour", "assets/station_service/avec_texte/mettre_a_jour.png"],
+    ["deplacer", "assets/station_service/avec_texte/deplacer.png"],
+];
 const FONCTIONS_ACTION_STATION_SERVICE = {
     reparer: "reparer_module_web",
     ameliorer: "ameliorer_module_web",
@@ -648,17 +651,17 @@ const POSITIONS_DEPLACABLES_STATION = ["avant_gauche", "avant_droite", "arriere_
 
 let positionSelectionneeStation = null;
 let modeDeplacementStation = false;
-// Cout/effets des actions de Station service (specs.md 2.1/2.2) : recuperes une seule fois depuis
-// bridge.py (COUT_ACTION_STATION_SERVICE/PV_REPARATION/PV_AMELIORATION, src/gameplay/partie.py)
-// plutot que dupliques ici en dur (CLAUDE.md - src/gameplay reste la seule source de verite).
-let constantesStationService = null;
+// Prix d'une action de Station service (specs.md 2.1/2.2) : recupere une seule fois depuis
+// bridge.py (COUT_ACTION_STATION_SERVICE, src/gameplay/partie.py) plutot que duplique ici en dur
+// (CLAUDE.md - src/gameplay reste la seule source de verite).
+let coutActionStationService = null;
 
 function ouvrirStationServicePartie(partie) {
     partieActive = partie;
     positionSelectionneeStation = null;
     modeDeplacementStation = false;
-    if (constantesStationService === null) {
-        constantesStationService = appelerBridge("constantes_station_service_web");
+    if (coutActionStationService === null) {
+        coutActionStationService = appelerBridge("cout_action_station_service_web");
     }
     rendreStationService();
     masquerTousLesEcrans();
@@ -690,27 +693,15 @@ function rendreStationService() {
             </div>`;
         })
         .join("");
-    const { cout_action, pv_reparation, pv_amelioration } = constantesStationService;
-    const abordable = partieActive.argent >= cout_action;
-    const actions = [
-        ["reparer", "Reparer", `Restaure ${pv_reparation} PV.`],
-        ["ameliorer", "Ameliorer", `+${pv_amelioration} PV max.`],
-        ["mettre_a_jour", "Mettre a jour", "Debloque le palier de cartes suivant pour ce module."],
-        ["deplacer", "Deplacer", "Change la position du module sur la grille."],
-    ];
-    document.getElementById("actions-station-service").innerHTML = actions
-        .map(([action, titre, description]) => {
-            const armee = action === "deplacer" && modeDeplacementStation ? " armee" : "";
-            const desactivee = abordable ? "" : " desactivee";
-            return construireLigneChoixHtml(
-                action,
-                ICONES_ACTION_STATION_SERVICE[action],
-                titre,
-                `${description}  (${cout_action} €)`,
-                ` action-station${armee}${desactivee}`
-            );
-        })
-        .join("");
+    const abordable = partieActive.argent >= coutActionStationService;
+    document.getElementById("actions-station-service").innerHTML = ACTIONS_STATION_SERVICE.map(([action, image]) => {
+        const armee = action === "deplacer" && modeDeplacementStation ? " armee" : "";
+        const desactivee = abordable ? "" : " desactivee";
+        return `<button class="action-station${armee}${desactivee}" data-action="${action}">
+            <img src="${image}" alt="${action}">
+            <span class="prix-action-station">${coutActionStationService} €</span>
+        </button>`;
+    }).join("");
     document.getElementById("instruction-station-service").textContent = instructionStationService();
 
     document.querySelectorAll(".module-station").forEach((element) => {
@@ -718,7 +709,7 @@ function rendreStationService() {
         element.addEventListener("click", () => cliquerModuleStation(element.dataset.position, estVide));
     });
     document.querySelectorAll(".action-station").forEach((element) => {
-        element.addEventListener("click", () => cliquerActionStation(element.dataset.choix));
+        element.addEventListener("click", () => cliquerActionStation(element.dataset.action));
     });
 }
 
@@ -766,7 +757,7 @@ function cliquerActionStation(action) {
     // Argent insuffisant (specs.md 2.1/2.2) : bloque l'action, meme pour l'armement de Deplacer
     // (son cout n'est preleve qu'a la destination, cliquerModuleStation, mais rien ne doit pouvoir
     // s'armer sans avoir de quoi payer).
-    if (partieActive.argent < constantesStationService.cout_action) {
+    if (partieActive.argent < coutActionStationService) {
         afficherPopupStation(positionSelectionneeStation, "Argent insuffisant !", "popup-degats");
         return;
     }

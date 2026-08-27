@@ -734,8 +734,8 @@ body {
     font-size: 1.1rem;
 }
 
-/* #candidats-niveau : voir la regle partagee avec les choix d'Aventure/Station service plus bas
-   (image sans texte incruste a gauche + rectangle de texte a droite, specs.md 2.3/2.4). */
+/* #candidats-niveau : voir la regle partagee avec les choix d'Aventure plus bas (image sans texte
+   incruste a gauche + rectangle de texte a droite, specs.md 2.3/2.4). */
 
 /* Ecran Station service (specs.md 2.2). Fond de combat reutilise en placeholder (deja applique
    globalement sur body) - decision utilisateur. Cartes module reprises de #vaisseau-accueil
@@ -819,17 +819,56 @@ body {
     font-size: 1.1rem;
 }
 
-/* Actions de Station service : lignes .choix-aventure (image sans texte incruste a gauche,
-   titre+description+cout a droite), cf. la regle partagee #actions-station-service plus haut -
-   .action-station n'ajoute que les 2 etats propres a cet ecran (Deplacer arme/action inabordable),
-   memes couleurs que src/ui/ecran_station_service.py cote PC. */
-.action-station.armee .choix-aventure-image,
-.action-station.armee .choix-aventure-texte {
-    border-color: #d2a028;
+#actions-station-service {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+}
+
+/* Icones avec cadre/nom incruste (assets/station_service/avec_texte/, restaurees depuis
+   l'historique git - decision utilisateur, seul ecran a garder ce format), aucun style de bouton
+   generique ici - juste un contour au survol/a l'armement de Deplacer, meme principe que
+   src/ui/ecran_station_service.py cote PC. */
+.action-station {
+    position: relative;
+    width: clamp(70px, 9vw, 100px);
+    aspect-ratio: 511 / 532;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: 10px;
+    background: transparent;
+    cursor: pointer;
+}
+
+.action-station img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.action-station:hover,
+.action-station.armee {
+    border-color: #ffffff;
+}
+
+/* Prix de l'action (specs.md 2.1/2.2), en badge sur l'icone deja pourvue de son cadre/nom
+   incruste (cf. commentaire plus haut) - pas de place dediee dans l'image elle-meme. */
+.prix-action-station {
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: #ffdc78;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+    pointer-events: none;
 }
 
 .action-station.desactivee {
-    opacity: 0.55;
+    opacity: 0.45;
 }
 
 /* Aventure "Trois lunes" (specs.md 2.5). Fond dedie (assets/aventure/trois_lunes.png) plutot que
@@ -860,12 +899,12 @@ body {
 }
 
 /* Choix empiles verticalement, image carree a gauche + rectangle de texte (titre + description) a
-   droite - convention partagee par les 3 ecrans d'Aventure (specs.md 2.5), les actions de Station
-   service (specs.md 2.2) et les propositions du Choix du prochain niveau (specs.md 2.3/2.4). */
+   droite - convention partagee par les 3 ecrans d'Aventure (specs.md 2.5) et les propositions du
+   Choix du prochain niveau (specs.md 2.3/2.4). Pas la Station service (#actions-station-service,
+   plus bas) : icones avec cadre/nom incruste restaurees pour cet ecran, decision utilisateur. */
 #choix-aventure-trois-lunes,
 #choix-aventure-asteroides,
 #choix-aventure-police,
-#actions-station-service,
 #candidats-niveau {
     display: flex;
     flex-direction: column;
