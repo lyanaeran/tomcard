@@ -314,14 +314,17 @@ mise en page entre les trois écrans (dupliquée par fichier côté PC, factoris
 commune côté web). Une ligne sans image dédiée affiche un placeholder vide (même convention que les
 autres emplacements vides du jeu) plutôt qu'un visuel non pertinent — image manquante à ce jour pour
 Bricoler (Trois lunes), Traverser le champ d'astéroïdes (Astéroïdes), Confiscation et Détourner
-l'attention (Police). Réparer/Améliorer (Trois lunes) réutilisent les icônes déjà fournies pour la
-Station service (`assets/station_service/reparer.png`/`ameliorer.png`) ; Affronter les pirates
-(Astéroïdes) et Mettre aux normes (Police) réutilisent de même des icônes déjà fournies
-(`assets/prochain_niveau/prime.png`/`assets/station_service/mettre_a_jour.png`), recadrées pour
-retirer leur bandeau de titre incrusté (respectivement "PRIME"/"METTRE À JOUR", non pertinent pour
-ces choix) — recadrage conservé dans `assets/aventure/pirates.png`/`mettre_aux_normes.png`, source
-originale inchangée pour son usage propre. Le titre est de toute facon systématiquement redessiné à
-côté (dans le rectangle de texte), qu'il soit ou non déjà incrusté dans l'image.
+l'attention (Police). Les 4 autres choix réutilisent une icône déjà fournie ailleurs dans le jeu,
+**recadrée pour retirer son bandeau de titre incrusté** (le titre étant de toute façon
+systématiquement redessiné à côté, dans le rectangle de texte — un bandeau incrusté, qu'il
+corresponde ou non au choix, n'a donc plus d'intérêt à être conservé, par cohérence entre tous les
+choix) : Réparer/Améliorer (Trois lunes) depuis `assets/station_service/reparer.png`/`ameliorer.png`
+("RÉPARER"/"AMÉLIORER" — déjà le bon titre, recadré tout de même par cohérence visuelle avec les
+2 suivants) ; Affronter les pirates (Astéroïdes) depuis `assets/prochain_niveau/prime.png`
+("PRIME" — non pertinent pour ce choix) ; Mettre aux normes (Police) depuis
+`assets/station_service/mettre_a_jour.png` ("METTRE À JOUR" — non pertinent). Recadrages conservés
+dans `assets/aventure/` (`reparer.png`/`ameliorer.png`/`pirates.png`/`mettre_aux_normes.png`),
+sources originales inchangées pour leur usage propre (Station service, Choix du prochain niveau).
 
 **Astéroïdes** — **implémentée** (fond `assets/aventure/champ_asteroides.png`) — "Poursuivi par des
 pirates de l'espace, vous n'avez plus le choix : vaincre ou périr ! À moins que..."

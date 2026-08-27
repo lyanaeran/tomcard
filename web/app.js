@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "41";
+const VERSION_CACHE = "42";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -806,10 +806,13 @@ function construireLigneChoixHtml(identifiant, image, titre, texte) {
 // immediatement des le clic - contrairement a l'Aventure Asteroides (a venir), pas de sequence en
 // plusieurs temps ici. Meme regles que src/ui/ecran_aventure_trois_lunes.py cote PC - bridge.py
 // n'applique que les fonctions pures de src/gameplay/partie.py, aucune regle dupliquee ici.
-// Images reutilisees de assets/station_service/ (deja leur titre incruste) quand pertinentes ;
-// null en attendant un visuel dedie sinon (aucune icone existante pour "Bricoler").
-const ICONE_REPARER = "assets/station_service/reparer.png";
-const ICONE_AMELIORER = "assets/station_service/ameliorer.png";
+// Images recadrees depuis assets/station_service/ (bandeau de titre incruste retire, "REPARER"/
+// "AMELIORER") - coherence avec le reste des choix d'Aventure (specs.md 2.5) : le titre est de
+// toute facon toujours redessine a cote dans le rectangle de texte. Sources originales inchangees
+// (toujours utilisees telles quelles en Station service). Null en attendant un visuel dedie sinon
+// (aucune icone existante pour "Bricoler").
+const ICONE_REPARER = "assets/aventure/reparer.png";
+const ICONE_AMELIORER = "assets/aventure/ameliorer.png";
 
 const DESCRIPTION_TROIS_LUNES =
     "Un havre de paix au milieu de la galaxie. Aucune forme de vie intelligente, des animaux de " +
