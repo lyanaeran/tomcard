@@ -21,14 +21,6 @@ COULEUR_SOUS_TITRE = (200, 200, 205)
 COULEUR_BOUTON = (60, 90, 160)
 COULEUR_BOUTON_SURVOLE = (90, 130, 210)
 
-# Titre affiche par type d'etape (LIBELLES_TYPE_ETAPE ne fournit qu'une icone + une courte
-# description, pas de nom a afficher en titre) - uniquement les deux types encore sans ecran
-# dedie (specs.md 2.4, etapes 7 et 9) ; Prime/Station service/Boss ont chacun leur propre ecran.
-TITRES_TYPE_ETAPE = {
-    TypeEtape.AVENTURE: "Aventure",
-    TypeEtape.PLANETE_COMMERCIALE: "Planete commerciale",
-}
-
 MESSAGE_CONTENU_A_VENIR = "Contenu pas encore defini pour cette etape."
 
 IMAGE_TAILLE = 240
@@ -65,11 +57,11 @@ class EcranEtapePlaceholder(pyglet.window.Window):
         del elements
 
     def _dessiner(self, lot: pyglet.graphics.Batch) -> list:
-        image, _description = LIBELLES_TYPE_ETAPE[self.type_etape]
+        image, titre, _description = LIBELLES_TYPE_ETAPE[self.type_etape]
         elements = [_sprite_etire(FOND_IMAGE, 0, 0, LARGEUR_FENETRE, HAUTEUR_FENETRE, lot)]
         elements.append(
             pyglet.text.Label(
-                f"{TITRES_TYPE_ETAPE[self.type_etape]} - Niveau {self.niveau}",
+                f"{titre} - Niveau {self.niveau}",
                 x=LARGEUR_FENETRE / 2,
                 y=HAUTEUR_FENETRE - 60,
                 anchor_x="center",

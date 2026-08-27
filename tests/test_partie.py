@@ -10,13 +10,17 @@ from src.gameplay.position import Colonne, Rangee
 
 from src.gameplay.donnees import charger_cartes, charger_modules
 from src.gameplay import partie as partie_module
+from src.gameplay.config_poc import NOMBRE_ENNEMIS_ASTEROIDES
 from src.gameplay.partie import (
     ARGENT_DEPART,
     ARGENT_PAR_ENNEMI_TUE,
     COUT_ACTION_STATION_SERVICE,
+    COUT_METTRE_AUX_NORMES,
+    DEGATS_ASTEROIDES,
     NIVEAU_MAJ_MAX,
     PV_AMELIORATION,
     PV_REPARATION,
+    PV_REPARATION_VAISSEAU,
     STATUT_EN_COURS,
     STATUT_TERMINEE,
     EtatModule,
@@ -24,7 +28,9 @@ from src.gameplay.partie import (
     abandonner_partie,
     ajouter_carte,
     ameliorer_module,
+    ameliorer_module_aventure,
     avancer_niveau,
+    combat_aventure_asteroides,
     combat_depuis_partie,
     creer_profil,
     deck_de_la_partie,
@@ -41,11 +47,15 @@ from src.gameplay.partie import (
     partie_en_cours,
     partie_vers_dict,
     partie_vers_json,
+    payer_mise_aux_normes,
     profil_depuis_json,
     profil_vers_json,
     reparer_module,
+    reparer_vaisseau,
+    retirer_carte,
     sauvegarder_partie,
     specs_utilisees_partie,
+    subir_degats_module,
     synchroniser_vaisseau_depuis_combat,
 )
 
@@ -398,6 +408,89 @@ def test_deplacer_module_vers_un_emplacement_vide():
 
     assert partie.vaisseau["avant_gauche"] is None
     assert partie.vaisseau["arriere_gauche"].module_id == spec.id
+
+
+# --- Aventures (specs.md 2.5) ---
+
+
+def test_reparer_vaisseau_soigne_chaque_module_equipe_plafonne_au_max():
+    partie = _partie_exemple()  # base pv=15/15 (deja au max), avant_gauche pv=10/18
+
+    reparer_vaisseau(partie)
+
+    assert partie.vaisseau["base"].pv == 15
+    assert partie.vaisseau["avant_gauche"].pv == min(10 + PV_REPARATION_VAISSEAU, 18)
+
+
+def test_reparer_vaisseau_ignore_les_emplacements_vides():
+    partie = _partie_exemple()
+
+    reparer_vaisseau(partie)  # ne doit pas lever d'exception sur avant_droite/arriere_* (None)
+
+    assert partie.vaisseau["avant_droite"] is None
+
+
+def test_retirer_carte_retire_un_seul_exemplaire():
+    partie = _partie_exemple()  # deck=["CRT_7", "CRT_7", "CRT_10"]
+
+    retirer_carte(partie, "CRT_7")
+
+    assert partie.deck == ["CRT_7", "CRT_10"]
+
+
+def test_ameliorer_module_aventure_meme_effet_que_ameliorer_module_mais_gratuit():
+    partie = _partie_exemple()  # argent=50
+    argent_avant = partie.argent
+
+    ameliorer_module_aventure(partie, "avant_gauche")
+
+    assert partie.vaisseau["avant_gauche"].pv_max == 18 + PV_AMELIORATION
+    assert partie.vaisseau["avant_gauche"].pv == 10 + PV_AMELIORATION
+    assert partie.argent == argent_avant  # contrairement a ameliorer_module (Station service)
+
+
+def test_subir_degats_module_reduit_les_pv():
+    partie = _partie_exemple()  # avant_gauche pv=10
+
+    subir_degats_module(partie, "avant_gauche", DEGATS_ASTEROIDES)
+
+    assert partie.vaisseau["avant_gauche"].pv == 10 - DEGATS_ASTEROIDES
+
+
+def test_subir_degats_module_plafonne_a_0():
+    partie = _partie_exemple()  # avant_gauche pv=10
+
+    subir_degats_module(partie, "avant_gauche", 999)
+
+    assert partie.vaisseau["avant_gauche"].pv == 0
+
+
+def test_combat_aventure_asteroides_a_une_flotte_scriptee():
+    partie = _partie_exemple()
+
+    combat = combat_aventure_asteroides(partie, random.Random(1))
+
+    assert len(combat.flotte.positions()) == NOMBRE_ENNEMIS_ASTEROIDES
+    assert combat.joueur.vaisseau.base.pv == 15  # meme vaisseau reel que combat_depuis_partie
+
+
+def test_payer_mise_aux_normes_deduit_le_cout_si_assez_d_argent():
+    partie = _partie_exemple()  # argent=50
+
+    succes = payer_mise_aux_normes(partie)
+
+    assert succes is True
+    assert partie.argent == 50 - COUT_METTRE_AUX_NORMES
+
+
+def test_payer_mise_aux_normes_refuse_si_argent_insuffisant():
+    partie = _partie_exemple()
+    partie.argent = COUT_METTRE_AUX_NORMES - 1
+
+    succes = payer_mise_aux_normes(partie)
+
+    assert succes is False
+    assert partie.argent == COUT_METTRE_AUX_NORMES - 1
 
 
 @pytest.fixture

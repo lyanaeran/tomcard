@@ -23,6 +23,7 @@ from src.gameplay.config_poc import (
     PV_MODULE_MODE_TEST,
     appliquer_degats_mode_test,
     creer_flotte,
+    creer_flotte_asteroides,
     ids_deck_module_principal,
 )
 from src.gameplay.deck import Deck
@@ -214,24 +215,21 @@ def deck_de_la_partie(partie: Partie, cartes: dict[str, Carte] | None = None) ->
     return [cartes[id_carte].copie() for id_carte in partie.deck]
 
 
-def combat_depuis_partie(partie: Partie, aleatoire: random.Random | None = None) -> Combat:
-    """Construit un Combat a partir d'une partie sauvegardee : vaisseau et deck reels du joueur,
-    mais flotte ennemie tiree au hasard - approximation temporaire (bouton "Continuer", decision
-    utilisateur) en attendant que l'orchestration du parcours (specs.md 2.3/10.3) determine
-    precisement quel combat affronter a ce niveau. Les PV des modules du joueur sont repris tels
-    quels depuis la partie sauvegardee (persistance entre combats, specs.md 2.2) - y compris en
-    mode test (MODE_TEST, cf. config_poc.py), ou seule leur valeur de depart est plus elevee
-    (PV_MODULE_MODE_TEST, cf. equiper_module/nouvelle_partie) : la persistance elle-meme reste
-    testable (Reparer/Ameliorer en Station service, degats qui persistent d'un combat a l'autre).
+def _joueur_depuis_partie(partie: Partie, cartes: dict[str, Carte], aleatoire: random.Random) -> Joueur:
+    """Construit le Joueur (vaisseau + deck) d'un combat a partir d'une partie sauvegardee -
+    partage entre combat_depuis_partie (flotte aleatoire standard) et combat_aventure_asteroides
+    (flotte scriptee, specs.md 2.5). Les PV des modules sont repris tels quels depuis la partie
+    (persistance entre combats, specs.md 2.2) - y compris en mode test (MODE_TEST, cf.
+    config_poc.py), ou seule leur valeur de depart est plus elevee (PV_MODULE_MODE_TEST, cf.
+    equiper_module/nouvelle_partie) : la persistance elle-meme reste testable (Reparer/Ameliorer
+    en Station service, degats qui persistent d'un combat a l'autre).
 
     En mode test, les cartes ATTAQUE de rarete Base du deck reel infligent
     VALEUR_ATTAQUE_BASE_MODE_TEST degats plutot que leur valeur normale - meme principe que la
     flotte ennemie (creer_flotte), pour pouvoir enchainer les essais manuels sans y passer
     plusieurs tours. Rien n'est modifie dans la partie sauvegardee pour autant (aucune ecriture
     ici)."""
-    aleatoire = aleatoire or random.Random(partie.graine + partie.niveau)
     specs_par_id = {spec.id: spec for spec in charger_modules()}
-    cartes = charger_cartes()
 
     def _module(etat: EtatModule | None) -> Module | None:
         if etat is None:
@@ -256,8 +254,30 @@ def combat_depuis_partie(partie: Partie, aleatoire: random.Random | None = None)
     if MODE_TEST:
         appliquer_degats_mode_test(deck_cartes)
     deck = Deck(cartes=deck_cartes, generateur_aleatoire=aleatoire)
-    joueur = Joueur(vaisseau=vaisseau, deck=deck, electricite_par_tour=ELECTRICITE_PAR_TOUR)
+    return Joueur(vaisseau=vaisseau, deck=deck, electricite_par_tour=ELECTRICITE_PAR_TOUR)
+
+
+def combat_depuis_partie(partie: Partie, aleatoire: random.Random | None = None) -> Combat:
+    """Construit un Combat a partir d'une partie sauvegardee : vaisseau et deck reels du joueur
+    (_joueur_depuis_partie), mais flotte ennemie tiree au hasard - approximation temporaire
+    (bouton "Continuer", decision utilisateur) en attendant que l'orchestration du parcours
+    (specs.md 2.3/10.3) determine precisement quel combat affronter a ce niveau."""
+    aleatoire = aleatoire or random.Random(partie.graine + partie.niveau)
+    cartes = charger_cartes()
+    joueur = _joueur_depuis_partie(partie, cartes, aleatoire)
     flotte = creer_flotte(charger_ennemis(), aleatoire)
+    return Combat(joueur=joueur, flotte=flotte, aleatoire=aleatoire)
+
+
+def combat_aventure_asteroides(partie: Partie, aleatoire: random.Random | None = None) -> Combat:
+    """Combat scripte du choix "Affronter les pirates" (Aventure Asteroides, specs.md 2.5) :
+    meme vaisseau/deck reels que combat_depuis_partie (_joueur_depuis_partie), mais flotte fixee a
+    NOMBRE_ENNEMIS_ASTEROIDES ennemis (creer_flotte_asteroides) plutot que le tirage standard lie
+    au niveau."""
+    aleatoire = aleatoire or random.Random(partie.graine + partie.niveau)
+    cartes = charger_cartes()
+    joueur = _joueur_depuis_partie(partie, cartes, aleatoire)
+    flotte = creer_flotte_asteroides(charger_ennemis(), aleatoire)
     return Combat(joueur=joueur, flotte=flotte, aleatoire=aleatoire)
 
 
@@ -373,16 +393,23 @@ def reparer_module(partie: Partie, position: str) -> bool:
     return True
 
 
-def ameliorer_module(partie: Partie, position: str) -> bool:
-    """Augmente le pv_max du module de cet emplacement de PV_AMELIORATION, et ses PV actuels du
-    meme montant (specs.md 2.2 : pas seulement le plafond), contre COUT_ACTION_STATION_SERVICE
-    d'Argent (specs.md 2.1). S'applique au module principal comme aux modules equipes. Modifie
-    `partie` et renvoie True si l'Argent etait suffisant, sinon ne fait rien et renvoie False."""
-    if not _payer_action_station_service(partie):
-        return False
+def _effet_ameliorer_module(partie: Partie, position: str) -> None:
+    """Coeur de l'effet Ameliorer (specs.md 2.2) : augmente le pv_max du module de cet
+    emplacement de PV_AMELIORATION, et ses PV actuels du meme montant (pas seulement le plafond).
+    Partage entre ameliorer_module (Station service, payant) et ameliorer_module_aventure
+    (specs.md 2.5, gratuit) - pas de cout applique ici, a la charge de l'appelant."""
     etat = partie.vaisseau[position]
     etat.pv_max += PV_AMELIORATION
     etat.pv += PV_AMELIORATION
+
+
+def ameliorer_module(partie: Partie, position: str) -> bool:
+    """Effet Ameliorer (_effet_ameliorer_module) contre COUT_ACTION_STATION_SERVICE d'Argent
+    (specs.md 2.1/2.2). S'applique au module principal comme aux modules equipes. Modifie
+    `partie` et renvoie True si l'Argent etait suffisant, sinon ne fait rien et renvoie False."""
+    if not _payer_action_station_service(partie):
+        return False
+    _effet_ameliorer_module(partie, position)
     return True
 
 
@@ -412,6 +439,64 @@ def deplacer_module(partie: Partie, position_source: str, position_destination: 
         partie.vaisseau[position_destination],
         partie.vaisseau[position_source],
     )
+    return True
+
+
+# --- Aventures (specs.md 2.5) : effets appliques a une partie sauvegardee, partages PC/web ---
+
+PV_REPARATION_VAISSEAU = 5
+
+
+def reparer_vaisseau(partie: Partie) -> Partie:
+    """Restaure PV_REPARATION_VAISSEAU PV a CHAQUE module equipe (base + equipables), plafonne a
+    son pv_max chacun (specs.md 2.5, Aventure "Trois lunes") - contrairement a reparer_module
+    (§2.2) qui ne cible qu'un seul module choisi. Modifie et renvoie `partie`."""
+    for position in POSITIONS_VAISSEAU:
+        etat = partie.vaisseau[position]
+        if etat is not None:
+            etat.pv = min(etat.pv + PV_REPARATION_VAISSEAU, etat.pv_max)
+    return partie
+
+
+def retirer_carte(partie: Partie, id_carte: str) -> Partie:
+    """Retire un exemplaire de cette carte du deck possede de la partie (specs.md 2.5, Aventure
+    "Trois lunes") - operation inverse de ajouter_carte. Modifie et renvoie `partie`."""
+    partie.deck.remove(id_carte)
+    return partie
+
+
+def ameliorer_module_aventure(partie: Partie, position: str) -> Partie:
+    """Meme effet que ameliorer_module (_effet_ameliorer_module, §2.2), mais gratuit (specs.md
+    2.5, Aventure "Trois lunes") : contrairement a la Station service, aucun cout en Argent.
+    Modifie et renvoie `partie`."""
+    _effet_ameliorer_module(partie, position)
+    return partie
+
+
+DEGATS_ASTEROIDES = 5
+
+
+def subir_degats_module(partie: Partie, position: str, degats: int) -> Partie:
+    """Inflige `degats` PV au module de cet emplacement, plafonne a 0 (specs.md 2.5, Aventure
+    "Asteroides") - operation inverse de reparer_module/reparer_vaisseau, mais hors combat (pas de
+    bouclier ici, EtatModule n'en persiste pas). Modifie et renvoie `partie`."""
+    etat = partie.vaisseau[position]
+    etat.pv = max(etat.pv - degats, 0)
+    return partie
+
+
+COUT_METTRE_AUX_NORMES = 10
+
+
+def payer_mise_aux_normes(partie: Partie) -> bool:
+    """Deduit COUT_METTRE_AUX_NORMES d'Argent si la partie en a assez (Aventure "Police", specs.md
+    2.5, choix "Mettre aux normes" - garde la carte tiree, pas d'effet sur le deck). Remplace le
+    pourcentage du prix de vente en magasin envisage initialement, abandonne : la Planete
+    commerciale n'a pas de prix par carte (specs.md 9.1). Renvoie True si l'Argent etait suffisant
+    (et deduit), sinon ne modifie rien et renvoie False."""
+    if partie.argent < COUT_METTRE_AUX_NORMES:
+        return False
+    partie.argent -= COUT_METTRE_AUX_NORMES
     return True
 
 

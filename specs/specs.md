@@ -20,7 +20,8 @@ Un deckbuilder roguelike inspiré de Slay the Spire, où le joueur incarne un va
   - **PRIME** — combat, contrat de chasseur de primes. Affiche un niveau de difficulté / la composition annoncée des ennemis (tailles S/M/L, cf. 3.2) sans révéler le détail exact
   - **STATION SERVICE** (le "garage") — entretien du vaisseau contre de l'Argent : réparer, améliorer ou déplacer un module (détail en §2.2)
   - **PLANÈTE COMMERCIALE** (le "marché") — achat de cartes contre de l'Argent ; la disponibilité des cartes Rares/Légendaires pour un module dépend de son niveau d'amélioration (voir §2.2 et §6)
-  - **AVENTURE** — événement inconnu, façon "?" de Slay the Spire. Contenu entièrement à définir (§9.1)
+  - **AVENTURE** — événement inconnu, façon "?" de Slay the Spire. 3 premières aventures spécifiées
+    (voir §2.5), reste à en écrire d'autres pour varier le pool (§9.1)
   - **CHOIX DE MODULE** — niveau 1 uniquement (§2.3) : 3 modules différents tirés au sort, le joueur en choisit un
   - *(autres types d'étapes à imaginer)*
 - **Boss** : niveau 10, puis tous les 10 niveaux (20, 30, 40...) — voir §2.3
@@ -111,10 +112,16 @@ l'écran ("... - Niveau N - X €"). Côté web, `COUT_ACTION_STATION_SERVICE` e
   dupliquée côté web (décision utilisateur, feedback demandé pendant les essais manuels). Le module
   sélectionné est ensuite **désélectionné automatiquement** (le popup suffit à confirmer l'effet) ;
   **Déplacer** garde son comportement propre (armement/clic de destination, cf. ci-dessus)
-- Icônes des 4 actions dans `assets/station_service/` (`reparer.png`, `ameliorer.png`,
-  `mettre_a_jour.png`, `deplacer.png`) : déjà pourvues de leur propre cadre/nom incrusté (fournies
-  par l'utilisateur, même principe que `assets/prochain_niveau/`), affichées seules sans étiquette de
-  texte supplémentaire à côté
+- **Icônes des 4 actions : rangée d'icônes déjà pourvues de leur propre cadre/nom incrusté**
+  (`assets/station_service/avec_texte/reparer.png`/`ameliorer.png`/`mettre_a_jour.png`/
+  `deplacer.png`), affichées seules avec juste le prix en dessous — décision utilisateur : un
+  essai de mise en page "empilée verticalement, image sans texte à gauche + titre/description à
+  droite" (même convention que les choix d'Aventure, §2.5) a été tenté avec les versions sans texte
+  de `assets/station_service/` (celles réutilisées telles quelles par les Aventures Trois
+  lunes/Police), puis abandonné pour cet écran uniquement, jugé moins lisible ; anciennes icônes
+  avec texte restaurées depuis l'historique git dans un sous-dossier dédié (`avec_texte/`) plutôt
+  que redemandées à l'utilisateur — Choix du prochain niveau et Station service ne partagent donc
+  plus la même présentation, contrairement à ce qu'un essai précédent visait
 - La carte du module principal utilise `assets/modules/principal_avant.png` (recadrage sur l'avant
   du vaisseau, décision utilisateur) plutôt que l'image complète du vaisseau (`config/modules.json`,
   utilisée telle quelle comme fond du vaisseau en combat) — sinon hors d'échelle par rapport aux
@@ -181,7 +188,8 @@ section (référencée), cette liste ne fait que les enchaîner.
 l'Électricité), dans le titre de Station service/Choix de module/Aventure-Planète commerciale
 ("... - Niveau N"), en sous-titre de VICTOIRE/DÉFAITE (Fin de combat), en plus des écrans qui
 l'affichaient déjà (Écran de partie, Choix du prochain niveau). PC : `FenetreCombat`/
-`EcranStationService`/`EcranChoixModule`/`EcranEtapePlaceholder`/`EcranFinCombat` reçoivent
+`EcranStationService`/`EcranChoixModule`/`EcranEtapePlaceholder`/`EcranAventureTroisLunes`/
+`EcranFinCombat` reçoivent
 `niveau` (ou lisent `self.partie.niveau`) depuis `main.py`. Web : `partieActive.niveau` (déjà
 présent dans le JSON de `Partie`, aucun champ bridge supplémentaire nécessaire), lu directement par
 `web/app.js`. Non affiché à l'écran Victoire finale (le run est terminé à ce stade).
@@ -217,11 +225,13 @@ présent dans le JSON de `Partie`, aucun champ bridge supplémentaire nécessair
    principe déjà décrit en §10.3) — `est_niveau_boss` reste utile pour d'autres besoins (ex. décider
    quel ennemi affronter une fois au Combat), mais n'a plus besoin d'être vérifié par l'appelant
    avant d'afficher cet écran : `tirer_propositions_niveau` gère le cas Boss en interne.
-   `src/ui/ecran_choix_niveau.py` (PC, jusqu'à 5 cartes possibles au total — layout généralisé pour
-   accepter 1 ou 3 propositions — avec icône dédiée par type — `assets/prochain_niveau/`, images
-   fournies par l'utilisateur, déjà leur propre cadre/nom incrusté — et description sous l'icône) ;
-   `web/bridge.py` (`choix_niveau_web`), `web/app.js` (`choixNiveau`, exposée sur `window` pour test
-   manuel)
+   `src/ui/ecran_choix_niveau.py` (PC, jusqu'à 3 propositions, 1 seule à un niveau Boss — icône
+   dédiée par type, `assets/prochain_niveau/`, images fournies par l'utilisateur **sans texte
+   incrusté** — présentées **empilées verticalement, image à gauche et rectangle de texte (titre +
+   description) à droite**, même convention que les choix d'Aventure (§2.5) et de Station service
+   (§2.2), plutôt que des cartes côte à côte avec image+description empilées à l'intérieur — mise en
+   page initiale, abandonnée une fois les icônes fournies sans texte) ; `web/bridge.py`
+   (`choix_niveau_web`), `web/app.js` (`afficherChoixNiveau`/`choisirEtape`)
 4. **Choix de module, Niveau 1** (implémenté en écran autonome, §2.3, **relié à la partie**) : une
    fois un module choisi, met à jour la partie (2ᵉ emplacement du vaisseau) et son niveau (1 → 2),
    puis → Choix du prochain niveau (étape 3)
@@ -238,19 +248,34 @@ présent dans le JSON de `Partie`, aucun champ bridge supplémentaire nécessair
      pas de distinction victoire/défaite/abandon pour l'instant, cf. §10.3) → Écran de partie
      (étape 2), via un bouton "Continuer" (PC : clic n'importe où sur l'écran, cf.
      `src/ui/ecran_fin_combat.py`)
-7. **Aventure** (contenu non préparé, §2/§9.1, **relié à l'enchaînement via un écran générique**) :
-   un bouton "j'ai terminé" avance le niveau et revient au Choix du prochain niveau (étape 3), même
-   principe que Station service — en attendant un vrai contenu, l'écran se limite à afficher
-   l'icône/description déjà utilisées au Choix du prochain niveau avec un message "Contenu pas
-   encore défini pour cette étape." `src/ui/ecran_etape_placeholder.py` (PC, un seul écran
-   générique pour cette étape et l'étape 9) + `main.py:_ouvrir_etape_placeholder` ; côté web
-   `web/bridge.py` (`terminer_etape_placeholder_web`) + `web/app.js`
-   (`ouvrirEtapePlaceholderPartie`/`terminerEtapePlaceholder`)
+7. **Aventure** (détaillé en §2.5, **trois Aventures implémentées et reliées à l'enchaînement :
+   "Trois lunes", "Astéroïdes" et "Police"** ; tirage uniforme non déterministe entre les trois via
+   `tirer_type_aventure`, PC (`main.py`) et web (`type_aventure_web`)) : un choix résolu puis un
+   bouton "Continuer" avance le niveau et revient au Choix du prochain niveau (étape 3), même
+   principe que Station service — sauf le choix "Affronter les pirates" de l'Astéroïdes, qui délègue
+   au pipeline Combat (étape 5) via un combat scripté plutôt que d'avancer directement.
+   `src/ui/ecran_aventure_trois_lunes.py`/`src/ui/ecran_aventure_asteroides.py`/
+   `src/ui/ecran_aventure_police.py` (PC) + `main.py:_ouvrir_aventure_trois_lunes`/
+   `_ouvrir_aventure_asteroides`/`_ouvrir_aventure_police` ; côté web `web/bridge.py`
+   (`constantes_aventure_trois_lunes_web`/`deck_groupe_par_id_partie_web`/
+   `reparer_vaisseau_aventure_web`/`ameliorer_module_aventure_web`/`retirer_carte_aventure_web`/
+   `terminer_aventure_trois_lunes_web` ; `constantes_aventure_asteroides_web`/
+   `subir_degats_module_asteroides_web`/`carte_offerte_asteroides_web`/
+   `prendre_carte_offerte_asteroides_web`/`combat_aventure_asteroides_web`/
+   `terminer_aventure_asteroides_web` ; `constantes_aventure_police_web`/`tirer_carte_police_web`/
+   `confiscation_police_web`/`mettre_aux_normes_police_web`/`terminer_aventure_police_web`) + `web/app.js`
+   (`ouvrirAventureTroisLunesPartie`/`ouvrirAventureAsteroidesPartie`/`ouvrirAventurePolicePartie` et
+   fonctions associées)
 8. **Station service** (détaillé en §2.2, **implémenté et relié à l'enchaînement**) : Réparer /
    Améliorer / Mettre à jour / Déplacer un module, un bouton "j'ai terminé" avance le niveau et
    revient au Choix du prochain niveau (étape 3), même principe que la fin d'un combat gagné
-9. **Planète commerciale** (contenu non préparé, §2/§9.1) : même principe qu'Aventure — même écran
-   générique, même comportement (étape 7)
+9. **Planète commerciale** (contenu non préparé, §2/§9.1, **relié à l'enchaînement via un écran
+   générique**) : un bouton "j'ai terminé" avance le niveau et revient au Choix du prochain niveau
+   (étape 3) — en attendant un vrai contenu, l'écran se limite à afficher l'icône/description déjà
+   utilisées au Choix du prochain niveau avec un message "Contenu pas encore défini pour cette
+   étape." `src/ui/ecran_etape_placeholder.py` (PC) + `main.py:_ouvrir_etape_placeholder` ; côté web
+   `web/bridge.py` (`terminer_etape_placeholder_web`) + `web/app.js`
+   (`ouvrirEtapePlaceholderPartie`/`terminerEtapePlaceholder`)
 10. **Boss** (niveau 10, puis tous les 10 niveaux à terme — §2.3), atteint via la proposition
     unique "Combattre le Boss !" de l'étape 3 : réutilise l'écran Combat pour l'instant, pas encore
     d'ennemi de Boss dédié (§9.1) → Victoire : Victoire finale (étape 11) ; Défaite : même
@@ -265,6 +290,146 @@ présent dans le JSON de `Partie`, aucun champ bridge supplémentaire nécessair
     désormais `{"partie": ..., "niveau_boss": bool}` pour signaler à `web/app.js` quand ouvrir cet
     écran plutôt que d'avancer directement) + `web/app.js` (`ouvrirVictoireFinalePartie`,
     `terminerVictoireFinale`)
+
+### 2.5 Aventures (contenu)
+
+Contenu concret des 3 premières Aventures spécifiées à ce jour — brouillon détaillé dans
+`specs/cartes.xlsx`, onglet "Aventures" (miroir humainement modifiable, même principe que l'onglet
+Cartes, cf. CLAUDE.md/§10.3). **Les trois Aventures (Trois lunes, Astéroïdes, Police) sont
+implémentées** (voir ci-dessous). `TypeEtape.AVENTURE` tire au hasard laquelle des trois ouvrir
+(`tirer_type_aventure`, `TypeAventure`, `src/gameplay/parcours.py` — tirage uniforme non
+déterministe, comme les récompenses de fin de combat).
+
+Forme retenue pour l'écran Aventure : un écran dédié par Aventure (pas l'écran générique),
+affichant description + 2-3 choix cliquables — même présentation que l'écran Choix du prochain
+niveau (§2.4 étape 3, choix empilés verticalement, image sans texte incrusté à gauche, titre +
+description à droite) plutôt qu'une mise en page différente par écran. Exception : la Station
+service (§2.2) est revenue à sa rangée d'icônes avec texte incrusté (décision utilisateur, cf.
+§2.2), les 2 écrans n'ont donc plus tout à fait la même présentation. Une Aventure scénarisée
+en plusieurs temps (Astéroïdes ci-dessous) reste un **seul écran** dont le contenu affiché change à
+mesure que le joueur avance (état interne à l'écran, comme `EcranStationService` se redessine après
+chaque action) plutôt que plusieurs écrans/fenêtres séparés — décision utilisateur : pas de moteur
+de séquence narrative générique, chaque Aventure scripte ses propres étapes en dur (Trois lunes :
+"choix" -> "choix_module"/"choix_carte" -> "resolu" ; Astéroïdes : "choix" -> "choix_module" ->
+"sequence_2" -> "sequence_3"/"resolu" -> "resolu" ; Police : "choix" -> "resolu", un attribut `etape`
+interne à l'écran dans les trois cas). Contenu prévu à terme dans un `config/aventures.json` (miroir
+de l'onglet xlsx, même relation que `config/cartes.json`/onglet Cartes) — pas encore créé, les trois
+Aventures actuelles restant scriptées en dur ; structure à définir si/quand d'autres Aventures
+s'ajoutent au pool (§9.1).
+
+**Présentation des choix** (les trois écrans) : chaque choix est une ligne empilée verticalement
+(pas de disposition en grille), avec une image carrée à gauche et, à droite, un long rectangle
+contenant le titre puis la description — décision utilisateur, pour préparer une illustration par
+choix. `_dessiner_carte_choix`/`construireLigneChoixHtml` (respectivement PC et web) partagent cette
+mise en page entre les trois écrans (dupliquée par fichier côté PC, factorisée en une fonction
+commune côté web). **Les 8 choix des 3 Aventures sont désormais tous illustrés** — une ligne sans
+image dédiée afficherait un placeholder vide (même convention que les autres emplacements vides du
+jeu), mais ce cas ne se présente plus à ce jour :
+- Réparer/Améliorer (Trois lunes) depuis `assets/station_service/reparer.png`/`ameliorer.png`,
+  Affronter les pirates (Astéroïdes) depuis `assets/prochain_niveau/prime.png`, Mettre aux normes
+  (Police) depuis `assets/station_service/mettre_a_jour.png` — **recadrées pour retirer leur bandeau
+  de titre incrusté** (respectivement "RÉPARER"/"AMÉLIORER" — déjà le bon titre, recadré tout de
+  même par cohérence visuelle avec les autres —, "PRIME" et "METTRE À JOUR" — non pertinents pour
+  ces choix). Le titre étant de toute façon systématiquement redessiné à côté dans le rectangle de
+  texte, un bandeau incrusté n'a plus d'intérêt à être conservé, qu'il corresponde ou non au choix.
+- Traverser le champ d'astéroïdes (Astéroïdes) depuis le fond d'écran de sa propre Aventure
+  (`assets/aventure/champ_asteroides.png`, extrait carré plutôt qu'une icône dédiée)
+- Bricoler (Trois lunes), Confiscation et Détourner l'attention (Police) : illustrations dédiées
+  fournies par l'utilisateur (`assets/aventure/bricoler.png`/`confiscation.png`/`detourner.png`)
+
+Recadrages/extraits/illustrations dédiées, toutes conservées dans `assets/aventure/`
+(`reparer.png`/`ameliorer.png`/`pirates.png`/`mettre_aux_normes.png`/`traverser.png`/`bricoler.png`/
+`confiscation.png`/`detourner.png`) ; sources originales des icônes recadrées inchangées pour leur
+usage propre (Station service, Choix du prochain niveau).
+
+**Astéroïdes** — **implémentée** (fond `assets/aventure/champ_asteroides.png`) — "Poursuivi par des
+pirates de l'espace, vous n'avez plus le choix : vaincre ou périr ! À moins que..."
+- Choix 1, *Traverser le champ d'astéroïdes* : séquence en 3 temps sur le même écran, chaque étape
+  validée par un bouton "Continuer" :
+  1. Le joueur clique un module (`_dessiner_choix_module`/`choix_module`) : -`DEGATS_ASTEROIDES` (5)
+     PV appliqués immédiatement (`subir_degats_module`, nouveau côté moteur : dégâts hors combat,
+     plafonnés à 0, opération inverse de `reparer_module`/`reparer_vaisseau`), puis affichage d'un
+     message de confirmation + bouton "Continuer" (étape `sequence_2`)
+  2. Au clic sur "Continuer" : -`DEGATS_ASTEROIDES` PV supplémentaires (même module)
+  3. Une carte est tirée au hasard dans le pool complet (`pool_toutes_cartes`/`tirer_carte_recompense`,
+     §6) et proposée gratuitement (boutons "Prendre"/"Passer", étape `sequence_3`) — gratuite et
+     hors du flux de récompense standard de fin de combat. Si le pool est vide (`carte` = `None`),
+     l'étape `sequence_3` est sautée directement vers `resolu`
+- Choix 2, *Affronter les pirates* : lance un combat scripté contre `NOMBRE_ENNEMIS_ASTEROIDES` (3)
+  ennemis (`combat_aventure_asteroides`/`creer_flotte_asteroides`) — approximation décidée en
+  attendant la taille S/M/L par ennemi (absente de `config/ennemis.json`, cf. §3.2/§9.1/§10.3) :
+  ennemis tirés du pool existant sur les 3 premières cases de la grille (colonne Avant), plutôt que
+  le tirage standard d'un combat Prime (grille complète, `combat_depuis_partie`). Délègue
+  entièrement au pipeline Combat existant (étape 5/6 : victoire → Argent + carte, comme un Prime
+  normal ; défaite → même traitement qu'un combat normal) via `main.py:_ouvrir_combat`
+  (paramètre `combat` optionnel, déjà construit par l'appelant) / `web/bridge.py:combat_aventure_asteroides_web`
+  (même variable globale `combat` que `continuer_partie_web`, reste du pipeline de fin de combat
+  inchangé)
+- Pas de 3ᵉ choix (binaire assumé)
+
+`src/gameplay/config_poc.py` (`NOMBRE_ENNEMIS_ASTEROIDES`, `creer_flotte_asteroides`) ;
+`src/gameplay/partie.py` (`DEGATS_ASTEROIDES`, `subir_degats_module`, `combat_aventure_asteroides`,
+`_joueur_depuis_partie` factorisée avec `combat_depuis_partie`) ; `src/ui/ecran_aventure_asteroides.py`
+(PC) + `main.py:_ouvrir_aventure_asteroides` ; côté web `web/bridge.py`
+(`constantes_aventure_asteroides_web` expose `DEGATS_ASTEROIDES` pour le texte des choix avant de
+les jouer, plutôt que dupliqué en dur dans `web/app.js`, cf. CLAUDE.md ;
+`subir_degats_module_asteroides_web` ; `carte_offerte_asteroides_web` — tirage et résolution de
+l'id de la carte dans le même appel, sur le même `charger_cartes()`, pour éviter tout problème
+d'identité entre deux chargements distincts, cf. `id_de_carte` — piège réel rencontré côté PC en
+construisant cet écran ; `prendre_carte_offerte_asteroides_web` ; `combat_aventure_asteroides_web` ;
+`terminer_aventure_asteroides_web`) + `web/app.js` (`ouvrirAventureAsteroidesPartie` et fonctions
+associées)
+
+**Trois lunes** — **implémentée** (fond `assets/aventure/trois_lunes.png`) — "Un havre de paix au
+milieu de la galaxie [...]. Il est temps de faire une pause." Trois choix, chacun résolu
+immédiatement (pas de séquence), retour direct au Choix du prochain niveau (bouton "Continuer") :
+- *Réparer le vaisseau* : +`PV_REPARATION_VAISSEAU` (5) PV à **chaque** module équipé, plafonné à
+  son pv_max chacun (`reparer_vaisseau`, nouveau côté moteur : soin groupé, distinct de
+  `reparer_module`, §2.2, qui ne cible qu'un seul module choisi)
+- *Améliorer* : même effet que `ameliorer_module` (+`PV_AMELIORATION`, §2.2) mais **gratuit**
+  (`ameliorer_module_aventure`, aucun coût en Argent contrairement à la Station service — l'effet
+  commun aux deux est factorisé dans `_effet_ameliorer_module`), sur le module cliqué par le joueur
+- *Bricoler* : retire une carte choisie par le joueur de son deck réel (`retirer_carte`, nouveau
+  côté moteur : opération inverse de `ajouter_carte`, §2.4 étape 6). Cartes regroupées par id (pas
+  par nom comme `regrouper_cartes`/l'écran "deck en entier", §6) pour retirer un exemplaire précis
+
+`src/gameplay/partie.py` (`PV_REPARATION_VAISSEAU`, `reparer_vaisseau`, `ameliorer_module_aventure`,
+`retirer_carte`) ; `src/ui/ecran_aventure_trois_lunes.py` (PC, écran à état interne `etape` : "choix"
+-> "choix_module"/"choix_carte" -> "resolu") + `main.py:_ouvrir_aventure_trois_lunes` ; côté web
+`web/bridge.py` (`constantes_aventure_trois_lunes_web` expose PV_REPARATION_VAISSEAU/PV_AMELIORATION
+pour le texte des choix avant de les jouer, plutôt que dupliqués en dur dans `web/app.js`, cf.
+CLAUDE.md ; `deck_groupe_par_id_partie_web` ; `reparer_vaisseau_aventure_web` ;
+`ameliorer_module_aventure_web` ; `retirer_carte_aventure_web` ; `terminer_aventure_trois_lunes_web`)
++ `web/app.js` (`ouvrirAventureTroisLunesPartie`/`rendreAventureTroisLunes` et les fonctions de clic
+associées)
+
+**Police** — **implémentée** (fond `assets/aventure/police.png`) — "Pas de bol, votre dernier achat
+n'est pas aux normes [...]." Une carte est tirée au hasard du deck réel du joueur
+(`tirer_carte_deck`, nouveau côté moteur : tirage dans le deck possédé, contrairement à
+`tirer_carte_recompense` qui tire dans un pool de récompense) et affichée **avant** les choix
+(contrairement aux deux autres Aventures) — dans le même format qu'une carte en combat (image en
+haut, texte en dessous, non cliquable), pas dans le format ligne image+texte des choix en dessous,
+pour ne pas donner l'impression que c'est elle-même une option :
+- *Confiscation* : retire cette carte du deck (`retirer_carte`, réutilisée de Trois lunes/Bricoler)
+- *Mettre aux normes* : coûte un montant fixe en Argent (`COUT_METTRE_AUX_NORMES`, 10 €, cf. §9.1)
+  plutôt qu'un pourcentage du prix de vente en magasin comme envisagé initialement — abandonné, la
+  Planète commerciale n'ayant pas de prix par carte (§9.1) ; garde la carte si l'Argent est
+  suffisant (`payer_mise_aux_normes`), sinon reste sur l'écran avec un message d'erreur
+- *Détourner l'attention* : tire une **seconde** carte au hasard qui remplace la première affichée,
+  puis revient au même écran avec seulement les 2 choix restants (Confiscation/Mettre aux normes —
+  "Détourner" ne peut être choisi qu'une fois **par Aventure**, pas par run : état purement local à
+  l'écran, rien de persisté sur `Partie`)
+
+`src/gameplay/parcours.py` (`tirer_carte_deck`) ; `src/gameplay/partie.py`
+(`COUT_METTRE_AUX_NORMES`, `payer_mise_aux_normes`) ; `src/ui/ecran_aventure_police.py` (PC, écran à
+état interne `etape` : "choix" -> "resolu") + `main.py:_ouvrir_aventure_police` ; côté web
+`web/bridge.py` (`constantes_aventure_police_web` expose `COUT_METTRE_AUX_NORMES` pour le texte du
+choix avant de le jouer, plutôt que dupliqué en dur dans `web/app.js`, cf. CLAUDE.md ;
+`tirer_carte_police_web` — appelée à l'ouverture de l'écran et de nouveau au choix "Détourner
+l'attention" ; `confiscation_police_web` ; `mettre_aux_normes_police_web` renvoie
+`{"partie": ..., "succes": bool}`, même convention que les actions payantes qui peuvent échouer ;
+`terminer_aventure_police_web`) + `web/app.js` (`ouvrirAventurePolicePartie`/`rendreAventurePolice`
+et les fonctions de clic associées)
 
 ---
 
@@ -580,10 +745,14 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
 
 ### 9.1 Design / gameplay
 
-- Contenu exact de la Planète commerciale (uniquement des cartes, ou aussi d'autres bonus ?) et de l'Aventure (entièrement à définir, voir §2)
+- Contenu exact de la Planète commerciale (uniquement des cartes, ou aussi d'autres bonus ?) reste
+  à définir (§2). Contenu de l'Aventure : 3 premières aventures spécifiées (Astéroïdes/Trois
+  lunes/Police), voir §2.5 — **les trois implémentées** (à en écrire d'autres pour varier le pool)
 - Montants d'Argent (récompense de combat, coût des actions de Station service, Argent de départ) :
   **tranchés et implémentés**, voir §2.1/§2.2 — valeurs inventées faute de spec précise à l'origine
-  de cette décision, à ajuster en playtest si besoin
+  de cette décision, à ajuster en playtest si besoin. Même situation pour le coût de "Mettre aux
+  normes" (Aventure Police, §2.5) : **10 € inventés par symétrie avec les autres montants,
+  implémenté**
 - La Planète commerciale propose-t-elle des cartes pour tous les modules du pool, ou seulement pour les modules actuellement équipés ? (§2, §6)
 - **Persistance des modules hors combat/profils joueur** (§2.2/§10.3) : **implémentée** (profil +
   partie, un seul joueur à la fois, écrans de sélection de profil/accueil du joueur, `main.py` en
@@ -799,9 +968,10 @@ fond dédié.
   ou d'une étape Aventure/Planète commerciale) — un combat en cours n'est pas sauvegardable ; le
   quitter en cours de route (fermer l'onglet/l'appli) le fait recommencer entièrement à la reprise,
   au même niveau
-- Planète commerciale et Aventure n'ont pas encore de contenu propre (§2.4, étapes 7 et 9, §9.1) :
-  un seul écran générique (`EcranEtapePlaceholder`) les représente toutes les deux, sans autre
-  effet que d'avancer au niveau suivant
+- Planète commerciale n'a pas encore de contenu propre (§2.4, étape 9, §9.1) : l'écran générique
+  (`EcranEtapePlaceholder`) la représente, sans autre effet que d'avancer au niveau suivant.
+  L'Aventure a désormais sa propre implémentation pour ses trois variantes (Trois lunes, Astéroïdes,
+  Police, §2.5)
 - Le run s'arrête réellement au Niveau 10 dans l'état actuel (décision utilisateur, provisoire,
   voir §2) : la Victoire finale (§2.4, étape 11) marque la partie `TERMINEE` sans proposer de
   continuation au-delà de ce niveau

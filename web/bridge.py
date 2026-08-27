@@ -12,6 +12,7 @@ ciblage/degats.
 import json
 import random
 import sys
+from collections import Counter
 
 sys.path.insert(0, "/repo")
 
@@ -20,18 +21,30 @@ from src.gameplay.config_poc import creer_combat_poc, creer_deck, creer_vaisseau
 from src.gameplay.donnees import charger_cartes, charger_modules, image_case_module
 from src.gameplay.module import Module
 from src.gameplay.parcours import (
+    TypeAventure,
+    TypeEtape,
     aleatoire_pour_niveau,
     est_niveau_boss,
     modules_equipables,
+    pool_toutes_cartes,
     tirer_candidats_module,
     tirer_candidats_recompense,
+    tirer_carte_deck,
+    tirer_carte_recompense,
     tirer_propositions_niveau,
+    tirer_type_aventure,
 )
 from src.gameplay.partie import (
     COUT_ACTION_STATION_SERVICE,
+    COUT_METTRE_AUX_NORMES,
+    DEGATS_ASTEROIDES,
+    PV_AMELIORATION,
+    PV_REPARATION_VAISSEAU,
     ajouter_carte,
     ameliorer_module,
+    ameliorer_module_aventure,
     avancer_niveau,
+    combat_aventure_asteroides,
     combat_depuis_partie,
     deck_de_la_partie,
     deplacer_module,
@@ -44,9 +57,13 @@ from src.gameplay.partie import (
     nouvelle_partie,
     partie_depuis_json,
     partie_vers_json,
+    payer_mise_aux_normes,
     profil_vers_json,
     reparer_module,
+    reparer_vaisseau,
+    retirer_carte,
     specs_utilisees_partie,
+    subir_degats_module,
     synchroniser_vaisseau_depuis_combat,
 )
 from src.gameplay.position import Colonne, Position, Rangee
@@ -418,6 +435,17 @@ def continuer_partie_web(partie_json) -> str:
     return json.dumps({"etat": _etat_dict(), "popups": []})
 
 
+# TEMPORAIRE (pour tester manuellement les 3 Aventures en debut de run) - a retirer une fois le
+# test termine : force les niveaux 2/3/4 en Aventure (au lieu du tirage normal, 1/10 par niveau),
+# une Aventure differente a chaque fois plutot que le tirage uniforme habituel entre les 3. Meme
+# principe que main.py:_NIVEAUX_AVENTURE_FORCEE_POUR_TEST cote PC.
+_NIVEAUX_AVENTURE_FORCEE_POUR_TEST = {
+    2: TypeAventure.TROIS_LUNES,
+    3: TypeAventure.ASTEROIDES,
+    4: TypeAventure.POLICE,
+}
+
+
 def choix_niveau_web(partie_json) -> str:
     """Ecran "Choix du prochain niveau" (specs.md 2.3/2.4) : 3 propositions d'etape tirees de
     facon deterministe a partir de la graine et du niveau de la partie (ou une seule, BOSS, a un
@@ -425,7 +453,19 @@ def choix_niveau_web(partie_json) -> str:
     partie = partie_depuis_json(partie_json)
     aleatoire = aleatoire_pour_niveau(partie.graine, partie.niveau)
     propositions = tirer_propositions_niveau(partie.niveau, aleatoire)
+    if partie.niveau in _NIVEAUX_AVENTURE_FORCEE_POUR_TEST:  # TEMPORAIRE, cf. commentaire ci-dessus
+        propositions = [TypeEtape.AVENTURE] * len(propositions)
     return json.dumps({"niveau": partie.niveau, "propositions": [type_etape.name for type_etape in propositions]})
+
+
+def type_aventure_web(niveau=None) -> str:
+    """Tire quelle Aventure ouvrir pour une etape TypeEtape.AVENTURE (specs.md 2.5) - meme
+    logique que main.py cote PC (tirer_type_aventure), seule source de verite (CLAUDE.md).
+    `niveau` optionnel : uniquement pour le forcage temporaire de test ci-dessus, cf.
+    web/app.js qui le fournit desormais a l'appel."""
+    if niveau in _NIVEAUX_AVENTURE_FORCEE_POUR_TEST:  # TEMPORAIRE, cf. commentaire ci-dessus
+        return _NIVEAUX_AVENTURE_FORCEE_POUR_TEST[niveau].name
+    return tirer_type_aventure(random.Random()).name
 
 
 def candidats_recompense_partie_web(partie_json) -> str:
@@ -521,10 +561,180 @@ def terminer_station_service_web(partie_json) -> str:
 
 
 def terminer_etape_placeholder_web(partie_json) -> str:
-    """Bouton "J'ai termine" de l'ecran generique Aventure/Planete commerciale (contenu pas encore
-    prepare, specs.md 2.4 etapes 7/9, 9.1) : avance au niveau suivant, meme logique que
+    """Bouton "J'ai termine" de l'ecran generique Planete commerciale (contenu pas encore prepare,
+    specs.md 2.4 etape 9, 9.1) : avance au niveau suivant, meme logique que
     main.py:_ouvrir_etape_placeholder cote PC. Renvoie la partie mise a jour (web/app.js la
     re-sauvegarde dans localStorage puis enchaine sur le choix du niveau)."""
+    partie = partie_depuis_json(partie_json)
+    avancer_niveau(partie)
+    return partie_vers_json(partie)
+
+
+# --- Aventure "Trois lunes" (specs.md 2.5) : choix unique parmi Reparer/Ameliorer/Bricoler,
+# resolu immediatement, memes fonctions pures que src/ui/ecran_aventure_trois_lunes.py cote PC
+# (src/gameplay/partie.py). Une seule Aventure implementee pour l'instant. ---
+
+
+def constantes_aventure_trois_lunes_web() -> str:
+    """Expose PV_REPARATION_VAISSEAU/PV_AMELIORATION (src/gameplay/partie.py) pour le texte des
+    choix avant meme de les jouer - seule source de verite (CLAUDE.md), web/app.js ne duplique
+    jamais ces valeurs."""
+    return json.dumps({"pv_reparation_vaisseau": PV_REPARATION_VAISSEAU, "pv_amelioration": PV_AMELIORATION})
+
+
+def deck_groupe_par_id_partie_web(partie_json) -> str:
+    """Deck reel d'une partie, regroupe par id de carte plutot que par nom (contrairement a
+    deck_partie_web/regrouper_cartes, src/gameplay/carte.py) : necessaire pour retirer un
+    exemplaire precis (choix "Bricoler", retirer_carte prend un id, pas un nom)."""
+    partie = partie_depuis_json(partie_json)
+    cartes = charger_cartes()
+    compteur = Counter(partie.deck)
+    resultat = []
+    for id_carte, quantite in compteur.items():
+        entree = _carte_regroupee_json(cartes[id_carte], quantite)
+        entree["id_carte"] = id_carte
+        resultat.append(entree)
+    return json.dumps(resultat)
+
+
+def reparer_vaisseau_aventure_web(partie_json) -> str:
+    partie = partie_depuis_json(partie_json)
+    reparer_vaisseau(partie)
+    return partie_vers_json(partie)
+
+
+def ameliorer_module_aventure_web(partie_json, position) -> str:
+    partie = partie_depuis_json(partie_json)
+    ameliorer_module_aventure(partie, position)
+    return partie_vers_json(partie)
+
+
+def retirer_carte_aventure_web(partie_json, id_carte) -> str:
+    partie = partie_depuis_json(partie_json)
+    retirer_carte(partie, id_carte)
+    return partie_vers_json(partie)
+
+
+def terminer_aventure_trois_lunes_web(partie_json) -> str:
+    """Bouton "Continuer" de l'ecran Aventure "Trois lunes" (une fois un choix resolu) : avance au
+    niveau suivant, meme logique que main.py:_ouvrir_aventure_trois_lunes cote PC. Renvoie la
+    partie mise a jour (web/app.js la re-sauvegarde dans localStorage puis enchaine sur le choix
+    du niveau)."""
+    partie = partie_depuis_json(partie_json)
+    avancer_niveau(partie)
+    return partie_vers_json(partie)
+
+
+# --- Aventure "Asteroides" (specs.md 2.5) : choix "Traverser" en 3 temps (module cible des
+# degats, puis carte offerte) ou "Affronter les pirates" (combat scripte), memes fonctions pures
+# que src/ui/ecran_aventure_asteroides.py cote PC (src/gameplay/partie.py). ---
+
+
+def constantes_aventure_asteroides_web() -> str:
+    """Expose DEGATS_ASTEROIDES (src/gameplay/partie.py) pour le texte des choix avant de les
+    jouer - seule source de verite (CLAUDE.md), web/app.js ne duplique jamais cette valeur."""
+    return json.dumps({"degats_asteroides": DEGATS_ASTEROIDES})
+
+
+def subir_degats_module_asteroides_web(partie_json, position) -> str:
+    partie = partie_depuis_json(partie_json)
+    subir_degats_module(partie, position, DEGATS_ASTEROIDES)
+    return partie_vers_json(partie)
+
+
+def _carte_avec_id_json(carte, cartes: dict) -> dict:
+    """Meme forme que _candidat_recompense_json, sans le module associe (non pertinent pour une
+    carte offerte/tiree hors combat, specs.md 2.5) - id resolu sur le meme charger_cartes() que
+    l'appelant, pour eviter tout probleme d'identite entre deux chargements distincts (cf. la
+    docstring de id_de_carte) - piege reel rencontre cote PC en construisant ces ecrans."""
+    return {
+        "id_carte": id_de_carte(carte, cartes),
+        "nom": carte.nom,
+        "image": _chemin_web(carte.image),
+        "cout": carte.cout,
+        "rarete": carte.rarete.name,
+        "valeur": carte.valeur,
+        "type": carte.type.name,
+        "cible": carte.cible.name,
+        "action": carte.action.name if carte.action else None,
+        "duree": carte.duree,
+    }
+
+
+def carte_offerte_asteroides_web() -> str:
+    """Tire une carte gratuite pour le choix "Traverser" (specs.md 2.5), meme pool que le module
+    principal (pool_toutes_cartes) - independant de tout combat/partie. None si le pool est vide
+    (cf. tirer_carte_recompense)."""
+    cartes = charger_cartes()
+    carte = tirer_carte_recompense(pool_toutes_cartes(cartes), random.Random())
+    if carte is None:
+        return json.dumps(None)
+    return json.dumps(_carte_avec_id_json(carte, cartes))
+
+
+def prendre_carte_offerte_asteroides_web(partie_json, id_carte) -> str:
+    partie = partie_depuis_json(partie_json)
+    ajouter_carte(partie, id_carte)
+    return partie_vers_json(partie)
+
+
+def combat_aventure_asteroides_web(partie_json) -> str:
+    """Choix "Affronter les pirates" (specs.md 2.5) : demarre le combat scripte a partir du
+    vaisseau/deck reels de la partie, meme logique que continuer_partie_web mais avec une flotte
+    fixee (combat_aventure_asteroides) plutot que le tirage standard lie au niveau."""
+    global combat
+    partie = partie_depuis_json(partie_json)
+    combat = combat_aventure_asteroides(partie)
+    return json.dumps({"etat": _etat_dict(), "popups": []})
+
+
+def terminer_aventure_asteroides_web(partie_json) -> str:
+    """Bouton "Continuer" de l'ecran Aventure "Asteroides" (choix "Traverser" resolu) : avance au
+    niveau suivant, meme logique que main.py:_ouvrir_aventure_asteroides cote PC. Renvoie la
+    partie mise a jour (web/app.js la re-sauvegarde dans localStorage puis enchaine sur le choix
+    du niveau)."""
+    partie = partie_depuis_json(partie_json)
+    avancer_niveau(partie)
+    return partie_vers_json(partie)
+
+
+# --- Aventure "Police" (specs.md 2.5) : une carte est tiree au hasard du deck reel du joueur et
+# affichee avant les choix - Confiscation / Mettre aux normes / Detourner l'attention (une seule
+# fois par Aventure, geree cote JS - pas d'etat a persister sur Partie). Memes fonctions pures que
+# src/ui/ecran_aventure_police.py cote PC (src/gameplay/partie.py). ---
+
+
+def constantes_aventure_police_web() -> str:
+    """Expose COUT_METTRE_AUX_NORMES (src/gameplay/partie.py) pour le texte du choix avant de le
+    jouer - seule source de verite (CLAUDE.md), web/app.js ne duplique jamais cette valeur."""
+    return json.dumps({"cout_mettre_aux_normes": COUT_METTRE_AUX_NORMES})
+
+
+def tirer_carte_police_web(partie_json) -> str:
+    """Tire au hasard une carte du deck reel de la partie (tirer_carte_deck, specs.md 2.5) -
+    appelee a l'ouverture de l'ecran, et de nouveau au choix "Detourner l'attention"."""
+    partie = partie_depuis_json(partie_json)
+    cartes = charger_cartes()
+    id_carte = tirer_carte_deck(partie.deck, random.Random())
+    return json.dumps(_carte_avec_id_json(cartes[id_carte], cartes))
+
+
+def confiscation_police_web(partie_json, id_carte) -> str:
+    partie = partie_depuis_json(partie_json)
+    retirer_carte(partie, id_carte)
+    return partie_vers_json(partie)
+
+
+def mettre_aux_normes_police_web(partie_json) -> str:
+    partie = partie_depuis_json(partie_json)
+    succes = payer_mise_aux_normes(partie)
+    return json.dumps({"partie": json.loads(partie_vers_json(partie)), "succes": succes})
+
+
+def terminer_aventure_police_web(partie_json) -> str:
+    """Bouton "Continuer" de l'ecran Aventure "Police" (choix resolu) : avance au niveau suivant,
+    meme logique que main.py:_ouvrir_aventure_police cote PC. Renvoie la partie mise a jour
+    (web/app.js la re-sauvegarde dans localStorage puis enchaine sur le choix du niveau)."""
     partie = partie_depuis_json(partie_json)
     avancer_niveau(partie)
     return partie_vers_json(partie)

@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "37";
+const VERSION_CACHE = "48";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -101,6 +101,9 @@ const IDS_ECRANS = [
     "ecran-choix-module",
     "ecran-choix-niveau",
     "ecran-station-service",
+    "ecran-aventure-trois-lunes",
+    "ecran-aventure-asteroides",
+    "ecran-aventure-police",
     "ecran-etape-placeholder",
     "ecran-fin-combat",
     "ecran-victoire-finale",
@@ -625,11 +628,17 @@ function ouvrirChoixNiveauPartie(partie) {
 // niveau (etape 8, specs.md 2.4). Meme regles que src/ui/ecran_station_service.py cote PC -
 // bridge.py n'applique que les fonctions pures de src/gameplay/partie.py, aucune regle dupliquee
 // ici (CLAUDE.md).
+// Icones avec cadre/nom incruste (assets/station_service/avec_texte/) - decision utilisateur :
+// cet ecran garde sa grille d'icones seules (pas la ligne image+texte des Aventures/Choix du
+// prochain niveau/specs.md 2.5), donc les versions sans texte de assets/station_service/
+// (reutilisees telles quelles par les Aventures Trois lunes/Police) ne conviennent plus ici sans
+// ajouter un texte redondant - anciennes icones restaurees depuis l'historique git, pour cet
+// ecran uniquement. Memes chemins que main.py:ecran_station_service.py:ACTIONS cote PC.
 const ACTIONS_STATION_SERVICE = [
-    ["reparer", "assets/station_service/reparer.png"],
-    ["ameliorer", "assets/station_service/ameliorer.png"],
-    ["mettre_a_jour", "assets/station_service/mettre_a_jour.png"],
-    ["deplacer", "assets/station_service/deplacer.png"],
+    ["reparer", "assets/station_service/avec_texte/reparer.png"],
+    ["ameliorer", "assets/station_service/avec_texte/ameliorer.png"],
+    ["mettre_a_jour", "assets/station_service/avec_texte/mettre_a_jour.png"],
+    ["deplacer", "assets/station_service/avec_texte/deplacer.png"],
 ];
 const FONCTIONS_ACTION_STATION_SERVICE = {
     reparer: "reparer_module_web",
@@ -784,20 +793,466 @@ function terminerStationServicePartie() {
     ouvrirChoixNiveauPartie(partie);
 }
 
-// Ecran generique pour une etape sans contenu prepare (Aventure, Planete commerciale - specs.md
-// 2.4 etapes 7/9, 9.1) : reutilise l'icone/description de LIBELLES_TYPE_ETAPE (definie plus bas,
-// pour l'ecran "Choix du prochain niveau") avec un message explicite et un bouton "J'ai termine"
-// qui avance simplement au niveau suivant - meme logique que
-// main.py:_ouvrir_etape_placeholder cote PC.
-const TITRES_TYPE_ETAPE = {
-    AVENTURE: "Aventure",
-    PLANETE_COMMERCIALE: "Planete commerciale",
-};
+// Ligne d'un choix d'Aventure (specs.md 2.5) : image carree a gauche (aucune -> case vide en
+// attendant un visuel dedie), rectangle de texte (titre + description) a droite - meme
+// presentation pour les 3 ecrans d'Aventure (Trois lunes/Asteroides/Police).
+function construireLigneChoixHtml(identifiant, image, titre, texte, classesSupplementaires = "") {
+    const imageHtml = image ? `<img src="${image}" alt="${titre}">` : "";
+    return `
+        <div class="choix-aventure${classesSupplementaires}" data-choix="${identifiant}">
+            <div class="choix-aventure-image">${imageHtml}</div>
+            <div class="choix-aventure-texte">
+                <div class="choix-aventure-titre">${titre}</div>
+                <div class="choix-aventure-description">${texte}</div>
+            </div>
+        </div>`;
+}
 
+// Aventure "Trois lunes" (specs.md 2.5) : choix unique parmi Reparer/Ameliorer/Bricoler, resolu
+// immediatement des le clic - contrairement a l'Aventure Asteroides (a venir), pas de sequence en
+// plusieurs temps ici. Meme regles que src/ui/ecran_aventure_trois_lunes.py cote PC - bridge.py
+// n'applique que les fonctions pures de src/gameplay/partie.py, aucune regle dupliquee ici.
+// Reutilisent les icones de assets/station_service/, desormais sans texte incruste (fournies par
+// l'utilisateur) - le titre est de toute facon toujours redessine a cote dans le rectangle de
+// texte.
+const ICONE_REPARER = "assets/station_service/reparer.png";
+const ICONE_AMELIORER = "assets/station_service/ameliorer.png";
+const ICONE_BRICOLER = "assets/aventure/bricoler.png";
+
+const DESCRIPTION_TROIS_LUNES =
+    "Un havre de paix au milieu de la galaxie. Aucune forme de vie intelligente, des animaux de " +
+    "taille raisonnable, de l'eau, des fruits et des legumes sauvages partout. Il est temps de " +
+    "faire une pause.";
+
+// Constantes reelles du moteur (PV_REPARATION_VAISSEAU/PV_AMELIORATION), recuperees une seule
+// fois depuis bridge.py plutot que dupliquees ici en dur (CLAUDE.md).
+let constantesAventureTroisLunes = null;
+// "choix" (3 choix initiaux) -> "choix_module" (Ameliorer) ou "choix_carte" (Bricoler), ou
+// directement "resolu" (Reparer, effet immediat sans cible a choisir).
+let etapeAventureTroisLunes = "choix";
+let groupesDeckAventureTroisLunes = [];
+let messageResoluAventureTroisLunes = "";
+
+function ouvrirAventureTroisLunesPartie(partie) {
+    partieActive = partie;
+    etapeAventureTroisLunes = "choix";
+    if (constantesAventureTroisLunes === null) {
+        constantesAventureTroisLunes = appelerBridge("constantes_aventure_trois_lunes_web");
+    }
+    rendreAventureTroisLunes();
+    masquerTousLesEcrans();
+    document.getElementById("ecran-aventure-trois-lunes").classList.remove("cachee");
+}
+
+function rendreAventureTroisLunes() {
+    document.getElementById("titre-aventure-trois-lunes").textContent = `Trois lunes - Niveau ${partieActive.niveau}`;
+
+    const description = document.getElementById("description-aventure-trois-lunes");
+    const choix = document.getElementById("choix-aventure-trois-lunes");
+    const instruction = document.getElementById("instruction-aventure-trois-lunes");
+    const modules = document.getElementById("modules-aventure-trois-lunes");
+    const deck = document.getElementById("deck-aventure-trois-lunes");
+    const messageResolu = document.getElementById("message-resolu-aventure-trois-lunes");
+    const boutonContinuer = document.getElementById("bouton-continuer-aventure-trois-lunes");
+
+    description.classList.toggle("cachee", etapeAventureTroisLunes !== "choix");
+    choix.classList.toggle("cachee", etapeAventureTroisLunes !== "choix");
+    instruction.classList.toggle("cachee", !["choix_module", "choix_carte"].includes(etapeAventureTroisLunes));
+    modules.classList.toggle("cachee", etapeAventureTroisLunes !== "choix_module");
+    deck.classList.toggle("cachee", etapeAventureTroisLunes !== "choix_carte");
+    messageResolu.classList.toggle("cachee", etapeAventureTroisLunes !== "resolu");
+    boutonContinuer.classList.toggle("cachee", etapeAventureTroisLunes !== "resolu");
+
+    if (etapeAventureTroisLunes === "choix") {
+        description.textContent = DESCRIPTION_TROIS_LUNES;
+        const { pv_reparation_vaisseau, pv_amelioration } = constantesAventureTroisLunes;
+        const options = [
+            ["reparer", ICONE_REPARER, "Reparer le vaisseau", `Chaque module regagne ${pv_reparation_vaisseau} PV.`],
+            ["ameliorer", ICONE_AMELIORER, "Ameliorer un module", `+${pv_amelioration} PV max sur le module de votre choix.`],
+            ["bricoler", ICONE_BRICOLER, "Bricoler", "Retirez une carte de votre deck."],
+        ];
+        choix.innerHTML = options
+            .map(([identifiant, image, titre, texte]) => construireLigneChoixHtml(identifiant, image, titre, texte))
+            .join("");
+        document.querySelectorAll("#choix-aventure-trois-lunes .choix-aventure").forEach((element) => {
+            element.addEventListener("click", () => cliquerChoixTroisLunes(element.dataset.choix));
+        });
+    } else if (etapeAventureTroisLunes === "choix_module") {
+        instruction.textContent = "Choisissez le module a ameliorer.";
+        const vaisseau = appelerBridge("infos_vaisseau_web", JSON.stringify(partieActive));
+        modules.innerHTML = Object.entries(vaisseau)
+            .map(([position, etat]) => {
+                if (!etat) {
+                    return `<div class="module-station module-station-vide" data-position="${position}">Emplacement vide</div>`;
+                }
+                return `
+                <div class="module-station" data-position="${position}">
+                    <img src="${etat.image}" alt="${etat.nom}">
+                    <div class="module-station-nom">${etat.nom}</div>
+                    <div class="module-station-pv">${etat.pv} / ${etat.pv_max} PV</div>
+                </div>`;
+            })
+            .join("");
+        document.querySelectorAll("#modules-aventure-trois-lunes .module-station:not(.module-station-vide)").forEach((element) => {
+            element.addEventListener("click", () => cliquerModuleTroisLunes(element.dataset.position));
+        });
+    } else if (etapeAventureTroisLunes === "choix_carte") {
+        instruction.textContent = "Choisissez une carte a retirer de votre deck.";
+        groupesDeckAventureTroisLunes = appelerBridge("deck_groupe_par_id_partie_web", JSON.stringify(partieActive));
+        deck.innerHTML = groupesDeckAventureTroisLunes
+            .map(
+                (carte) => `
+            <div class="carte-deck" data-id="${carte.id_carte}">
+                <span class="etoile-${carte.rarete.toLowerCase()}">★</span>
+                ${carte.quantite > 1 ? `<span class="carte-deck-quantite">×${carte.quantite}</span>` : ""}
+                <img src="${carte.image}" alt="${carte.nom}">
+                <div class="carte-deck-nom">${carte.nom}</div>
+                <div class="carte-deck-cout">⚡ ${carte.cout}</div>
+            </div>`
+            )
+            .join("");
+        document.querySelectorAll("#deck-aventure-trois-lunes .carte-deck").forEach((element) => {
+            element.addEventListener("click", () => cliquerCarteTroisLunes(element.dataset.id));
+        });
+    } else {
+        messageResolu.textContent = messageResoluAventureTroisLunes;
+    }
+}
+
+function cliquerChoixTroisLunes(identifiant) {
+    const { pv_reparation_vaisseau } = constantesAventureTroisLunes;
+    if (identifiant === "reparer") {
+        partieActive = appelerBridge("reparer_vaisseau_aventure_web", JSON.stringify(partieActive));
+        messageResoluAventureTroisLunes = `Chaque module regagne ${pv_reparation_vaisseau} PV !`;
+        etapeAventureTroisLunes = "resolu";
+    } else if (identifiant === "ameliorer") {
+        etapeAventureTroisLunes = "choix_module";
+    } else if (identifiant === "bricoler") {
+        etapeAventureTroisLunes = "choix_carte";
+    }
+    rendreAventureTroisLunes();
+}
+
+function cliquerModuleTroisLunes(position) {
+    const { pv_amelioration } = constantesAventureTroisLunes;
+    const nom = appelerBridge("infos_vaisseau_web", JSON.stringify(partieActive))[position].nom;
+    partieActive = appelerBridge("ameliorer_module_aventure_web", JSON.stringify(partieActive), position);
+    messageResoluAventureTroisLunes = `${nom} ameliore : +${pv_amelioration} PV max !`;
+    etapeAventureTroisLunes = "resolu";
+    rendreAventureTroisLunes();
+}
+
+function cliquerCarteTroisLunes(idCarte) {
+    const carte = groupesDeckAventureTroisLunes.find((c) => c.id_carte === idCarte);
+    partieActive = appelerBridge("retirer_carte_aventure_web", JSON.stringify(partieActive), idCarte);
+    messageResoluAventureTroisLunes = `Carte retiree : ${carte.nom}.`;
+    etapeAventureTroisLunes = "resolu";
+    rendreAventureTroisLunes();
+}
+
+function terminerAventureTroisLunes() {
+    const partie = appelerBridge("terminer_aventure_trois_lunes_web", JSON.stringify(partieActive));
+    sauvegarderPartieLocale(joueurCourant.id, partie);
+    ouvrirChoixNiveauPartie(partie);
+}
+
+// Aventure "Asteroides" (specs.md 2.5) : deux choix - Traverser (sequence en 3 temps sur ce meme
+// ecran, chaque etape validee par un bouton "Continuer") ou Affronter les pirates (combat scripte,
+// delegue au meme pipeline qu'un combat Prime normal). Meme regles que
+// src/ui/ecran_aventure_asteroides.py cote PC - bridge.py n'applique que les fonctions pures de
+// src/gameplay/partie.py, aucune regle dupliquee ici.
+const DESCRIPTION_ASTEROIDES =
+    "Poursuivi par des pirates de l'espace, vous n'avez plus le choix : vaincre ou perir ! A moins que...";
+
+// Reutilise l'icone de assets/prochain_niveau/prime.png, desormais sans texte incruste (fournie
+// par l'utilisateur) - le titre est de toute facon toujours redessine a cote dans le rectangle de
+// texte.
+const ICONE_AFFRONTER = "assets/prochain_niveau/prime.png";
+
+// Extrait du fond d'ecran de cette Aventure (assets/aventure/champ_asteroides.png) plutot qu'une
+// icone distincte : aucune icone existante n'etait pertinente pour ce choix.
+const ICONE_TRAVERSER = "assets/aventure/traverser.png";
+
+const CHOIX_ASTEROIDES = [
+    ["traverser", ICONE_TRAVERSER, "Traverser le champ d'asteroides", "Un module au choix va en subir les consequences..."],
+    ["affronter", ICONE_AFFRONTER, "Affronter les pirates", "Lance un combat contre 3 ennemis."],
+];
+
+let constantesAventureAsteroides = null;
+// "choix" (2 choix) -> "choix_module" (module cible des degats) -> "sequence_2" (2e coup, apres
+// le 1er deja applique au clic du module) -> "sequence_3" (carte offerte, si trouvee) -> "resolu".
+let etapeAventureAsteroides = "choix";
+let positionCibleeAsteroides = null;
+let carteOfferteAsteroides = null;
+let messageAsteroides = "";
+
+function ouvrirAventureAsteroidesPartie(partie) {
+    partieActive = partie;
+    etapeAventureAsteroides = "choix";
+    positionCibleeAsteroides = null;
+    carteOfferteAsteroides = null;
+    if (constantesAventureAsteroides === null) {
+        constantesAventureAsteroides = appelerBridge("constantes_aventure_asteroides_web");
+    }
+    rendreAventureAsteroides();
+    masquerTousLesEcrans();
+    document.getElementById("ecran-aventure-asteroides").classList.remove("cachee");
+}
+
+function rendreAventureAsteroides() {
+    document.getElementById("titre-aventure-asteroides").textContent = `Asteroides - Niveau ${partieActive.niveau}`;
+
+    const description = document.getElementById("description-aventure-asteroides");
+    const choix = document.getElementById("choix-aventure-asteroides");
+    const instruction = document.getElementById("instruction-aventure-asteroides");
+    const modules = document.getElementById("modules-aventure-asteroides");
+    const message = document.getElementById("message-aventure-asteroides");
+    const carteOfferte = document.getElementById("carte-offerte-aventure-asteroides");
+    const boutonsCarteOfferte = document.getElementById("boutons-carte-offerte-aventure-asteroides");
+    const boutonContinuer = document.getElementById("bouton-continuer-aventure-asteroides");
+
+    description.classList.toggle("cachee", etapeAventureAsteroides !== "choix");
+    choix.classList.toggle("cachee", etapeAventureAsteroides !== "choix");
+    instruction.classList.toggle("cachee", etapeAventureAsteroides !== "choix_module");
+    modules.classList.toggle("cachee", etapeAventureAsteroides !== "choix_module");
+    message.classList.toggle("cachee", !["sequence_2", "sequence_3", "resolu"].includes(etapeAventureAsteroides));
+    carteOfferte.classList.toggle("cachee", etapeAventureAsteroides !== "sequence_3");
+    boutonsCarteOfferte.classList.toggle("cachee", etapeAventureAsteroides !== "sequence_3");
+    boutonContinuer.classList.toggle("cachee", !["sequence_2", "resolu"].includes(etapeAventureAsteroides));
+
+    if (etapeAventureAsteroides === "choix") {
+        description.textContent = DESCRIPTION_ASTEROIDES;
+        choix.innerHTML = CHOIX_ASTEROIDES.map(
+            ([identifiant, image, titre, texte]) => construireLigneChoixHtml(identifiant, image, titre, texte)
+        ).join("");
+        document.querySelectorAll("#choix-aventure-asteroides .choix-aventure").forEach((element) => {
+            element.addEventListener("click", () => cliquerChoixAsteroides(element.dataset.choix));
+        });
+    } else if (etapeAventureAsteroides === "choix_module") {
+        instruction.textContent = "Choisissez le module qui essuiera les degats.";
+        const vaisseau = appelerBridge("infos_vaisseau_web", JSON.stringify(partieActive));
+        modules.innerHTML = Object.entries(vaisseau)
+            .map(([position, etat]) => {
+                if (!etat) {
+                    return `<div class="module-station module-station-vide" data-position="${position}">Emplacement vide</div>`;
+                }
+                return `
+                <div class="module-station" data-position="${position}">
+                    <img src="${etat.image}" alt="${etat.nom}">
+                    <div class="module-station-nom">${etat.nom}</div>
+                    <div class="module-station-pv">${etat.pv} / ${etat.pv_max} PV</div>
+                </div>`;
+            })
+            .join("");
+        document.querySelectorAll("#modules-aventure-asteroides .module-station:not(.module-station-vide)").forEach((element) => {
+            element.addEventListener("click", () => cliquerModuleAsteroides(element.dataset.position));
+        });
+    } else {
+        message.textContent = messageAsteroides;
+        if (etapeAventureAsteroides === "sequence_3") {
+            const carte = carteOfferteAsteroides;
+            carteOfferte.innerHTML = `
+                <div class="candidat-recompense">
+                    <span class="etoile-${carte.rarete.toLowerCase()}">★</span>
+                    <img src="${carte.image}" alt="${carte.nom}">
+                    <div class="candidat-recompense-nom">${carte.nom}</div>
+                    <div class="candidat-recompense-cout">⚡ ${carte.cout}</div>
+                    <div class="candidat-recompense-description">${texteEffetCarte(carte)}</div>
+                </div>`;
+        }
+    }
+}
+
+function cliquerChoixAsteroides(identifiant) {
+    if (identifiant === "traverser") {
+        etapeAventureAsteroides = "choix_module";
+        rendreAventureAsteroides();
+    } else if (identifiant === "affronter") {
+        appliquerResultat(appelerBridge("combat_aventure_asteroides_web", JSON.stringify(partieActive)));
+        masquerTousLesEcrans();
+        document.getElementById("app").classList.remove("cachee");
+    }
+}
+
+function cliquerModuleAsteroides(position) {
+    const { degats_asteroides } = constantesAventureAsteroides;
+    positionCibleeAsteroides = position;
+    const nom = appelerBridge("infos_vaisseau_web", JSON.stringify(partieActive))[position].nom;
+    partieActive = appelerBridge("subir_degats_module_asteroides_web", JSON.stringify(partieActive), position);
+    messageAsteroides = `Vous traversez le champ d'asteroides : ${nom} perd ${degats_asteroides} PV.`;
+    etapeAventureAsteroides = "sequence_2";
+    rendreAventureAsteroides();
+}
+
+function continuerSequence2Asteroides() {
+    const { degats_asteroides } = constantesAventureAsteroides;
+    const nom = appelerBridge("infos_vaisseau_web", JSON.stringify(partieActive))[positionCibleeAsteroides].nom;
+    partieActive = appelerBridge("subir_degats_module_asteroides_web", JSON.stringify(partieActive), positionCibleeAsteroides);
+    carteOfferteAsteroides = appelerBridge("carte_offerte_asteroides_web");
+    if (carteOfferteAsteroides === null) {
+        etapeAventureAsteroides = "resolu";
+        messageAsteroides =
+            `Ces asteroides n'en finissent plus : ${nom} perd encore ${degats_asteroides} PV. ` +
+            "Vous parvenez finalement a vous degager.";
+    } else {
+        etapeAventureAsteroides = "sequence_3";
+        messageAsteroides =
+            `Ces asteroides n'en finissent plus : ${nom} perd encore ${degats_asteroides} PV. ` +
+            "Pres de la sortie, vous reperez des debris...";
+    }
+    rendreAventureAsteroides();
+}
+
+function prendreCarteAsteroides() {
+    partieActive = appelerBridge(
+        "prendre_carte_offerte_asteroides_web",
+        JSON.stringify(partieActive),
+        carteOfferteAsteroides.id_carte
+    );
+    messageAsteroides = `Vous recuperez : ${carteOfferteAsteroides.nom}.`;
+    etapeAventureAsteroides = "resolu";
+    rendreAventureAsteroides();
+}
+
+function passerCarteAsteroides() {
+    messageAsteroides = "Vous laissez les debris derriere vous.";
+    etapeAventureAsteroides = "resolu";
+    rendreAventureAsteroides();
+}
+
+function cliquerContinuerAsteroides() {
+    if (etapeAventureAsteroides === "sequence_2") {
+        continuerSequence2Asteroides();
+    } else if (etapeAventureAsteroides === "resolu") {
+        const partie = appelerBridge("terminer_aventure_asteroides_web", JSON.stringify(partieActive));
+        sauvegarderPartieLocale(joueurCourant.id, partie);
+        ouvrirChoixNiveauPartie(partie);
+    }
+}
+
+// Aventure "Police" (specs.md 2.5) : une carte du deck reel est tiree au hasard, puis 3 choix -
+// Confiscation (retire la carte), Mettre aux normes (payer un cout fixe pour la garder), Detourner
+// l'attention (retire une autre carte au hasard, disponible une seule fois par Aventure - le choix
+// disparait ensuite). Meme regles que src/ui/ecran_aventure_police.py cote PC - bridge.py n'applique
+// que les fonctions pures de src/gameplay/partie.py, aucune regle dupliquee ici.
+const DESCRIPTION_POLICE =
+    "Un vaisseau de patrouille vous somme de vous arreter pour un controle de routine...";
+
+// Reutilise l'icone de assets/station_service/mettre_a_jour.png, desormais sans texte incruste
+// (fournie par l'utilisateur) - le titre est de toute facon toujours redessine a cote dans le
+// rectangle de texte.
+const ICONE_METTRE_AUX_NORMES = "assets/station_service/mettre_a_jour.png";
+const ICONE_CONFISCATION = "assets/aventure/confiscation.png";
+const ICONE_DETOURNER = "assets/aventure/detourner.png";
+
+let constantesAventurePolice = null;
+// "choix" (2 ou 3 choix selon detournerDisponiblePolice) -> "resolu".
+let etapeAventurePolice = "choix";
+let carteActuellePolice = null;
+let detournerDisponiblePolice = true;
+let messageErreurPolice = "";
+let messageResoluPolice = "";
+
+function ouvrirAventurePolicePartie(partie) {
+    partieActive = partie;
+    etapeAventurePolice = "choix";
+    detournerDisponiblePolice = true;
+    messageErreurPolice = "";
+    if (constantesAventurePolice === null) {
+        constantesAventurePolice = appelerBridge("constantes_aventure_police_web");
+    }
+    carteActuellePolice = appelerBridge("tirer_carte_police_web", JSON.stringify(partieActive));
+    rendreAventurePolice();
+    masquerTousLesEcrans();
+    document.getElementById("ecran-aventure-police").classList.remove("cachee");
+}
+
+function rendreAventurePolice() {
+    document.getElementById("titre-aventure-police").textContent = `Police - Niveau ${partieActive.niveau}`;
+
+    const description = document.getElementById("description-aventure-police");
+    const carteActuelle = document.getElementById("carte-actuelle-aventure-police");
+    const choix = document.getElementById("choix-aventure-police");
+    const messageErreur = document.getElementById("message-erreur-aventure-police");
+    const messageResolu = document.getElementById("message-resolu-aventure-police");
+    const boutonContinuer = document.getElementById("bouton-continuer-aventure-police");
+
+    description.classList.toggle("cachee", etapeAventurePolice !== "choix");
+    carteActuelle.classList.toggle("cachee", etapeAventurePolice !== "choix");
+    choix.classList.toggle("cachee", etapeAventurePolice !== "choix");
+    messageErreur.classList.toggle("cachee", etapeAventurePolice !== "choix" || !messageErreurPolice);
+    messageResolu.classList.toggle("cachee", etapeAventurePolice !== "resolu");
+    boutonContinuer.classList.toggle("cachee", etapeAventurePolice !== "resolu");
+
+    if (etapeAventurePolice === "choix") {
+        description.textContent = DESCRIPTION_POLICE;
+        const carte = carteActuellePolice;
+        carteActuelle.innerHTML = `
+            <div class="candidat-recompense carte-actuelle-police">
+                <span class="etoile-${carte.rarete.toLowerCase()}">★</span>
+                <img src="${carte.image}" alt="${carte.nom}">
+                <div class="candidat-recompense-nom">${carte.nom}</div>
+                <div class="candidat-recompense-cout">⚡ ${carte.cout}</div>
+                <div class="candidat-recompense-description">${texteEffetCarte(carte)}</div>
+            </div>`;
+
+        const { cout_mettre_aux_normes } = constantesAventurePolice;
+        const options = [
+            ["confiscation", ICONE_CONFISCATION, "Confiscation", "Supprime cette carte de votre deck."],
+            ["mettre_aux_normes", ICONE_METTRE_AUX_NORMES, "Mettre aux normes", `Payez ${cout_mettre_aux_normes} € et gardez la carte.`],
+            ["detourner", ICONE_DETOURNER, "Detourner l'attention", "Tire une autre carte (une seule fois)."],
+        ].filter(([identifiant]) => identifiant !== "detourner" || detournerDisponiblePolice);
+        choix.innerHTML = options
+            .map(([identifiant, image, titre, texte]) => construireLigneChoixHtml(identifiant, image, titre, texte))
+            .join("");
+        document.querySelectorAll("#choix-aventure-police .choix-aventure").forEach((element) => {
+            element.addEventListener("click", () => cliquerChoixPolice(element.dataset.choix));
+        });
+
+        messageErreur.textContent = messageErreurPolice;
+    } else {
+        messageResolu.textContent = messageResoluPolice;
+    }
+}
+
+function cliquerChoixPolice(identifiant) {
+    if (identifiant === "confiscation") {
+        const carte = carteActuellePolice;
+        partieActive = appelerBridge("confiscation_police_web", JSON.stringify(partieActive), carte.id_carte);
+        messageResoluPolice = `Carte confisquee : ${carte.nom}.`;
+        etapeAventurePolice = "resolu";
+    } else if (identifiant === "mettre_aux_normes") {
+        const resultat = appelerBridge("mettre_aux_normes_police_web", JSON.stringify(partieActive));
+        if (resultat.succes) {
+            partieActive = resultat.partie;
+            messageResoluPolice = `Vous mettez ${carteActuellePolice.nom} aux normes.`;
+            etapeAventurePolice = "resolu";
+        } else {
+            messageErreurPolice = "Argent insuffisant pour mettre cette carte aux normes.";
+        }
+    } else if (identifiant === "detourner") {
+        carteActuellePolice = appelerBridge("tirer_carte_police_web", JSON.stringify(partieActive));
+        detournerDisponiblePolice = false;
+        messageErreurPolice = "";
+    }
+    rendreAventurePolice();
+}
+
+function terminerAventurePolice() {
+    const partie = appelerBridge("terminer_aventure_police_web", JSON.stringify(partieActive));
+    sauvegarderPartieLocale(joueurCourant.id, partie);
+    ouvrirChoixNiveauPartie(partie);
+}
+
+// Ecran generique pour une etape sans contenu prepare (Planete commerciale - specs.md 2.4 etape
+// 9, 9.1) : reutilise l'icone/titre de LIBELLES_TYPE_ETAPE (definie plus bas, pour l'ecran
+// "Choix du prochain niveau") avec un message explicite et un bouton "J'ai termine" qui avance
+// simplement au niveau suivant - meme logique que
+// main.py:_ouvrir_etape_placeholder cote PC.
 function ouvrirEtapePlaceholderPartie(partie, type) {
     partieActive = partie;
-    const [image] = LIBELLES_TYPE_ETAPE[type];
-    document.getElementById("titre-etape-placeholder").textContent = `${TITRES_TYPE_ETAPE[type]} - Niveau ${partie.niveau}`;
+    const [image, titre] = LIBELLES_TYPE_ETAPE[type];
+    document.getElementById("titre-etape-placeholder").textContent = `${titre} - Niveau ${partie.niveau}`;
     document.getElementById("image-etape-placeholder").src = image;
     masquerTousLesEcrans();
     document.getElementById("ecran-etape-placeholder").classList.remove("cachee");
@@ -813,30 +1268,30 @@ function terminerEtapePlaceholder() {
 // une seule (BOSS) a un niveau Boss (multiple de 10) - decision utilisateur, meme ecran de choix,
 // juste une seule carte "Combattre le Boss !" au lieu de 3. Pas encore reliee a une orchestration
 // de parcours (qui n'existe pas encore), exposee sur window pour test manuel en attendant.
-// Icones (deja leur propre cadre + nom incruste, images fournies par l'utilisateur) et
-// description par type d'etape - memes textes que le PC (src/ui/ecran_choix_niveau.py).
+// Icones (desormais sans texte incruste, fournies par l'utilisateur), titre et description par
+// type d'etape - memes textes que le PC (src/ui/ecran_choix_niveau.py).
 const LIBELLES_TYPE_ETAPE = {
-    PRIME: ["assets/prochain_niveau/prime.png", "Combat, contrat de chasseur de primes."],
-    STATION_SERVICE: ["assets/prochain_niveau/station_service.png", "Entretien du vaisseau contre de l'Argent."],
-    PLANETE_COMMERCIALE: ["assets/prochain_niveau/planete_commerciale.png", "Achat de cartes contre de l'Argent."],
-    AVENTURE: ["assets/prochain_niveau/aventure.png", "Evenement inconnu."],
-    BOSS: ["assets/prochain_niveau/boss.png", "Combattre le Boss !"],
+    PRIME: ["assets/prochain_niveau/prime.png", "Prime", "Combat, contrat de chasseur de primes."],
+    STATION_SERVICE: [
+        "assets/prochain_niveau/station_service.png", "Station service", "Entretien du vaisseau contre de l'Argent.",
+    ],
+    PLANETE_COMMERCIALE: [
+        "assets/prochain_niveau/planete_commerciale.png", "Planete commerciale", "Achat de cartes contre de l'Argent.",
+    ],
+    AVENTURE: ["assets/prochain_niveau/aventure.png", "Aventure", "Evenement inconnu."],
+    BOSS: ["assets/prochain_niveau/boss.png", "Boss", "Combattre le Boss !"],
 };
 
 function afficherChoixNiveau(resultat) {
     document.getElementById("titre-choix-niveau").textContent = `Niveau ${resultat.niveau}`;
     document.getElementById("candidats-niveau").innerHTML = resultat.propositions
         .map((type, index) => {
-            const [image, description] = LIBELLES_TYPE_ETAPE[type];
-            return `
-        <div class="candidat-niveau" data-index="${index}">
-            <img src="${image}" alt="${type}">
-            <div class="candidat-niveau-description">${description}</div>
-        </div>`;
+            const [image, titre, description] = LIBELLES_TYPE_ETAPE[type];
+            return construireLigneChoixHtml(String(index), image, titre, description);
         })
         .join("");
-    document.querySelectorAll(".candidat-niveau").forEach((element) => {
-        element.addEventListener("click", () => choisirEtape(resultat.propositions[Number(element.dataset.index)]));
+    document.querySelectorAll("#candidats-niveau .choix-aventure").forEach((element) => {
+        element.addEventListener("click", () => choisirEtape(resultat.propositions[Number(element.dataset.choix)]));
     });
     masquerTousLesEcrans();
     document.getElementById("ecran-choix-niveau").classList.remove("cachee");
@@ -858,8 +1313,20 @@ function choisirEtape(type) {
         document.getElementById("app").classList.remove("cachee");
     } else if (type === "STATION_SERVICE") {
         ouvrirStationServicePartie(partieActive);
+    } else if (type === "AVENTURE") {
+        // Trois aventures implementees (specs.md 2.5), tirage uniforme non deterministe cote
+        // Python (type_aventure_web) - niveau fourni uniquement pour le forcage temporaire de
+        // test cote bridge.py (_NIVEAUX_AVENTURE_FORCEE_POUR_TEST), sans effet sinon.
+        const typeAventure = appelerBridge("type_aventure_web", partieActive.niveau);
+        if (typeAventure === "TROIS_LUNES") {
+            ouvrirAventureTroisLunesPartie(partieActive);
+        } else if (typeAventure === "ASTEROIDES") {
+            ouvrirAventureAsteroidesPartie(partieActive);
+        } else {
+            ouvrirAventurePolicePartie(partieActive);
+        }
     } else {
-        // Aventure / Planete commerciale : contenu pas encore prepare (specs.md 2.4, 9.1).
+        // Planete commerciale : contenu pas encore prepare (specs.md 2.4, 9.1).
         ouvrirEtapePlaceholderPartie(partieActive, type);
     }
 }
@@ -1209,6 +1676,11 @@ document.getElementById("bouton-voir-deck-partie").addEventListener("click", voi
 document.getElementById("bouton-nouvelle-partie").addEventListener("click", nouvellePartie);
 document.getElementById("bouton-continuer-fin-combat").addEventListener("click", continuerApresFinCombat);
 document.getElementById("bouton-termine-station-service").addEventListener("click", terminerStationServicePartie);
+document.getElementById("bouton-continuer-aventure-trois-lunes").addEventListener("click", terminerAventureTroisLunes);
+document.getElementById("bouton-continuer-aventure-asteroides").addEventListener("click", cliquerContinuerAsteroides);
+document.getElementById("bouton-prendre-aventure-asteroides").addEventListener("click", prendreCarteAsteroides);
+document.getElementById("bouton-passer-aventure-asteroides").addEventListener("click", passerCarteAsteroides);
+document.getElementById("bouton-continuer-aventure-police").addEventListener("click", terminerAventurePolice);
 document.getElementById("bouton-continuer-victoire-finale").addEventListener("click", terminerVictoireFinale);
 document.getElementById("bouton-termine-etape-placeholder").addEventListener("click", terminerEtapePlaceholder);
 document.getElementById("bouton-retour-deck").addEventListener("click", retourDepuisDeck);

@@ -79,12 +79,20 @@ LARGEUR_BOUTON_TERMINE = 220
 HAUTEUR_BOUTON_TERMINE = 46
 Y_BOUTON_TERMINE = 40
 
+# Icones avec cadre/nom incruste (assets/station_service/avec_texte/) - decision utilisateur :
+# cet ecran garde son ancienne grille d'icones seules (pas la ligne image+texte des Aventures/
+# Choix du prochain niveau/specs.md 2.5), donc les versions sans texte de assets/station_service/
+# (reutilisees telles quelles par les Aventures Trois lunes/Police) ne conviennent plus ici sans
+# ajouter un texte redondant - anciennes icones restaurees depuis l'historique git plutot que
+# supprimees, pour ce seul ecran.
+_DOSSIER_ICONES = RACINE / "assets" / "station_service" / "avec_texte"
+
 # (identifiant, libelle, chemin de l'icone) - ordre d'affichage des 4 actions (specs.md 2.2).
 ACTIONS = (
-    ("reparer", "Reparer", str(RACINE / "assets" / "station_service" / "reparer.png")),
-    ("ameliorer", "Ameliorer", str(RACINE / "assets" / "station_service" / "ameliorer.png")),
-    ("mettre_a_jour", "Mettre a jour", str(RACINE / "assets" / "station_service" / "mettre_a_jour.png")),
-    ("deplacer", "Deplacer", str(RACINE / "assets" / "station_service" / "deplacer.png")),
+    ("reparer", "Reparer", str(_DOSSIER_ICONES / "reparer.png")),
+    ("ameliorer", "Ameliorer", str(_DOSSIER_ICONES / "ameliorer.png")),
+    ("mettre_a_jour", "Mettre a jour", str(_DOSSIER_ICONES / "mettre_a_jour.png")),
+    ("deplacer", "Deplacer", str(_DOSSIER_ICONES / "deplacer.png")),
 )
 
 APPLICATEURS_ACTION = {

@@ -12,6 +12,7 @@ from src.gameplay.config_poc import (
     ELECTRICITE_PAR_TOUR,
     ID_MODULE_PRINCIPAL,
     MODE_TEST,
+    NOMBRE_ENNEMIS_ASTEROIDES,
     NOMBRE_ENNEMIS_MODE_TEST,
     NOMBRE_MODULES_EQUIPES,
     PV_ENNEMI_MODE_TEST,
@@ -21,6 +22,7 @@ from src.gameplay.config_poc import (
     creer_deck,
     creer_deck_mode_test,
     creer_flotte,
+    creer_flotte_asteroides,
     creer_vaisseau,
     tirer_cartes,
 )
@@ -88,6 +90,18 @@ def test_creer_flotte_en_mode_test_ne_remplit_que_2_cases():
 
     assert len(flotte.positions()) == NOMBRE_ENNEMIS_MODE_TEST
     assert len(flotte.ennemis_vivants()) == NOMBRE_ENNEMIS_MODE_TEST
+
+
+def test_creer_flotte_asteroides_remplit_3_cases():
+    """Aventure Asteroides (specs.md 2.5) : nombre fixe d'ennemis, independant de MODE_TEST
+    (contrairement a creer_flotte) - seul leur PV depend de MODE_TEST via _ennemi_depuis_spec."""
+    specs = charger_ennemis()
+    aleatoire = random.Random(1)
+
+    flotte = creer_flotte_asteroides(specs, aleatoire)
+
+    assert len(flotte.positions()) == NOMBRE_ENNEMIS_ASTEROIDES == 3
+    assert len(flotte.ennemis_vivants()) == NOMBRE_ENNEMIS_ASTEROIDES
 
 
 def test_tirer_cartes_pioche_la_bonne_quantite_dans_la_pool():

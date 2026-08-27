@@ -9,6 +9,7 @@ from src.gameplay.carte import Carte, CibleCarte, RareteCarte, TypeCarte
 from src.gameplay.config_poc import ID_MODULE_PRINCIPAL, creer_vaisseau
 from src.gameplay.donnees import charger_cartes, charger_modules
 from src.gameplay.parcours import (
+    TypeAventure,
     TypeEtape,
     aleatoire_pour_niveau,
     est_niveau_boss,
@@ -17,9 +18,11 @@ from src.gameplay.parcours import (
     pool_toutes_cartes,
     tirer_candidats_module,
     tirer_candidats_recompense,
+    tirer_carte_deck,
     tirer_carte_recompense,
     tirer_propositions_niveau,
     tirer_rarete_recompense,
+    tirer_type_aventure,
     tirer_type_etape,
 )
 
@@ -220,3 +223,33 @@ def test_tirer_propositions_niveau_ne_remplace_rien_si_deja_present():
 def test_tirer_propositions_niveau_boss_renvoie_une_seule_proposition_boss():
     assert tirer_propositions_niveau(10, random.Random(1)) == [TypeEtape.BOSS]
     assert tirer_propositions_niveau(20, random.Random(1)) == [TypeEtape.BOSS]
+
+
+# --- Aventures (specs.md 2.5) ---
+
+
+def test_tirer_type_aventure_renvoie_une_des_aventures_implementees():
+    aleatoire = random.Random(1)
+
+    for _ in range(20):
+        assert tirer_type_aventure(aleatoire) in (
+            TypeAventure.TROIS_LUNES,
+            TypeAventure.ASTEROIDES,
+            TypeAventure.POLICE,
+        )
+
+
+def test_tirer_type_aventure_tire_les_trois_sur_un_grand_nombre_d_essais():
+    aleatoire = random.Random(1)
+
+    resultats = {tirer_type_aventure(aleatoire) for _ in range(100)}
+
+    assert resultats == {TypeAventure.TROIS_LUNES, TypeAventure.ASTEROIDES, TypeAventure.POLICE}
+
+
+def test_tirer_carte_deck_renvoie_un_id_du_deck():
+    deck = ["CRT_7", "CRT_10", "CRT_12"]
+    aleatoire = random.Random(1)
+
+    for _ in range(20):
+        assert tirer_carte_deck(deck, aleatoire) in deck
