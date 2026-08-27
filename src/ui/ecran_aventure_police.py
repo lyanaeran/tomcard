@@ -19,6 +19,11 @@ from src.ui.fenetre import COULEUR_ETOILE_RARETE, HAUTEUR_FENETRE, LARGEUR_FENET
 
 FOND_POLICE = str(RACINE / "assets" / "aventure" / "police.png")
 
+# Recadree depuis assets/station_service/mettre_a_jour.png (bandeau "METTRE A JOUR" retire) :
+# affiche de toute facon son propre titre a cote dans le rectangle de texte, cf. commentaire de
+# CHOIX plus bas.
+_ICONE_METTRE_AUX_NORMES = str(RACINE / "assets" / "aventure" / "mettre_aux_normes.png")
+
 DESCRIPTION = "Pas de bol, votre dernier achat n'est pas aux normes. Et la police de l'espace ne plaisante pas trop dans le coin..."
 
 COULEUR_TEXTE = (255, 255, 255)
@@ -34,11 +39,11 @@ COULEUR_BOUTON_SURVOLE = (90, 130, 210)
 OPACITE_FOND = 190
 
 # (identifiant, image, titre, description) - image = None en attendant un visuel dedie (aucune
-# icone existante pertinente). "detourner" retire de la liste affichee une fois utilise (specs.md
-# 2.5 : une seule fois par Aventure, pas par run).
+# icone existante pertinente pour "Confiscation"/"Detourner l'attention"). "detourner" retire de la
+# liste affichee une fois utilise (specs.md 2.5 : une seule fois par Aventure, pas par run).
 CHOIX = (
     ("confiscation", None, "Confiscation", "Supprime cette carte de votre deck."),
-    ("mettre_aux_normes", None, "Mettre aux normes", f"Payez {COUT_METTRE_AUX_NORMES} € et gardez la carte."),
+    ("mettre_aux_normes", _ICONE_METTRE_AUX_NORMES, "Mettre aux normes", f"Payez {COUT_METTRE_AUX_NORMES} € et gardez la carte."),
     ("detourner", None, "Detourner l'attention", "Tire une autre carte (une seule fois)."),
 )
 

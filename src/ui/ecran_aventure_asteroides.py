@@ -27,6 +27,10 @@ from src.ui.fenetre import (
 
 FOND_ASTEROIDES = str(RACINE / "assets" / "aventure" / "champ_asteroides.png")
 
+# Recadree depuis assets/prochain_niveau/prime.png (bandeau "PRIME" retire) : affiche de toute facon
+# de nouveau son propre titre a cote dans le rectangle de texte, cf. commentaire de CHOIX plus bas.
+_ICONE_AFFRONTER = str(RACINE / "assets" / "aventure" / "pirates.png")
+
 DESCRIPTION = "Poursuivi par des pirates de l'espace, vous n'avez plus le choix : vaincre ou perir ! A moins que..."
 
 COULEUR_TEXTE = (255, 255, 255)
@@ -42,10 +46,10 @@ COULEUR_BOUTON_SURVOLE = (90, 130, 210)
 OPACITE_FOND = 190
 
 # (identifiant, image, titre, description) - image = None en attendant un visuel dedie (aucune
-# icone existante pertinente : prime.png/mettre_a_jour.png ont un texte incruste different).
+# icone existante pertinente pour "Traverser").
 CHOIX = (
     ("traverser", None, "Traverser le champ d'asteroides", "Un module au choix va en subir les consequences..."),
-    ("affronter", None, "Affronter les pirates", "Lance un combat contre 3 ennemis."),
+    ("affronter", _ICONE_AFFRONTER, "Affronter les pirates", "Lance un combat contre 3 ennemis."),
 )
 
 # Choix empiles verticalement : image carree a gauche, rectangle de texte (titre + description) a

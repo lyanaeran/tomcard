@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "40";
+const VERSION_CACHE = "41";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -956,9 +956,14 @@ function terminerAventureTroisLunes() {
 const DESCRIPTION_ASTEROIDES =
     "Poursuivi par des pirates de l'espace, vous n'avez plus le choix : vaincre ou perir ! A moins que...";
 
+// Recadree depuis assets/prochain_niveau/prime.png (bandeau "PRIME" retire) : affiche de toute
+// facon son propre titre a cote dans le rectangle de texte. Aucune icone existante pertinente pour
+// "Traverser".
+const ICONE_AFFRONTER = "assets/aventure/pirates.png";
+
 const CHOIX_ASTEROIDES = [
     ["traverser", null, "Traverser le champ d'asteroides", "Un module au choix va en subir les consequences..."],
-    ["affronter", null, "Affronter les pirates", "Lance un combat contre 3 ennemis."],
+    ["affronter", ICONE_AFFRONTER, "Affronter les pirates", "Lance un combat contre 3 ennemis."],
 ];
 
 let constantesAventureAsteroides = null;
@@ -1121,6 +1126,11 @@ function cliquerContinuerAsteroides() {
 const DESCRIPTION_POLICE =
     "Un vaisseau de patrouille vous somme de vous arreter pour un controle de routine...";
 
+// Recadree depuis assets/station_service/mettre_a_jour.png (bandeau "METTRE A JOUR" retire) :
+// affiche de toute facon son propre titre a cote dans le rectangle de texte. Aucune icone existante
+// pertinente pour "Confiscation"/"Detourner l'attention".
+const ICONE_METTRE_AUX_NORMES = "assets/aventure/mettre_aux_normes.png";
+
 let constantesAventurePolice = null;
 // "choix" (2 ou 3 choix selon detournerDisponiblePolice) -> "resolu".
 let etapeAventurePolice = "choix";
@@ -1175,7 +1185,7 @@ function rendreAventurePolice() {
         const { cout_mettre_aux_normes } = constantesAventurePolice;
         const options = [
             ["confiscation", null, "Confiscation", "Supprime cette carte de votre deck."],
-            ["mettre_aux_normes", null, "Mettre aux normes", `Payez ${cout_mettre_aux_normes} € et gardez la carte.`],
+            ["mettre_aux_normes", ICONE_METTRE_AUX_NORMES, "Mettre aux normes", `Payez ${cout_mettre_aux_normes} € et gardez la carte.`],
             ["detourner", null, "Detourner l'attention", "Tire une autre carte (une seule fois)."],
         ].filter(([identifiant]) => identifiant !== "detourner" || detournerDisponiblePolice);
         choix.innerHTML = options

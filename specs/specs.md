@@ -313,11 +313,15 @@ choix. `_dessiner_carte_choix`/`construireLigneChoixHtml` (respectivement PC et 
 mise en page entre les trois écrans (dupliquée par fichier côté PC, factorisée en une fonction
 commune côté web). Une ligne sans image dédiée affiche un placeholder vide (même convention que les
 autres emplacements vides du jeu) plutôt qu'un visuel non pertinent — image manquante à ce jour pour
-Bricoler (Trois lunes), Traverser le champ d'astéroïdes et Affronter les pirates (Astéroïdes),
-Confiscation, Mettre aux normes et Détourner l'attention (Police). Réparer/Améliorer (Trois lunes)
-réutilisent les icônes déjà fournies pour la Station service (`assets/station_service/reparer.png`/
-`ameliorer.png`), le titre étant maintenant systématiquement redessiné à côté (dans le rectangle de
-texte) qu'il soit ou non déjà incrusté dans l'image.
+Bricoler (Trois lunes), Traverser le champ d'astéroïdes (Astéroïdes), Confiscation et Détourner
+l'attention (Police). Réparer/Améliorer (Trois lunes) réutilisent les icônes déjà fournies pour la
+Station service (`assets/station_service/reparer.png`/`ameliorer.png`) ; Affronter les pirates
+(Astéroïdes) et Mettre aux normes (Police) réutilisent de même des icônes déjà fournies
+(`assets/prochain_niveau/prime.png`/`assets/station_service/mettre_a_jour.png`), recadrées pour
+retirer leur bandeau de titre incrusté (respectivement "PRIME"/"METTRE À JOUR", non pertinent pour
+ces choix) — recadrage conservé dans `assets/aventure/pirates.png`/`mettre_aux_normes.png`, source
+originale inchangée pour son usage propre. Le titre est de toute facon systématiquement redessiné à
+côté (dans le rectangle de texte), qu'il soit ou non déjà incrusté dans l'image.
 
 **Astéroïdes** — **implémentée** (fond `assets/aventure/champ_asteroides.png`) — "Poursuivi par des
 pirates de l'espace, vous n'avez plus le choix : vaincre ou périr ! À moins que..."
