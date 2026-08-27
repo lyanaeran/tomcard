@@ -2,9 +2,9 @@
 Point d'entree du jeu Space Fight (PC) : selection du profil joueur (specs.md 10.3), puis l'accueil
 de ce joueur (partie en cours ou nouvelle partie), qui enchaine desormais reellement sur le reste du
 parcours (specs.md 2.4) : choix de module (Niveau 1) -> choix du prochain niveau -> combat (Prime ou
-Boss), Station service, une Aventure ("Trois lunes" ou "Asteroides", specs.md 2.5) ou Planete
-commerciale (ecran generique, contenu pas encore prepare) -> retour au choix du prochain niveau, ou
-victoire finale (Boss vaincu) -> fin de partie.
+Boss), Station service, une Aventure ("Trois lunes", "Asteroides" ou "Police", specs.md 2.5, tiree
+au hasard) ou Planete commerciale (ecran generique, contenu pas encore prepare) -> retour au choix
+du prochain niveau, ou victoire finale (Boss vaincu) -> fin de partie.
 
 Chaque ecran est une fenetre pyglet independante ; les transitions se font en fermant la fenetre
 courante et en ouvrant la suivante, verifiees a intervalle regulier via pyglet.clock (pas
@@ -13,10 +13,10 @@ d'evenement dedie pour "l'utilisateur a fait un choix" dans ces ecrans, cf. leur
 
 Limites connues (specs.md 2.4) : Planete commerciale n'a pas encore de contenu propre (specs.md
 9.1) - l'ecran generique (EcranEtapePlaceholder) la represente, sans autre effet que d'avancer au
-niveau suivant. Deux aventures implementees pour l'instant (Trois lunes, Asteroides - specs.md 2.5),
-tirees au hasard a chaque TypeEtape.AVENTURE (tirer_type_aventure) : Police reste a construire. La
-flotte ennemie d'un combat Prime/Boss est toujours tiree au hasard (combat_depuis_partie), sans
-tenir compte des tailles/du nombre d'ennemis attendus au niveau courant (specs.md 2.3/3.2).
+niveau suivant. Les 3 aventures specifiees sont implementees (Trois lunes, Asteroides, Police -
+specs.md 2.5), tirees au hasard a chaque TypeEtape.AVENTURE (tirer_type_aventure). La flotte
+ennemie d'un combat Prime/Boss est toujours tiree au hasard (combat_depuis_partie), sans tenir
+compte des tailles/du nombre d'ennemis attendus au niveau courant (specs.md 2.3/3.2).
 """
 
 import random
@@ -57,6 +57,7 @@ from src.gameplay.partie import (
 )
 from src.ui.ecran_accueil_joueur import EcranAccueilJoueur
 from src.ui.ecran_aventure_asteroides import EcranAventureAsteroides
+from src.ui.ecran_aventure_police import EcranAventurePolice
 from src.ui.ecran_aventure_trois_lunes import EcranAventureTroisLunes
 from src.ui.ecran_choix_module import EcranChoixModule
 from src.ui.ecran_choix_niveau import EcranChoixNiveau
@@ -179,13 +180,15 @@ def _ouvrir_choix_niveau(profil: Profil, partie: Partie) -> None:
         elif type_choisi == TypeEtape.STATION_SERVICE:
             _ouvrir_station_service(profil, partie)
         elif type_choisi == TypeEtape.AVENTURE:
-            # Deux aventures implementees pour l'instant (specs.md 2.5), tirage 50/50 non
-            # deterministe (comme la recompense de fin de combat) - Police reste a construire.
+            # Trois aventures implementees (specs.md 2.5), tirage uniforme non deterministe
+            # (comme la recompense de fin de combat).
             type_aventure = tirer_type_aventure(random.Random())
             if type_aventure == TypeAventure.TROIS_LUNES:
                 _ouvrir_aventure_trois_lunes(profil, partie)
-            else:
+            elif type_aventure == TypeAventure.ASTEROIDES:
                 _ouvrir_aventure_asteroides(profil, partie)
+            else:
+                _ouvrir_aventure_police(profil, partie)
         else:
             # Planete commerciale : contenu pas encore prepare (specs.md 2.4, 9.1).
             _ouvrir_etape_placeholder(profil, partie, type_choisi)
@@ -235,6 +238,21 @@ def _ouvrir_aventure_asteroides(profil: Profil, partie: Partie) -> None:
             # scriptee plutot que le tirage standard lie au niveau.
             _ouvrir_combat(profil, partie, combat_aventure_asteroides(partie))
             return
+        if not fenetre.termine:
+            return
+        pyglet.clock.unschedule(verifier)
+        fenetre.close()
+        avancer_niveau(partie)
+        sauvegarder_partie(profil.id, partie)
+        _ouvrir_choix_niveau(profil, partie)
+
+    pyglet.clock.schedule_interval(verifier, INTERVALLE_VERIFICATION)
+
+
+def _ouvrir_aventure_police(profil: Profil, partie: Partie) -> None:
+    fenetre = EcranAventurePolice(partie, niveau=partie.niveau)
+
+    def verifier(_dt: float) -> None:
         if not fenetre.termine:
             return
         pyglet.clock.unschedule(verifier)

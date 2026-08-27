@@ -485,6 +485,21 @@ def subir_degats_module(partie: Partie, position: str, degats: int) -> Partie:
     return partie
 
 
+COUT_METTRE_AUX_NORMES = 10
+
+
+def payer_mise_aux_normes(partie: Partie) -> bool:
+    """Deduit COUT_METTRE_AUX_NORMES d'Argent si la partie en a assez (Aventure "Police", specs.md
+    2.5, choix "Mettre aux normes" - garde la carte tiree, pas d'effet sur le deck). Remplace le
+    pourcentage du prix de vente en magasin envisage initialement, abandonne : la Planete
+    commerciale n'a pas de prix par carte (specs.md 9.1). Renvoie True si l'Argent etait suffisant
+    (et deduit), sinon ne modifie rien et renvoie False."""
+    if partie.argent < COUT_METTRE_AUX_NORMES:
+        return False
+    partie.argent -= COUT_METTRE_AUX_NORMES
+    return True
+
+
 # --- I/O fichier (PC uniquement) ---
 
 

@@ -44,18 +44,26 @@ COULEUR_BOUTON = (60, 90, 160)
 COULEUR_BOUTON_SURVOLE = (90, 130, 210)
 OPACITE_FOND = 190
 
-# (identifiant, titre, description) des 3 choix (specs.md 2.5) - la description reprend les
-# constantes reelles du moteur plutot que des valeurs dupliquees en dur.
+# (identifiant, image, titre, description) des 3 choix (specs.md 2.5) - la description reprend
+# les constantes reelles du moteur plutot que des valeurs dupliquees en dur. Image = None en
+# attendant un visuel dedie (aucune icone existante pertinente pour "Bricoler").
+_ICONE_REPARER = str(RACINE / "assets" / "station_service" / "reparer.png")
+_ICONE_AMELIORER = str(RACINE / "assets" / "station_service" / "ameliorer.png")
+
 CHOIX = (
-    ("reparer", "Reparer le vaisseau", f"Chaque module regagne {PV_REPARATION_VAISSEAU} PV."),
-    ("ameliorer", "Ameliorer un module", f"+{PV_AMELIORATION} PV max sur le module de votre choix."),
-    ("bricoler", "Bricoler", "Retirez une carte de votre deck."),
+    ("reparer", _ICONE_REPARER, "Reparer le vaisseau", f"Chaque module regagne {PV_REPARATION_VAISSEAU} PV."),
+    ("ameliorer", _ICONE_AMELIORER, "Ameliorer un module", f"+{PV_AMELIORATION} PV max sur le module de votre choix."),
+    ("bricoler", None, "Bricoler", "Retirez une carte de votre deck."),
 )
 
-LARGEUR_CHOIX = 300
-HAUTEUR_CHOIX = 160
-ESPACEMENT_CHOIX = 30
-Y_CHOIX = 320
+# Choix empiles verticalement : image carree a gauche, rectangle de texte (titre + description) a
+# droite - meme convention pour toutes les Aventures (specs.md 2.5).
+LARGEUR_LIGNE_CHOIX = 820
+HAUTEUR_LIGNE_CHOIX = 110
+TAILLE_IMAGE_CHOIX = 100
+ESPACEMENT_IMAGE_TEXTE = 16
+ESPACEMENT_LIGNES_CHOIX = 16
+Y_HAUT_CHOIX = 560
 
 LARGEUR_CARTE_MODULE = 200
 HAUTEUR_CARTE_MODULE = 220
@@ -84,10 +92,11 @@ def _rect_bouton() -> tuple[float, float, float, float]:
 
 
 def _rect_choix(index: int) -> tuple[float, float, float, float]:
-    largeur_totale = len(CHOIX) * LARGEUR_CHOIX + (len(CHOIX) - 1) * ESPACEMENT_CHOIX
-    x_depart = (LARGEUR_FENETRE - largeur_totale) / 2
-    x = x_depart + index * (LARGEUR_CHOIX + ESPACEMENT_CHOIX)
-    return x, Y_CHOIX, LARGEUR_CHOIX, HAUTEUR_CHOIX
+    """Ligne complete (image + rectangle de texte) du choix a cet index - empilees du haut vers
+    le bas, index 0 en premier."""
+    x = (LARGEUR_FENETRE - LARGEUR_LIGNE_CHOIX) / 2
+    y = Y_HAUT_CHOIX - HAUTEUR_LIGNE_CHOIX - index * (HAUTEUR_LIGNE_CHOIX + ESPACEMENT_LIGNES_CHOIX)
+    return x, y, LARGEUR_LIGNE_CHOIX, HAUTEUR_LIGNE_CHOIX
 
 
 def _rect_module(index: int) -> tuple[float, float, float, float]:
@@ -179,29 +188,48 @@ class EcranAventureTroisLunes(pyglet.window.Window):
                 batch=lot,
             )
         ]
-        for index, (_identifiant, titre, description) in enumerate(CHOIX):
-            elements.extend(self._dessiner_carte_choix(index, titre, description, lot))
+        for index, (_identifiant, image, titre, description) in enumerate(CHOIX):
+            elements.extend(self._dessiner_carte_choix(index, image, titre, description, lot))
         return elements
 
-    def _dessiner_carte_choix(self, index: int, titre: str, description: str, lot: pyglet.graphics.Batch) -> list:
+    def _dessiner_carte_choix(
+        self, index: int, image: str | None, titre: str, description: str, lot: pyglet.graphics.Batch
+    ) -> list:
+        """Une ligne de choix : image carree a gauche (None -> case vide en attendant un visuel
+        dedie), rectangle de texte (titre + description) a droite (specs.md 2.5)."""
         x, y, largeur, hauteur = _rect_choix(index)
         survole = index == self.index_survole
-        cadre = shapes.BorderedRectangle(
-            x, y, largeur, hauteur, border=2, color=COULEUR_FOND_CARTE,
-            border_color=COULEUR_CONTOUR_SURVOLEE if survole else COULEUR_CONTOUR_CARTE, batch=lot,
+        couleur_contour = COULEUR_CONTOUR_SURVOLEE if survole else COULEUR_CONTOUR_CARTE
+        y_image = y + (hauteur - TAILLE_IMAGE_CHOIX) / 2
+
+        cadre_image = shapes.BorderedRectangle(
+            x, y_image, TAILLE_IMAGE_CHOIX, TAILLE_IMAGE_CHOIX, border=2,
+            color=COULEUR_FOND_VIDE if image is None else COULEUR_FOND_CARTE,
+            border_color=couleur_contour, batch=lot,
         )
-        cadre.opacity = OPACITE_FOND
-        cx = x + largeur / 2
+        cadre_image.opacity = OPACITE_FOND
+        elements = [cadre_image]
+        if image is not None:
+            elements.append(_sprite_ajuste(image, x, y_image, TAILLE_IMAGE_CHOIX, TAILLE_IMAGE_CHOIX, lot))
+
+        x_texte = x + TAILLE_IMAGE_CHOIX + ESPACEMENT_IMAGE_TEXTE
+        largeur_texte = largeur - TAILLE_IMAGE_CHOIX - ESPACEMENT_IMAGE_TEXTE
+        cadre_texte = shapes.BorderedRectangle(
+            x_texte, y, largeur_texte, hauteur, border=2, color=COULEUR_FOND_CARTE,
+            border_color=couleur_contour, batch=lot,
+        )
+        cadre_texte.opacity = OPACITE_FOND
         titre_label = pyglet.text.Label(
-            titre, x=cx, y=y + hauteur - 30, anchor_x="center", anchor_y="center",
+            titre, x=x_texte + 20, y=y + hauteur - 30, anchor_x="left", anchor_y="center",
             font_size=16, color=(*COULEUR_NOM, 255), batch=lot,
         )
         description_label = pyglet.text.Label(
-            description, x=cx, y=y + hauteur - 55, anchor_x="center", anchor_y="top",
-            font_size=12, color=(*COULEUR_TEXTE, 255), multiline=True, width=largeur - 30,
-            align="center", batch=lot,
+            description, x=x_texte + 20, y=y + hauteur - 52, anchor_x="left", anchor_y="top",
+            font_size=13, color=(*COULEUR_TEXTE, 255), multiline=True, width=largeur_texte - 40,
+            align="left", batch=lot,
         )
-        return [cadre, titre_label, description_label]
+        elements.extend([cadre_texte, titre_label, description_label])
+        return elements
 
     def _dessiner_choix_module(self, lot: pyglet.graphics.Batch) -> list:
         elements = [self._dessiner_instruction("Choisissez le module a ameliorer.", lot)]

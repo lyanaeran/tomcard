@@ -27,12 +27,14 @@ from src.gameplay.parcours import (
     pool_toutes_cartes,
     tirer_candidats_module,
     tirer_candidats_recompense,
+    tirer_carte_deck,
     tirer_carte_recompense,
     tirer_propositions_niveau,
     tirer_type_aventure,
 )
 from src.gameplay.partie import (
     COUT_ACTION_STATION_SERVICE,
+    COUT_METTRE_AUX_NORMES,
     DEGATS_ASTEROIDES,
     PV_AMELIORATION,
     PV_REPARATION_VAISSEAU,
@@ -53,6 +55,7 @@ from src.gameplay.partie import (
     nouvelle_partie,
     partie_depuis_json,
     partie_vers_json,
+    payer_mise_aux_normes,
     profil_vers_json,
     reparer_module,
     reparer_vaisseau,
@@ -620,32 +623,34 @@ def subir_degats_module_asteroides_web(partie_json, position) -> str:
     return partie_vers_json(partie)
 
 
+def _carte_avec_id_json(carte, cartes: dict) -> dict:
+    """Meme forme que _candidat_recompense_json, sans le module associe (non pertinent pour une
+    carte offerte/tiree hors combat, specs.md 2.5) - id resolu sur le meme charger_cartes() que
+    l'appelant, pour eviter tout probleme d'identite entre deux chargements distincts (cf. la
+    docstring de id_de_carte) - piege reel rencontre cote PC en construisant ces ecrans."""
+    return {
+        "id_carte": id_de_carte(carte, cartes),
+        "nom": carte.nom,
+        "image": _chemin_web(carte.image),
+        "cout": carte.cout,
+        "rarete": carte.rarete.name,
+        "valeur": carte.valeur,
+        "type": carte.type.name,
+        "cible": carte.cible.name,
+        "action": carte.action.name if carte.action else None,
+        "duree": carte.duree,
+    }
+
+
 def carte_offerte_asteroides_web() -> str:
     """Tire une carte gratuite pour le choix "Traverser" (specs.md 2.5), meme pool que le module
-    principal (pool_toutes_cartes) - independant de tout combat/partie. Renvoie directement son id
-    (a re-transmettre a prendre_carte_offerte_asteroides_web) : le tirage et la resolution de
-    l'id se font dans le meme appel, sur le meme charger_cartes(), pour eviter tout probleme
-    d'identite entre deux chargements distincts (cf. la docstring de id_de_carte) - piege reel
-    rencontre cote PC en construisant cet ecran. None si le pool est vide (cf.
-    tirer_carte_recompense)."""
+    principal (pool_toutes_cartes) - independant de tout combat/partie. None si le pool est vide
+    (cf. tirer_carte_recompense)."""
     cartes = charger_cartes()
     carte = tirer_carte_recompense(pool_toutes_cartes(cartes), random.Random())
     if carte is None:
         return json.dumps(None)
-    return json.dumps(
-        {
-            "id_carte": id_de_carte(carte, cartes),
-            "nom": carte.nom,
-            "image": _chemin_web(carte.image),
-            "cout": carte.cout,
-            "rarete": carte.rarete.name,
-            "valeur": carte.valeur,
-            "type": carte.type.name,
-            "cible": carte.cible.name,
-            "action": carte.action.name if carte.action else None,
-            "duree": carte.duree,
-        }
-    )
+    return json.dumps(_carte_avec_id_json(carte, cartes))
 
 
 def prendre_carte_offerte_asteroides_web(partie_json, id_carte) -> str:
@@ -669,6 +674,48 @@ def terminer_aventure_asteroides_web(partie_json) -> str:
     niveau suivant, meme logique que main.py:_ouvrir_aventure_asteroides cote PC. Renvoie la
     partie mise a jour (web/app.js la re-sauvegarde dans localStorage puis enchaine sur le choix
     du niveau)."""
+    partie = partie_depuis_json(partie_json)
+    avancer_niveau(partie)
+    return partie_vers_json(partie)
+
+
+# --- Aventure "Police" (specs.md 2.5) : une carte est tiree au hasard du deck reel du joueur et
+# affichee avant les choix - Confiscation / Mettre aux normes / Detourner l'attention (une seule
+# fois par Aventure, geree cote JS - pas d'etat a persister sur Partie). Memes fonctions pures que
+# src/ui/ecran_aventure_police.py cote PC (src/gameplay/partie.py). ---
+
+
+def constantes_aventure_police_web() -> str:
+    """Expose COUT_METTRE_AUX_NORMES (src/gameplay/partie.py) pour le texte du choix avant de le
+    jouer - seule source de verite (CLAUDE.md), web/app.js ne duplique jamais cette valeur."""
+    return json.dumps({"cout_mettre_aux_normes": COUT_METTRE_AUX_NORMES})
+
+
+def tirer_carte_police_web(partie_json) -> str:
+    """Tire au hasard une carte du deck reel de la partie (tirer_carte_deck, specs.md 2.5) -
+    appelee a l'ouverture de l'ecran, et de nouveau au choix "Detourner l'attention"."""
+    partie = partie_depuis_json(partie_json)
+    cartes = charger_cartes()
+    id_carte = tirer_carte_deck(partie.deck, random.Random())
+    return json.dumps(_carte_avec_id_json(cartes[id_carte], cartes))
+
+
+def confiscation_police_web(partie_json, id_carte) -> str:
+    partie = partie_depuis_json(partie_json)
+    retirer_carte(partie, id_carte)
+    return partie_vers_json(partie)
+
+
+def mettre_aux_normes_police_web(partie_json) -> str:
+    partie = partie_depuis_json(partie_json)
+    succes = payer_mise_aux_normes(partie)
+    return json.dumps({"partie": json.loads(partie_vers_json(partie)), "succes": succes})
+
+
+def terminer_aventure_police_web(partie_json) -> str:
+    """Bouton "Continuer" de l'ecran Aventure "Police" (choix resolu) : avance au niveau suivant,
+    meme logique que main.py:_ouvrir_aventure_police cote PC. Renvoie la partie mise a jour
+    (web/app.js la re-sauvegarde dans localStorage puis enchaine sur le choix du niveau)."""
     partie = partie_depuis_json(partie_json)
     avancer_niveau(partie)
     return partie_vers_json(partie)

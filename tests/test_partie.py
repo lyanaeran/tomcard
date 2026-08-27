@@ -15,6 +15,7 @@ from src.gameplay.partie import (
     ARGENT_DEPART,
     ARGENT_PAR_ENNEMI_TUE,
     COUT_ACTION_STATION_SERVICE,
+    COUT_METTRE_AUX_NORMES,
     DEGATS_ASTEROIDES,
     NIVEAU_MAJ_MAX,
     PV_AMELIORATION,
@@ -46,6 +47,7 @@ from src.gameplay.partie import (
     partie_en_cours,
     partie_vers_dict,
     partie_vers_json,
+    payer_mise_aux_normes,
     profil_depuis_json,
     profil_vers_json,
     reparer_module,
@@ -470,6 +472,25 @@ def test_combat_aventure_asteroides_a_une_flotte_scriptee():
 
     assert len(combat.flotte.positions()) == NOMBRE_ENNEMIS_ASTEROIDES
     assert combat.joueur.vaisseau.base.pv == 15  # meme vaisseau reel que combat_depuis_partie
+
+
+def test_payer_mise_aux_normes_deduit_le_cout_si_assez_d_argent():
+    partie = _partie_exemple()  # argent=50
+
+    succes = payer_mise_aux_normes(partie)
+
+    assert succes is True
+    assert partie.argent == 50 - COUT_METTRE_AUX_NORMES
+
+
+def test_payer_mise_aux_normes_refuse_si_argent_insuffisant():
+    partie = _partie_exemple()
+    partie.argent = COUT_METTRE_AUX_NORMES - 1
+
+    succes = payer_mise_aux_normes(partie)
+
+    assert succes is False
+    assert partie.argent == COUT_METTRE_AUX_NORMES - 1
 
 
 @pytest.fixture

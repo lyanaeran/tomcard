@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
     <title>Space Fight - prototype web</title>
-    <link rel="stylesheet" href="web/style.css?v=39">
-    <link rel="manifest" href="web/manifest.json?v=39">
+    <link rel="stylesheet" href="web/style.css?v=40">
+    <link rel="manifest" href="web/manifest.json?v=40">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0b1020">
@@ -92,6 +92,15 @@
         </div>
         <button id="bouton-continuer-aventure-asteroides" class="cachee">Continuer</button>
     </div>
+    <div id="ecran-aventure-police" class="cachee">
+        <h1 id="titre-aventure-police">Police</h1>
+        <p id="description-aventure-police" class="instruction cachee"></p>
+        <div id="carte-actuelle-aventure-police" class="cachee"></div>
+        <div id="choix-aventure-police" class="cachee"></div>
+        <p id="message-erreur-aventure-police" class="cachee"></p>
+        <p id="message-resolu-aventure-police" class="cachee"></p>
+        <button id="bouton-continuer-aventure-police" class="cachee">Continuer</button>
+    </div>
     <div id="ecran-etape-placeholder" class="cachee">
         <h1 id="titre-etape-placeholder"></h1>
         <img id="image-etape-placeholder" alt="">
@@ -120,6 +129,6 @@
         <div id="info-carte-deck"></div>
     </div>
     <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
-    <script src="web/app.js?v=39"></script>
+    <script src="web/app.js?v=40"></script>
 </body>
 </html>

@@ -18,6 +18,7 @@ from src.gameplay.parcours import (
     pool_toutes_cartes,
     tirer_candidats_module,
     tirer_candidats_recompense,
+    tirer_carte_deck,
     tirer_carte_recompense,
     tirer_propositions_niveau,
     tirer_rarete_recompense,
@@ -231,12 +232,24 @@ def test_tirer_type_aventure_renvoie_une_des_aventures_implementees():
     aleatoire = random.Random(1)
 
     for _ in range(20):
-        assert tirer_type_aventure(aleatoire) in (TypeAventure.TROIS_LUNES, TypeAventure.ASTEROIDES)
+        assert tirer_type_aventure(aleatoire) in (
+            TypeAventure.TROIS_LUNES,
+            TypeAventure.ASTEROIDES,
+            TypeAventure.POLICE,
+        )
 
 
-def test_tirer_type_aventure_tire_les_deux_sur_un_grand_nombre_d_essais():
+def test_tirer_type_aventure_tire_les_trois_sur_un_grand_nombre_d_essais():
     aleatoire = random.Random(1)
 
-    resultats = {tirer_type_aventure(aleatoire) for _ in range(50)}
+    resultats = {tirer_type_aventure(aleatoire) for _ in range(100)}
 
-    assert resultats == {TypeAventure.TROIS_LUNES, TypeAventure.ASTEROIDES}
+    assert resultats == {TypeAventure.TROIS_LUNES, TypeAventure.ASTEROIDES, TypeAventure.POLICE}
+
+
+def test_tirer_carte_deck_renvoie_un_id_du_deck():
+    deck = ["CRT_7", "CRT_10", "CRT_12"]
+    aleatoire = random.Random(1)
+
+    for _ in range(20):
+        assert tirer_carte_deck(deck, aleatoire) in deck

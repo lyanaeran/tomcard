@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "39";
+const VERSION_CACHE = "40";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -103,6 +103,7 @@ const IDS_ECRANS = [
     "ecran-station-service",
     "ecran-aventure-trois-lunes",
     "ecran-aventure-asteroides",
+    "ecran-aventure-police",
     "ecran-etape-placeholder",
     "ecran-fin-combat",
     "ecran-victoire-finale",
@@ -786,10 +787,30 @@ function terminerStationServicePartie() {
     ouvrirChoixNiveauPartie(partie);
 }
 
+// Ligne d'un choix d'Aventure (specs.md 2.5) : image carree a gauche (aucune -> case vide en
+// attendant un visuel dedie), rectangle de texte (titre + description) a droite - meme
+// presentation pour les 3 ecrans d'Aventure (Trois lunes/Asteroides/Police).
+function construireLigneChoixHtml(identifiant, image, titre, texte) {
+    const imageHtml = image ? `<img src="${image}" alt="${titre}">` : "";
+    return `
+        <div class="choix-aventure" data-choix="${identifiant}">
+            <div class="choix-aventure-image">${imageHtml}</div>
+            <div class="choix-aventure-texte">
+                <div class="choix-aventure-titre">${titre}</div>
+                <div class="choix-aventure-description">${texte}</div>
+            </div>
+        </div>`;
+}
+
 // Aventure "Trois lunes" (specs.md 2.5) : choix unique parmi Reparer/Ameliorer/Bricoler, resolu
 // immediatement des le clic - contrairement a l'Aventure Asteroides (a venir), pas de sequence en
 // plusieurs temps ici. Meme regles que src/ui/ecran_aventure_trois_lunes.py cote PC - bridge.py
 // n'applique que les fonctions pures de src/gameplay/partie.py, aucune regle dupliquee ici.
+// Images reutilisees de assets/station_service/ (deja leur titre incruste) quand pertinentes ;
+// null en attendant un visuel dedie sinon (aucune icone existante pour "Bricoler").
+const ICONE_REPARER = "assets/station_service/reparer.png";
+const ICONE_AMELIORER = "assets/station_service/ameliorer.png";
+
 const DESCRIPTION_TROIS_LUNES =
     "Un havre de paix au milieu de la galaxie. Aucune forme de vie intelligente, des animaux de " +
     "taille raisonnable, de l'eau, des fruits et des legumes sauvages partout. Il est temps de " +
@@ -838,20 +859,14 @@ function rendreAventureTroisLunes() {
         description.textContent = DESCRIPTION_TROIS_LUNES;
         const { pv_reparation_vaisseau, pv_amelioration } = constantesAventureTroisLunes;
         const options = [
-            ["reparer", "Reparer le vaisseau", `Chaque module regagne ${pv_reparation_vaisseau} PV.`],
-            ["ameliorer", "Ameliorer un module", `+${pv_amelioration} PV max sur le module de votre choix.`],
-            ["bricoler", "Bricoler", "Retirez une carte de votre deck."],
+            ["reparer", ICONE_REPARER, "Reparer le vaisseau", `Chaque module regagne ${pv_reparation_vaisseau} PV.`],
+            ["ameliorer", ICONE_AMELIORER, "Ameliorer un module", `+${pv_amelioration} PV max sur le module de votre choix.`],
+            ["bricoler", null, "Bricoler", "Retirez une carte de votre deck."],
         ];
         choix.innerHTML = options
-            .map(
-                ([identifiant, titre, texte]) => `
-            <div class="choix-aventure" data-choix="${identifiant}">
-                <div class="choix-aventure-titre">${titre}</div>
-                <div class="choix-aventure-description">${texte}</div>
-            </div>`
-            )
+            .map(([identifiant, image, titre, texte]) => construireLigneChoixHtml(identifiant, image, titre, texte))
             .join("");
-        document.querySelectorAll(".choix-aventure").forEach((element) => {
+        document.querySelectorAll("#choix-aventure-trois-lunes .choix-aventure").forEach((element) => {
             element.addEventListener("click", () => cliquerChoixTroisLunes(element.dataset.choix));
         });
     } else if (etapeAventureTroisLunes === "choix_module") {
@@ -942,8 +957,8 @@ const DESCRIPTION_ASTEROIDES =
     "Poursuivi par des pirates de l'espace, vous n'avez plus le choix : vaincre ou perir ! A moins que...";
 
 const CHOIX_ASTEROIDES = [
-    ["traverser", "Traverser le champ d'asteroides", "Un module au choix va en subir les consequences..."],
-    ["affronter", "Affronter les pirates", "Lance un combat contre 3 ennemis."],
+    ["traverser", null, "Traverser le champ d'asteroides", "Un module au choix va en subir les consequences..."],
+    ["affronter", null, "Affronter les pirates", "Lance un combat contre 3 ennemis."],
 ];
 
 let constantesAventureAsteroides = null;
@@ -991,11 +1006,7 @@ function rendreAventureAsteroides() {
     if (etapeAventureAsteroides === "choix") {
         description.textContent = DESCRIPTION_ASTEROIDES;
         choix.innerHTML = CHOIX_ASTEROIDES.map(
-            ([identifiant, titre, texte]) => `
-            <div class="choix-aventure" data-choix="${identifiant}">
-                <div class="choix-aventure-titre">${titre}</div>
-                <div class="choix-aventure-description">${texte}</div>
-            </div>`
+            ([identifiant, image, titre, texte]) => construireLigneChoixHtml(identifiant, image, titre, texte)
         ).join("");
         document.querySelectorAll("#choix-aventure-asteroides .choix-aventure").forEach((element) => {
             element.addEventListener("click", () => cliquerChoixAsteroides(element.dataset.choix));
@@ -1102,6 +1113,113 @@ function cliquerContinuerAsteroides() {
     }
 }
 
+// Aventure "Police" (specs.md 2.5) : une carte du deck reel est tiree au hasard, puis 3 choix -
+// Confiscation (retire la carte), Mettre aux normes (payer un cout fixe pour la garder), Detourner
+// l'attention (retire une autre carte au hasard, disponible une seule fois par Aventure - le choix
+// disparait ensuite). Meme regles que src/ui/ecran_aventure_police.py cote PC - bridge.py n'applique
+// que les fonctions pures de src/gameplay/partie.py, aucune regle dupliquee ici.
+const DESCRIPTION_POLICE =
+    "Un vaisseau de patrouille vous somme de vous arreter pour un controle de routine...";
+
+let constantesAventurePolice = null;
+// "choix" (2 ou 3 choix selon detournerDisponiblePolice) -> "resolu".
+let etapeAventurePolice = "choix";
+let carteActuellePolice = null;
+let detournerDisponiblePolice = true;
+let messageErreurPolice = "";
+let messageResoluPolice = "";
+
+function ouvrirAventurePolicePartie(partie) {
+    partieActive = partie;
+    etapeAventurePolice = "choix";
+    detournerDisponiblePolice = true;
+    messageErreurPolice = "";
+    if (constantesAventurePolice === null) {
+        constantesAventurePolice = appelerBridge("constantes_aventure_police_web");
+    }
+    carteActuellePolice = appelerBridge("tirer_carte_police_web", JSON.stringify(partieActive));
+    rendreAventurePolice();
+    masquerTousLesEcrans();
+    document.getElementById("ecran-aventure-police").classList.remove("cachee");
+}
+
+function rendreAventurePolice() {
+    document.getElementById("titre-aventure-police").textContent = `Police - Niveau ${partieActive.niveau}`;
+
+    const description = document.getElementById("description-aventure-police");
+    const carteActuelle = document.getElementById("carte-actuelle-aventure-police");
+    const choix = document.getElementById("choix-aventure-police");
+    const messageErreur = document.getElementById("message-erreur-aventure-police");
+    const messageResolu = document.getElementById("message-resolu-aventure-police");
+    const boutonContinuer = document.getElementById("bouton-continuer-aventure-police");
+
+    description.classList.toggle("cachee", etapeAventurePolice !== "choix");
+    carteActuelle.classList.toggle("cachee", etapeAventurePolice !== "choix");
+    choix.classList.toggle("cachee", etapeAventurePolice !== "choix");
+    messageErreur.classList.toggle("cachee", etapeAventurePolice !== "choix" || !messageErreurPolice);
+    messageResolu.classList.toggle("cachee", etapeAventurePolice !== "resolu");
+    boutonContinuer.classList.toggle("cachee", etapeAventurePolice !== "resolu");
+
+    if (etapeAventurePolice === "choix") {
+        description.textContent = DESCRIPTION_POLICE;
+        const carte = carteActuellePolice;
+        carteActuelle.innerHTML = `
+            <div class="choix-aventure carte-actuelle-aventure">
+                <div class="choix-aventure-image">${carte.image ? `<img src="${carte.image}" alt="${carte.nom}">` : ""}</div>
+                <div class="choix-aventure-texte">
+                    <div class="choix-aventure-titre">${carte.nom}</div>
+                    <div class="choix-aventure-description">${texteEffetCarte(carte)}</div>
+                </div>
+            </div>`;
+
+        const { cout_mettre_aux_normes } = constantesAventurePolice;
+        const options = [
+            ["confiscation", null, "Confiscation", "Supprime cette carte de votre deck."],
+            ["mettre_aux_normes", null, "Mettre aux normes", `Payez ${cout_mettre_aux_normes} € et gardez la carte.`],
+            ["detourner", null, "Detourner l'attention", "Tire une autre carte (une seule fois)."],
+        ].filter(([identifiant]) => identifiant !== "detourner" || detournerDisponiblePolice);
+        choix.innerHTML = options
+            .map(([identifiant, image, titre, texte]) => construireLigneChoixHtml(identifiant, image, titre, texte))
+            .join("");
+        document.querySelectorAll("#choix-aventure-police .choix-aventure").forEach((element) => {
+            element.addEventListener("click", () => cliquerChoixPolice(element.dataset.choix));
+        });
+
+        messageErreur.textContent = messageErreurPolice;
+    } else {
+        messageResolu.textContent = messageResoluPolice;
+    }
+}
+
+function cliquerChoixPolice(identifiant) {
+    if (identifiant === "confiscation") {
+        const carte = carteActuellePolice;
+        partieActive = appelerBridge("confiscation_police_web", JSON.stringify(partieActive), carte.id_carte);
+        messageResoluPolice = `Carte confisquee : ${carte.nom}.`;
+        etapeAventurePolice = "resolu";
+    } else if (identifiant === "mettre_aux_normes") {
+        const resultat = appelerBridge("mettre_aux_normes_police_web", JSON.stringify(partieActive));
+        if (resultat.succes) {
+            partieActive = resultat.partie;
+            messageResoluPolice = `Vous mettez ${carteActuellePolice.nom} aux normes.`;
+            etapeAventurePolice = "resolu";
+        } else {
+            messageErreurPolice = "Argent insuffisant pour mettre cette carte aux normes.";
+        }
+    } else if (identifiant === "detourner") {
+        carteActuellePolice = appelerBridge("tirer_carte_police_web", JSON.stringify(partieActive));
+        detournerDisponiblePolice = false;
+        messageErreurPolice = "";
+    }
+    rendreAventurePolice();
+}
+
+function terminerAventurePolice() {
+    const partie = appelerBridge("terminer_aventure_police_web", JSON.stringify(partieActive));
+    sauvegarderPartieLocale(joueurCourant.id, partie);
+    ouvrirChoixNiveauPartie(partie);
+}
+
 // Ecran generique pour une etape sans contenu prepare (Planete commerciale - specs.md 2.4 etape
 // 9, 9.1) : reutilise l'icone/description de LIBELLES_TYPE_ETAPE (definie plus bas, pour l'ecran
 // "Choix du prochain niveau") avec un message explicite et un bouton "J'ai termine" qui avance
@@ -1177,13 +1295,15 @@ function choisirEtape(type) {
     } else if (type === "STATION_SERVICE") {
         ouvrirStationServicePartie(partieActive);
     } else if (type === "AVENTURE") {
-        // Deux aventures implementees pour l'instant (specs.md 2.5), tirage 50/50 non
-        // deterministe cote Python (type_aventure_web) - Police reste a construire.
+        // Trois aventures implementees (specs.md 2.5), tirage uniforme non deterministe cote
+        // Python (type_aventure_web).
         const typeAventure = appelerBridge("type_aventure_web");
         if (typeAventure === "TROIS_LUNES") {
             ouvrirAventureTroisLunesPartie(partieActive);
-        } else {
+        } else if (typeAventure === "ASTEROIDES") {
             ouvrirAventureAsteroidesPartie(partieActive);
+        } else {
+            ouvrirAventurePolicePartie(partieActive);
         }
     } else {
         // Planete commerciale : contenu pas encore prepare (specs.md 2.4, 9.1).
@@ -1540,6 +1660,7 @@ document.getElementById("bouton-continuer-aventure-trois-lunes").addEventListene
 document.getElementById("bouton-continuer-aventure-asteroides").addEventListener("click", cliquerContinuerAsteroides);
 document.getElementById("bouton-prendre-aventure-asteroides").addEventListener("click", prendreCarteAsteroides);
 document.getElementById("bouton-passer-aventure-asteroides").addEventListener("click", passerCarteAsteroides);
+document.getElementById("bouton-continuer-aventure-police").addEventListener("click", terminerAventurePolice);
 document.getElementById("bouton-continuer-victoire-finale").addEventListener("click", terminerVictoireFinale);
 document.getElementById("bouton-termine-etape-placeholder").addEventListener("click", terminerEtapePlaceholder);
 document.getElementById("bouton-retour-deck").addEventListener("click", retourDepuisDeck);
