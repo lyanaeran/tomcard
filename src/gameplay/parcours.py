@@ -159,3 +159,20 @@ def tirer_propositions_niveau(
     if niveau in NIVEAUX_STATION_GARANTIE and TypeEtape.STATION_SERVICE not in propositions:
         propositions[aleatoire.randrange(quantite)] = TypeEtape.STATION_SERVICE
     return propositions
+
+
+# Quelle Aventure ouvrir quand TypeEtape.AVENTURE est choisi (specs.md 2.5) : deux implementees
+# pour l'instant (Police reste a construire).
+
+
+class TypeAventure(Enum):
+    """Aventure concrete ouverte pour une etape TypeEtape.AVENTURE (specs.md 2.5)."""
+
+    TROIS_LUNES = auto()
+    ASTEROIDES = auto()
+
+
+def tirer_type_aventure(aleatoire: random.Random) -> TypeAventure:
+    """Tirage uniforme entre les Aventures implementees (specs.md 2.5) - non deterministe (comme
+    les recompenses de fin de combat), pas encore lie a graine/niveau."""
+    return aleatoire.choice((TypeAventure.TROIS_LUNES, TypeAventure.ASTEROIDES))

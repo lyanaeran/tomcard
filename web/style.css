@@ -958,6 +958,45 @@ body {
     color: #ffdc78;
 }
 
+/* Aventure "Asteroides" (specs.md 2.5). Fond dedie (assets/aventure/champ_asteroides.png), meme
+   principe que #ecran-aventure-trois-lunes ci-dessus. .choix-aventure/.module-station reutilisees
+   telles quelles (memes classes que Trois lunes/Station service, pas de style duplique). */
+#ecran-aventure-asteroides {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.2rem;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    text-align: center;
+    background: #0b1020 url("../assets/aventure/champ_asteroides.png") center / 100% 100% no-repeat;
+}
+
+#description-aventure-asteroides {
+    max-width: 700px;
+}
+
+#choix-aventure-asteroides,
+#modules-aventure-asteroides {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+}
+
+#message-aventure-asteroides {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #ffdc78;
+    max-width: 700px;
+}
+
+#boutons-carte-offerte-aventure-asteroides {
+    display: flex;
+    gap: 1rem;
+}
+
 /* Ecran generique pour une etape sans contenu prepare (Planete commerciale - specs.md 2.4 etape
    9, 9.1). Fond de combat reutilise en placeholder (deja applique globalement sur body) -
    decision utilisateur. */

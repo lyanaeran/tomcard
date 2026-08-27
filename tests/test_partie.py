@@ -10,10 +10,12 @@ from src.gameplay.position import Colonne, Rangee
 
 from src.gameplay.donnees import charger_cartes, charger_modules
 from src.gameplay import partie as partie_module
+from src.gameplay.config_poc import NOMBRE_ENNEMIS_ASTEROIDES
 from src.gameplay.partie import (
     ARGENT_DEPART,
     ARGENT_PAR_ENNEMI_TUE,
     COUT_ACTION_STATION_SERVICE,
+    DEGATS_ASTEROIDES,
     NIVEAU_MAJ_MAX,
     PV_AMELIORATION,
     PV_REPARATION,
@@ -27,6 +29,7 @@ from src.gameplay.partie import (
     ameliorer_module,
     ameliorer_module_aventure,
     avancer_niveau,
+    combat_aventure_asteroides,
     combat_depuis_partie,
     creer_profil,
     deck_de_la_partie,
@@ -50,6 +53,7 @@ from src.gameplay.partie import (
     retirer_carte,
     sauvegarder_partie,
     specs_utilisees_partie,
+    subir_degats_module,
     synchroniser_vaisseau_depuis_combat,
 )
 
@@ -441,6 +445,31 @@ def test_ameliorer_module_aventure_meme_effet_que_ameliorer_module_mais_gratuit(
     assert partie.vaisseau["avant_gauche"].pv_max == 18 + PV_AMELIORATION
     assert partie.vaisseau["avant_gauche"].pv == 10 + PV_AMELIORATION
     assert partie.argent == argent_avant  # contrairement a ameliorer_module (Station service)
+
+
+def test_subir_degats_module_reduit_les_pv():
+    partie = _partie_exemple()  # avant_gauche pv=10
+
+    subir_degats_module(partie, "avant_gauche", DEGATS_ASTEROIDES)
+
+    assert partie.vaisseau["avant_gauche"].pv == 10 - DEGATS_ASTEROIDES
+
+
+def test_subir_degats_module_plafonne_a_0():
+    partie = _partie_exemple()  # avant_gauche pv=10
+
+    subir_degats_module(partie, "avant_gauche", 999)
+
+    assert partie.vaisseau["avant_gauche"].pv == 0
+
+
+def test_combat_aventure_asteroides_a_une_flotte_scriptee():
+    partie = _partie_exemple()
+
+    combat = combat_aventure_asteroides(partie, random.Random(1))
+
+    assert len(combat.flotte.positions()) == NOMBRE_ENNEMIS_ASTEROIDES
+    assert combat.joueur.vaisseau.base.pv == 15  # meme vaisseau reel que combat_depuis_partie
 
 
 @pytest.fixture

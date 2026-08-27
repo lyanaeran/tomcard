@@ -2,9 +2,9 @@
 Point d'entree du jeu Space Fight (PC) : selection du profil joueur (specs.md 10.3), puis l'accueil
 de ce joueur (partie en cours ou nouvelle partie), qui enchaine desormais reellement sur le reste du
 parcours (specs.md 2.4) : choix de module (Niveau 1) -> choix du prochain niveau -> combat (Prime ou
-Boss), Station service, Aventure "Trois lunes" (specs.md 2.5) ou Planete commerciale (ecran
-generique, contenu pas encore prepare) -> retour au choix du prochain niveau, ou victoire finale
-(Boss vaincu) -> fin de partie.
+Boss), Station service, une Aventure ("Trois lunes" ou "Asteroides", specs.md 2.5) ou Planete
+commerciale (ecran generique, contenu pas encore prepare) -> retour au choix du prochain niveau, ou
+victoire finale (Boss vaincu) -> fin de partie.
 
 Chaque ecran est une fenetre pyglet independante ; les transitions se font en fermant la fenetre
 courante et en ouvrant la suivante, verifiees a intervalle regulier via pyglet.clock (pas
@@ -13,10 +13,10 @@ d'evenement dedie pour "l'utilisateur a fait un choix" dans ces ecrans, cf. leur
 
 Limites connues (specs.md 2.4) : Planete commerciale n'a pas encore de contenu propre (specs.md
 9.1) - l'ecran generique (EcranEtapePlaceholder) la represente, sans autre effet que d'avancer au
-niveau suivant. Une seule Aventure implementee pour l'instant (Trois lunes, specs.md 2.5) : tout
-tirage TypeEtape.AVENTURE l'ouvre directement, Asteroides/Police restent a construire. La flotte
-ennemie d'un combat est toujours tiree au hasard (combat_depuis_partie), sans tenir compte des
-tailles/du nombre d'ennemis attendus au niveau courant (specs.md 2.3/3.2).
+niveau suivant. Deux aventures implementees pour l'instant (Trois lunes, Asteroides - specs.md 2.5),
+tirees au hasard a chaque TypeEtape.AVENTURE (tirer_type_aventure) : Police reste a construire. La
+flotte ennemie d'un combat Prime/Boss est toujours tiree au hasard (combat_depuis_partie), sans
+tenir compte des tailles/du nombre d'ennemis attendus au niveau courant (specs.md 2.3/3.2).
 """
 
 import random
@@ -26,6 +26,7 @@ import pyglet
 from src.gameplay.combat import Combat, EtatCombat
 from src.gameplay.donnees import charger_cartes, charger_modules
 from src.gameplay.parcours import (
+    TypeAventure,
     TypeEtape,
     aleatoire_pour_niveau,
     est_niveau_boss,
@@ -33,6 +34,7 @@ from src.gameplay.parcours import (
     tirer_candidats_module,
     tirer_candidats_recompense,
     tirer_propositions_niveau,
+    tirer_type_aventure,
 )
 from src.gameplay.partie import (
     Partie,
@@ -40,6 +42,7 @@ from src.gameplay.partie import (
     abandonner_partie,
     ajouter_carte,
     avancer_niveau,
+    combat_aventure_asteroides,
     combat_depuis_partie,
     deck_de_la_partie,
     equiper_module,
@@ -53,6 +56,7 @@ from src.gameplay.partie import (
     synchroniser_vaisseau_depuis_combat,
 )
 from src.ui.ecran_accueil_joueur import EcranAccueilJoueur
+from src.ui.ecran_aventure_asteroides import EcranAventureAsteroides
 from src.ui.ecran_aventure_trois_lunes import EcranAventureTroisLunes
 from src.ui.ecran_choix_module import EcranChoixModule
 from src.ui.ecran_choix_niveau import EcranChoixNiveau
@@ -175,9 +179,13 @@ def _ouvrir_choix_niveau(profil: Profil, partie: Partie) -> None:
         elif type_choisi == TypeEtape.STATION_SERVICE:
             _ouvrir_station_service(profil, partie)
         elif type_choisi == TypeEtape.AVENTURE:
-            # Une seule Aventure implementee pour l'instant (specs.md 2.5) : pas encore de tirage
-            # entre plusieurs aventures, Asteroides/Police restent a construire.
-            _ouvrir_aventure_trois_lunes(profil, partie)
+            # Deux aventures implementees pour l'instant (specs.md 2.5), tirage 50/50 non
+            # deterministe (comme la recompense de fin de combat) - Police reste a construire.
+            type_aventure = tirer_type_aventure(random.Random())
+            if type_aventure == TypeAventure.TROIS_LUNES:
+                _ouvrir_aventure_trois_lunes(profil, partie)
+            else:
+                _ouvrir_aventure_asteroides(profil, partie)
         else:
             # Planete commerciale : contenu pas encore prepare (specs.md 2.4, 9.1).
             _ouvrir_etape_placeholder(profil, partie, type_choisi)
@@ -215,6 +223,29 @@ def _ouvrir_aventure_trois_lunes(profil: Profil, partie: Partie) -> None:
     pyglet.clock.schedule_interval(verifier, INTERVALLE_VERIFICATION)
 
 
+def _ouvrir_aventure_asteroides(profil: Profil, partie: Partie) -> None:
+    fenetre = EcranAventureAsteroides(partie, niveau=partie.niveau)
+
+    def verifier(_dt: float) -> None:
+        if fenetre.combat_demande:
+            pyglet.clock.unschedule(verifier)
+            fenetre.close()
+            # Choix "Affronter les pirates" (specs.md 2.5) : delegue au meme pipeline qu'un
+            # combat Prime normal (_ouvrir_combat/_ouvrir_fin_combat), juste avec une flotte
+            # scriptee plutot que le tirage standard lie au niveau.
+            _ouvrir_combat(profil, partie, combat_aventure_asteroides(partie))
+            return
+        if not fenetre.termine:
+            return
+        pyglet.clock.unschedule(verifier)
+        fenetre.close()
+        avancer_niveau(partie)
+        sauvegarder_partie(profil.id, partie)
+        _ouvrir_choix_niveau(profil, partie)
+
+    pyglet.clock.schedule_interval(verifier, INTERVALLE_VERIFICATION)
+
+
 def _ouvrir_etape_placeholder(profil: Profil, partie: Partie, type_etape: TypeEtape) -> None:
     fenetre = EcranEtapePlaceholder(type_etape, niveau=partie.niveau)
 
@@ -230,8 +261,11 @@ def _ouvrir_etape_placeholder(profil: Profil, partie: Partie, type_etape: TypeEt
     pyglet.clock.schedule_interval(verifier, INTERVALLE_VERIFICATION)
 
 
-def _ouvrir_combat(profil: Profil, partie: Partie) -> None:
-    combat = combat_depuis_partie(partie)
+def _ouvrir_combat(profil: Profil, partie: Partie, combat: Combat | None = None) -> None:
+    """`combat` : deja construit par l'appelant pour un combat scripte (Aventure Asteroides,
+    specs.md 2.5, combat_aventure_asteroides) ; None pour un Prime/Boss normal
+    (combat_depuis_partie, tirage standard lie au niveau)."""
+    combat = combat or combat_depuis_partie(partie)
     fenetre = FenetreCombat(combat, niveau=partie.niveau)
 
     def verifier(_dt: float) -> None:

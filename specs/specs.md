@@ -240,16 +240,22 @@ présent dans le JSON de `Partie`, aucun champ bridge supplémentaire nécessair
      pas de distinction victoire/défaite/abandon pour l'instant, cf. §10.3) → Écran de partie
      (étape 2), via un bouton "Continuer" (PC : clic n'importe où sur l'écran, cf.
      `src/ui/ecran_fin_combat.py`)
-7. **Aventure** (détaillé en §2.5, **une seule Aventure implémentée et reliée à l'enchaînement pour
-   l'instant : "Trois lunes"** — Astéroïdes/Police restent à construire, pas encore de tirage entre
-   plusieurs aventures puisqu'une seule existe) : un choix résolu (Réparer/Améliorer/Bricoler) puis
-   un bouton "Continuer" avance le niveau et revient au Choix du prochain niveau (étape 3), même
-   principe que Station service. `src/ui/ecran_aventure_trois_lunes.py` (PC) +
-   `main.py:_ouvrir_aventure_trois_lunes` ; côté web `web/bridge.py`
+7. **Aventure** (détaillé en §2.5, **deux Aventures implémentées et reliées à l'enchaînement pour
+   l'instant : "Trois lunes" et "Astéroïdes"** — Police reste à construire ; tirage 50/50 non
+   déterministe entre les deux via `tirer_type_aventure`, PC (`main.py`) et web
+   (`type_aventure_web`)) : un choix résolu puis un bouton "Continuer" avance le niveau et revient
+   au Choix du prochain niveau (étape 3), même principe que Station service — sauf le choix
+   "Affronter les pirates" de l'Astéroïdes, qui délègue au pipeline Combat (étape 5) via un combat
+   scripté plutôt que d'avancer directement. `src/ui/ecran_aventure_trois_lunes.py`/
+   `src/ui/ecran_aventure_asteroides.py` (PC) + `main.py:_ouvrir_aventure_trois_lunes`/
+   `_ouvrir_aventure_asteroides` ; côté web `web/bridge.py`
    (`constantes_aventure_trois_lunes_web`/`deck_groupe_par_id_partie_web`/
    `reparer_vaisseau_aventure_web`/`ameliorer_module_aventure_web`/`retirer_carte_aventure_web`/
-   `terminer_aventure_trois_lunes_web`) + `web/app.js` (`ouvrirAventureTroisLunesPartie` et
-   fonctions associées)
+   `terminer_aventure_trois_lunes_web` ; `constantes_aventure_asteroides_web`/
+   `subir_degats_module_asteroides_web`/`carte_offerte_asteroides_web`/
+   `prendre_carte_offerte_asteroides_web`/`combat_aventure_asteroides_web`/
+   `terminer_aventure_asteroides_web`) + `web/app.js` (`ouvrirAventureTroisLunesPartie`/
+   `ouvrirAventureAsteroidesPartie` et fonctions associées)
 8. **Station service** (détaillé en §2.2, **implémenté et relié à l'enchaînement**) : Réparer /
    Améliorer / Mettre à jour / Déplacer un module, un bouton "j'ai terminé" avance le niveau et
    revient au Choix du prochain niveau (étape 3), même principe que la fin d'un combat gagné
@@ -279,38 +285,63 @@ présent dans le JSON de `Partie`, aucun champ bridge supplémentaire nécessair
 
 Contenu concret des 3 premières Aventures spécifiées à ce jour — brouillon détaillé dans
 `specs/cartes.xlsx`, onglet "Aventures" (miroir humainement modifiable, même principe que l'onglet
-Cartes, cf. CLAUDE.md/§10.3). **Trois lunes implémentée** (voir ci-dessous) ; Astéroïdes et Police
-restent à construire, l'étape Aventure les représenterait alors avec l'écran générique
-`EcranEtapePlaceholder` en attendant (comme la Planète commerciale aujourd'hui) — mais puisqu'une
-seule Aventure existe pour l'instant, `TypeEtape.AVENTURE` ouvre toujours directement Trois lunes
-(§2.4 étape 7), aucun tirage entre plusieurs aventures n'est encore nécessaire.
+Cartes, cf. CLAUDE.md/§10.3). **Trois lunes et Astéroïdes implémentées** (voir ci-dessous) ; Police
+reste à construire, l'étape Aventure la représenterait alors avec l'écran générique
+`EcranEtapePlaceholder` en attendant (comme la Planète commerciale aujourd'hui). `TypeEtape.AVENTURE`
+tire au hasard laquelle des deux ouvrir (`tirer_type_aventure`, `TypeAventure`,
+`src/gameplay/parcours.py` — tirage uniforme non déterministe, comme les récompenses de fin de
+combat) — à étendre à Police une fois construite (§2.4 étape 7).
 
 Forme retenue pour l'écran Aventure : un écran dédié par Aventure (pas l'écran générique),
 affichant description + 2-3 choix cliquables — même famille visuelle que l'écran Choix du prochain
 niveau (§2.4 étape 3) plutôt qu'une mise en page différente par Aventure. Une Aventure scénarisée
-en plusieurs temps (Astéroïdes ci-dessous, pas encore construite) resterait un **seul écran** dont
-le contenu affiché change à mesure que le joueur avance (état interne à l'écran, comme
-`EcranStationService` se redessine après chaque action) plutôt que plusieurs écrans/fenêtres
-séparés — décision utilisateur : pas de moteur de séquence narrative générique, chaque Aventure
-scripte ses propres étapes en dur (déjà le cas de Trois lunes : "choix" -> "choix_module"/
-"choix_carte" -> "resolu", un attribut `etape` interne à l'écran). Contenu prévu à terme dans un
-`config/aventures.json` (miroir de l'onglet xlsx, même relation que `config/cartes.json`/onglet
-Cartes) — pas encore créé, structure à définir en construisant Astéroïdes/Police.
+en plusieurs temps (Astéroïdes ci-dessous) reste un **seul écran** dont le contenu affiché change à
+mesure que le joueur avance (état interne à l'écran, comme `EcranStationService` se redessine après
+chaque action) plutôt que plusieurs écrans/fenêtres séparés — décision utilisateur : pas de moteur
+de séquence narrative générique, chaque Aventure scripte ses propres étapes en dur (Trois lunes :
+"choix" -> "choix_module"/"choix_carte" -> "resolu" ; Astéroïdes : "choix" -> "choix_module" ->
+"sequence_2" -> "sequence_3"/"resolu" -> "resolu", un attribut `etape` interne à l'écran dans les
+deux cas). Contenu prévu à terme dans un `config/aventures.json` (miroir de l'onglet xlsx, même
+relation que `config/cartes.json`/onglet Cartes) — pas encore créé, structure à définir en
+construisant Police.
 
-**Astéroïdes** (fond `assets/aventure/champ_asteroides.png`) — "Poursuivi par des pirates de
-l'espace, vous n'avez plus le choix : vaincre ou périr ! À moins que..."
+**Astéroïdes** — **implémentée** (fond `assets/aventure/champ_asteroides.png`) — "Poursuivi par des
+pirates de l'espace, vous n'avez plus le choix : vaincre ou périr ! À moins que..."
 - Choix 1, *Traverser le champ d'astéroïdes* : séquence en 3 temps sur le même écran, chaque étape
   validée par un bouton "Continuer" :
-  1. -5 PV sur un module choisi par le joueur (clic sur une case, même convention que Station
-     service, §2.2)
-  2. -5 PV supplémentaires (même module)
-  3. Une carte est tirée au hasard et proposée gratuitement (le joueur la prend ou passe, façon
-     récompense de fin de combat, §6, mais gratuite et hors du flux de récompense standard)
-- Choix 2, *Affronter les pirates* : lance un combat scripté contre 3 ennemis — approximation
-  décidée en attendant la taille S/M/L par ennemi (absente de `config/ennemis.json`, cf.
-  §3.2/§9.1/§10.3) : 3 ennemis tirés du pool existant, flotte à 3 emplacements plutôt que le tirage
-  standard d'un combat Prime (grille complète)
+  1. Le joueur clique un module (`_dessiner_choix_module`/`choix_module`) : -`DEGATS_ASTEROIDES` (5)
+     PV appliqués immédiatement (`subir_degats_module`, nouveau côté moteur : dégâts hors combat,
+     plafonnés à 0, opération inverse de `reparer_module`/`reparer_vaisseau`), puis affichage d'un
+     message de confirmation + bouton "Continuer" (étape `sequence_2`)
+  2. Au clic sur "Continuer" : -`DEGATS_ASTEROIDES` PV supplémentaires (même module)
+  3. Une carte est tirée au hasard dans le pool complet (`pool_toutes_cartes`/`tirer_carte_recompense`,
+     §6) et proposée gratuitement (boutons "Prendre"/"Passer", étape `sequence_3`) — gratuite et
+     hors du flux de récompense standard de fin de combat. Si le pool est vide (`carte` = `None`),
+     l'étape `sequence_3` est sautée directement vers `resolu`
+- Choix 2, *Affronter les pirates* : lance un combat scripté contre `NOMBRE_ENNEMIS_ASTEROIDES` (3)
+  ennemis (`combat_aventure_asteroides`/`creer_flotte_asteroides`) — approximation décidée en
+  attendant la taille S/M/L par ennemi (absente de `config/ennemis.json`, cf. §3.2/§9.1/§10.3) :
+  ennemis tirés du pool existant sur les 3 premières cases de la grille (colonne Avant), plutôt que
+  le tirage standard d'un combat Prime (grille complète, `combat_depuis_partie`). Délègue
+  entièrement au pipeline Combat existant (étape 5/6 : victoire → Argent + carte, comme un Prime
+  normal ; défaite → même traitement qu'un combat normal) via `main.py:_ouvrir_combat`
+  (paramètre `combat` optionnel, déjà construit par l'appelant) / `web/bridge.py:combat_aventure_asteroides_web`
+  (même variable globale `combat` que `continuer_partie_web`, reste du pipeline de fin de combat
+  inchangé)
 - Pas de 3ᵉ choix (binaire assumé)
+
+`src/gameplay/config_poc.py` (`NOMBRE_ENNEMIS_ASTEROIDES`, `creer_flotte_asteroides`) ;
+`src/gameplay/partie.py` (`DEGATS_ASTEROIDES`, `subir_degats_module`, `combat_aventure_asteroides`,
+`_joueur_depuis_partie` factorisée avec `combat_depuis_partie`) ; `src/ui/ecran_aventure_asteroides.py`
+(PC) + `main.py:_ouvrir_aventure_asteroides` ; côté web `web/bridge.py`
+(`constantes_aventure_asteroides_web` expose `DEGATS_ASTEROIDES` pour le texte des choix avant de
+les jouer, plutôt que dupliqué en dur dans `web/app.js`, cf. CLAUDE.md ;
+`subir_degats_module_asteroides_web` ; `carte_offerte_asteroides_web` — tirage et résolution de
+l'id de la carte dans le même appel, sur le même `charger_cartes()`, pour éviter tout problème
+d'identité entre deux chargements distincts, cf. `id_de_carte` — piège réel rencontré côté PC en
+construisant cet écran ; `prendre_carte_offerte_asteroides_web` ; `combat_aventure_asteroides_web` ;
+`terminer_aventure_asteroides_web`) + `web/app.js` (`ouvrirAventureAsteroidesPartie` et fonctions
+associées)
 
 **Trois lunes** — **implémentée** (fond `assets/aventure/trois_lunes.png`) — "Un havre de paix au
 milieu de la galaxie [...]. Il est temps de faire une pause." Trois choix, chacun résolu
@@ -663,8 +694,8 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
 
 - Contenu exact de la Planète commerciale (uniquement des cartes, ou aussi d'autres bonus ?) reste
   à définir (§2). Contenu de l'Aventure : 3 premières aventures spécifiées (Astéroïdes/Trois
-  lunes/Police), voir §2.5 — **Trois lunes implémentée**, Astéroïdes/Police restent à construire
-  (et à en écrire d'autres pour varier le pool une fois ces deux-là faites)
+  lunes/Police), voir §2.5 — **Trois lunes et Astéroïdes implémentées**, Police reste à construire
+  (et à en écrire d'autres pour varier le pool une fois celle-ci faite)
 - Montants d'Argent (récompense de combat, coût des actions de Station service, Argent de départ) :
   **tranchés et implémentés**, voir §2.1/§2.2 — valeurs inventées faute de spec précise à l'origine
   de cette décision, à ajuster en playtest si besoin. Même situation pour le coût de "Mettre aux
@@ -887,8 +918,8 @@ fond dédié.
   au même niveau
 - Planète commerciale n'a pas encore de contenu propre (§2.4, étape 9, §9.1) : l'écran générique
   (`EcranEtapePlaceholder`) la représente, sans autre effet que d'avancer au niveau suivant.
-  L'Aventure a sa propre implémentation depuis Trois lunes (§2.5), mais reste limitée à cette seule
-  aventure (Astéroïdes/Police pas encore construites)
+  L'Aventure a sa propre implémentation depuis Trois lunes et Astéroïdes (§2.5), Police restant la
+  seule à construire
 - Le run s'arrête réellement au Niveau 10 dans l'état actuel (décision utilisateur, provisoire,
   voir §2) : la Victoire finale (§2.4, étape 11) marque la partie `TERMINEE` sans proposer de
   continuation au-delà de ce niveau

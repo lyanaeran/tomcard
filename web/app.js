@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "38";
+const VERSION_CACHE = "39";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -102,6 +102,7 @@ const IDS_ECRANS = [
     "ecran-choix-niveau",
     "ecran-station-service",
     "ecran-aventure-trois-lunes",
+    "ecran-aventure-asteroides",
     "ecran-etape-placeholder",
     "ecran-fin-combat",
     "ecran-victoire-finale",
@@ -932,6 +933,175 @@ function terminerAventureTroisLunes() {
     ouvrirChoixNiveauPartie(partie);
 }
 
+// Aventure "Asteroides" (specs.md 2.5) : deux choix - Traverser (sequence en 3 temps sur ce meme
+// ecran, chaque etape validee par un bouton "Continuer") ou Affronter les pirates (combat scripte,
+// delegue au meme pipeline qu'un combat Prime normal). Meme regles que
+// src/ui/ecran_aventure_asteroides.py cote PC - bridge.py n'applique que les fonctions pures de
+// src/gameplay/partie.py, aucune regle dupliquee ici.
+const DESCRIPTION_ASTEROIDES =
+    "Poursuivi par des pirates de l'espace, vous n'avez plus le choix : vaincre ou perir ! A moins que...";
+
+const CHOIX_ASTEROIDES = [
+    ["traverser", "Traverser le champ d'asteroides", "Un module au choix va en subir les consequences..."],
+    ["affronter", "Affronter les pirates", "Lance un combat contre 3 ennemis."],
+];
+
+let constantesAventureAsteroides = null;
+// "choix" (2 choix) -> "choix_module" (module cible des degats) -> "sequence_2" (2e coup, apres
+// le 1er deja applique au clic du module) -> "sequence_3" (carte offerte, si trouvee) -> "resolu".
+let etapeAventureAsteroides = "choix";
+let positionCibleeAsteroides = null;
+let carteOfferteAsteroides = null;
+let messageAsteroides = "";
+
+function ouvrirAventureAsteroidesPartie(partie) {
+    partieActive = partie;
+    etapeAventureAsteroides = "choix";
+    positionCibleeAsteroides = null;
+    carteOfferteAsteroides = null;
+    if (constantesAventureAsteroides === null) {
+        constantesAventureAsteroides = appelerBridge("constantes_aventure_asteroides_web");
+    }
+    rendreAventureAsteroides();
+    masquerTousLesEcrans();
+    document.getElementById("ecran-aventure-asteroides").classList.remove("cachee");
+}
+
+function rendreAventureAsteroides() {
+    document.getElementById("titre-aventure-asteroides").textContent = `Asteroides - Niveau ${partieActive.niveau}`;
+
+    const description = document.getElementById("description-aventure-asteroides");
+    const choix = document.getElementById("choix-aventure-asteroides");
+    const instruction = document.getElementById("instruction-aventure-asteroides");
+    const modules = document.getElementById("modules-aventure-asteroides");
+    const message = document.getElementById("message-aventure-asteroides");
+    const carteOfferte = document.getElementById("carte-offerte-aventure-asteroides");
+    const boutonsCarteOfferte = document.getElementById("boutons-carte-offerte-aventure-asteroides");
+    const boutonContinuer = document.getElementById("bouton-continuer-aventure-asteroides");
+
+    description.classList.toggle("cachee", etapeAventureAsteroides !== "choix");
+    choix.classList.toggle("cachee", etapeAventureAsteroides !== "choix");
+    instruction.classList.toggle("cachee", etapeAventureAsteroides !== "choix_module");
+    modules.classList.toggle("cachee", etapeAventureAsteroides !== "choix_module");
+    message.classList.toggle("cachee", !["sequence_2", "sequence_3", "resolu"].includes(etapeAventureAsteroides));
+    carteOfferte.classList.toggle("cachee", etapeAventureAsteroides !== "sequence_3");
+    boutonsCarteOfferte.classList.toggle("cachee", etapeAventureAsteroides !== "sequence_3");
+    boutonContinuer.classList.toggle("cachee", !["sequence_2", "resolu"].includes(etapeAventureAsteroides));
+
+    if (etapeAventureAsteroides === "choix") {
+        description.textContent = DESCRIPTION_ASTEROIDES;
+        choix.innerHTML = CHOIX_ASTEROIDES.map(
+            ([identifiant, titre, texte]) => `
+            <div class="choix-aventure" data-choix="${identifiant}">
+                <div class="choix-aventure-titre">${titre}</div>
+                <div class="choix-aventure-description">${texte}</div>
+            </div>`
+        ).join("");
+        document.querySelectorAll("#choix-aventure-asteroides .choix-aventure").forEach((element) => {
+            element.addEventListener("click", () => cliquerChoixAsteroides(element.dataset.choix));
+        });
+    } else if (etapeAventureAsteroides === "choix_module") {
+        instruction.textContent = "Choisissez le module qui essuiera les degats.";
+        const vaisseau = appelerBridge("infos_vaisseau_web", JSON.stringify(partieActive));
+        modules.innerHTML = Object.entries(vaisseau)
+            .map(([position, etat]) => {
+                if (!etat) {
+                    return `<div class="module-station module-station-vide" data-position="${position}">Emplacement vide</div>`;
+                }
+                return `
+                <div class="module-station" data-position="${position}">
+                    <img src="${etat.image}" alt="${etat.nom}">
+                    <div class="module-station-nom">${etat.nom}</div>
+                    <div class="module-station-pv">${etat.pv} / ${etat.pv_max} PV</div>
+                </div>`;
+            })
+            .join("");
+        document.querySelectorAll("#modules-aventure-asteroides .module-station:not(.module-station-vide)").forEach((element) => {
+            element.addEventListener("click", () => cliquerModuleAsteroides(element.dataset.position));
+        });
+    } else {
+        message.textContent = messageAsteroides;
+        if (etapeAventureAsteroides === "sequence_3") {
+            const carte = carteOfferteAsteroides;
+            carteOfferte.innerHTML = `
+                <div class="candidat-recompense">
+                    <span class="etoile-${carte.rarete.toLowerCase()}">★</span>
+                    <img src="${carte.image}" alt="${carte.nom}">
+                    <div class="candidat-recompense-nom">${carte.nom}</div>
+                    <div class="candidat-recompense-cout">⚡ ${carte.cout}</div>
+                    <div class="candidat-recompense-description">${texteEffetCarte(carte)}</div>
+                </div>`;
+        }
+    }
+}
+
+function cliquerChoixAsteroides(identifiant) {
+    if (identifiant === "traverser") {
+        etapeAventureAsteroides = "choix_module";
+        rendreAventureAsteroides();
+    } else if (identifiant === "affronter") {
+        appliquerResultat(appelerBridge("combat_aventure_asteroides_web", JSON.stringify(partieActive)));
+        masquerTousLesEcrans();
+        document.getElementById("app").classList.remove("cachee");
+    }
+}
+
+function cliquerModuleAsteroides(position) {
+    const { degats_asteroides } = constantesAventureAsteroides;
+    positionCibleeAsteroides = position;
+    const nom = appelerBridge("infos_vaisseau_web", JSON.stringify(partieActive))[position].nom;
+    partieActive = appelerBridge("subir_degats_module_asteroides_web", JSON.stringify(partieActive), position);
+    messageAsteroides = `Vous traversez le champ d'asteroides : ${nom} perd ${degats_asteroides} PV.`;
+    etapeAventureAsteroides = "sequence_2";
+    rendreAventureAsteroides();
+}
+
+function continuerSequence2Asteroides() {
+    const { degats_asteroides } = constantesAventureAsteroides;
+    const nom = appelerBridge("infos_vaisseau_web", JSON.stringify(partieActive))[positionCibleeAsteroides].nom;
+    partieActive = appelerBridge("subir_degats_module_asteroides_web", JSON.stringify(partieActive), positionCibleeAsteroides);
+    carteOfferteAsteroides = appelerBridge("carte_offerte_asteroides_web");
+    if (carteOfferteAsteroides === null) {
+        etapeAventureAsteroides = "resolu";
+        messageAsteroides =
+            `Ces asteroides n'en finissent plus : ${nom} perd encore ${degats_asteroides} PV. ` +
+            "Vous parvenez finalement a vous degager.";
+    } else {
+        etapeAventureAsteroides = "sequence_3";
+        messageAsteroides =
+            `Ces asteroides n'en finissent plus : ${nom} perd encore ${degats_asteroides} PV. ` +
+            "Pres de la sortie, vous reperez des debris...";
+    }
+    rendreAventureAsteroides();
+}
+
+function prendreCarteAsteroides() {
+    partieActive = appelerBridge(
+        "prendre_carte_offerte_asteroides_web",
+        JSON.stringify(partieActive),
+        carteOfferteAsteroides.id_carte
+    );
+    messageAsteroides = `Vous recuperez : ${carteOfferteAsteroides.nom}.`;
+    etapeAventureAsteroides = "resolu";
+    rendreAventureAsteroides();
+}
+
+function passerCarteAsteroides() {
+    messageAsteroides = "Vous laissez les debris derriere vous.";
+    etapeAventureAsteroides = "resolu";
+    rendreAventureAsteroides();
+}
+
+function cliquerContinuerAsteroides() {
+    if (etapeAventureAsteroides === "sequence_2") {
+        continuerSequence2Asteroides();
+    } else if (etapeAventureAsteroides === "resolu") {
+        const partie = appelerBridge("terminer_aventure_asteroides_web", JSON.stringify(partieActive));
+        sauvegarderPartieLocale(joueurCourant.id, partie);
+        ouvrirChoixNiveauPartie(partie);
+    }
+}
+
 // Ecran generique pour une etape sans contenu prepare (Planete commerciale - specs.md 2.4 etape
 // 9, 9.1) : reutilise l'icone/description de LIBELLES_TYPE_ETAPE (definie plus bas, pour l'ecran
 // "Choix du prochain niveau") avec un message explicite et un bouton "J'ai termine" qui avance
@@ -1007,9 +1177,14 @@ function choisirEtape(type) {
     } else if (type === "STATION_SERVICE") {
         ouvrirStationServicePartie(partieActive);
     } else if (type === "AVENTURE") {
-        // Une seule Aventure implementee pour l'instant (specs.md 2.5) : pas encore de tirage
-        // entre plusieurs aventures, Asteroides/Police restent a construire.
-        ouvrirAventureTroisLunesPartie(partieActive);
+        // Deux aventures implementees pour l'instant (specs.md 2.5), tirage 50/50 non
+        // deterministe cote Python (type_aventure_web) - Police reste a construire.
+        const typeAventure = appelerBridge("type_aventure_web");
+        if (typeAventure === "TROIS_LUNES") {
+            ouvrirAventureTroisLunesPartie(partieActive);
+        } else {
+            ouvrirAventureAsteroidesPartie(partieActive);
+        }
     } else {
         // Planete commerciale : contenu pas encore prepare (specs.md 2.4, 9.1).
         ouvrirEtapePlaceholderPartie(partieActive, type);
@@ -1362,6 +1537,9 @@ document.getElementById("bouton-nouvelle-partie").addEventListener("click", nouv
 document.getElementById("bouton-continuer-fin-combat").addEventListener("click", continuerApresFinCombat);
 document.getElementById("bouton-termine-station-service").addEventListener("click", terminerStationServicePartie);
 document.getElementById("bouton-continuer-aventure-trois-lunes").addEventListener("click", terminerAventureTroisLunes);
+document.getElementById("bouton-continuer-aventure-asteroides").addEventListener("click", cliquerContinuerAsteroides);
+document.getElementById("bouton-prendre-aventure-asteroides").addEventListener("click", prendreCarteAsteroides);
+document.getElementById("bouton-passer-aventure-asteroides").addEventListener("click", passerCarteAsteroides);
 document.getElementById("bouton-continuer-victoire-finale").addEventListener("click", terminerVictoireFinale);
 document.getElementById("bouton-termine-etape-placeholder").addEventListener("click", terminerEtapePlaceholder);
 document.getElementById("bouton-retour-deck").addEventListener("click", retourDepuisDeck);

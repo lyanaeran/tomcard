@@ -9,6 +9,7 @@ from src.gameplay.carte import Carte, CibleCarte, RareteCarte, TypeCarte
 from src.gameplay.config_poc import ID_MODULE_PRINCIPAL, creer_vaisseau
 from src.gameplay.donnees import charger_cartes, charger_modules
 from src.gameplay.parcours import (
+    TypeAventure,
     TypeEtape,
     aleatoire_pour_niveau,
     est_niveau_boss,
@@ -20,6 +21,7 @@ from src.gameplay.parcours import (
     tirer_carte_recompense,
     tirer_propositions_niveau,
     tirer_rarete_recompense,
+    tirer_type_aventure,
     tirer_type_etape,
 )
 
@@ -220,3 +222,21 @@ def test_tirer_propositions_niveau_ne_remplace_rien_si_deja_present():
 def test_tirer_propositions_niveau_boss_renvoie_une_seule_proposition_boss():
     assert tirer_propositions_niveau(10, random.Random(1)) == [TypeEtape.BOSS]
     assert tirer_propositions_niveau(20, random.Random(1)) == [TypeEtape.BOSS]
+
+
+# --- Aventures (specs.md 2.5) ---
+
+
+def test_tirer_type_aventure_renvoie_une_des_aventures_implementees():
+    aleatoire = random.Random(1)
+
+    for _ in range(20):
+        assert tirer_type_aventure(aleatoire) in (TypeAventure.TROIS_LUNES, TypeAventure.ASTEROIDES)
+
+
+def test_tirer_type_aventure_tire_les_deux_sur_un_grand_nombre_d_essais():
+    aleatoire = random.Random(1)
+
+    resultats = {tirer_type_aventure(aleatoire) for _ in range(50)}
+
+    assert resultats == {TypeAventure.TROIS_LUNES, TypeAventure.ASTEROIDES}

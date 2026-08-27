@@ -24,18 +24,23 @@ from src.gameplay.parcours import (
     aleatoire_pour_niveau,
     est_niveau_boss,
     modules_equipables,
+    pool_toutes_cartes,
     tirer_candidats_module,
     tirer_candidats_recompense,
+    tirer_carte_recompense,
     tirer_propositions_niveau,
+    tirer_type_aventure,
 )
 from src.gameplay.partie import (
     COUT_ACTION_STATION_SERVICE,
+    DEGATS_ASTEROIDES,
     PV_AMELIORATION,
     PV_REPARATION_VAISSEAU,
     ajouter_carte,
     ameliorer_module,
     ameliorer_module_aventure,
     avancer_niveau,
+    combat_aventure_asteroides,
     combat_depuis_partie,
     deck_de_la_partie,
     deplacer_module,
@@ -53,6 +58,7 @@ from src.gameplay.partie import (
     reparer_vaisseau,
     retirer_carte,
     specs_utilisees_partie,
+    subir_degats_module,
     synchroniser_vaisseau_depuis_combat,
 )
 from src.gameplay.position import Colonne, Position, Rangee
@@ -434,6 +440,12 @@ def choix_niveau_web(partie_json) -> str:
     return json.dumps({"niveau": partie.niveau, "propositions": [type_etape.name for type_etape in propositions]})
 
 
+def type_aventure_web() -> str:
+    """Tire quelle Aventure ouvrir pour une etape TypeEtape.AVENTURE (specs.md 2.5) - meme
+    logique que main.py cote PC (tirer_type_aventure), seule source de verite (CLAUDE.md)."""
+    return tirer_type_aventure(random.Random()).name
+
+
 def candidats_recompense_partie_web(partie_json) -> str:
     """Candidats de recompense de fin de combat (victoire) pour une partie reelle (specs.md 2.1/6),
     un par module effectivement equipe sur cette partie (specs_utilisees_partie) plutot qu'un
@@ -584,6 +596,77 @@ def retirer_carte_aventure_web(partie_json, id_carte) -> str:
 def terminer_aventure_trois_lunes_web(partie_json) -> str:
     """Bouton "Continuer" de l'ecran Aventure "Trois lunes" (une fois un choix resolu) : avance au
     niveau suivant, meme logique que main.py:_ouvrir_aventure_trois_lunes cote PC. Renvoie la
+    partie mise a jour (web/app.js la re-sauvegarde dans localStorage puis enchaine sur le choix
+    du niveau)."""
+    partie = partie_depuis_json(partie_json)
+    avancer_niveau(partie)
+    return partie_vers_json(partie)
+
+
+# --- Aventure "Asteroides" (specs.md 2.5) : choix "Traverser" en 3 temps (module cible des
+# degats, puis carte offerte) ou "Affronter les pirates" (combat scripte), memes fonctions pures
+# que src/ui/ecran_aventure_asteroides.py cote PC (src/gameplay/partie.py). ---
+
+
+def constantes_aventure_asteroides_web() -> str:
+    """Expose DEGATS_ASTEROIDES (src/gameplay/partie.py) pour le texte des choix avant de les
+    jouer - seule source de verite (CLAUDE.md), web/app.js ne duplique jamais cette valeur."""
+    return json.dumps({"degats_asteroides": DEGATS_ASTEROIDES})
+
+
+def subir_degats_module_asteroides_web(partie_json, position) -> str:
+    partie = partie_depuis_json(partie_json)
+    subir_degats_module(partie, position, DEGATS_ASTEROIDES)
+    return partie_vers_json(partie)
+
+
+def carte_offerte_asteroides_web() -> str:
+    """Tire une carte gratuite pour le choix "Traverser" (specs.md 2.5), meme pool que le module
+    principal (pool_toutes_cartes) - independant de tout combat/partie. Renvoie directement son id
+    (a re-transmettre a prendre_carte_offerte_asteroides_web) : le tirage et la resolution de
+    l'id se font dans le meme appel, sur le meme charger_cartes(), pour eviter tout probleme
+    d'identite entre deux chargements distincts (cf. la docstring de id_de_carte) - piege reel
+    rencontre cote PC en construisant cet ecran. None si le pool est vide (cf.
+    tirer_carte_recompense)."""
+    cartes = charger_cartes()
+    carte = tirer_carte_recompense(pool_toutes_cartes(cartes), random.Random())
+    if carte is None:
+        return json.dumps(None)
+    return json.dumps(
+        {
+            "id_carte": id_de_carte(carte, cartes),
+            "nom": carte.nom,
+            "image": _chemin_web(carte.image),
+            "cout": carte.cout,
+            "rarete": carte.rarete.name,
+            "valeur": carte.valeur,
+            "type": carte.type.name,
+            "cible": carte.cible.name,
+            "action": carte.action.name if carte.action else None,
+            "duree": carte.duree,
+        }
+    )
+
+
+def prendre_carte_offerte_asteroides_web(partie_json, id_carte) -> str:
+    partie = partie_depuis_json(partie_json)
+    ajouter_carte(partie, id_carte)
+    return partie_vers_json(partie)
+
+
+def combat_aventure_asteroides_web(partie_json) -> str:
+    """Choix "Affronter les pirates" (specs.md 2.5) : demarre le combat scripte a partir du
+    vaisseau/deck reels de la partie, meme logique que continuer_partie_web mais avec une flotte
+    fixee (combat_aventure_asteroides) plutot que le tirage standard lie au niveau."""
+    global combat
+    partie = partie_depuis_json(partie_json)
+    combat = combat_aventure_asteroides(partie)
+    return json.dumps({"etat": _etat_dict(), "popups": []})
+
+
+def terminer_aventure_asteroides_web(partie_json) -> str:
+    """Bouton "Continuer" de l'ecran Aventure "Asteroides" (choix "Traverser" resolu) : avance au
+    niveau suivant, meme logique que main.py:_ouvrir_aventure_asteroides cote PC. Renvoie la
     partie mise a jour (web/app.js la re-sauvegarde dans localStorage puis enchaine sur le choix
     du niveau)."""
     partie = partie_depuis_json(partie_json)

@@ -171,6 +171,21 @@ def creer_flotte(specs_ennemis: list[SpecEnnemi], aleatoire: random.Random) -> F
     return Flotte(ennemis)
 
 
+# Combat scripte du choix "Affronter les pirates" (Aventure Asteroides, specs.md 2.5) :
+# approximation decidee en attendant la taille S/M/L par ennemi (absente de config/ennemis.json,
+# cf. specs.md 3.2/9.1/10.3) - un nombre fixe d'ennemis tires du pool actuel, distincte du tirage
+# standard d'un combat Prime (creer_flotte, grille complete ou reduite en mode test).
+NOMBRE_ENNEMIS_ASTEROIDES = 3
+
+
+def creer_flotte_asteroides(specs_ennemis: list[SpecEnnemi], aleatoire: random.Random) -> Flotte:
+    """Flotte scriptee a NOMBRE_ENNEMIS_ASTEROIDES ennemis tires au hasard (avec remise) dans le
+    pool actuel, sur les premieres cases de POSITIONS_ENNEMIES."""
+    positions = POSITIONS_ENNEMIES[:NOMBRE_ENNEMIS_ASTEROIDES]
+    ennemis = {position: _ennemi_depuis_spec(aleatoire.choice(specs_ennemis)) for position in positions}
+    return Flotte(ennemis)
+
+
 def creer_combat_poc(generateur_aleatoire: random.Random | None = None) -> Combat:
     """Genere un combat aleatoire (modules, ennemis, deck) a partir de config/."""
     aleatoire = generateur_aleatoire or random.Random()
