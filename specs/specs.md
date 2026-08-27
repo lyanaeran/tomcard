@@ -20,7 +20,8 @@ Un deckbuilder roguelike inspiré de Slay the Spire, où le joueur incarne un va
   - **PRIME** — combat, contrat de chasseur de primes. Affiche un niveau de difficulté / la composition annoncée des ennemis (tailles S/M/L, cf. 3.2) sans révéler le détail exact
   - **STATION SERVICE** (le "garage") — entretien du vaisseau contre de l'Argent : réparer, améliorer ou déplacer un module (détail en §2.2)
   - **PLANÈTE COMMERCIALE** (le "marché") — achat de cartes contre de l'Argent ; la disponibilité des cartes Rares/Légendaires pour un module dépend de son niveau d'amélioration (voir §2.2 et §6)
-  - **AVENTURE** — événement inconnu, façon "?" de Slay the Spire. Contenu entièrement à définir (§9.1)
+  - **AVENTURE** — événement inconnu, façon "?" de Slay the Spire. 3 premières aventures spécifiées
+    (voir §2.5), reste à en écrire d'autres pour varier le pool (§9.1)
   - **CHOIX DE MODULE** — niveau 1 uniquement (§2.3) : 3 modules différents tirés au sort, le joueur en choisit un
   - *(autres types d'étapes à imaginer)*
 - **Boss** : niveau 10, puis tous les 10 niveaux (20, 30, 40...) — voir §2.3
@@ -238,13 +239,13 @@ présent dans le JSON de `Partie`, aucun champ bridge supplémentaire nécessair
      pas de distinction victoire/défaite/abandon pour l'instant, cf. §10.3) → Écran de partie
      (étape 2), via un bouton "Continuer" (PC : clic n'importe où sur l'écran, cf.
      `src/ui/ecran_fin_combat.py`)
-7. **Aventure** (contenu non préparé, §2/§9.1, **relié à l'enchaînement via un écran générique**) :
-   un bouton "j'ai terminé" avance le niveau et revient au Choix du prochain niveau (étape 3), même
-   principe que Station service — en attendant un vrai contenu, l'écran se limite à afficher
-   l'icône/description déjà utilisées au Choix du prochain niveau avec un message "Contenu pas
-   encore défini pour cette étape." `src/ui/ecran_etape_placeholder.py` (PC, un seul écran
-   générique pour cette étape et l'étape 9) + `main.py:_ouvrir_etape_placeholder` ; côté web
-   `web/bridge.py` (`terminer_etape_placeholder_web`) + `web/app.js`
+7. **Aventure** (contenu spécifié pour 3 aventures, §2.5, mais **pas encore implémenté** — reste
+   **relié à l'enchaînement via l'écran générique** en attendant) : un bouton "j'ai terminé" avance
+   le niveau et revient au Choix du prochain niveau (étape 3), même principe que Station service —
+   l'écran se limite à afficher l'icône/description déjà utilisées au Choix du prochain niveau avec
+   un message "Contenu pas encore défini pour cette étape." `src/ui/ecran_etape_placeholder.py` (PC,
+   un seul écran générique pour cette étape et l'étape 9) + `main.py:_ouvrir_etape_placeholder` ;
+   côté web `web/bridge.py` (`terminer_etape_placeholder_web`) + `web/app.js`
    (`ouvrirEtapePlaceholderPartie`/`terminerEtapePlaceholder`)
 8. **Station service** (détaillé en §2.2, **implémenté et relié à l'enchaînement**) : Réparer /
    Améliorer / Mettre à jour / Déplacer un module, un bouton "j'ai terminé" avance le niveau et
@@ -265,6 +266,61 @@ présent dans le JSON de `Partie`, aucun champ bridge supplémentaire nécessair
     désormais `{"partie": ..., "niveau_boss": bool}` pour signaler à `web/app.js` quand ouvrir cet
     écran plutôt que d'avancer directement) + `web/app.js` (`ouvrirVictoireFinalePartie`,
     `terminerVictoireFinale`)
+
+### 2.5 Aventures (contenu)
+
+Contenu concret des 3 premières Aventures spécifiées à ce jour — brouillon détaillé dans
+`specs/cartes.xlsx`, onglet "Aventures" (miroir humainement modifiable, même principe que l'onglet
+Cartes, cf. CLAUDE.md/§10.3). **Pas encore implémenté** : l'étape Aventure utilise toujours l'écran
+générique `EcranEtapePlaceholder` (§2.4 étape 7) en attendant.
+
+Forme retenue pour l'écran Aventure à construire : un écran dédié par Aventure (pas l'écran
+générique actuel), affichant description + 2-3 choix cliquables — même famille visuelle que l'écran
+Choix du prochain niveau (§2.4 étape 3) plutôt qu'une mise en page différente par Aventure. Une
+Aventure scénarisée en plusieurs temps (Astéroïdes ci-dessous) reste un **seul écran** dont le
+contenu affiché change à mesure que le joueur avance (état interne à l'écran, comme
+`EcranStationService` se redessine après chaque action) plutôt que plusieurs écrans/fenêtres
+séparés — décision utilisateur : pas de moteur de séquence narrative générique pour l'instant,
+chaque Aventure scripte ses propres étapes en dur. Contenu prévu à terme dans un
+`config/aventures.json` (miroir de l'onglet xlsx, même relation que `config/cartes.json`/onglet
+Cartes) — pas encore créé, structure à définir au moment de l'implémentation.
+
+**Astéroïdes** (fond `assets/aventure/champ_asteroides.png`) — "Poursuivi par des pirates de
+l'espace, vous n'avez plus le choix : vaincre ou périr ! À moins que..."
+- Choix 1, *Traverser le champ d'astéroïdes* : séquence en 3 temps sur le même écran, chaque étape
+  validée par un bouton "Continuer" :
+  1. -5 PV sur un module choisi par le joueur (clic sur une case, même convention que Station
+     service, §2.2)
+  2. -5 PV supplémentaires (même module)
+  3. Une carte est tirée au hasard et proposée gratuitement (le joueur la prend ou passe, façon
+     récompense de fin de combat, §6, mais gratuite et hors du flux de récompense standard)
+- Choix 2, *Affronter les pirates* : lance un combat scripté contre 3 ennemis — approximation
+  décidée en attendant la taille S/M/L par ennemi (absente de `config/ennemis.json`, cf.
+  §3.2/§9.1/§10.3) : 3 ennemis tirés du pool existant, flotte à 3 emplacements plutôt que le tirage
+  standard d'un combat Prime (grille complète)
+- Pas de 3ᵉ choix (binaire assumé)
+
+**Trois lunes** (fond `assets/aventure/trois_lunes.png`) — "Un havre de paix au milieu de la
+galaxie [...]. Il est temps de faire une pause." Trois choix, chacun résolu immédiatement (pas de
+séquence), retour direct au Choix du prochain niveau :
+- *Réparer le vaisseau* : +5 PV à **chaque** module équipé (nouveau côté moteur : soin groupé,
+  distinct de `reparer_module`, §2.2, qui ne cible qu'un seul module choisi)
+- *Améliorer* : réutilise `ameliorer_module` tel quel (même effet qu'en Station service, +
+  `PV_AMELIORATION`), sur le module cliqué par le joueur
+- *Bricoler* : retire une carte choisie par le joueur de son deck réel (nouveau côté moteur : aucune
+  fonction de retrait n'existe encore, seul `ajouter_carte` existe, §2.4 étape 6)
+
+**Police** (fond `assets/aventure/police.png`) — "Pas de bol, votre dernier achat n'est pas aux
+normes [...]." Une carte est tirée au hasard du deck réel du joueur et affichée **avant** les choix
+(contrairement aux deux autres Aventures) :
+- *Confiscation* : retire cette carte du deck
+- *Mettre aux normes* : coûte un montant fixe en Argent (10 €, cf. §9.1) plutôt qu'un pourcentage du
+  prix de vente en magasin comme envisagé initialement — abandonné, la Planète commerciale n'ayant
+  pas de prix par carte (§9.1) ; garde la carte
+- *Détourner l'attention* : tire une **seconde** carte au hasard qui remplace la première affichée,
+  puis revient au même écran avec seulement les 2 choix restants (Confiscation/Mettre aux normes —
+  "Détourner" ne peut être choisi qu'une fois **par Aventure**, pas par run : état purement local à
+  l'écran, rien de persisté sur `Partie`)
 
 ---
 
@@ -580,10 +636,14 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
 
 ### 9.1 Design / gameplay
 
-- Contenu exact de la Planète commerciale (uniquement des cartes, ou aussi d'autres bonus ?) et de l'Aventure (entièrement à définir, voir §2)
+- Contenu exact de la Planète commerciale (uniquement des cartes, ou aussi d'autres bonus ?) reste
+  à définir (§2). Contenu de l'Aventure : 3 premières aventures spécifiées (Astéroïdes/Trois
+  lunes/Police), voir §2.5 — pas encore implémenté, reste à en écrire d'autres pour varier le pool
 - Montants d'Argent (récompense de combat, coût des actions de Station service, Argent de départ) :
   **tranchés et implémentés**, voir §2.1/§2.2 — valeurs inventées faute de spec précise à l'origine
-  de cette décision, à ajuster en playtest si besoin
+  de cette décision, à ajuster en playtest si besoin. Même situation pour le coût de "Mettre aux
+  normes" (Aventure Police, §2.5) : 10 € inventés par symétrie avec les autres montants, pas encore
+  implémenté
 - La Planète commerciale propose-t-elle des cartes pour tous les modules du pool, ou seulement pour les modules actuellement équipés ? (§2, §6)
 - **Persistance des modules hors combat/profils joueur** (§2.2/§10.3) : **implémentée** (profil +
   partie, un seul joueur à la fois, écrans de sélection de profil/accueil du joueur, `main.py` en
