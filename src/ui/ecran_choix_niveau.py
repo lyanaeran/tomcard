@@ -21,35 +21,41 @@ COULEUR_CONTOUR_CARTE = (90, 110, 150)
 COULEUR_CONTOUR_CARTE_SURVOLEE = (255, 255, 255)
 COULEUR_DESCRIPTION = (220, 220, 225)
 COULEUR_TEXTE = (255, 255, 255)
+COULEUR_TITRE = (255, 220, 120)
 OPACITE_FOND_CARTE = 190
 
 _DOSSIER_ICONES = RACINE / "assets" / "prochain_niveau"
 
-# Icone (deja son propre cadre + nom incruste, image fournie par l'utilisateur) et description
-# par type d'etape (specs.md 2), memes textes que le web (web/app.js).
+# Icone (desormais sans texte incruste, fournie par l'utilisateur), titre et description par type
+# d'etape (specs.md 2), memes textes que le web (web/app.js).
 LIBELLES_TYPE_ETAPE = {
-    TypeEtape.PRIME: (str(_DOSSIER_ICONES / "prime.png"), "Combat, contrat de chasseur de primes."),
-    TypeEtape.STATION_SERVICE: (str(_DOSSIER_ICONES / "station_service.png"), "Entretien du vaisseau contre de l'Argent."),
-    TypeEtape.PLANETE_COMMERCIALE: (str(_DOSSIER_ICONES / "planete_commerciale.png"), "Achat de cartes contre de l'Argent."),
-    TypeEtape.AVENTURE: (str(_DOSSIER_ICONES / "aventure.png"), "Evenement inconnu."),
-    TypeEtape.BOSS: (str(_DOSSIER_ICONES / "boss.png"), "Combattre le Boss !"),
+    TypeEtape.PRIME: (str(_DOSSIER_ICONES / "prime.png"), "Prime", "Combat, contrat de chasseur de primes."),
+    TypeEtape.STATION_SERVICE: (
+        str(_DOSSIER_ICONES / "station_service.png"), "Station service", "Entretien du vaisseau contre de l'Argent.",
+    ),
+    TypeEtape.PLANETE_COMMERCIALE: (
+        str(_DOSSIER_ICONES / "planete_commerciale.png"), "Planete commerciale", "Achat de cartes contre de l'Argent.",
+    ),
+    TypeEtape.AVENTURE: (str(_DOSSIER_ICONES / "aventure.png"), "Aventure", "Evenement inconnu."),
+    TypeEtape.BOSS: (str(_DOSSIER_ICONES / "boss.png"), "Boss", "Combattre le Boss !"),
 }
 
-LARGEUR_CARTE = 280
-HAUTEUR_CARTE = 400
-IMAGE_TAILLE_LARGEUR = 240
-IMAGE_TAILLE_HAUTEUR = 290
-ESPACEMENT_CARTES = 50
+# Choix empiles verticalement : image carree a gauche, rectangle de texte (titre + description) a
+# droite - meme convention que les choix d'Aventure (specs.md 2.5).
+LARGEUR_LIGNE = 820
+HAUTEUR_LIGNE = 110
+TAILLE_IMAGE = 100
+ESPACEMENT_IMAGE_TEXTE = 16
+ESPACEMENT_LIGNES = 16
 Y_HAUT = HAUTEUR_FENETRE - 140
 
 
-def _rect_candidat(index: int, total: int) -> tuple[float, float, float, float]:
-    """Rectangle (x, y, largeur, hauteur) de la case cliquable du candidat a cet index, `total`
-    cases centrees horizontalement dans la fenetre (3 d'ordinaire, 1 seule a un niveau Boss)."""
-    largeur_totale = total * LARGEUR_CARTE + (total - 1) * ESPACEMENT_CARTES
-    x_depart = (LARGEUR_FENETRE - largeur_totale) / 2
-    x = x_depart + index * (LARGEUR_CARTE + ESPACEMENT_CARTES)
-    return x, Y_HAUT - HAUTEUR_CARTE, LARGEUR_CARTE, HAUTEUR_CARTE
+def _rect_candidat(index: int, _total: int) -> tuple[float, float, float, float]:
+    """Ligne complete (image + rectangle de texte) du candidat a cet index, empilees du haut vers
+    le bas (3 d'ordinaire, 1 seule a un niveau Boss)."""
+    x = (LARGEUR_FENETRE - LARGEUR_LIGNE) / 2
+    y = Y_HAUT - HAUTEUR_LIGNE - index * (HAUTEUR_LIGNE + ESPACEMENT_LIGNES)
+    return x, y, LARGEUR_LIGNE, HAUTEUR_LIGNE
 
 
 def _point_dans_rectangle(px: float, py: float, x: float, y: float, largeur: float, hauteur: float) -> bool:
@@ -106,44 +112,38 @@ class EcranChoixNiveau(pyglet.window.Window):
         return elements
 
     def _dessiner_candidat(self, index: int, total: int, type_etape: TypeEtape, lot: pyglet.graphics.Batch) -> list:
+        """Une ligne de candidat : image carree a gauche, rectangle de texte (titre + description)
+        a droite - meme convention que les choix d'Aventure (specs.md 2.5)."""
         x, y, largeur, hauteur = _rect_candidat(index, total)
         survole = index == self.index_survole
-        cadre = shapes.BorderedRectangle(
-            x,
-            y,
-            largeur,
-            hauteur,
-            border=2,
-            color=COULEUR_FOND_CARTE,
-            border_color=COULEUR_CONTOUR_CARTE_SURVOLEE if survole else COULEUR_CONTOUR_CARTE,
-            batch=lot,
-        )
-        cadre.opacity = OPACITE_FOND_CARTE
-        cx = x + largeur / 2
-        image, description = LIBELLES_TYPE_ETAPE[type_etape]
+        couleur_contour = COULEUR_CONTOUR_CARTE_SURVOLEE if survole else COULEUR_CONTOUR_CARTE
+        image, titre, description = LIBELLES_TYPE_ETAPE[type_etape]
 
-        sprite = _sprite_ajuste(
-            image,
-            cx - IMAGE_TAILLE_LARGEUR / 2,
-            y + hauteur - 20 - IMAGE_TAILLE_HAUTEUR,
-            IMAGE_TAILLE_LARGEUR,
-            IMAGE_TAILLE_HAUTEUR,
-            lot,
+        y_image = y + (hauteur - TAILLE_IMAGE) / 2
+        cadre_image = shapes.BorderedRectangle(
+            x, y_image, TAILLE_IMAGE, TAILLE_IMAGE, border=2,
+            color=COULEUR_FOND_CARTE, border_color=couleur_contour, batch=lot,
+        )
+        cadre_image.opacity = OPACITE_FOND_CARTE
+        sprite = _sprite_ajuste(image, x, y_image, TAILLE_IMAGE, TAILLE_IMAGE, lot)
+
+        x_texte = x + TAILLE_IMAGE + ESPACEMENT_IMAGE_TEXTE
+        largeur_texte = largeur - TAILLE_IMAGE - ESPACEMENT_IMAGE_TEXTE
+        cadre_texte = shapes.BorderedRectangle(
+            x_texte, y, largeur_texte, hauteur, border=2,
+            color=COULEUR_FOND_CARTE, border_color=couleur_contour, batch=lot,
+        )
+        cadre_texte.opacity = OPACITE_FOND_CARTE
+        titre_label = pyglet.text.Label(
+            titre, x=x_texte + 20, y=y + hauteur - 30, anchor_x="left", anchor_y="center",
+            font_size=16, color=(*COULEUR_TITRE, 255), batch=lot,
         )
         description_label = pyglet.text.Label(
-            description,
-            x=cx,
-            y=y + hauteur - 40 - IMAGE_TAILLE_HAUTEUR,
-            anchor_x="center",
-            anchor_y="top",
-            font_size=13,
-            color=(*COULEUR_DESCRIPTION, 255),
-            multiline=True,
-            width=largeur - 30,
-            align="center",
-            batch=lot,
+            description, x=x_texte + 20, y=y + hauteur - 52, anchor_x="left", anchor_y="top",
+            font_size=13, color=(*COULEUR_DESCRIPTION, 255), multiline=True, width=largeur_texte - 40,
+            align="left", batch=lot,
         )
-        return [cadre, sprite, description_label]
+        return [cadre_image, sprite, cadre_texte, titre_label, description_label]
 
     def on_mouse_motion(self, x: int, y: int, dx: int, dy: int) -> None:
         self.index_survole = self._index_a(x, y)

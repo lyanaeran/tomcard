@@ -27,9 +27,10 @@ from src.ui.fenetre import (
 
 FOND_ASTEROIDES = str(RACINE / "assets" / "aventure" / "champ_asteroides.png")
 
-# Recadree depuis assets/prochain_niveau/prime.png (bandeau "PRIME" retire) : affiche de toute facon
-# de nouveau son propre titre a cote dans le rectangle de texte, cf. commentaire de CHOIX plus bas.
-_ICONE_AFFRONTER = str(RACINE / "assets" / "aventure" / "pirates.png")
+# Reutilise l'icone de assets/prochain_niveau/prime.png, desormais sans texte incruste (fournie
+# par l'utilisateur) - le titre est de toute facon toujours redessine a cote dans le rectangle de
+# texte, cf. commentaire de CHOIX plus bas.
+_ICONE_AFFRONTER = str(RACINE / "assets" / "prochain_niveau" / "prime.png")
 
 # Extrait du fond d'ecran de cette Aventure (FOND_ASTEROIDES ci-dessus) plutot qu'une icone
 # distincte : aucune icone existante n'etait pertinente pour ce choix.

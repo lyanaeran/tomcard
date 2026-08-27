@@ -19,10 +19,10 @@ from src.ui.fenetre import COULEUR_ETOILE_RARETE, HAUTEUR_FENETRE, LARGEUR_FENET
 
 FOND_POLICE = str(RACINE / "assets" / "aventure" / "police.png")
 
-# Recadree depuis assets/station_service/mettre_a_jour.png (bandeau "METTRE A JOUR" retire) :
-# affiche de toute facon son propre titre a cote dans le rectangle de texte, cf. commentaire de
-# CHOIX plus bas.
-_ICONE_METTRE_AUX_NORMES = str(RACINE / "assets" / "aventure" / "mettre_aux_normes.png")
+# Reutilise l'icone de assets/station_service/mettre_a_jour.png, desormais sans texte incruste
+# (fournie par l'utilisateur) - le titre est de toute facon toujours redessine a cote dans le
+# rectangle de texte, cf. commentaire de CHOIX plus bas.
+_ICONE_METTRE_AUX_NORMES = str(RACINE / "assets" / "station_service" / "mettre_a_jour.png")
 _ICONE_CONFISCATION = str(RACINE / "assets" / "aventure" / "confiscation.png")
 _ICONE_DETOURNER = str(RACINE / "assets" / "aventure" / "detourner.png")
 

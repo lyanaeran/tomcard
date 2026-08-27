@@ -46,13 +46,11 @@ OPACITE_FOND = 190
 
 # (identifiant, image, titre, description) des 3 choix (specs.md 2.5) - la description reprend
 # les constantes reelles du moteur plutot que des valeurs dupliquees en dur.
-# Reparer/Ameliorer recadrees depuis assets/station_service/ (bandeau de titre incruste retire,
-# "REPARER"/"AMELIORER") - coherence avec le reste des choix d'Aventure (specs.md 2.5) : le titre
-# est de toute facon toujours redessine a cote dans le rectangle de texte, un doublon du bandeau
-# incruste original n'aurait plus d'interet. Sources originales inchangees (toujours utilisees
-# telles quelles en Station service).
-_ICONE_REPARER = str(RACINE / "assets" / "aventure" / "reparer.png")
-_ICONE_AMELIORER = str(RACINE / "assets" / "aventure" / "ameliorer.png")
+# Reparer/Ameliorer reutilisent les icones de assets/station_service/, desormais sans texte
+# incruste (fournies par l'utilisateur) - le titre est de toute facon toujours redessine a cote
+# dans le rectangle de texte.
+_ICONE_REPARER = str(RACINE / "assets" / "station_service" / "reparer.png")
+_ICONE_AMELIORER = str(RACINE / "assets" / "station_service" / "ameliorer.png")
 _ICONE_BRICOLER = str(RACINE / "assets" / "aventure" / "bricoler.png")
 
 CHOIX = (

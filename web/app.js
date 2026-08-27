@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "46";
+const VERSION_CACHE = "47";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -628,12 +628,15 @@ function ouvrirChoixNiveauPartie(partie) {
 // niveau (etape 8, specs.md 2.4). Meme regles que src/ui/ecran_station_service.py cote PC -
 // bridge.py n'applique que les fonctions pures de src/gameplay/partie.py, aucune regle dupliquee
 // ici (CLAUDE.md).
-const ACTIONS_STATION_SERVICE = [
-    ["reparer", "assets/station_service/reparer.png"],
-    ["ameliorer", "assets/station_service/ameliorer.png"],
-    ["mettre_a_jour", "assets/station_service/mettre_a_jour.png"],
-    ["deplacer", "assets/station_service/deplacer.png"],
-];
+// Images sans texte incruste (fournies par l'utilisateur) ; titre + description desormais
+// redessines a cote, dans le rectangle de texte (meme convention que les choix d'Aventure) -
+// description/cout construits dans rendreStationService, une fois constantesStationService connue.
+const ICONES_ACTION_STATION_SERVICE = {
+    reparer: "assets/station_service/reparer.png",
+    ameliorer: "assets/station_service/ameliorer.png",
+    mettre_a_jour: "assets/station_service/mettre_a_jour.png",
+    deplacer: "assets/station_service/deplacer.png",
+};
 const FONCTIONS_ACTION_STATION_SERVICE = {
     reparer: "reparer_module_web",
     ameliorer: "ameliorer_module_web",
@@ -645,17 +648,17 @@ const POSITIONS_DEPLACABLES_STATION = ["avant_gauche", "avant_droite", "arriere_
 
 let positionSelectionneeStation = null;
 let modeDeplacementStation = false;
-// Prix d'une action de Station service (specs.md 2.1/2.2) : recupere une seule fois depuis
-// bridge.py (COUT_ACTION_STATION_SERVICE, src/gameplay/partie.py) plutot que duplique ici en dur
-// (CLAUDE.md - src/gameplay reste la seule source de verite).
-let coutActionStationService = null;
+// Cout/effets des actions de Station service (specs.md 2.1/2.2) : recuperes une seule fois depuis
+// bridge.py (COUT_ACTION_STATION_SERVICE/PV_REPARATION/PV_AMELIORATION, src/gameplay/partie.py)
+// plutot que dupliques ici en dur (CLAUDE.md - src/gameplay reste la seule source de verite).
+let constantesStationService = null;
 
 function ouvrirStationServicePartie(partie) {
     partieActive = partie;
     positionSelectionneeStation = null;
     modeDeplacementStation = false;
-    if (coutActionStationService === null) {
-        coutActionStationService = appelerBridge("cout_action_station_service_web");
+    if (constantesStationService === null) {
+        constantesStationService = appelerBridge("constantes_station_service_web");
     }
     rendreStationService();
     masquerTousLesEcrans();
@@ -687,15 +690,27 @@ function rendreStationService() {
             </div>`;
         })
         .join("");
-    const abordable = partieActive.argent >= coutActionStationService;
-    document.getElementById("actions-station-service").innerHTML = ACTIONS_STATION_SERVICE.map(([action, image]) => {
-        const armee = action === "deplacer" && modeDeplacementStation ? " armee" : "";
-        const desactivee = abordable ? "" : " desactivee";
-        return `<button class="action-station${armee}${desactivee}" data-action="${action}">
-            <img src="${image}" alt="${action}">
-            <span class="prix-action-station">${coutActionStationService} €</span>
-        </button>`;
-    }).join("");
+    const { cout_action, pv_reparation, pv_amelioration } = constantesStationService;
+    const abordable = partieActive.argent >= cout_action;
+    const actions = [
+        ["reparer", "Reparer", `Restaure ${pv_reparation} PV.`],
+        ["ameliorer", "Ameliorer", `+${pv_amelioration} PV max.`],
+        ["mettre_a_jour", "Mettre a jour", "Debloque le palier de cartes suivant pour ce module."],
+        ["deplacer", "Deplacer", "Change la position du module sur la grille."],
+    ];
+    document.getElementById("actions-station-service").innerHTML = actions
+        .map(([action, titre, description]) => {
+            const armee = action === "deplacer" && modeDeplacementStation ? " armee" : "";
+            const desactivee = abordable ? "" : " desactivee";
+            return construireLigneChoixHtml(
+                action,
+                ICONES_ACTION_STATION_SERVICE[action],
+                titre,
+                `${description}  (${cout_action} €)`,
+                ` action-station${armee}${desactivee}`
+            );
+        })
+        .join("");
     document.getElementById("instruction-station-service").textContent = instructionStationService();
 
     document.querySelectorAll(".module-station").forEach((element) => {
@@ -703,7 +718,7 @@ function rendreStationService() {
         element.addEventListener("click", () => cliquerModuleStation(element.dataset.position, estVide));
     });
     document.querySelectorAll(".action-station").forEach((element) => {
-        element.addEventListener("click", () => cliquerActionStation(element.dataset.action));
+        element.addEventListener("click", () => cliquerActionStation(element.dataset.choix));
     });
 }
 
@@ -751,7 +766,7 @@ function cliquerActionStation(action) {
     // Argent insuffisant (specs.md 2.1/2.2) : bloque l'action, meme pour l'armement de Deplacer
     // (son cout n'est preleve qu'a la destination, cliquerModuleStation, mais rien ne doit pouvoir
     // s'armer sans avoir de quoi payer).
-    if (partieActive.argent < coutActionStationService) {
+    if (partieActive.argent < constantesStationService.cout_action) {
         afficherPopupStation(positionSelectionneeStation, "Argent insuffisant !", "popup-degats");
         return;
     }
@@ -790,10 +805,10 @@ function terminerStationServicePartie() {
 // Ligne d'un choix d'Aventure (specs.md 2.5) : image carree a gauche (aucune -> case vide en
 // attendant un visuel dedie), rectangle de texte (titre + description) a droite - meme
 // presentation pour les 3 ecrans d'Aventure (Trois lunes/Asteroides/Police).
-function construireLigneChoixHtml(identifiant, image, titre, texte) {
+function construireLigneChoixHtml(identifiant, image, titre, texte, classesSupplementaires = "") {
     const imageHtml = image ? `<img src="${image}" alt="${titre}">` : "";
     return `
-        <div class="choix-aventure" data-choix="${identifiant}">
+        <div class="choix-aventure${classesSupplementaires}" data-choix="${identifiant}">
             <div class="choix-aventure-image">${imageHtml}</div>
             <div class="choix-aventure-texte">
                 <div class="choix-aventure-titre">${titre}</div>
@@ -806,12 +821,11 @@ function construireLigneChoixHtml(identifiant, image, titre, texte) {
 // immediatement des le clic - contrairement a l'Aventure Asteroides (a venir), pas de sequence en
 // plusieurs temps ici. Meme regles que src/ui/ecran_aventure_trois_lunes.py cote PC - bridge.py
 // n'applique que les fonctions pures de src/gameplay/partie.py, aucune regle dupliquee ici.
-// Images recadrees depuis assets/station_service/ (bandeau de titre incruste retire, "REPARER"/
-// "AMELIORER") - coherence avec le reste des choix d'Aventure (specs.md 2.5) : le titre est de
-// toute facon toujours redessine a cote dans le rectangle de texte. Sources originales inchangees
-// (toujours utilisees telles quelles en Station service).
-const ICONE_REPARER = "assets/aventure/reparer.png";
-const ICONE_AMELIORER = "assets/aventure/ameliorer.png";
+// Reutilisent les icones de assets/station_service/, desormais sans texte incruste (fournies par
+// l'utilisateur) - le titre est de toute facon toujours redessine a cote dans le rectangle de
+// texte.
+const ICONE_REPARER = "assets/station_service/reparer.png";
+const ICONE_AMELIORER = "assets/station_service/ameliorer.png";
 const ICONE_BRICOLER = "assets/aventure/bricoler.png";
 
 const DESCRIPTION_TROIS_LUNES =
@@ -959,9 +973,10 @@ function terminerAventureTroisLunes() {
 const DESCRIPTION_ASTEROIDES =
     "Poursuivi par des pirates de l'espace, vous n'avez plus le choix : vaincre ou perir ! A moins que...";
 
-// Recadree depuis assets/prochain_niveau/prime.png (bandeau "PRIME" retire) : affiche de toute
-// facon son propre titre a cote dans le rectangle de texte.
-const ICONE_AFFRONTER = "assets/aventure/pirates.png";
+// Reutilise l'icone de assets/prochain_niveau/prime.png, desormais sans texte incruste (fournie
+// par l'utilisateur) - le titre est de toute facon toujours redessine a cote dans le rectangle de
+// texte.
+const ICONE_AFFRONTER = "assets/prochain_niveau/prime.png";
 
 // Extrait du fond d'ecran de cette Aventure (assets/aventure/champ_asteroides.png) plutot qu'une
 // icone distincte : aucune icone existante n'etait pertinente pour ce choix.
@@ -1132,9 +1147,10 @@ function cliquerContinuerAsteroides() {
 const DESCRIPTION_POLICE =
     "Un vaisseau de patrouille vous somme de vous arreter pour un controle de routine...";
 
-// Recadree depuis assets/station_service/mettre_a_jour.png (bandeau "METTRE A JOUR" retire) :
-// affiche de toute facon son propre titre a cote dans le rectangle de texte.
-const ICONE_METTRE_AUX_NORMES = "assets/aventure/mettre_aux_normes.png";
+// Reutilise l'icone de assets/station_service/mettre_a_jour.png, desormais sans texte incruste
+// (fournie par l'utilisateur) - le titre est de toute facon toujours redessine a cote dans le
+// rectangle de texte.
+const ICONE_METTRE_AUX_NORMES = "assets/station_service/mettre_a_jour.png";
 const ICONE_CONFISCATION = "assets/aventure/confiscation.png";
 const ICONE_DETOURNER = "assets/aventure/detourner.png";
 
@@ -1238,19 +1254,14 @@ function terminerAventurePolice() {
 }
 
 // Ecran generique pour une etape sans contenu prepare (Planete commerciale - specs.md 2.4 etape
-// 9, 9.1) : reutilise l'icone/description de LIBELLES_TYPE_ETAPE (definie plus bas, pour l'ecran
+// 9, 9.1) : reutilise l'icone/titre de LIBELLES_TYPE_ETAPE (definie plus bas, pour l'ecran
 // "Choix du prochain niveau") avec un message explicite et un bouton "J'ai termine" qui avance
 // simplement au niveau suivant - meme logique que
 // main.py:_ouvrir_etape_placeholder cote PC.
-const TITRES_TYPE_ETAPE = {
-    AVENTURE: "Aventure",
-    PLANETE_COMMERCIALE: "Planete commerciale",
-};
-
 function ouvrirEtapePlaceholderPartie(partie, type) {
     partieActive = partie;
-    const [image] = LIBELLES_TYPE_ETAPE[type];
-    document.getElementById("titre-etape-placeholder").textContent = `${TITRES_TYPE_ETAPE[type]} - Niveau ${partie.niveau}`;
+    const [image, titre] = LIBELLES_TYPE_ETAPE[type];
+    document.getElementById("titre-etape-placeholder").textContent = `${titre} - Niveau ${partie.niveau}`;
     document.getElementById("image-etape-placeholder").src = image;
     masquerTousLesEcrans();
     document.getElementById("ecran-etape-placeholder").classList.remove("cachee");
@@ -1266,30 +1277,30 @@ function terminerEtapePlaceholder() {
 // une seule (BOSS) a un niveau Boss (multiple de 10) - decision utilisateur, meme ecran de choix,
 // juste une seule carte "Combattre le Boss !" au lieu de 3. Pas encore reliee a une orchestration
 // de parcours (qui n'existe pas encore), exposee sur window pour test manuel en attendant.
-// Icones (deja leur propre cadre + nom incruste, images fournies par l'utilisateur) et
-// description par type d'etape - memes textes que le PC (src/ui/ecran_choix_niveau.py).
+// Icones (desormais sans texte incruste, fournies par l'utilisateur), titre et description par
+// type d'etape - memes textes que le PC (src/ui/ecran_choix_niveau.py).
 const LIBELLES_TYPE_ETAPE = {
-    PRIME: ["assets/prochain_niveau/prime.png", "Combat, contrat de chasseur de primes."],
-    STATION_SERVICE: ["assets/prochain_niveau/station_service.png", "Entretien du vaisseau contre de l'Argent."],
-    PLANETE_COMMERCIALE: ["assets/prochain_niveau/planete_commerciale.png", "Achat de cartes contre de l'Argent."],
-    AVENTURE: ["assets/prochain_niveau/aventure.png", "Evenement inconnu."],
-    BOSS: ["assets/prochain_niveau/boss.png", "Combattre le Boss !"],
+    PRIME: ["assets/prochain_niveau/prime.png", "Prime", "Combat, contrat de chasseur de primes."],
+    STATION_SERVICE: [
+        "assets/prochain_niveau/station_service.png", "Station service", "Entretien du vaisseau contre de l'Argent.",
+    ],
+    PLANETE_COMMERCIALE: [
+        "assets/prochain_niveau/planete_commerciale.png", "Planete commerciale", "Achat de cartes contre de l'Argent.",
+    ],
+    AVENTURE: ["assets/prochain_niveau/aventure.png", "Aventure", "Evenement inconnu."],
+    BOSS: ["assets/prochain_niveau/boss.png", "Boss", "Combattre le Boss !"],
 };
 
 function afficherChoixNiveau(resultat) {
     document.getElementById("titre-choix-niveau").textContent = `Niveau ${resultat.niveau}`;
     document.getElementById("candidats-niveau").innerHTML = resultat.propositions
         .map((type, index) => {
-            const [image, description] = LIBELLES_TYPE_ETAPE[type];
-            return `
-        <div class="candidat-niveau" data-index="${index}">
-            <img src="${image}" alt="${type}">
-            <div class="candidat-niveau-description">${description}</div>
-        </div>`;
+            const [image, titre, description] = LIBELLES_TYPE_ETAPE[type];
+            return construireLigneChoixHtml(String(index), image, titre, description);
         })
         .join("");
-    document.querySelectorAll(".candidat-niveau").forEach((element) => {
-        element.addEventListener("click", () => choisirEtape(resultat.propositions[Number(element.dataset.index)]));
+    document.querySelectorAll("#candidats-niveau .choix-aventure").forEach((element) => {
+        element.addEventListener("click", () => choisirEtape(resultat.propositions[Number(element.dataset.choix)]));
     });
     masquerTousLesEcrans();
     document.getElementById("ecran-choix-niveau").classList.remove("cachee");

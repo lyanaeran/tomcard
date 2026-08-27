@@ -15,6 +15,7 @@ from src.gameplay.donnees import RACINE, charger_modules, image_case_module
 from src.gameplay.partie import (
     COUT_ACTION_STATION_SERVICE,
     PV_AMELIORATION,
+    PV_REPARATION,
     EtatModule,
     Partie,
     ameliorer_module,
@@ -68,23 +69,41 @@ HAUTEUR_CARTE_MODULE = 240
 IMAGE_TAILLE = 110
 ESPACEMENT_CARTE = 24
 Y_HAUT_GRILLE = HAUTEUR_FENETRE - 140
-
-LARGEUR_ACTION = 130
-HAUTEUR_ACTION = 135
-ESPACEMENT_ACTION = 24
-Y_ACTIONS = 150
-MARGE_ICONE_ACTION = 8
+Y_BAS_GRILLE_MODULES = Y_HAUT_GRILLE - HAUTEUR_CARTE_MODULE
 
 LARGEUR_BOUTON_TERMINE = 220
 HAUTEUR_BOUTON_TERMINE = 46
 Y_BOUTON_TERMINE = 40
 
-# (identifiant, libelle, chemin de l'icone) - ordre d'affichage des 4 actions (specs.md 2.2).
+# Actions empilees verticalement : image carree a gauche (desormais sans texte incruste, fournie
+# par l'utilisateur), rectangle de texte (titre + description) a droite - meme convention que les
+# choix d'Aventure (specs.md 2.5), mais lignes plus compactes pour tenir sous la grille de modules
+# dans la meme fenetre.
+LARGEUR_LIGNE_ACTION = 700
+HAUTEUR_LIGNE_ACTION = 64
+TAILLE_IMAGE_ACTION = 52
+ESPACEMENT_IMAGE_TEXTE_ACTION = 14
+ESPACEMENT_LIGNES_ACTION = 6
+Y_INSTRUCTION_ACTIONS = Y_BAS_GRILLE_MODULES - 24
+Y_HAUT_LIGNES_ACTIONS = Y_INSTRUCTION_ACTIONS - 24
+
+# (identifiant, titre, description, chemin de l'icone) - ordre d'affichage des 4 actions
+# (specs.md 2.2). Cout commun aux 4 (COUT_ACTION_STATION_SERVICE), ajoute au texte a l'affichage.
 ACTIONS = (
-    ("reparer", "Reparer", str(RACINE / "assets" / "station_service" / "reparer.png")),
-    ("ameliorer", "Ameliorer", str(RACINE / "assets" / "station_service" / "ameliorer.png")),
-    ("mettre_a_jour", "Mettre a jour", str(RACINE / "assets" / "station_service" / "mettre_a_jour.png")),
-    ("deplacer", "Deplacer", str(RACINE / "assets" / "station_service" / "deplacer.png")),
+    ("reparer", "Reparer", f"Restaure {PV_REPARATION} PV.", str(RACINE / "assets" / "station_service" / "reparer.png")),
+    ("ameliorer", "Ameliorer", f"+{PV_AMELIORATION} PV max.", str(RACINE / "assets" / "station_service" / "ameliorer.png")),
+    (
+        "mettre_a_jour",
+        "Mettre a jour",
+        "Debloque le palier de cartes suivant pour ce module.",
+        str(RACINE / "assets" / "station_service" / "mettre_a_jour.png"),
+    ),
+    (
+        "deplacer",
+        "Deplacer",
+        "Change la position du module sur la grille.",
+        str(RACINE / "assets" / "station_service" / "deplacer.png"),
+    ),
 )
 
 APPLICATEURS_ACTION = {
@@ -149,8 +168,8 @@ class EcranStationService(pyglet.window.Window):
         )
         for index, (position, libelle) in enumerate(POSITIONS_AFFICHEES):
             elements.extend(self._dessiner_module(index, position, libelle, self.partie.vaisseau[position], lot))
-        for index, (identifiant, libelle, chemin_icone) in enumerate(ACTIONS):
-            elements.extend(self._dessiner_action(index, identifiant, libelle, chemin_icone, lot))
+        for index, (identifiant, titre, description, chemin_icone) in enumerate(ACTIONS):
+            elements.extend(self._dessiner_ligne_action(index, identifiant, titre, description, chemin_icone, lot))
         elements.extend(self._dessiner_instruction(lot))
         elements.extend(self._dessiner_bouton_termine(lot))
         elements.extend(self._dessiner_popups(lot))
@@ -198,7 +217,7 @@ class EcranStationService(pyglet.window.Window):
             pyglet.text.Label(
                 self._instruction(),
                 x=LARGEUR_FENETRE / 2,
-                y=Y_ACTIONS + HAUTEUR_ACTION + 30,
+                y=Y_INSTRUCTION_ACTIONS,
                 anchor_x="center",
                 anchor_y="center",
                 font_size=16,
@@ -303,20 +322,18 @@ class EcranStationService(pyglet.window.Window):
         return [cadre, libelle_label, sprite, nom, pv, niveau_maj]
 
     def _rect_action(self, index: int) -> tuple[float, float, float, float]:
-        total = len(ACTIONS)
-        largeur_totale = total * LARGEUR_ACTION + (total - 1) * ESPACEMENT_ACTION
-        x_depart = (LARGEUR_FENETRE - largeur_totale) / 2
-        x = x_depart + index * (LARGEUR_ACTION + ESPACEMENT_ACTION)
-        return x, Y_ACTIONS, LARGEUR_ACTION, HAUTEUR_ACTION
+        """Ligne complete (image + rectangle de texte) de cette action - empilees du haut vers le
+        bas, index 0 en premier (meme convention que les choix d'Aventure, specs.md 2.5)."""
+        x = (LARGEUR_FENETRE - LARGEUR_LIGNE_ACTION) / 2
+        y = Y_HAUT_LIGNES_ACTIONS - HAUTEUR_LIGNE_ACTION - index * (HAUTEUR_LIGNE_ACTION + ESPACEMENT_LIGNES_ACTION)
+        return x, y, LARGEUR_LIGNE_ACTION, HAUTEUR_LIGNE_ACTION
 
-    def _dessiner_action(
-        self, index: int, identifiant: str, libelle: str, chemin_icone: str, lot: pyglet.graphics.Batch
+    def _dessiner_ligne_action(
+        self, index: int, identifiant: str, titre: str, description: str, chemin_icone: str, lot: pyglet.graphics.Batch
     ) -> list:
-        # Icone deja pourvue de son cadre/nom incruste (fournie par l'utilisateur, meme principe
-        # que assets/prochain_niveau/), pas de texte supplementaire ici - meme convention que
-        # src/ui/ecran_choix_niveau.py. Cadre dessine derriere l'icone, sans groupe explicite
-        # (meme convention que _dessiner_module ci-dessus, l'icone masque le centre du cadre et
-        # ne laisse depasser que sa bordure).
+        """Une ligne d'action : image carree a gauche (desormais sans texte incruste), rectangle
+        de texte (titre + description + cout) a droite - meme convention que les choix d'Aventure
+        (specs.md 2.5)."""
         x, y, largeur, hauteur = self._rect_action(index)
         survole = index == self.index_action_survolee
         armee = identifiant == "deplacer" and self.mode_deplacement
@@ -327,30 +344,33 @@ class EcranStationService(pyglet.window.Window):
             couleur_contour = COULEUR_CONTOUR_SELECTIONNEE
         else:
             couleur_contour = COULEUR_CONTOUR_CARTE
-        cadre = shapes.BorderedRectangle(
-            x, y, largeur, hauteur, border=3, color=COULEUR_FOND_CARTE, border_color=couleur_contour, batch=lot
+        y_image = y + (hauteur - TAILLE_IMAGE_ACTION) / 2
+        cadre_image = shapes.BorderedRectangle(
+            x, y_image, TAILLE_IMAGE_ACTION, TAILLE_IMAGE_ACTION, border=2,
+            color=COULEUR_FOND_CARTE, border_color=couleur_contour, batch=lot,
         )
-        icone = _sprite_ajuste(
-            chemin_icone,
-            x + MARGE_ICONE_ACTION,
-            y + MARGE_ICONE_ACTION,
-            largeur - 2 * MARGE_ICONE_ACTION,
-            hauteur - 2 * MARGE_ICONE_ACTION,
-            lot,
-        )
+        cadre_image.opacity = OPACITE_FOND
+        icone = _sprite_ajuste(chemin_icone, x, y_image, TAILLE_IMAGE_ACTION, TAILLE_IMAGE_ACTION, lot)
         if not abordable:
             icone.opacity = 110
-        prix = pyglet.text.Label(
-            f"{COUT_ACTION_STATION_SERVICE} €",
-            x=x + largeur / 2,
-            y=y - 14,
-            anchor_x="center",
-            anchor_y="center",
-            font_size=12,
-            color=(*COULEUR_NIVEAU_MAJ, 255) if abordable else (140, 90, 90, 255),
-            batch=lot,
+
+        x_texte = x + TAILLE_IMAGE_ACTION + ESPACEMENT_IMAGE_TEXTE_ACTION
+        largeur_texte = largeur - TAILLE_IMAGE_ACTION - ESPACEMENT_IMAGE_TEXTE_ACTION
+        cadre_texte = shapes.BorderedRectangle(
+            x_texte, y, largeur_texte, hauteur, border=2,
+            color=COULEUR_FOND_CARTE, border_color=couleur_contour, batch=lot,
         )
-        return [cadre, icone, prix]
+        cadre_texte.opacity = OPACITE_FOND
+        titre_label = pyglet.text.Label(
+            titre, x=x_texte + 16, y=y + hauteur - 16, anchor_x="left", anchor_y="center",
+            font_size=14, color=(*COULEUR_SOUS_TITRE, 255), batch=lot,
+        )
+        description_label = pyglet.text.Label(
+            f"{description}  ({COUT_ACTION_STATION_SERVICE} €)",
+            x=x_texte + 16, y=y + 16, anchor_x="left", anchor_y="center", font_size=12,
+            color=(*COULEUR_NIVEAU_MAJ, 255) if abordable else (140, 90, 90, 255), batch=lot,
+        )
+        return [cadre_image, icone, cadre_texte, titre_label, description_label]
 
     def _rect_bouton_termine(self) -> tuple[float, float, float, float]:
         x = (LARGEUR_FENETRE - LARGEUR_BOUTON_TERMINE) / 2

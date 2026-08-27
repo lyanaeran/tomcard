@@ -67,9 +67,9 @@ de succès plutôt que la `Partie` (rétro-incompatibilité assumée, aucun appe
 de retour). Écran Station service (PC et web) : prix affiché sous chaque action, icône grisée et
 popup rouge "Argent insuffisant !" au clic si `partie.argent < COUT_ACTION_STATION_SERVICE` (armement
 de Déplacer bloqué dans ce cas, pas seulement son exécution) ; Argent total affiché dans le titre de
-l'écran ("... - Niveau N - X €"). Côté web, `COUT_ACTION_STATION_SERVICE` est exposé par
-`web/bridge.py:cout_action_station_service_web()` plutôt que dupliqué en dur dans `web/app.js`
-(CLAUDE.md).
+l'écran ("... - Niveau N - X €"). Côté web, `COUT_ACTION_STATION_SERVICE`/`PV_REPARATION`/
+`PV_AMELIORATION` sont exposés par `web/bridge.py:constantes_station_service_web()` plutôt que
+dupliqués en dur dans `web/app.js` (CLAUDE.md).
 
 - Réparer/Améliorer/Mettre à jour s'appliquent au **module principal** comme aux modules équipés.
   Déplacer ne s'applique pas au principal (toujours en position Mid, pas d'emplacement équivalent à
@@ -113,9 +113,11 @@ l'écran ("... - Niveau N - X €"). Côté web, `COUT_ACTION_STATION_SERVICE` e
   sélectionné est ensuite **désélectionné automatiquement** (le popup suffit à confirmer l'effet) ;
   **Déplacer** garde son comportement propre (armement/clic de destination, cf. ci-dessus)
 - Icônes des 4 actions dans `assets/station_service/` (`reparer.png`, `ameliorer.png`,
-  `mettre_a_jour.png`, `deplacer.png`) : déjà pourvues de leur propre cadre/nom incrusté (fournies
-  par l'utilisateur, même principe que `assets/prochain_niveau/`), affichées seules sans étiquette de
-  texte supplémentaire à côté
+  `mettre_a_jour.png`, `deplacer.png`), fournies par l'utilisateur **sans texte incrusté** (même
+  principe que `assets/prochain_niveau/`) : les 4 actions sont présentées **empilées verticalement,
+  image à gauche et rectangle de texte (titre + description + coût) à droite**, même convention que
+  les choix d'Aventure (§2.5) — plutôt qu'une rangée d'icônes seules avec juste le prix en dessous
+  (mise en page initiale, abandonnée une fois les icônes fournies sans texte)
 - La carte du module principal utilise `assets/modules/principal_avant.png` (recadrage sur l'avant
   du vaisseau, décision utilisateur) plutôt que l'image complète du vaisseau (`config/modules.json`,
   utilisée telle quelle comme fond du vaisseau en combat) — sinon hors d'échelle par rapport aux
@@ -219,11 +221,13 @@ présent dans le JSON de `Partie`, aucun champ bridge supplémentaire nécessair
    principe déjà décrit en §10.3) — `est_niveau_boss` reste utile pour d'autres besoins (ex. décider
    quel ennemi affronter une fois au Combat), mais n'a plus besoin d'être vérifié par l'appelant
    avant d'afficher cet écran : `tirer_propositions_niveau` gère le cas Boss en interne.
-   `src/ui/ecran_choix_niveau.py` (PC, jusqu'à 5 cartes possibles au total — layout généralisé pour
-   accepter 1 ou 3 propositions — avec icône dédiée par type — `assets/prochain_niveau/`, images
-   fournies par l'utilisateur, déjà leur propre cadre/nom incrusté — et description sous l'icône) ;
-   `web/bridge.py` (`choix_niveau_web`), `web/app.js` (`choixNiveau`, exposée sur `window` pour test
-   manuel)
+   `src/ui/ecran_choix_niveau.py` (PC, jusqu'à 3 propositions, 1 seule à un niveau Boss — icône
+   dédiée par type, `assets/prochain_niveau/`, images fournies par l'utilisateur **sans texte
+   incrusté** — présentées **empilées verticalement, image à gauche et rectangle de texte (titre +
+   description) à droite**, même convention que les choix d'Aventure (§2.5) et de Station service
+   (§2.2), plutôt que des cartes côte à côte avec image+description empilées à l'intérieur — mise en
+   page initiale, abandonnée une fois les icônes fournies sans texte) ; `web/bridge.py`
+   (`choix_niveau_web`), `web/app.js` (`afficherChoixNiveau`/`choisirEtape`)
 4. **Choix de module, Niveau 1** (implémenté en écran autonome, §2.3, **relié à la partie**) : une
    fois un module choisi, met à jour la partie (2ᵉ emplacement du vaisseau) et son niveau (1 → 2),
    puis → Choix du prochain niveau (étape 3)
@@ -293,8 +297,10 @@ implémentées** (voir ci-dessous). `TypeEtape.AVENTURE` tire au hasard laquelle
 déterministe, comme les récompenses de fin de combat).
 
 Forme retenue pour l'écran Aventure : un écran dédié par Aventure (pas l'écran générique),
-affichant description + 2-3 choix cliquables — même famille visuelle que l'écran Choix du prochain
-niveau (§2.4 étape 3) plutôt qu'une mise en page différente par Aventure. Une Aventure scénarisée
+affichant description + 2-3 choix cliquables — même présentation que l'écran Choix du prochain
+niveau (§2.4 étape 3) et les actions de Station service (§2.2), désormais identique aux trois (choix
+empilés verticalement, image sans texte incrusté à gauche, titre + description à droite) plutôt
+qu'une mise en page différente par écran. Une Aventure scénarisée
 en plusieurs temps (Astéroïdes ci-dessous) reste un **seul écran** dont le contenu affiché change à
 mesure que le joueur avance (état interne à l'écran, comme `EcranStationService` se redessine après
 chaque action) plutôt que plusieurs écrans/fenêtres séparés — décision utilisateur : pas de moteur
