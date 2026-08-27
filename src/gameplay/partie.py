@@ -373,16 +373,23 @@ def reparer_module(partie: Partie, position: str) -> bool:
     return True
 
 
-def ameliorer_module(partie: Partie, position: str) -> bool:
-    """Augmente le pv_max du module de cet emplacement de PV_AMELIORATION, et ses PV actuels du
-    meme montant (specs.md 2.2 : pas seulement le plafond), contre COUT_ACTION_STATION_SERVICE
-    d'Argent (specs.md 2.1). S'applique au module principal comme aux modules equipes. Modifie
-    `partie` et renvoie True si l'Argent etait suffisant, sinon ne fait rien et renvoie False."""
-    if not _payer_action_station_service(partie):
-        return False
+def _effet_ameliorer_module(partie: Partie, position: str) -> None:
+    """Coeur de l'effet Ameliorer (specs.md 2.2) : augmente le pv_max du module de cet
+    emplacement de PV_AMELIORATION, et ses PV actuels du meme montant (pas seulement le plafond).
+    Partage entre ameliorer_module (Station service, payant) et ameliorer_module_aventure
+    (specs.md 2.5, gratuit) - pas de cout applique ici, a la charge de l'appelant."""
     etat = partie.vaisseau[position]
     etat.pv_max += PV_AMELIORATION
     etat.pv += PV_AMELIORATION
+
+
+def ameliorer_module(partie: Partie, position: str) -> bool:
+    """Effet Ameliorer (_effet_ameliorer_module) contre COUT_ACTION_STATION_SERVICE d'Argent
+    (specs.md 2.1/2.2). S'applique au module principal comme aux modules equipes. Modifie
+    `partie` et renvoie True si l'Argent etait suffisant, sinon ne fait rien et renvoie False."""
+    if not _payer_action_station_service(partie):
+        return False
+    _effet_ameliorer_module(partie, position)
     return True
 
 
@@ -413,6 +420,37 @@ def deplacer_module(partie: Partie, position_source: str, position_destination: 
         partie.vaisseau[position_source],
     )
     return True
+
+
+# --- Aventures (specs.md 2.5) : effets appliques a une partie sauvegardee, partages PC/web ---
+
+PV_REPARATION_VAISSEAU = 5
+
+
+def reparer_vaisseau(partie: Partie) -> Partie:
+    """Restaure PV_REPARATION_VAISSEAU PV a CHAQUE module equipe (base + equipables), plafonne a
+    son pv_max chacun (specs.md 2.5, Aventure "Trois lunes") - contrairement a reparer_module
+    (§2.2) qui ne cible qu'un seul module choisi. Modifie et renvoie `partie`."""
+    for position in POSITIONS_VAISSEAU:
+        etat = partie.vaisseau[position]
+        if etat is not None:
+            etat.pv = min(etat.pv + PV_REPARATION_VAISSEAU, etat.pv_max)
+    return partie
+
+
+def retirer_carte(partie: Partie, id_carte: str) -> Partie:
+    """Retire un exemplaire de cette carte du deck possede de la partie (specs.md 2.5, Aventure
+    "Trois lunes") - operation inverse de ajouter_carte. Modifie et renvoie `partie`."""
+    partie.deck.remove(id_carte)
+    return partie
+
+
+def ameliorer_module_aventure(partie: Partie, position: str) -> Partie:
+    """Meme effet que ameliorer_module (_effet_ameliorer_module, §2.2), mais gratuit (specs.md
+    2.5, Aventure "Trois lunes") : contrairement a la Station service, aucun cout en Argent.
+    Modifie et renvoie `partie`."""
+    _effet_ameliorer_module(partie, position)
+    return partie
 
 
 # --- I/O fichier (PC uniquement) ---

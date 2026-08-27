@@ -12,6 +12,7 @@ ciblage/degats.
 import json
 import random
 import sys
+from collections import Counter
 
 sys.path.insert(0, "/repo")
 
@@ -29,8 +30,11 @@ from src.gameplay.parcours import (
 )
 from src.gameplay.partie import (
     COUT_ACTION_STATION_SERVICE,
+    PV_AMELIORATION,
+    PV_REPARATION_VAISSEAU,
     ajouter_carte,
     ameliorer_module,
+    ameliorer_module_aventure,
     avancer_niveau,
     combat_depuis_partie,
     deck_de_la_partie,
@@ -46,6 +50,8 @@ from src.gameplay.partie import (
     partie_vers_json,
     profil_vers_json,
     reparer_module,
+    reparer_vaisseau,
+    retirer_carte,
     specs_utilisees_partie,
     synchroniser_vaisseau_depuis_combat,
 )
@@ -521,10 +527,65 @@ def terminer_station_service_web(partie_json) -> str:
 
 
 def terminer_etape_placeholder_web(partie_json) -> str:
-    """Bouton "J'ai termine" de l'ecran generique Aventure/Planete commerciale (contenu pas encore
-    prepare, specs.md 2.4 etapes 7/9, 9.1) : avance au niveau suivant, meme logique que
+    """Bouton "J'ai termine" de l'ecran generique Planete commerciale (contenu pas encore prepare,
+    specs.md 2.4 etape 9, 9.1) : avance au niveau suivant, meme logique que
     main.py:_ouvrir_etape_placeholder cote PC. Renvoie la partie mise a jour (web/app.js la
     re-sauvegarde dans localStorage puis enchaine sur le choix du niveau)."""
+    partie = partie_depuis_json(partie_json)
+    avancer_niveau(partie)
+    return partie_vers_json(partie)
+
+
+# --- Aventure "Trois lunes" (specs.md 2.5) : choix unique parmi Reparer/Ameliorer/Bricoler,
+# resolu immediatement, memes fonctions pures que src/ui/ecran_aventure_trois_lunes.py cote PC
+# (src/gameplay/partie.py). Une seule Aventure implementee pour l'instant. ---
+
+
+def constantes_aventure_trois_lunes_web() -> str:
+    """Expose PV_REPARATION_VAISSEAU/PV_AMELIORATION (src/gameplay/partie.py) pour le texte des
+    choix avant meme de les jouer - seule source de verite (CLAUDE.md), web/app.js ne duplique
+    jamais ces valeurs."""
+    return json.dumps({"pv_reparation_vaisseau": PV_REPARATION_VAISSEAU, "pv_amelioration": PV_AMELIORATION})
+
+
+def deck_groupe_par_id_partie_web(partie_json) -> str:
+    """Deck reel d'une partie, regroupe par id de carte plutot que par nom (contrairement a
+    deck_partie_web/regrouper_cartes, src/gameplay/carte.py) : necessaire pour retirer un
+    exemplaire precis (choix "Bricoler", retirer_carte prend un id, pas un nom)."""
+    partie = partie_depuis_json(partie_json)
+    cartes = charger_cartes()
+    compteur = Counter(partie.deck)
+    resultat = []
+    for id_carte, quantite in compteur.items():
+        entree = _carte_regroupee_json(cartes[id_carte], quantite)
+        entree["id_carte"] = id_carte
+        resultat.append(entree)
+    return json.dumps(resultat)
+
+
+def reparer_vaisseau_aventure_web(partie_json) -> str:
+    partie = partie_depuis_json(partie_json)
+    reparer_vaisseau(partie)
+    return partie_vers_json(partie)
+
+
+def ameliorer_module_aventure_web(partie_json, position) -> str:
+    partie = partie_depuis_json(partie_json)
+    ameliorer_module_aventure(partie, position)
+    return partie_vers_json(partie)
+
+
+def retirer_carte_aventure_web(partie_json, id_carte) -> str:
+    partie = partie_depuis_json(partie_json)
+    retirer_carte(partie, id_carte)
+    return partie_vers_json(partie)
+
+
+def terminer_aventure_trois_lunes_web(partie_json) -> str:
+    """Bouton "Continuer" de l'ecran Aventure "Trois lunes" (une fois un choix resolu) : avance au
+    niveau suivant, meme logique que main.py:_ouvrir_aventure_trois_lunes cote PC. Renvoie la
+    partie mise a jour (web/app.js la re-sauvegarde dans localStorage puis enchaine sur le choix
+    du niveau)."""
     partie = partie_depuis_json(partie_json)
     avancer_niveau(partie)
     return partie_vers_json(partie)

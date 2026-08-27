@@ -17,6 +17,7 @@ from src.gameplay.partie import (
     NIVEAU_MAJ_MAX,
     PV_AMELIORATION,
     PV_REPARATION,
+    PV_REPARATION_VAISSEAU,
     STATUT_EN_COURS,
     STATUT_TERMINEE,
     EtatModule,
@@ -24,6 +25,7 @@ from src.gameplay.partie import (
     abandonner_partie,
     ajouter_carte,
     ameliorer_module,
+    ameliorer_module_aventure,
     avancer_niveau,
     combat_depuis_partie,
     creer_profil,
@@ -44,6 +46,8 @@ from src.gameplay.partie import (
     profil_depuis_json,
     profil_vers_json,
     reparer_module,
+    reparer_vaisseau,
+    retirer_carte,
     sauvegarder_partie,
     specs_utilisees_partie,
     synchroniser_vaisseau_depuis_combat,
@@ -398,6 +402,45 @@ def test_deplacer_module_vers_un_emplacement_vide():
 
     assert partie.vaisseau["avant_gauche"] is None
     assert partie.vaisseau["arriere_gauche"].module_id == spec.id
+
+
+# --- Aventures (specs.md 2.5) ---
+
+
+def test_reparer_vaisseau_soigne_chaque_module_equipe_plafonne_au_max():
+    partie = _partie_exemple()  # base pv=15/15 (deja au max), avant_gauche pv=10/18
+
+    reparer_vaisseau(partie)
+
+    assert partie.vaisseau["base"].pv == 15
+    assert partie.vaisseau["avant_gauche"].pv == min(10 + PV_REPARATION_VAISSEAU, 18)
+
+
+def test_reparer_vaisseau_ignore_les_emplacements_vides():
+    partie = _partie_exemple()
+
+    reparer_vaisseau(partie)  # ne doit pas lever d'exception sur avant_droite/arriere_* (None)
+
+    assert partie.vaisseau["avant_droite"] is None
+
+
+def test_retirer_carte_retire_un_seul_exemplaire():
+    partie = _partie_exemple()  # deck=["CRT_7", "CRT_7", "CRT_10"]
+
+    retirer_carte(partie, "CRT_7")
+
+    assert partie.deck == ["CRT_7", "CRT_10"]
+
+
+def test_ameliorer_module_aventure_meme_effet_que_ameliorer_module_mais_gratuit():
+    partie = _partie_exemple()  # argent=50
+    argent_avant = partie.argent
+
+    ameliorer_module_aventure(partie, "avant_gauche")
+
+    assert partie.vaisseau["avant_gauche"].pv_max == 18 + PV_AMELIORATION
+    assert partie.vaisseau["avant_gauche"].pv == 10 + PV_AMELIORATION
+    assert partie.argent == argent_avant  # contrairement a ameliorer_module (Station service)
 
 
 @pytest.fixture

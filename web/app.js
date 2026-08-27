@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "37";
+const VERSION_CACHE = "38";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -101,6 +101,7 @@ const IDS_ECRANS = [
     "ecran-choix-module",
     "ecran-choix-niveau",
     "ecran-station-service",
+    "ecran-aventure-trois-lunes",
     "ecran-etape-placeholder",
     "ecran-fin-combat",
     "ecran-victoire-finale",
@@ -784,10 +785,157 @@ function terminerStationServicePartie() {
     ouvrirChoixNiveauPartie(partie);
 }
 
-// Ecran generique pour une etape sans contenu prepare (Aventure, Planete commerciale - specs.md
-// 2.4 etapes 7/9, 9.1) : reutilise l'icone/description de LIBELLES_TYPE_ETAPE (definie plus bas,
-// pour l'ecran "Choix du prochain niveau") avec un message explicite et un bouton "J'ai termine"
-// qui avance simplement au niveau suivant - meme logique que
+// Aventure "Trois lunes" (specs.md 2.5) : choix unique parmi Reparer/Ameliorer/Bricoler, resolu
+// immediatement des le clic - contrairement a l'Aventure Asteroides (a venir), pas de sequence en
+// plusieurs temps ici. Meme regles que src/ui/ecran_aventure_trois_lunes.py cote PC - bridge.py
+// n'applique que les fonctions pures de src/gameplay/partie.py, aucune regle dupliquee ici.
+const DESCRIPTION_TROIS_LUNES =
+    "Un havre de paix au milieu de la galaxie. Aucune forme de vie intelligente, des animaux de " +
+    "taille raisonnable, de l'eau, des fruits et des legumes sauvages partout. Il est temps de " +
+    "faire une pause.";
+
+// Constantes reelles du moteur (PV_REPARATION_VAISSEAU/PV_AMELIORATION), recuperees une seule
+// fois depuis bridge.py plutot que dupliquees ici en dur (CLAUDE.md).
+let constantesAventureTroisLunes = null;
+// "choix" (3 choix initiaux) -> "choix_module" (Ameliorer) ou "choix_carte" (Bricoler), ou
+// directement "resolu" (Reparer, effet immediat sans cible a choisir).
+let etapeAventureTroisLunes = "choix";
+let groupesDeckAventureTroisLunes = [];
+let messageResoluAventureTroisLunes = "";
+
+function ouvrirAventureTroisLunesPartie(partie) {
+    partieActive = partie;
+    etapeAventureTroisLunes = "choix";
+    if (constantesAventureTroisLunes === null) {
+        constantesAventureTroisLunes = appelerBridge("constantes_aventure_trois_lunes_web");
+    }
+    rendreAventureTroisLunes();
+    masquerTousLesEcrans();
+    document.getElementById("ecran-aventure-trois-lunes").classList.remove("cachee");
+}
+
+function rendreAventureTroisLunes() {
+    document.getElementById("titre-aventure-trois-lunes").textContent = `Trois lunes - Niveau ${partieActive.niveau}`;
+
+    const description = document.getElementById("description-aventure-trois-lunes");
+    const choix = document.getElementById("choix-aventure-trois-lunes");
+    const instruction = document.getElementById("instruction-aventure-trois-lunes");
+    const modules = document.getElementById("modules-aventure-trois-lunes");
+    const deck = document.getElementById("deck-aventure-trois-lunes");
+    const messageResolu = document.getElementById("message-resolu-aventure-trois-lunes");
+    const boutonContinuer = document.getElementById("bouton-continuer-aventure-trois-lunes");
+
+    description.classList.toggle("cachee", etapeAventureTroisLunes !== "choix");
+    choix.classList.toggle("cachee", etapeAventureTroisLunes !== "choix");
+    instruction.classList.toggle("cachee", !["choix_module", "choix_carte"].includes(etapeAventureTroisLunes));
+    modules.classList.toggle("cachee", etapeAventureTroisLunes !== "choix_module");
+    deck.classList.toggle("cachee", etapeAventureTroisLunes !== "choix_carte");
+    messageResolu.classList.toggle("cachee", etapeAventureTroisLunes !== "resolu");
+    boutonContinuer.classList.toggle("cachee", etapeAventureTroisLunes !== "resolu");
+
+    if (etapeAventureTroisLunes === "choix") {
+        description.textContent = DESCRIPTION_TROIS_LUNES;
+        const { pv_reparation_vaisseau, pv_amelioration } = constantesAventureTroisLunes;
+        const options = [
+            ["reparer", "Reparer le vaisseau", `Chaque module regagne ${pv_reparation_vaisseau} PV.`],
+            ["ameliorer", "Ameliorer un module", `+${pv_amelioration} PV max sur le module de votre choix.`],
+            ["bricoler", "Bricoler", "Retirez une carte de votre deck."],
+        ];
+        choix.innerHTML = options
+            .map(
+                ([identifiant, titre, texte]) => `
+            <div class="choix-aventure" data-choix="${identifiant}">
+                <div class="choix-aventure-titre">${titre}</div>
+                <div class="choix-aventure-description">${texte}</div>
+            </div>`
+            )
+            .join("");
+        document.querySelectorAll(".choix-aventure").forEach((element) => {
+            element.addEventListener("click", () => cliquerChoixTroisLunes(element.dataset.choix));
+        });
+    } else if (etapeAventureTroisLunes === "choix_module") {
+        instruction.textContent = "Choisissez le module a ameliorer.";
+        const vaisseau = appelerBridge("infos_vaisseau_web", JSON.stringify(partieActive));
+        modules.innerHTML = Object.entries(vaisseau)
+            .map(([position, etat]) => {
+                if (!etat) {
+                    return `<div class="module-station module-station-vide" data-position="${position}">Emplacement vide</div>`;
+                }
+                return `
+                <div class="module-station" data-position="${position}">
+                    <img src="${etat.image}" alt="${etat.nom}">
+                    <div class="module-station-nom">${etat.nom}</div>
+                    <div class="module-station-pv">${etat.pv} / ${etat.pv_max} PV</div>
+                </div>`;
+            })
+            .join("");
+        document.querySelectorAll("#modules-aventure-trois-lunes .module-station:not(.module-station-vide)").forEach((element) => {
+            element.addEventListener("click", () => cliquerModuleTroisLunes(element.dataset.position));
+        });
+    } else if (etapeAventureTroisLunes === "choix_carte") {
+        instruction.textContent = "Choisissez une carte a retirer de votre deck.";
+        groupesDeckAventureTroisLunes = appelerBridge("deck_groupe_par_id_partie_web", JSON.stringify(partieActive));
+        deck.innerHTML = groupesDeckAventureTroisLunes
+            .map(
+                (carte) => `
+            <div class="carte-deck" data-id="${carte.id_carte}">
+                <span class="etoile-${carte.rarete.toLowerCase()}">★</span>
+                ${carte.quantite > 1 ? `<span class="carte-deck-quantite">×${carte.quantite}</span>` : ""}
+                <img src="${carte.image}" alt="${carte.nom}">
+                <div class="carte-deck-nom">${carte.nom}</div>
+                <div class="carte-deck-cout">⚡ ${carte.cout}</div>
+            </div>`
+            )
+            .join("");
+        document.querySelectorAll("#deck-aventure-trois-lunes .carte-deck").forEach((element) => {
+            element.addEventListener("click", () => cliquerCarteTroisLunes(element.dataset.id));
+        });
+    } else {
+        messageResolu.textContent = messageResoluAventureTroisLunes;
+    }
+}
+
+function cliquerChoixTroisLunes(identifiant) {
+    const { pv_reparation_vaisseau } = constantesAventureTroisLunes;
+    if (identifiant === "reparer") {
+        partieActive = appelerBridge("reparer_vaisseau_aventure_web", JSON.stringify(partieActive));
+        messageResoluAventureTroisLunes = `Chaque module regagne ${pv_reparation_vaisseau} PV !`;
+        etapeAventureTroisLunes = "resolu";
+    } else if (identifiant === "ameliorer") {
+        etapeAventureTroisLunes = "choix_module";
+    } else if (identifiant === "bricoler") {
+        etapeAventureTroisLunes = "choix_carte";
+    }
+    rendreAventureTroisLunes();
+}
+
+function cliquerModuleTroisLunes(position) {
+    const { pv_amelioration } = constantesAventureTroisLunes;
+    const nom = appelerBridge("infos_vaisseau_web", JSON.stringify(partieActive))[position].nom;
+    partieActive = appelerBridge("ameliorer_module_aventure_web", JSON.stringify(partieActive), position);
+    messageResoluAventureTroisLunes = `${nom} ameliore : +${pv_amelioration} PV max !`;
+    etapeAventureTroisLunes = "resolu";
+    rendreAventureTroisLunes();
+}
+
+function cliquerCarteTroisLunes(idCarte) {
+    const carte = groupesDeckAventureTroisLunes.find((c) => c.id_carte === idCarte);
+    partieActive = appelerBridge("retirer_carte_aventure_web", JSON.stringify(partieActive), idCarte);
+    messageResoluAventureTroisLunes = `Carte retiree : ${carte.nom}.`;
+    etapeAventureTroisLunes = "resolu";
+    rendreAventureTroisLunes();
+}
+
+function terminerAventureTroisLunes() {
+    const partie = appelerBridge("terminer_aventure_trois_lunes_web", JSON.stringify(partieActive));
+    sauvegarderPartieLocale(joueurCourant.id, partie);
+    ouvrirChoixNiveauPartie(partie);
+}
+
+// Ecran generique pour une etape sans contenu prepare (Planete commerciale - specs.md 2.4 etape
+// 9, 9.1) : reutilise l'icone/description de LIBELLES_TYPE_ETAPE (definie plus bas, pour l'ecran
+// "Choix du prochain niveau") avec un message explicite et un bouton "J'ai termine" qui avance
+// simplement au niveau suivant - meme logique que
 // main.py:_ouvrir_etape_placeholder cote PC.
 const TITRES_TYPE_ETAPE = {
     AVENTURE: "Aventure",
@@ -858,8 +1006,12 @@ function choisirEtape(type) {
         document.getElementById("app").classList.remove("cachee");
     } else if (type === "STATION_SERVICE") {
         ouvrirStationServicePartie(partieActive);
+    } else if (type === "AVENTURE") {
+        // Une seule Aventure implementee pour l'instant (specs.md 2.5) : pas encore de tirage
+        // entre plusieurs aventures, Asteroides/Police restent a construire.
+        ouvrirAventureTroisLunesPartie(partieActive);
     } else {
-        // Aventure / Planete commerciale : contenu pas encore prepare (specs.md 2.4, 9.1).
+        // Planete commerciale : contenu pas encore prepare (specs.md 2.4, 9.1).
         ouvrirEtapePlaceholderPartie(partieActive, type);
     }
 }
@@ -1209,6 +1361,7 @@ document.getElementById("bouton-voir-deck-partie").addEventListener("click", voi
 document.getElementById("bouton-nouvelle-partie").addEventListener("click", nouvellePartie);
 document.getElementById("bouton-continuer-fin-combat").addEventListener("click", continuerApresFinCombat);
 document.getElementById("bouton-termine-station-service").addEventListener("click", terminerStationServicePartie);
+document.getElementById("bouton-continuer-aventure-trois-lunes").addEventListener("click", terminerAventureTroisLunes);
 document.getElementById("bouton-continuer-victoire-finale").addEventListener("click", terminerVictoireFinale);
 document.getElementById("bouton-termine-etape-placeholder").addEventListener("click", terminerEtapePlaceholder);
 document.getElementById("bouton-retour-deck").addEventListener("click", retourDepuisDeck);

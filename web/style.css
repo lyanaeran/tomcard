@@ -900,9 +900,67 @@ body {
     opacity: 0.45;
 }
 
-/* Ecran generique pour une etape sans contenu prepare (Aventure, Planete commerciale - specs.md
-   2.4 etapes 7/9, 9.1). Fond de combat reutilise en placeholder (deja applique globalement sur
-   body) - decision utilisateur. */
+/* Aventure "Trois lunes" (specs.md 2.5). Fond dedie (assets/aventure/trois_lunes.png) plutot que
+   le fond de combat reutilise par les autres ecrans du parcours - remplace ici le fond global de
+   body (meme principe de mise en page que #ecran-station-service). */
+#ecran-aventure-trois-lunes {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.2rem;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    text-align: center;
+    background: #0b1020 url("../assets/aventure/trois_lunes.png") center / 100% 100% no-repeat;
+}
+
+#description-aventure-trois-lunes {
+    max-width: 700px;
+}
+
+#choix-aventure-trois-lunes,
+#modules-aventure-trois-lunes,
+#deck-aventure-trois-lunes {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.choix-aventure {
+    width: clamp(180px, 24vw, 280px);
+    background: rgba(20, 24, 34, 0.75);
+    border: 2px solid #5a6e91;
+    border-radius: 10px;
+    padding: 1rem;
+    cursor: pointer;
+}
+
+.choix-aventure:hover {
+    border-color: #ffffff;
+}
+
+.choix-aventure-titre {
+    font-weight: bold;
+    color: #ffdc78;
+    margin-bottom: 0.4rem;
+}
+
+.choix-aventure-description {
+    font-size: 0.85rem;
+    color: #dcdce1;
+}
+
+#message-resolu-aventure-trois-lunes {
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: #ffdc78;
+}
+
+/* Ecran generique pour une etape sans contenu prepare (Planete commerciale - specs.md 2.4 etape
+   9, 9.1). Fond de combat reutilise en placeholder (deja applique globalement sur body) -
+   decision utilisateur. */
 #ecran-etape-placeholder {
     display: flex;
     flex-direction: column;

@@ -182,7 +182,8 @@ section (référencée), cette liste ne fait que les enchaîner.
 l'Électricité), dans le titre de Station service/Choix de module/Aventure-Planète commerciale
 ("... - Niveau N"), en sous-titre de VICTOIRE/DÉFAITE (Fin de combat), en plus des écrans qui
 l'affichaient déjà (Écran de partie, Choix du prochain niveau). PC : `FenetreCombat`/
-`EcranStationService`/`EcranChoixModule`/`EcranEtapePlaceholder`/`EcranFinCombat` reçoivent
+`EcranStationService`/`EcranChoixModule`/`EcranEtapePlaceholder`/`EcranAventureTroisLunes`/
+`EcranFinCombat` reçoivent
 `niveau` (ou lisent `self.partie.niveau`) depuis `main.py`. Web : `partieActive.niveau` (déjà
 présent dans le JSON de `Partie`, aucun champ bridge supplémentaire nécessaire), lu directement par
 `web/app.js`. Non affiché à l'écran Victoire finale (le run est terminé à ce stade).
@@ -239,19 +240,26 @@ présent dans le JSON de `Partie`, aucun champ bridge supplémentaire nécessair
      pas de distinction victoire/défaite/abandon pour l'instant, cf. §10.3) → Écran de partie
      (étape 2), via un bouton "Continuer" (PC : clic n'importe où sur l'écran, cf.
      `src/ui/ecran_fin_combat.py`)
-7. **Aventure** (contenu spécifié pour 3 aventures, §2.5, mais **pas encore implémenté** — reste
-   **relié à l'enchaînement via l'écran générique** en attendant) : un bouton "j'ai terminé" avance
-   le niveau et revient au Choix du prochain niveau (étape 3), même principe que Station service —
-   l'écran se limite à afficher l'icône/description déjà utilisées au Choix du prochain niveau avec
-   un message "Contenu pas encore défini pour cette étape." `src/ui/ecran_etape_placeholder.py` (PC,
-   un seul écran générique pour cette étape et l'étape 9) + `main.py:_ouvrir_etape_placeholder` ;
-   côté web `web/bridge.py` (`terminer_etape_placeholder_web`) + `web/app.js`
-   (`ouvrirEtapePlaceholderPartie`/`terminerEtapePlaceholder`)
+7. **Aventure** (détaillé en §2.5, **une seule Aventure implémentée et reliée à l'enchaînement pour
+   l'instant : "Trois lunes"** — Astéroïdes/Police restent à construire, pas encore de tirage entre
+   plusieurs aventures puisqu'une seule existe) : un choix résolu (Réparer/Améliorer/Bricoler) puis
+   un bouton "Continuer" avance le niveau et revient au Choix du prochain niveau (étape 3), même
+   principe que Station service. `src/ui/ecran_aventure_trois_lunes.py` (PC) +
+   `main.py:_ouvrir_aventure_trois_lunes` ; côté web `web/bridge.py`
+   (`constantes_aventure_trois_lunes_web`/`deck_groupe_par_id_partie_web`/
+   `reparer_vaisseau_aventure_web`/`ameliorer_module_aventure_web`/`retirer_carte_aventure_web`/
+   `terminer_aventure_trois_lunes_web`) + `web/app.js` (`ouvrirAventureTroisLunesPartie` et
+   fonctions associées)
 8. **Station service** (détaillé en §2.2, **implémenté et relié à l'enchaînement**) : Réparer /
    Améliorer / Mettre à jour / Déplacer un module, un bouton "j'ai terminé" avance le niveau et
    revient au Choix du prochain niveau (étape 3), même principe que la fin d'un combat gagné
-9. **Planète commerciale** (contenu non préparé, §2/§9.1) : même principe qu'Aventure — même écran
-   générique, même comportement (étape 7)
+9. **Planète commerciale** (contenu non préparé, §2/§9.1, **relié à l'enchaînement via un écran
+   générique**) : un bouton "j'ai terminé" avance le niveau et revient au Choix du prochain niveau
+   (étape 3) — en attendant un vrai contenu, l'écran se limite à afficher l'icône/description déjà
+   utilisées au Choix du prochain niveau avec un message "Contenu pas encore défini pour cette
+   étape." `src/ui/ecran_etape_placeholder.py` (PC) + `main.py:_ouvrir_etape_placeholder` ; côté web
+   `web/bridge.py` (`terminer_etape_placeholder_web`) + `web/app.js`
+   (`ouvrirEtapePlaceholderPartie`/`terminerEtapePlaceholder`)
 10. **Boss** (niveau 10, puis tous les 10 niveaux à terme — §2.3), atteint via la proposition
     unique "Combattre le Boss !" de l'étape 3 : réutilise l'écran Combat pour l'instant, pas encore
     d'ennemi de Boss dédié (§9.1) → Victoire : Victoire finale (étape 11) ; Défaite : même
@@ -271,19 +279,23 @@ présent dans le JSON de `Partie`, aucun champ bridge supplémentaire nécessair
 
 Contenu concret des 3 premières Aventures spécifiées à ce jour — brouillon détaillé dans
 `specs/cartes.xlsx`, onglet "Aventures" (miroir humainement modifiable, même principe que l'onglet
-Cartes, cf. CLAUDE.md/§10.3). **Pas encore implémenté** : l'étape Aventure utilise toujours l'écran
-générique `EcranEtapePlaceholder` (§2.4 étape 7) en attendant.
+Cartes, cf. CLAUDE.md/§10.3). **Trois lunes implémentée** (voir ci-dessous) ; Astéroïdes et Police
+restent à construire, l'étape Aventure les représenterait alors avec l'écran générique
+`EcranEtapePlaceholder` en attendant (comme la Planète commerciale aujourd'hui) — mais puisqu'une
+seule Aventure existe pour l'instant, `TypeEtape.AVENTURE` ouvre toujours directement Trois lunes
+(§2.4 étape 7), aucun tirage entre plusieurs aventures n'est encore nécessaire.
 
-Forme retenue pour l'écran Aventure à construire : un écran dédié par Aventure (pas l'écran
-générique actuel), affichant description + 2-3 choix cliquables — même famille visuelle que l'écran
-Choix du prochain niveau (§2.4 étape 3) plutôt qu'une mise en page différente par Aventure. Une
-Aventure scénarisée en plusieurs temps (Astéroïdes ci-dessous) reste un **seul écran** dont le
-contenu affiché change à mesure que le joueur avance (état interne à l'écran, comme
+Forme retenue pour l'écran Aventure : un écran dédié par Aventure (pas l'écran générique),
+affichant description + 2-3 choix cliquables — même famille visuelle que l'écran Choix du prochain
+niveau (§2.4 étape 3) plutôt qu'une mise en page différente par Aventure. Une Aventure scénarisée
+en plusieurs temps (Astéroïdes ci-dessous, pas encore construite) resterait un **seul écran** dont
+le contenu affiché change à mesure que le joueur avance (état interne à l'écran, comme
 `EcranStationService` se redessine après chaque action) plutôt que plusieurs écrans/fenêtres
-séparés — décision utilisateur : pas de moteur de séquence narrative générique pour l'instant,
-chaque Aventure scripte ses propres étapes en dur. Contenu prévu à terme dans un
+séparés — décision utilisateur : pas de moteur de séquence narrative générique, chaque Aventure
+scripte ses propres étapes en dur (déjà le cas de Trois lunes : "choix" -> "choix_module"/
+"choix_carte" -> "resolu", un attribut `etape` interne à l'écran). Contenu prévu à terme dans un
 `config/aventures.json` (miroir de l'onglet xlsx, même relation que `config/cartes.json`/onglet
-Cartes) — pas encore créé, structure à définir au moment de l'implémentation.
+Cartes) — pas encore créé, structure à définir en construisant Astéroïdes/Police.
 
 **Astéroïdes** (fond `assets/aventure/champ_asteroides.png`) — "Poursuivi par des pirates de
 l'espace, vous n'avez plus le choix : vaincre ou périr ! À moins que..."
@@ -300,15 +312,28 @@ l'espace, vous n'avez plus le choix : vaincre ou périr ! À moins que..."
   standard d'un combat Prime (grille complète)
 - Pas de 3ᵉ choix (binaire assumé)
 
-**Trois lunes** (fond `assets/aventure/trois_lunes.png`) — "Un havre de paix au milieu de la
-galaxie [...]. Il est temps de faire une pause." Trois choix, chacun résolu immédiatement (pas de
-séquence), retour direct au Choix du prochain niveau :
-- *Réparer le vaisseau* : +5 PV à **chaque** module équipé (nouveau côté moteur : soin groupé,
-  distinct de `reparer_module`, §2.2, qui ne cible qu'un seul module choisi)
-- *Améliorer* : réutilise `ameliorer_module` tel quel (même effet qu'en Station service, +
-  `PV_AMELIORATION`), sur le module cliqué par le joueur
-- *Bricoler* : retire une carte choisie par le joueur de son deck réel (nouveau côté moteur : aucune
-  fonction de retrait n'existe encore, seul `ajouter_carte` existe, §2.4 étape 6)
+**Trois lunes** — **implémentée** (fond `assets/aventure/trois_lunes.png`) — "Un havre de paix au
+milieu de la galaxie [...]. Il est temps de faire une pause." Trois choix, chacun résolu
+immédiatement (pas de séquence), retour direct au Choix du prochain niveau (bouton "Continuer") :
+- *Réparer le vaisseau* : +`PV_REPARATION_VAISSEAU` (5) PV à **chaque** module équipé, plafonné à
+  son pv_max chacun (`reparer_vaisseau`, nouveau côté moteur : soin groupé, distinct de
+  `reparer_module`, §2.2, qui ne cible qu'un seul module choisi)
+- *Améliorer* : même effet que `ameliorer_module` (+`PV_AMELIORATION`, §2.2) mais **gratuit**
+  (`ameliorer_module_aventure`, aucun coût en Argent contrairement à la Station service — l'effet
+  commun aux deux est factorisé dans `_effet_ameliorer_module`), sur le module cliqué par le joueur
+- *Bricoler* : retire une carte choisie par le joueur de son deck réel (`retirer_carte`, nouveau
+  côté moteur : opération inverse de `ajouter_carte`, §2.4 étape 6). Cartes regroupées par id (pas
+  par nom comme `regrouper_cartes`/l'écran "deck en entier", §6) pour retirer un exemplaire précis
+
+`src/gameplay/partie.py` (`PV_REPARATION_VAISSEAU`, `reparer_vaisseau`, `ameliorer_module_aventure`,
+`retirer_carte`) ; `src/ui/ecran_aventure_trois_lunes.py` (PC, écran à état interne `etape` : "choix"
+-> "choix_module"/"choix_carte" -> "resolu") + `main.py:_ouvrir_aventure_trois_lunes` ; côté web
+`web/bridge.py` (`constantes_aventure_trois_lunes_web` expose PV_REPARATION_VAISSEAU/PV_AMELIORATION
+pour le texte des choix avant de les jouer, plutôt que dupliqués en dur dans `web/app.js`, cf.
+CLAUDE.md ; `deck_groupe_par_id_partie_web` ; `reparer_vaisseau_aventure_web` ;
+`ameliorer_module_aventure_web` ; `retirer_carte_aventure_web` ; `terminer_aventure_trois_lunes_web`)
++ `web/app.js` (`ouvrirAventureTroisLunesPartie`/`rendreAventureTroisLunes` et les fonctions de clic
+associées)
 
 **Police** (fond `assets/aventure/police.png`) — "Pas de bol, votre dernier achat n'est pas aux
 normes [...]." Une carte est tirée au hasard du deck réel du joueur et affichée **avant** les choix
@@ -638,7 +663,8 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
 
 - Contenu exact de la Planète commerciale (uniquement des cartes, ou aussi d'autres bonus ?) reste
   à définir (§2). Contenu de l'Aventure : 3 premières aventures spécifiées (Astéroïdes/Trois
-  lunes/Police), voir §2.5 — pas encore implémenté, reste à en écrire d'autres pour varier le pool
+  lunes/Police), voir §2.5 — **Trois lunes implémentée**, Astéroïdes/Police restent à construire
+  (et à en écrire d'autres pour varier le pool une fois ces deux-là faites)
 - Montants d'Argent (récompense de combat, coût des actions de Station service, Argent de départ) :
   **tranchés et implémentés**, voir §2.1/§2.2 — valeurs inventées faute de spec précise à l'origine
   de cette décision, à ajuster en playtest si besoin. Même situation pour le coût de "Mettre aux
@@ -859,9 +885,10 @@ fond dédié.
   ou d'une étape Aventure/Planète commerciale) — un combat en cours n'est pas sauvegardable ; le
   quitter en cours de route (fermer l'onglet/l'appli) le fait recommencer entièrement à la reprise,
   au même niveau
-- Planète commerciale et Aventure n'ont pas encore de contenu propre (§2.4, étapes 7 et 9, §9.1) :
-  un seul écran générique (`EcranEtapePlaceholder`) les représente toutes les deux, sans autre
-  effet que d'avancer au niveau suivant
+- Planète commerciale n'a pas encore de contenu propre (§2.4, étape 9, §9.1) : l'écran générique
+  (`EcranEtapePlaceholder`) la représente, sans autre effet que d'avancer au niveau suivant.
+  L'Aventure a sa propre implémentation depuis Trois lunes (§2.5), mais reste limitée à cette seule
+  aventure (Astéroïdes/Police pas encore construites)
 - Le run s'arrête réellement au Niveau 10 dans l'état actuel (décision utilisateur, provisoire,
   voir §2) : la Victoire finale (§2.4, étape 11) marque la partie `TERMINEE` sans proposer de
   continuation au-delà de ce niveau
