@@ -396,7 +396,9 @@ associées)
 n'est pas aux normes [...]." Une carte est tirée au hasard du deck réel du joueur
 (`tirer_carte_deck`, nouveau côté moteur : tirage dans le deck possédé, contrairement à
 `tirer_carte_recompense` qui tire dans un pool de récompense) et affichée **avant** les choix
-(contrairement aux deux autres Aventures) :
+(contrairement aux deux autres Aventures) — dans le même format qu'une carte en combat (image en
+haut, texte en dessous, non cliquable), pas dans le format ligne image+texte des choix en dessous,
+pour ne pas donner l'impression que c'est elle-même une option :
 - *Confiscation* : retire cette carte du deck (`retirer_carte`, réutilisée de Trois lunes/Bricoler)
 - *Mettre aux normes* : coûte un montant fixe en Argent (`COUT_METTRE_AUX_NORMES`, 10 €, cf. §9.1)
   plutôt qu'un pourcentage du prix de vente en magasin comme envisagé initialement — abandonné, la
