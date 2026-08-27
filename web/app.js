@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "42";
+const VERSION_CACHE = "43";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -960,12 +960,15 @@ const DESCRIPTION_ASTEROIDES =
     "Poursuivi par des pirates de l'espace, vous n'avez plus le choix : vaincre ou perir ! A moins que...";
 
 // Recadree depuis assets/prochain_niveau/prime.png (bandeau "PRIME" retire) : affiche de toute
-// facon son propre titre a cote dans le rectangle de texte. Aucune icone existante pertinente pour
-// "Traverser".
+// facon son propre titre a cote dans le rectangle de texte.
 const ICONE_AFFRONTER = "assets/aventure/pirates.png";
 
+// Extrait du fond d'ecran de cette Aventure (assets/aventure/champ_asteroides.png) plutot qu'une
+// icone distincte : aucune icone existante n'etait pertinente pour ce choix.
+const ICONE_TRAVERSER = "assets/aventure/traverser.png";
+
 const CHOIX_ASTEROIDES = [
-    ["traverser", null, "Traverser le champ d'asteroides", "Un module au choix va en subir les consequences..."],
+    ["traverser", ICONE_TRAVERSER, "Traverser le champ d'asteroides", "Un module au choix va en subir les consequences..."],
     ["affronter", ICONE_AFFRONTER, "Affronter les pirates", "Lance un combat contre 3 ennemis."],
 ];
 

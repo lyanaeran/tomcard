@@ -31,6 +31,10 @@ FOND_ASTEROIDES = str(RACINE / "assets" / "aventure" / "champ_asteroides.png")
 # de nouveau son propre titre a cote dans le rectangle de texte, cf. commentaire de CHOIX plus bas.
 _ICONE_AFFRONTER = str(RACINE / "assets" / "aventure" / "pirates.png")
 
+# Extrait du fond d'ecran de cette Aventure (FOND_ASTEROIDES ci-dessus) plutot qu'une icone
+# distincte : aucune icone existante n'etait pertinente pour ce choix.
+_ICONE_TRAVERSER = str(RACINE / "assets" / "aventure" / "traverser.png")
+
 DESCRIPTION = "Poursuivi par des pirates de l'espace, vous n'avez plus le choix : vaincre ou perir ! A moins que..."
 
 COULEUR_TEXTE = (255, 255, 255)
@@ -45,10 +49,9 @@ COULEUR_BOUTON = (60, 90, 160)
 COULEUR_BOUTON_SURVOLE = (90, 130, 210)
 OPACITE_FOND = 190
 
-# (identifiant, image, titre, description) - image = None en attendant un visuel dedie (aucune
-# icone existante pertinente pour "Traverser").
+# (identifiant, image, titre, description).
 CHOIX = (
-    ("traverser", None, "Traverser le champ d'asteroides", "Un module au choix va en subir les consequences..."),
+    ("traverser", _ICONE_TRAVERSER, "Traverser le champ d'asteroides", "Un module au choix va en subir les consequences..."),
     ("affronter", _ICONE_AFFRONTER, "Affronter les pirates", "Lance un combat contre 3 ennemis."),
 )
 
