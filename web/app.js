@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "44";
+const VERSION_CACHE = "45";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -1313,8 +1313,9 @@ function choisirEtape(type) {
         ouvrirStationServicePartie(partieActive);
     } else if (type === "AVENTURE") {
         // Trois aventures implementees (specs.md 2.5), tirage uniforme non deterministe cote
-        // Python (type_aventure_web).
-        const typeAventure = appelerBridge("type_aventure_web");
+        // Python (type_aventure_web) - niveau fourni uniquement pour le forcage temporaire de
+        // test cote bridge.py (_NIVEAUX_AVENTURE_FORCEE_POUR_TEST), sans effet sinon.
+        const typeAventure = appelerBridge("type_aventure_web", partieActive.niveau);
         if (typeAventure === "TROIS_LUNES") {
             ouvrirAventureTroisLunesPartie(partieActive);
         } else if (typeAventure === "ASTEROIDES") {

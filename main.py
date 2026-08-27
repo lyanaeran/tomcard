@@ -76,6 +76,15 @@ INTERVALLE_VERIFICATION = 1 / 30
 # _ouvrir_choix_niveau.
 TYPES_COMBAT = (TypeEtape.PRIME, TypeEtape.BOSS)
 
+# TEMPORAIRE (pour tester manuellement les 3 Aventures en debut de run) - a retirer une fois le
+# test termine : force les niveaux 2/3/4 en Aventure (au lieu du tirage normal, 1/10 par niveau),
+# une Aventure differente a chaque fois plutot que le tirage uniforme habituel entre les 3.
+_NIVEAUX_AVENTURE_FORCEE_POUR_TEST = {
+    2: TypeAventure.TROIS_LUNES,
+    3: TypeAventure.ASTEROIDES,
+    4: TypeAventure.POLICE,
+}
+
 
 def main() -> None:
     _ouvrir_selection_joueur()
@@ -167,6 +176,8 @@ def _ouvrir_choix_module(profil: Profil, partie: Partie) -> None:
 def _ouvrir_choix_niveau(profil: Profil, partie: Partie) -> None:
     aleatoire = aleatoire_pour_niveau(partie.graine, partie.niveau)
     propositions = tirer_propositions_niveau(partie.niveau, aleatoire)
+    if partie.niveau in _NIVEAUX_AVENTURE_FORCEE_POUR_TEST:  # TEMPORAIRE, cf. commentaire ci-dessus
+        propositions = [TypeEtape.AVENTURE] * len(propositions)
     fenetre = EcranChoixNiveau(partie.niveau, propositions)
 
     def verifier(_dt: float) -> None:
@@ -182,7 +193,10 @@ def _ouvrir_choix_niveau(profil: Profil, partie: Partie) -> None:
         elif type_choisi == TypeEtape.AVENTURE:
             # Trois aventures implementees (specs.md 2.5), tirage uniforme non deterministe
             # (comme la recompense de fin de combat).
-            type_aventure = tirer_type_aventure(random.Random())
+            if partie.niveau in _NIVEAUX_AVENTURE_FORCEE_POUR_TEST:  # TEMPORAIRE, cf. ci-dessus
+                type_aventure = _NIVEAUX_AVENTURE_FORCEE_POUR_TEST[partie.niveau]
+            else:
+                type_aventure = tirer_type_aventure(random.Random())
             if type_aventure == TypeAventure.TROIS_LUNES:
                 _ouvrir_aventure_trois_lunes(profil, partie)
             elif type_aventure == TypeAventure.ASTEROIDES:
