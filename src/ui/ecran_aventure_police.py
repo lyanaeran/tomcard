@@ -23,6 +23,8 @@ FOND_POLICE = str(RACINE / "assets" / "aventure" / "police.png")
 # affiche de toute facon son propre titre a cote dans le rectangle de texte, cf. commentaire de
 # CHOIX plus bas.
 _ICONE_METTRE_AUX_NORMES = str(RACINE / "assets" / "aventure" / "mettre_aux_normes.png")
+_ICONE_CONFISCATION = str(RACINE / "assets" / "aventure" / "confiscation.png")
+_ICONE_DETOURNER = str(RACINE / "assets" / "aventure" / "detourner.png")
 
 DESCRIPTION = "Pas de bol, votre dernier achat n'est pas aux normes. Et la police de l'espace ne plaisante pas trop dans le coin..."
 
@@ -38,13 +40,12 @@ COULEUR_BOUTON = (60, 90, 160)
 COULEUR_BOUTON_SURVOLE = (90, 130, 210)
 OPACITE_FOND = 190
 
-# (identifiant, image, titre, description) - image = None en attendant un visuel dedie (aucune
-# icone existante pertinente pour "Confiscation"/"Detourner l'attention"). "detourner" retire de la
-# liste affichee une fois utilise (specs.md 2.5 : une seule fois par Aventure, pas par run).
+# (identifiant, image, titre, description). "detourner" retire de la liste affichee une fois
+# utilise (specs.md 2.5 : une seule fois par Aventure, pas par run).
 CHOIX = (
-    ("confiscation", None, "Confiscation", "Supprime cette carte de votre deck."),
+    ("confiscation", _ICONE_CONFISCATION, "Confiscation", "Supprime cette carte de votre deck."),
     ("mettre_aux_normes", _ICONE_METTRE_AUX_NORMES, "Mettre aux normes", f"Payez {COUT_METTRE_AUX_NORMES} € et gardez la carte."),
-    ("detourner", None, "Detourner l'attention", "Tire une autre carte (une seule fois)."),
+    ("detourner", _ICONE_DETOURNER, "Detourner l'attention", "Tire une autre carte (une seule fois)."),
 )
 
 # Ligne de la carte tiree (meme gabarit que les lignes de choix, mais non cliquable, en valeur

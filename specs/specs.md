@@ -311,24 +311,25 @@ s'ajoutent au pool (§9.1).
 contenant le titre puis la description — décision utilisateur, pour préparer une illustration par
 choix. `_dessiner_carte_choix`/`construireLigneChoixHtml` (respectivement PC et web) partagent cette
 mise en page entre les trois écrans (dupliquée par fichier côté PC, factorisée en une fonction
-commune côté web). Une ligne sans image dédiée affiche un placeholder vide (même convention que les
-autres emplacements vides du jeu) plutôt qu'un visuel non pertinent — image manquante à ce jour pour
-Bricoler (Trois lunes), Confiscation et Détourner l'attention (Police). Les autres choix réutilisent
-une image déjà disponible, recadrée pour ce nouvel usage plutôt qu'une illustration inédite :
+commune côté web). **Les 8 choix des 3 Aventures sont désormais tous illustrés** — une ligne sans
+image dédiée afficherait un placeholder vide (même convention que les autres emplacements vides du
+jeu), mais ce cas ne se présente plus à ce jour :
 - Réparer/Améliorer (Trois lunes) depuis `assets/station_service/reparer.png`/`ameliorer.png`,
   Affronter les pirates (Astéroïdes) depuis `assets/prochain_niveau/prime.png`, Mettre aux normes
   (Police) depuis `assets/station_service/mettre_a_jour.png` — **recadrées pour retirer leur bandeau
   de titre incrusté** (respectivement "RÉPARER"/"AMÉLIORER" — déjà le bon titre, recadré tout de
-  même par cohérence visuelle avec les 2 suivants —, "PRIME" et "METTRE À JOUR" — non pertinents
-  pour ces choix). Le titre étant de toute façon systématiquement redessiné à côté dans le
-  rectangle de texte, un bandeau incrusté n'a plus d'intérêt à être conservé, qu'il corresponde ou
-  non au choix.
+  même par cohérence visuelle avec les autres —, "PRIME" et "METTRE À JOUR" — non pertinents pour
+  ces choix). Le titre étant de toute façon systématiquement redessiné à côté dans le rectangle de
+  texte, un bandeau incrusté n'a plus d'intérêt à être conservé, qu'il corresponde ou non au choix.
 - Traverser le champ d'astéroïdes (Astéroïdes) depuis le fond d'écran de sa propre Aventure
   (`assets/aventure/champ_asteroides.png`, extrait carré plutôt qu'une icône dédiée)
+- Bricoler (Trois lunes), Confiscation et Détourner l'attention (Police) : illustrations dédiées
+  fournies par l'utilisateur (`assets/aventure/bricoler.png`/`confiscation.png`/`detourner.png`)
 
-Recadrages conservés dans `assets/aventure/` (`reparer.png`/`ameliorer.png`/`pirates.png`/
-`mettre_aux_normes.png`/`traverser.png`), sources originales inchangées pour leur usage propre
-(Station service, Choix du prochain niveau, fond d'écran de l'Aventure).
+Recadrages/extraits/illustrations dédiées, toutes conservées dans `assets/aventure/`
+(`reparer.png`/`ameliorer.png`/`pirates.png`/`mettre_aux_normes.png`/`traverser.png`/`bricoler.png`/
+`confiscation.png`/`detourner.png`) ; sources originales des icônes recadrées inchangées pour leur
+usage propre (Station service, Choix du prochain niveau).
 
 **Astéroïdes** — **implémentée** (fond `assets/aventure/champ_asteroides.png`) — "Poursuivi par des
 pirates de l'espace, vous n'avez plus le choix : vaincre ou périr ! À moins que..."

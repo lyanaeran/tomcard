@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "43";
+const VERSION_CACHE = "44";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -809,10 +809,10 @@ function construireLigneChoixHtml(identifiant, image, titre, texte) {
 // Images recadrees depuis assets/station_service/ (bandeau de titre incruste retire, "REPARER"/
 // "AMELIORER") - coherence avec le reste des choix d'Aventure (specs.md 2.5) : le titre est de
 // toute facon toujours redessine a cote dans le rectangle de texte. Sources originales inchangees
-// (toujours utilisees telles quelles en Station service). Null en attendant un visuel dedie sinon
-// (aucune icone existante pour "Bricoler").
+// (toujours utilisees telles quelles en Station service).
 const ICONE_REPARER = "assets/aventure/reparer.png";
 const ICONE_AMELIORER = "assets/aventure/ameliorer.png";
+const ICONE_BRICOLER = "assets/aventure/bricoler.png";
 
 const DESCRIPTION_TROIS_LUNES =
     "Un havre de paix au milieu de la galaxie. Aucune forme de vie intelligente, des animaux de " +
@@ -864,7 +864,7 @@ function rendreAventureTroisLunes() {
         const options = [
             ["reparer", ICONE_REPARER, "Reparer le vaisseau", `Chaque module regagne ${pv_reparation_vaisseau} PV.`],
             ["ameliorer", ICONE_AMELIORER, "Ameliorer un module", `+${pv_amelioration} PV max sur le module de votre choix.`],
-            ["bricoler", null, "Bricoler", "Retirez une carte de votre deck."],
+            ["bricoler", ICONE_BRICOLER, "Bricoler", "Retirez une carte de votre deck."],
         ];
         choix.innerHTML = options
             .map(([identifiant, image, titre, texte]) => construireLigneChoixHtml(identifiant, image, titre, texte))
@@ -1133,9 +1133,10 @@ const DESCRIPTION_POLICE =
     "Un vaisseau de patrouille vous somme de vous arreter pour un controle de routine...";
 
 // Recadree depuis assets/station_service/mettre_a_jour.png (bandeau "METTRE A JOUR" retire) :
-// affiche de toute facon son propre titre a cote dans le rectangle de texte. Aucune icone existante
-// pertinente pour "Confiscation"/"Detourner l'attention".
+// affiche de toute facon son propre titre a cote dans le rectangle de texte.
 const ICONE_METTRE_AUX_NORMES = "assets/aventure/mettre_aux_normes.png";
+const ICONE_CONFISCATION = "assets/aventure/confiscation.png";
+const ICONE_DETOURNER = "assets/aventure/detourner.png";
 
 let constantesAventurePolice = null;
 // "choix" (2 ou 3 choix selon detournerDisponiblePolice) -> "resolu".
@@ -1190,9 +1191,9 @@ function rendreAventurePolice() {
 
         const { cout_mettre_aux_normes } = constantesAventurePolice;
         const options = [
-            ["confiscation", null, "Confiscation", "Supprime cette carte de votre deck."],
+            ["confiscation", ICONE_CONFISCATION, "Confiscation", "Supprime cette carte de votre deck."],
             ["mettre_aux_normes", ICONE_METTRE_AUX_NORMES, "Mettre aux normes", `Payez ${cout_mettre_aux_normes} € et gardez la carte.`],
-            ["detourner", null, "Detourner l'attention", "Tire une autre carte (une seule fois)."],
+            ["detourner", ICONE_DETOURNER, "Detourner l'attention", "Tire une autre carte (une seule fois)."],
         ].filter(([identifiant]) => identifiant !== "detourner" || detournerDisponiblePolice);
         choix.innerHTML = options
             .map(([identifiant, image, titre, texte]) => construireLigneChoixHtml(identifiant, image, titre, texte))

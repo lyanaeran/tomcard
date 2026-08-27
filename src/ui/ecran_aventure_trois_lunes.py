@@ -45,8 +45,7 @@ COULEUR_BOUTON_SURVOLE = (90, 130, 210)
 OPACITE_FOND = 190
 
 # (identifiant, image, titre, description) des 3 choix (specs.md 2.5) - la description reprend
-# les constantes reelles du moteur plutot que des valeurs dupliquees en dur. Image = None en
-# attendant un visuel dedie (aucune icone existante pertinente pour "Bricoler").
+# les constantes reelles du moteur plutot que des valeurs dupliquees en dur.
 # Reparer/Ameliorer recadrees depuis assets/station_service/ (bandeau de titre incruste retire,
 # "REPARER"/"AMELIORER") - coherence avec le reste des choix d'Aventure (specs.md 2.5) : le titre
 # est de toute facon toujours redessine a cote dans le rectangle de texte, un doublon du bandeau
@@ -54,11 +53,12 @@ OPACITE_FOND = 190
 # telles quelles en Station service).
 _ICONE_REPARER = str(RACINE / "assets" / "aventure" / "reparer.png")
 _ICONE_AMELIORER = str(RACINE / "assets" / "aventure" / "ameliorer.png")
+_ICONE_BRICOLER = str(RACINE / "assets" / "aventure" / "bricoler.png")
 
 CHOIX = (
     ("reparer", _ICONE_REPARER, "Reparer le vaisseau", f"Chaque module regagne {PV_REPARATION_VAISSEAU} PV."),
     ("ameliorer", _ICONE_AMELIORER, "Ameliorer un module", f"+{PV_AMELIORATION} PV max sur le module de votre choix."),
-    ("bricoler", None, "Bricoler", "Retirez une carte de votre deck."),
+    ("bricoler", _ICONE_BRICOLER, "Bricoler", "Retirez une carte de votre deck."),
 )
 
 # Choix empiles verticalement : image carree a gauche, rectangle de texte (titre + description) a
