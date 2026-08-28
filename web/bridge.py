@@ -464,8 +464,8 @@ def type_aventure_web(niveau=None) -> str:
     `niveau` optionnel : uniquement pour le forcage temporaire de test ci-dessus, cf.
     web/app.js qui le fournit desormais a l'appel."""
     if niveau in _NIVEAUX_AVENTURE_FORCEE_POUR_TEST:  # TEMPORAIRE, cf. commentaire ci-dessus
-        return _NIVEAUX_AVENTURE_FORCEE_POUR_TEST[niveau].name
-    return tirer_type_aventure(random.Random()).name
+        return json.dumps(_NIVEAUX_AVENTURE_FORCEE_POUR_TEST[niveau].name)
+    return json.dumps(tirer_type_aventure(random.Random()).name)
 
 
 def candidats_recompense_partie_web(partie_json) -> str:
