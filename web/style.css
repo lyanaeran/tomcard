@@ -62,22 +62,24 @@ body {
    ecrans concernes bascules par actualiserBarreLaterale() dans web/app.js. Simplification web :
    overlay en coin (largeur fixe et etroite, libelles abreges) plutot qu'une bande qui reserve de
    la place (pas de reflow des ecrans existants, deja tous centres/fluides) - masquee en portrait
-   (ecran deja tres contraint en largeur, cf. #conseil-rotation) et sous 820px de large en paysage :
-   mesure au Playwright, c'est le seuil qui evite tout chevauchement avec la grille de 5 modules
-   (#modules-station-service et etapes "choix_module" des Aventures Trois lunes/Asteroides, seuls
-   ecrans a s'approcher autant du bord gauche) sur les tailles d'ecran usuelles - en dessous
-   (iPhone SE et plus petit), la barre reste simplement absente. */
+   (ecran deja tres contraint en largeur, cf. #conseil-rotation) et sous 760px de large en paysage :
+   mesure au Playwright, c'est le seuil (avec une petite marge, le chevauchement reel commence vers
+   745px) qui evite tout chevauchement avec la grille de 5 modules (#modules-station-service et
+   etapes "choix_module" des Aventures Trois lunes/Asteroides, seuls ecrans a s'approcher autant du
+   bord gauche) sur les tailles d'ecran usuelles, iPhone 12/13 mini inclus (812px) - largeur choisie
+   expres etroite (52px) pour ca, seul l'iPhone SE et plus petit (667px) reste sous ce seuil, la
+   barre y est simplement absente. */
 #barre-laterale {
     position: fixed;
     top: max(0.6rem, env(safe-area-inset-top));
     left: max(0.6rem, env(safe-area-inset-left));
     z-index: 25;
     display: flex;
-    width: 60px;
+    width: 52px;
     flex-direction: column;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.4rem;
+    gap: 0.35rem;
+    padding: 0.3rem;
     background: rgba(20, 24, 34, 0.8);
     border: 1px solid #5a6e91;
     border-radius: 10px;
@@ -89,7 +91,7 @@ body {
     top: 56px;
 }
 
-@media (orientation: portrait), (max-width: 819px) {
+@media (orientation: portrait), (max-width: 759px) {
     #barre-laterale {
         display: none !important;
     }
