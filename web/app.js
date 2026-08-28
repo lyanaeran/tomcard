@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "48";
+const VERSION_CACHE = "49";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -87,6 +87,13 @@ function appelerBridge(nomFonction, ...args) {
     const fonctionPython = pyodide.globals.get(nomFonction);
     try {
         return JSON.parse(fonctionPython(...args));
+    } catch (erreur) {
+        // Sans ceci, une exception Python (ou une erreur pyodide) echouait silencieusement : le
+        // clic ne produisait visiblement "rien" cote joueur, sans aucun message pour diagnostiquer
+        // (bug constate par l'utilisateur - POC experimental, pas de gestion d'erreur globale).
+        console.error(`appelerBridge(${nomFonction}) a echoue :`, erreur);
+        alert(`Erreur (${nomFonction}) : ${erreur && erreur.message ? erreur.message : erreur}`);
+        throw erreur;
     } finally {
         fonctionPython.destroy();
     }
