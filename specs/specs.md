@@ -216,11 +216,13 @@ terminé à ce stade).
   `masquerTousLesEcrans()` (qui le masquerait) — même principe que côté PC, sans fenêtre
   additionnelle puisque le web n'affiche qu'un seul écran DOM visible à la fois. En Combat, la barre
   est décalée sous `#entete` (classe `.barre-laterale-combat`). **Simplification web** (écart
-  documenté, cf. CLAUDE.md) : barre étroite (60px) et **masquée sous 820px de large en paysage, et
+  documenté, cf. CLAUDE.md) : barre étroite (52px, choisie expressément pour inclure l'iPhone
+  12/13 mini — 812px de large en paysage, remonté par l'utilisateur comme resté sans barre avec une
+  première largeur de 60px/seuil 820px) et **masquée sous 760px de large en paysage, et
   systématiquement en portrait** — mesuré empiriquement (Playwright) comme le seuil au delà duquel
   elle ne chevauche jamais la grille de 5 modules (Station service et l'étape "choix_module" des
-  Aventures Trois lunes/Astéroïdes) aux tailles d'écran de téléphone usuelles ; en dessous, la barre
-  est simplement absente. En Combat spécifiquement, la largeur du bloc vaisseau dépend aussi de la
+  Aventures Trois lunes/Astéroïdes) ; seul l'iPhone SE et plus petit (667px) reste sous ce seuil, la
+  barre y est simplement absente. En Combat spécifiquement, la largeur du bloc vaisseau dépend aussi de la
   hauteur d'écran (`--taille-case`) : un seuil de largeur fixe ne suffisant pas à garantir l'absence
   de chevauchement sur tous les formats (fenêtre large et haute, tablette en paysage...),
   `actualiserBarreLaterale`/`barreChevaucheVaisseau` vérifient le chevauchement réel après affichage
