@@ -136,10 +136,9 @@ class EcranAventureAsteroides(pyglet.window.Window):
     le combat scripte (choix "Affronter") ; `self.termine` signale qu'il peut sauvegarder la
     partie et enchainer sur le choix du prochain niveau (choix "Traverser" resolu)."""
 
-    def __init__(self, partie: Partie, niveau: int):
+    def __init__(self, partie: Partie):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.partie = partie
-        self.niveau = niveau
         self.specs_par_id = {spec.id: spec for spec in charger_modules()}
         # Un seul chargement, reutilise pour le tirage (_resoudre_sequence_2) et pour retrouver
         # l'id de la carte offerte (_prendre_carte_offerte) : charger_cartes() reconstruit de
@@ -171,7 +170,7 @@ class EcranAventureAsteroides(pyglet.window.Window):
         elements = [_sprite_etire(FOND_ASTEROIDES, 0, 0, LARGEUR_FENETRE, HAUTEUR_FENETRE, lot)]
         elements.append(
             pyglet.text.Label(
-                f"Asteroides - Niveau {self.niveau}",
+                "Asteroides",
                 x=LARGEUR_FENETRE / 2,
                 y=HAUTEUR_FENETRE - 50,
                 anchor_x="center",

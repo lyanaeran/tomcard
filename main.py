@@ -226,7 +226,7 @@ def _ouvrir_station_service(profil: Profil, partie: Partie) -> None:
 
 
 def _ouvrir_aventure_trois_lunes(profil: Profil, partie: Partie) -> None:
-    fenetre = EcranAventureTroisLunes(partie, niveau=partie.niveau)
+    fenetre = EcranAventureTroisLunes(partie)
 
     def verifier(_dt: float) -> None:
         if not fenetre.termine:
@@ -241,7 +241,7 @@ def _ouvrir_aventure_trois_lunes(profil: Profil, partie: Partie) -> None:
 
 
 def _ouvrir_aventure_asteroides(profil: Profil, partie: Partie) -> None:
-    fenetre = EcranAventureAsteroides(partie, niveau=partie.niveau)
+    fenetre = EcranAventureAsteroides(partie)
 
     def verifier(_dt: float) -> None:
         if fenetre.combat_demande:
@@ -264,7 +264,7 @@ def _ouvrir_aventure_asteroides(profil: Profil, partie: Partie) -> None:
 
 
 def _ouvrir_aventure_police(profil: Profil, partie: Partie) -> None:
-    fenetre = EcranAventurePolice(partie, niveau=partie.niveau)
+    fenetre = EcranAventurePolice(partie)
 
     def verifier(_dt: float) -> None:
         if not fenetre.termine:
@@ -298,7 +298,7 @@ def _ouvrir_combat(profil: Profil, partie: Partie, combat: Combat | None = None)
     specs.md 2.5, combat_aventure_asteroides) ; None pour un Prime/Boss normal
     (combat_depuis_partie, tirage standard lie au niveau)."""
     combat = combat or combat_depuis_partie(partie)
-    fenetre = FenetreCombat(combat)
+    fenetre = FenetreCombat(combat, partie)
 
     def verifier(_dt: float) -> None:
         if combat.etat == EtatCombat.EN_COURS:

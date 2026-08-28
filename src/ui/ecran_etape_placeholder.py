@@ -66,7 +66,7 @@ class EcranEtapePlaceholder(pyglet.window.Window):
         elements = [_sprite_etire(FOND_IMAGE, 0, 0, LARGEUR_FENETRE, HAUTEUR_FENETRE, lot)]
         elements.append(
             pyglet.text.Label(
-                f"{titre} - Niveau {self.partie.niveau}",
+                titre,
                 x=LARGEUR_FENETRE / 2,
                 y=HAUTEUR_FENETRE - 60,
                 anchor_x="center",

@@ -57,13 +57,15 @@ body {
 /* Barre laterale persistante des ecrans du parcours hors combat (specs.md 2.4/10.3) : Niveau,
    Argent, et deux boutons qui ouvrent le Deck/Vaisseau en survol (#ecran-deck/#ecran-vaisseau,
    .ecran-survol ci-dessus) sans quitter l'ecran courant - equivalent de src/ui/barre_laterale.py
-   cote PC. Ecrans concernes bascules par actualiserBarreLaterale() dans web/app.js. Simplification
-   web : overlay en coin (largeur fixe et etroite, libelles abreges) plutot qu'une bande qui
-   reserve de la place (pas de reflow des ecrans existants, deja tous centres/fluides) - masquee en
-   portrait (ecran deja tres contraint en largeur, cf. #conseil-rotation) et sous 760px de large en
-   paysage : mesure au Playwright, c'est le seuil qui evite tout chevauchement avec la grille de 5
-   modules (#modules-station-service et etapes "choix_module" des Aventures Trois lunes/Asteroides,
-   seuls ecrans a s'approcher autant du bord gauche) sur les tailles d'ecran usuelles - en dessous
+   cote PC. Affichee y compris en Combat (decision utilisateur), decalee sous #entete dans ce cas
+   (classe .barre-laterale-combat ci-dessous, cf. Y_HAUT_BARRE_COMBAT cote PC/src/ui/fenetre.py) -
+   ecrans concernes bascules par actualiserBarreLaterale() dans web/app.js. Simplification web :
+   overlay en coin (largeur fixe et etroite, libelles abreges) plutot qu'une bande qui reserve de
+   la place (pas de reflow des ecrans existants, deja tous centres/fluides) - masquee en portrait
+   (ecran deja tres contraint en largeur, cf. #conseil-rotation) et sous 820px de large en paysage :
+   mesure au Playwright, c'est le seuil qui evite tout chevauchement avec la grille de 5 modules
+   (#modules-station-service et etapes "choix_module" des Aventures Trois lunes/Asteroides, seuls
+   ecrans a s'approcher autant du bord gauche) sur les tailles d'ecran usuelles - en dessous
    (iPhone SE et plus petit), la barre reste simplement absente. */
 #barre-laterale {
     position: fixed;
@@ -79,6 +81,12 @@ body {
     background: rgba(20, 24, 34, 0.8);
     border: 1px solid #5a6e91;
     border-radius: 10px;
+}
+
+/* #entete (Electricite/Fin de tour) occupe deja le haut de l'ecran en Combat (~39px mesures au
+   Playwright + marge) : decale la barre en dessous plutot que par-dessus. */
+#barre-laterale.barre-laterale-combat {
+    top: 56px;
 }
 
 @media (orientation: portrait), (max-width: 819px) {
@@ -1200,12 +1208,6 @@ body {
 
 #titre-fin-combat.victoire {
     color: rgb(70, 190, 90);
-}
-
-#niveau-fin-combat {
-    margin: 0.2rem 0 0;
-    font-size: 1rem;
-    opacity: 0.85;
 }
 
 #message-defaite {

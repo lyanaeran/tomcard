@@ -89,7 +89,7 @@ class EcranChoixNiveau(pyglet.window.Window):
         elements = [_sprite_etire(FOND_IMAGE, 0, 0, LARGEUR_FENETRE, HAUTEUR_FENETRE, lot)]
         elements.append(
             pyglet.text.Label(
-                f"Niveau {self.partie.niveau}",
+                "Choix du prochain niveau",
                 x=LARGEUR_FENETRE / 2,
                 y=HAUTEUR_FENETRE - 60,
                 anchor_x="center",

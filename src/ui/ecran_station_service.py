@@ -150,7 +150,7 @@ class EcranStationService(pyglet.window.Window):
         elements = [_sprite_etire(FOND_IMAGE, 0, 0, LARGEUR_FENETRE, HAUTEUR_FENETRE, lot)]
         elements.append(
             pyglet.text.Label(
-                f"Station service - Niveau {self.partie.niveau} - {self.partie.argent} €",
+                "Station service",
                 x=LARGEUR_FENETRE / 2,
                 y=HAUTEUR_FENETRE - 40,
                 anchor_x="center",

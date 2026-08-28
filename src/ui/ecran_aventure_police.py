@@ -102,10 +102,9 @@ class EcranAventurePolice(pyglet.window.Window):
     """Aventure "Police" (specs.md 2.5). `self.termine` signale a l'appelant qu'il peut
     sauvegarder la partie et enchainer sur le choix du prochain niveau."""
 
-    def __init__(self, partie: Partie, niveau: int):
+    def __init__(self, partie: Partie):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.partie = partie
-        self.niveau = niveau
         # Un seul chargement, reutilise pour chaque tirage (charger_cartes() reconstruit de
         # nouvelles instances a chaque appel, ce qui casserait toute comparaison par identite).
         self.cartes = charger_cartes()
@@ -143,7 +142,7 @@ class EcranAventurePolice(pyglet.window.Window):
         elements = [_sprite_etire(FOND_POLICE, 0, 0, LARGEUR_FENETRE, HAUTEUR_FENETRE, lot)]
         elements.append(
             pyglet.text.Label(
-                f"Police - Niveau {self.niveau}",
+                "Police",
                 x=LARGEUR_FENETRE / 2,
                 y=HAUTEUR_FENETRE - 50,
                 anchor_x="center",

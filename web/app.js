@@ -570,6 +570,8 @@ function rendre() {
     document.querySelectorAll(".case[data-id]").forEach((element) => {
         attacherPressionCase(element, element.dataset.id, element.dataset.type);
     });
+    actualiserBarreLaterale(true);
+
     document.querySelectorAll(".carte").forEach((element) => {
         const carte = etatCourant.main.find((c) => c.index === Number(element.dataset.index));
         element.addEventListener("click", () => selectionnerCarte(carte));
@@ -583,9 +585,8 @@ function rendre() {
 // manuellement (console du navigateur) en attendant. nouveauChoixModule(graine) tire les
 // candidats via bridge.py puis affiche l'ecran ; choisirModule ne fait encore que logger le
 // choix, aucun etat de parcours a mettre a jour pour l'instant.
-function afficherChoixModule(candidats, niveau = null) {
-    document.getElementById("titre-choix-module").textContent =
-        niveau !== null ? `Nouveau module - Niveau ${niveau}` : "Nouveau module";
+function afficherChoixModule(candidats) {
+    document.getElementById("titre-choix-module").textContent = "Nouveau module";
     document.getElementById("candidats-module").innerHTML = candidats
         .map(
             (candidat, index) => `
@@ -626,7 +627,7 @@ window.nouveauChoixModule = nouveauChoixModule;
 // main.py:_traiter_action cote PC (Niveau 1 sans 2e module equipe = pas encore choisi).
 function ouvrirChoixModulePartie(partie) {
     partieActive = partie;
-    afficherChoixModule(appelerBridge("choix_module_partie_web", JSON.stringify(partie)), partie.niveau);
+    afficherChoixModule(appelerBridge("choix_module_partie_web", JSON.stringify(partie)));
 }
 
 // Ouvre le choix du prochain niveau pour une partie reelle - meme condition d'appel que
@@ -688,8 +689,7 @@ function instructionStationService() {
 }
 
 function rendreStationService() {
-    document.getElementById("titre-station-service").textContent =
-        `Station service - Niveau ${partieActive.niveau} - ${partieActive.argent} €`;
+    document.getElementById("titre-station-service").textContent = "Station service";
     const vaisseau = appelerBridge("infos_vaisseau_web", JSON.stringify(partieActive));
     document.getElementById("modules-station-service").innerHTML = Object.entries(vaisseau)
         .map(([position, etat]) => {
@@ -859,7 +859,7 @@ function ouvrirAventureTroisLunesPartie(partie) {
 }
 
 function rendreAventureTroisLunes() {
-    document.getElementById("titre-aventure-trois-lunes").textContent = `Trois lunes - Niveau ${partieActive.niveau}`;
+    document.getElementById("titre-aventure-trois-lunes").textContent = "Trois lunes";
 
     const description = document.getElementById("description-aventure-trois-lunes");
     const choix = document.getElementById("choix-aventure-trois-lunes");
@@ -1015,7 +1015,7 @@ function ouvrirAventureAsteroidesPartie(partie) {
 }
 
 function rendreAventureAsteroides() {
-    document.getElementById("titre-aventure-asteroides").textContent = `Asteroides - Niveau ${partieActive.niveau}`;
+    document.getElementById("titre-aventure-asteroides").textContent = "Asteroides";
 
     const description = document.getElementById("description-aventure-asteroides");
     const choix = document.getElementById("choix-aventure-asteroides");
@@ -1084,9 +1084,9 @@ function cliquerChoixAsteroides(identifiant) {
         etapeAventureAsteroides = "choix_module";
         rendreAventureAsteroides();
     } else if (identifiant === "affronter") {
-        appliquerResultat(appelerBridge("combat_aventure_asteroides_web", JSON.stringify(partieActive)));
         masquerTousLesEcrans();
         document.getElementById("app").classList.remove("cachee");
+        appliquerResultat(appelerBridge("combat_aventure_asteroides_web", JSON.stringify(partieActive)));
     }
 }
 
@@ -1184,7 +1184,7 @@ function ouvrirAventurePolicePartie(partie) {
 }
 
 function rendreAventurePolice() {
-    document.getElementById("titre-aventure-police").textContent = `Police - Niveau ${partieActive.niveau}`;
+    document.getElementById("titre-aventure-police").textContent = "Police";
 
     const description = document.getElementById("description-aventure-police");
     const carteActuelle = document.getElementById("carte-actuelle-aventure-police");
@@ -1269,7 +1269,7 @@ function terminerAventurePolice() {
 function ouvrirEtapePlaceholderPartie(partie, type) {
     partieActive = partie;
     const [image, titre] = LIBELLES_TYPE_ETAPE[type];
-    document.getElementById("titre-etape-placeholder").textContent = `${titre} - Niveau ${partie.niveau}`;
+    document.getElementById("titre-etape-placeholder").textContent = titre;
     document.getElementById("image-etape-placeholder").src = image;
     masquerTousLesEcrans();
     document.getElementById("ecran-etape-placeholder").classList.remove("cachee");
@@ -1301,7 +1301,7 @@ const LIBELLES_TYPE_ETAPE = {
 };
 
 function afficherChoixNiveau(resultat) {
-    document.getElementById("titre-choix-niveau").textContent = `Niveau ${resultat.niveau}`;
+    document.getElementById("titre-choix-niveau").textContent = "Choix du prochain niveau";
     document.getElementById("candidats-niveau").innerHTML = resultat.propositions
         .map((type, index) => {
             const [image, titre, description] = LIBELLES_TYPE_ETAPE[type];
@@ -1327,9 +1327,9 @@ function choisirEtape(type) {
         return;
     }
     if (TYPES_COMBAT.has(type)) {
-        appliquerResultat(appelerBridge("continuer_partie_web", JSON.stringify(partieActive)));
         masquerTousLesEcrans();
         document.getElementById("app").classList.remove("cachee");
+        appliquerResultat(appelerBridge("continuer_partie_web", JSON.stringify(partieActive)));
     } else if (type === "STATION_SERVICE") {
         ouvrirStationServicePartie(partieActive);
     } else if (type === "AVENTURE") {
@@ -1361,13 +1361,10 @@ window.choixNiveau = choixNiveau;
 // manuel en attendant. nouvelleDefaite() n'a besoin d'aucune donnee (texte fixe) ;
 // nouvelleVictoire(graine) tire les candidats de recompense via bridge.py (un par module d'un
 // vaisseau tire au sort - demo, pas un vrai combat termine pour l'instant).
-function afficherFinCombat(victoire, candidats, niveau = null) {
+function afficherFinCombat(victoire, candidats) {
     const titre = document.getElementById("titre-fin-combat");
     titre.textContent = victoire ? "VICTOIRE" : "DEFAITE";
     titre.className = victoire ? "victoire" : "defaite";
-    const niveauElement = document.getElementById("niveau-fin-combat");
-    niveauElement.textContent = niveau !== null ? `Niveau ${niveau}` : "";
-    niveauElement.classList.toggle("cachee", niveau === null);
     document.getElementById("message-defaite").classList.toggle("cachee", victoire);
     document.getElementById("candidats-recompense").classList.toggle("cachee", !victoire);
     document.getElementById("instruction-fin-combat").classList.toggle("cachee", !victoire);
@@ -1428,9 +1425,9 @@ window.nouvelleDefaite = nouvelleDefaite;
 function terminerCombatPartie() {
     if (etatCourant.etat === "VICTOIRE") {
         const candidats = appelerBridge("candidats_recompense_partie_web", JSON.stringify(partieActive));
-        afficherFinCombat(true, candidats, partieActive.niveau);
+        afficherFinCombat(true, candidats);
     } else {
-        afficherFinCombat(false, [], partieActive.niveau);
+        afficherFinCombat(false, []);
     }
 }
 
@@ -1701,7 +1698,7 @@ function retourDepuisDeck() {
 // afficherDeck/afficherAccueilJoueur qui masquent tous les autres ecrans. Chaque fonction de rendu
 // d'un ecran avec barre laterale l'appelle a chaque (re)affichage pour rester a jour si l'Argent/
 // le deck changent sans quitter l'ecran (Station service, Aventures).
-function actualiserBarreLaterale() {
+function actualiserBarreLaterale(enCombat = false) {
     const barre = document.getElementById("barre-laterale");
     if (!partieActive) {
         // Mode demonstration (window.nouveauChoixModule/choixNiveau/...) : pas de vraie Partie,
@@ -1712,7 +1709,27 @@ function actualiserBarreLaterale() {
     document.getElementById("niveau-barre-laterale").textContent = `Niveau ${partieActive.niveau}`;
     document.getElementById("argent-barre-laterale").textContent = `${partieActive.argent} €`;
     document.getElementById("compteur-deck-barre-laterale").textContent = `${partieActive.deck.length} cartes`;
+    // En Combat, #entete (Electricite/Fin de tour) occupe deja le haut de l'ecran : decale la
+    // barre sous ce bandeau (classe .barre-laterale-combat, style.css) plutot que par-dessus,
+    // meme principe que Y_HAUT_BARRE_COMBAT cote PC (src/ui/fenetre.py).
+    barre.classList.toggle("barre-laterale-combat", enCombat);
     barre.classList.remove("cachee");
+    if (enCombat && barreChevaucheVaisseau()) {
+        // Contrairement aux autres ecrans du parcours (largeur de grille fixe via clamp()), la
+        // largeur du bloc vaisseau en Combat depend aussi de la hauteur d'ecran (--taille-case,
+        // cf. style.css) : un seuil de largeur fixe ne suffit pas a garantir l'absence de
+        // chevauchement sur tous les formats (fenetre large et haute, tablette en paysage...) -
+        // verifie donc le chevauchement reel apres affichage plutot que de deviner un seuil.
+        barre.classList.add("cachee");
+    }
+}
+
+function barreChevaucheVaisseau() {
+    const grilleJoueur = document.querySelector(".grille-joueur");
+    if (!grilleJoueur) return false;
+    const rectBarre = document.getElementById("barre-laterale").getBoundingClientRect();
+    const rectGrille = grilleJoueur.getBoundingClientRect();
+    return rectBarre.right > rectGrille.left;
 }
 
 function ouvrirSurvolDeck() {

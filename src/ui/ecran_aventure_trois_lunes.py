@@ -134,10 +134,9 @@ class EcranAventureTroisLunes(pyglet.window.Window):
     resolu immediatement. `self.termine` signale a l'appelant qu'il peut sauvegarder la partie et
     enchainer sur le choix du prochain niveau."""
 
-    def __init__(self, partie: Partie, niveau: int):
+    def __init__(self, partie: Partie):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.partie = partie
-        self.niveau = niveau
         self.specs_par_id = {spec.id: spec for spec in charger_modules()}
         self.groupes_deck = _grouper_deck_par_id(partie.deck, charger_cartes())
         # "choix" (3 choix initiaux) -> "choix_module" (Ameliorer) ou "choix_carte" (Bricoler),
@@ -160,7 +159,7 @@ class EcranAventureTroisLunes(pyglet.window.Window):
         elements = [_sprite_etire(FOND_TROIS_LUNES, 0, 0, LARGEUR_FENETRE, HAUTEUR_FENETRE, lot)]
         elements.append(
             pyglet.text.Label(
-                f"Trois lunes - Niveau {self.niveau}",
+                "Trois lunes",
                 x=LARGEUR_FENETRE / 2,
                 y=HAUTEUR_FENETRE - 50,
                 anchor_x="center",

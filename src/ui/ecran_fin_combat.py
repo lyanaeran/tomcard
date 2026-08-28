@@ -105,11 +105,10 @@ class EcranFinCombat(pyglet.window.Window):
             color=(*COULEUR_DEFAITE, 255),
             batch=lot,
         )
-        niveau = self._dessiner_niveau(HAUTEUR_FENETRE - 170, lot)
         message = pyglet.text.Label(
             MESSAGE_DEFAITE,
             x=LARGEUR_FENETRE / 2,
-            y=HAUTEUR_FENETRE - 200,
+            y=HAUTEUR_FENETRE - 160,
             anchor_x="center",
             anchor_y="center",
             font_size=16,
@@ -126,19 +125,7 @@ class EcranFinCombat(pyglet.window.Window):
             color=(*COULEUR_TEXTE, 255),
             batch=lot,
         )
-        return [titre, niveau, message, instruction]
-
-    def _dessiner_niveau(self, y: float, lot: pyglet.graphics.Batch) -> pyglet.text.Label:
-        return pyglet.text.Label(
-            f"Niveau {self.partie.niveau}",
-            x=LARGEUR_FENETRE / 2,
-            y=y,
-            anchor_x="center",
-            anchor_y="center",
-            font_size=16,
-            color=(*COULEUR_TEXTE, 255),
-            batch=lot,
-        )
+        return [titre, message, instruction]
 
     def _dessiner_victoire(self, lot: pyglet.graphics.Batch) -> list:
         elements = [
@@ -152,7 +139,6 @@ class EcranFinCombat(pyglet.window.Window):
                 color=(*COULEUR_VICTOIRE, 255),
                 batch=lot,
             ),
-            self._dessiner_niveau(HAUTEUR_FENETRE - 120, lot),
         ]
         total = len(self.candidats)
         for index, (spec, carte) in enumerate(self.candidats):
