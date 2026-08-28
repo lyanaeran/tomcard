@@ -184,15 +184,43 @@ d'implémentation entre parenthèses pour chaque écran ; le detail de chacun re
 section (référencée), cette liste ne fait que les enchaîner.
 
 **Le niveau courant de la partie (`partie.niveau`) est affiché sur chaque écran du parcours**
-(décision utilisateur, repérage pendant les essais manuels) : dans l'en-tête du Combat (à côté de
-l'Électricité), dans le titre de Station service/Choix de module/Aventure-Planète commerciale
-("... - Niveau N"), en sous-titre de VICTOIRE/DÉFAITE (Fin de combat), en plus des écrans qui
-l'affichaient déjà (Écran de partie, Choix du prochain niveau). PC : `FenetreCombat`/
-`EcranStationService`/`EcranChoixModule`/`EcranEtapePlaceholder`/`EcranAventureTroisLunes`/
-`EcranFinCombat` reçoivent
-`niveau` (ou lisent `self.partie.niveau`) depuis `main.py`. Web : `partieActive.niveau` (déjà
-présent dans le JSON de `Partie`, aucun champ bridge supplémentaire nécessaire), lu directement par
-`web/app.js`. Non affiché à l'écran Victoire finale (le run est terminé à ce stade).
+(décision utilisateur, repérage pendant les essais manuels) : dans le titre de Station
+service/Choix de module/Choix du prochain niveau/Aventure/Planète commerciale ("... - Niveau N"),
+en sous-titre de VICTOIRE/DÉFAITE (Fin de combat), et depuis la **barre latérale** décrite
+ci-dessous sur ces mêmes écrans (redondant avec le titre, assumé — repérage rapide sans avoir à
+lire le titre). Non affiché à l'écran Victoire finale (le run est terminé à ce stade), ni dans
+l'en-tête du Combat (retiré de cet en-tête au profit de la barre latérale sur les autres écrans —
+décision utilisateur : pendant le Combat, l'Électricité/le bouton "Fin de tour" suffisent, le
+niveau n'y apporte rien de plus).
+
+**Barre latérale persistante** (décision utilisateur) affichée à gauche de tous les écrans du
+parcours **hors Combat** — Choix de module, Choix du prochain niveau, Station service, les trois
+Aventures, Planète commerciale (écran placeholder) et Fin de combat — mais pas sur l'Écran de
+partie/Deck/Victoire finale (qui affichent déjà Argent/deck/vaisseau autrement) ni sur le Combat
+(cf. ci-dessus). Contenu, du haut vers le bas : Niveau, Argent, un bouton Deck (icône
+`assets/interface/deck.png`, avec le nombre de cartes du deck en dessous) et un bouton Vaisseau
+(icône `assets/interface/vaisseau.png`) qui ouvrent chacun un écran de consultation en lecture
+seule **par-dessus l'écran appelant, qui reste ouvert et inchangé derrière** (aucun état interne à
+cet écran perdu/réinitialisé — important pour les écrans à état multi-étapes comme les Aventures
+Astéroïdes/Police) :
+- PC (`src/ui/barre_laterale.py`) : exploite le support natif de pyglet pour plusieurs fenêtres
+  simultanément — l'écran de consultation (`EcranDeck`/`EcranVaisseau`, nouveau) s'ouvre dans une
+  **fenêtre pyglet additionnelle**, sans fermer la fenêtre appelante ; se referme tout seul via un
+  petit minuteur dédié (`barre_laterale.ouvrir_survol`) qui surveille son `self.termine` et appelle
+  `.close()` — aucune modification nécessaire à l'orchestration existante de `main.py`. Largeur de
+  90px, choisie pour tenir sous la marge la plus étroite des écrans concernés (grille de modules de
+  Station service) sans retoucher leur mise en page.
+- Web (`web/app.js` : `actualiserBarreLaterale`/`ouvrirSurvolDeck`/`ouvrirSurvolVaisseau`) :
+  `#ecran-deck`/`#ecran-vaisseau` passent en `position: fixed` (classe `.ecran-survol`,
+  `web/style.css`) pour se superposer à l'écran actuellement affiché sans passer par
+  `masquerTousLesEcrans()` (qui le masquerait) — même principe que côté PC, sans fenêtre
+  additionnelle puisque le web n'affiche qu'un seul écran DOM visible à la fois. **Simplification
+  web** (écart documenté, cf. CLAUDE.md) : barre étroite (60px) et **masquée sous 820px de large en
+  paysage, et systématiquement en portrait** — mesuré empiriquement (Playwright) comme le seuil au
+  delà duquel elle ne chevauche jamais la grille de 5 modules (le cas le plus large, Station service
+  et l'étape "choix_module" des Aventures Trois lunes/Astéroïdes) aux tailles d'écran de téléphone
+  usuelles ; en dessous, la barre est simplement absente (Argent/niveau restent visibles dans le
+  titre de l'écran).
 
 1. **Sélection du joueur** (implémenté, §10.3) — choisir un profil existant ou en créer un →
    Écran de partie (étape 2). Bouton "Quitter le jeu" (**PC uniquement** : ferme l'application ;

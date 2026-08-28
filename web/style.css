@@ -40,6 +40,102 @@ body {
     display: none !important;
 }
 
+/* Ecran de consultation ouvert "par-dessus" l'ecran appelant (Deck/Vaisseau, cf. #barre-laterale
+   plus bas) : position:fixed pour couvrir tout le viewport quel que soit l'ecran encore visible
+   derriere (jamais masque par masquerTousLesEcrans() dans ce cas, cf. web/app.js) - meme principe
+   que le second fenetre pyglet ouverte par-dessus cote PC (src/ui/barre_laterale.py). Fonctionne
+   aussi a l'identique quand ces ecrans sont ouverts "en plein" (masquerTousLesEcrans() a deja tout
+   cache) : le rendu final est le meme, fixed ou non, des lors qu'il n'y a rien d'autre a voir. */
+.ecran-survol {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    overflow-y: auto;
+    background: #0b1020 url("../assets/fond.PNG") center / 100% 100% no-repeat;
+}
+
+/* Barre laterale persistante des ecrans du parcours hors combat (specs.md 2.4/10.3) : Niveau,
+   Argent, et deux boutons qui ouvrent le Deck/Vaisseau en survol (#ecran-deck/#ecran-vaisseau,
+   .ecran-survol ci-dessus) sans quitter l'ecran courant - equivalent de src/ui/barre_laterale.py
+   cote PC. Ecrans concernes bascules par actualiserBarreLaterale() dans web/app.js. Simplification
+   web : overlay en coin (largeur fixe et etroite, libelles abreges) plutot qu'une bande qui
+   reserve de la place (pas de reflow des ecrans existants, deja tous centres/fluides) - masquee en
+   portrait (ecran deja tres contraint en largeur, cf. #conseil-rotation) et sous 760px de large en
+   paysage : mesure au Playwright, c'est le seuil qui evite tout chevauchement avec la grille de 5
+   modules (#modules-station-service et etapes "choix_module" des Aventures Trois lunes/Asteroides,
+   seuls ecrans a s'approcher autant du bord gauche) sur les tailles d'ecran usuelles - en dessous
+   (iPhone SE et plus petit), la barre reste simplement absente. */
+#barre-laterale {
+    position: fixed;
+    top: max(0.6rem, env(safe-area-inset-top));
+    left: max(0.6rem, env(safe-area-inset-left));
+    z-index: 25;
+    display: flex;
+    width: 60px;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem;
+    background: rgba(20, 24, 34, 0.8);
+    border: 1px solid #5a6e91;
+    border-radius: 10px;
+}
+
+@media (orientation: portrait), (max-width: 819px) {
+    #barre-laterale {
+        display: none !important;
+    }
+}
+
+.barre-laterale-info {
+    font-size: 0.68rem;
+    font-weight: bold;
+    text-align: center;
+}
+
+.barre-laterale-argent {
+    color: #ffdc78;
+    margin-bottom: 0.2rem;
+}
+
+.barre-laterale-bouton {
+    position: relative;
+    width: 38px;
+    height: 38px;
+    padding: 4px;
+    border: 2px solid #5a6e91;
+    border-radius: 8px;
+    background: rgba(10, 14, 24, 0.6);
+    cursor: pointer;
+}
+
+.barre-laterale-bouton:hover {
+    border-color: #ffffff;
+}
+
+.barre-laterale-bouton img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* Groupe bouton Deck + compteur de cartes en flux normal (pas de position:absolute) pour que le
+   gap de #barre-laterale reserve naturellement sa place, sans jamais chevaucher le bouton Vaisseau
+   en dessous quel que soit le nombre de chiffres du compteur. */
+.barre-laterale-groupe {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+}
+
+.barre-laterale-compteur {
+    font-size: 0.6rem;
+    color: #e8ecff;
+    white-space: nowrap;
+}
+
 #statut-chargement {
     padding: 2rem;
     text-align: center;
@@ -82,11 +178,6 @@ body {
 #electricite {
     font-weight: bold;
     font-size: 1.1rem;
-}
-
-#niveau-combat {
-    font-size: 1rem;
-    opacity: 0.85;
 }
 
 #boutons-entete {
@@ -1200,10 +1291,8 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    min-height: 100vh;
     padding: 2rem 1rem;
     text-align: center;
-    position: relative;
 }
 
 #ecran-deck h1 {
@@ -1212,11 +1301,36 @@ body {
     font-weight: normal;
 }
 
-/* Seul moyen de fermer cet ecran et de revenir a l'ecran de partie, cf. web/app.js. */
-#bouton-retour-deck {
+/* Seul moyen de fermer ces ecrans et de revenir a l'ecran appelant, cf. web/app.js. */
+#bouton-retour-deck,
+#bouton-retour-vaisseau {
     position: absolute;
     top: 2rem;
     right: 1rem;
+}
+
+/* Vaisseau en survol (cf. #barre-laterale) : cartes module reprises de #vaisseau-accueil
+   (.module-accueil), lecture seule - pas de position de module affichee (Avant gauche/Arriere
+   droite/...), simplification web deja en usage pour #modules-station-service. */
+#ecran-vaisseau {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+#ecran-vaisseau h1 {
+    margin: 0 0 1.5rem;
+    font-size: 1.8rem;
+    font-weight: normal;
+}
+
+#modules-vaisseau {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
 }
 
 #grille-deck {
@@ -1361,7 +1475,8 @@ body {
 #bouton-termine-station-service,
 #bouton-continuer-victoire-finale,
 #bouton-termine-etape-placeholder,
-#bouton-retour-deck {
+#bouton-retour-deck,
+#bouton-retour-vaisseau {
     font-size: 1rem;
     padding: 0.6rem 1.4rem;
     border: none;

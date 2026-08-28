@@ -11,6 +11,10 @@ import pyglet
 from pyglet import shapes
 
 from src.gameplay.donnees import SpecModule
+from src.gameplay.partie import Partie, deck_de_la_partie
+from src.ui import barre_laterale
+from src.ui.ecran_deck import EcranDeck
+from src.ui.ecran_vaisseau import EcranVaisseau
 from src.ui.fenetre import FOND_IMAGE, HAUTEUR_FENETRE, LARGEUR_FENETRE, _sprite_ajuste, _sprite_etire
 
 COULEUR_FOND_CARTE = (20, 24, 34)
@@ -44,11 +48,12 @@ def _point_dans_rectangle(px: float, py: float, x: float, y: float, largeur: flo
 class EcranChoixModule(pyglet.window.Window):
     """Ecran de choix d'un nouveau module parmi 3 candidats (specs.md 2.3, Niveau 1)."""
 
-    def __init__(self, candidats: list[SpecModule], niveau: int = 1):
+    def __init__(self, candidats: list[SpecModule], partie: Partie):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.candidats = candidats
-        self.niveau = niveau
+        self.partie = partie
         self.index_survole: int | None = None
+        self.survole_barre: str | None = None
         self.module_choisi: SpecModule | None = None
 
     def on_draw(self) -> None:
@@ -62,7 +67,7 @@ class EcranChoixModule(pyglet.window.Window):
         elements = [_sprite_etire(FOND_IMAGE, 0, 0, LARGEUR_FENETRE, HAUTEUR_FENETRE, lot)]
         elements.append(
             pyglet.text.Label(
-                f"Nouveau module - Niveau {self.niveau}",
+                f"Nouveau module - Niveau {self.partie.niveau}",
                 x=LARGEUR_FENETRE / 2,
                 y=HAUTEUR_FENETRE - 60,
                 anchor_x="center",
@@ -86,6 +91,7 @@ class EcranChoixModule(pyglet.window.Window):
                 batch=lot,
             )
         )
+        elements.extend(barre_laterale.dessiner(self.partie, self.survole_barre, lot))
         return elements
 
     def _dessiner_candidat(self, index: int, candidat: SpecModule, lot: pyglet.graphics.Batch) -> list:
@@ -133,8 +139,16 @@ class EcranChoixModule(pyglet.window.Window):
 
     def on_mouse_motion(self, x: int, y: int, dx: int, dy: int) -> None:
         self.index_survole = self._index_a(x, y)
+        self.survole_barre = barre_laterale.bouton_survole(x, y)
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
+        bouton_barre = barre_laterale.bouton_survole(x, y)
+        if bouton_barre == "deck":
+            barre_laterale.ouvrir_survol(EcranDeck(deck_de_la_partie(self.partie)))
+            return
+        if bouton_barre == "vaisseau":
+            barre_laterale.ouvrir_survol(EcranVaisseau(self.partie))
+            return
         index = self._index_a(x, y)
         if index is not None:
             self.module_choisi = self.candidats[index]

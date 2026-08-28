@@ -1,0 +1,118 @@
+"""
+Barre laterale persistante (specs.md 2.4/10.3) : affichee a gauche des ecrans du parcours hors
+combat - niveau, Argent, et deux boutons qui ouvrent un ecran de consultation en survol (Deck,
+Vaisseau) par-dessus l'ecran appelant, qui reste ouvert et inchange derriere. Pas de barre pendant
+le combat (decision utilisateur) : le niveau y est retire de l'entete existant, mais Argent/deck/
+vaisseau y sont deja visibles autrement (main/pioche, vaisseau du joueur a l'ecran).
+
+Ce module ne definit pas d'ecran : seulement des fonctions de dessin/hit-test partagees, a appeler
+depuis le `_dessiner()`/`on_mouse_motion()`/`on_mouse_press()` de chaque ecran qui integre la
+barre - meme convention de duplication legere que le reste du projet (CLAUDE.md), chaque ecran
+garde son propre etat de survol/clic.
+"""
+
+import pyglet
+from pyglet import shapes
+
+from src.gameplay.donnees import RACINE
+from src.gameplay.partie import Partie
+from src.ui.fenetre import HAUTEUR_FENETRE, _sprite_ajuste
+
+# Largeur choisie pour tenir sous la marge la plus etroite des ecrans qui l'affichent (grille de
+# modules de Station service, marge de 92px) sans avoir a retoucher leur mise en page.
+LARGEUR_BARRE = 90
+
+COULEUR_FOND_BOUTON = (20, 24, 34)
+COULEUR_CONTOUR_BOUTON = (90, 110, 150)
+COULEUR_CONTOUR_SURVOLE = (255, 255, 255)
+COULEUR_TEXTE = (255, 255, 255)
+COULEUR_ARGENT = (255, 220, 120)
+OPACITE_FOND = 190
+
+_ICONE_DECK = str(RACINE / "assets" / "interface" / "deck.png")
+_ICONE_VAISSEAU = str(RACINE / "assets" / "interface" / "vaisseau.png")
+
+TAILLE_ICONE = 60
+X_ICONE = (LARGEUR_BARRE - TAILLE_ICONE) / 2
+Y_NIVEAU = HAUTEUR_FENETRE - 30
+Y_ARGENT = HAUTEUR_FENETRE - 54
+Y_HAUT_DECK = HAUTEUR_FENETRE - 100
+Y_COMPTEUR_DECK = Y_HAUT_DECK - TAILLE_ICONE - 14
+Y_HAUT_VAISSEAU = Y_COMPTEUR_DECK - 30
+
+
+def _rect_bouton_deck() -> tuple[float, float, float, float]:
+    return X_ICONE, Y_HAUT_DECK - TAILLE_ICONE, TAILLE_ICONE, TAILLE_ICONE
+
+
+def _rect_bouton_vaisseau() -> tuple[float, float, float, float]:
+    return X_ICONE, Y_HAUT_VAISSEAU - TAILLE_ICONE, TAILLE_ICONE, TAILLE_ICONE
+
+
+def _point_dans_rectangle(px: float, py: float, x: float, y: float, largeur: float, hauteur: float) -> bool:
+    return x <= px <= x + largeur and y <= py <= y + hauteur
+
+
+def bouton_survole(x: int, y: int) -> str | None:
+    """Identifiant ("deck"/"vaisseau") du bouton sous ce point, None si aucun - a appeler depuis
+    on_mouse_motion/on_mouse_press de l'ecran integrant la barre."""
+    if _point_dans_rectangle(x, y, *_rect_bouton_deck()):
+        return "deck"
+    if _point_dans_rectangle(x, y, *_rect_bouton_vaisseau()):
+        return "vaisseau"
+    return None
+
+
+def dessiner(partie: Partie, survole: str | None, lot: pyglet.graphics.Batch) -> list:
+    """Dessine la barre : niveau, Argent, boutons Deck (avec nombre de cartes)/Vaisseau -
+    `survole` est l'identifiant renvoye par bouton_survole pour l'etat de survol courant."""
+    elements = [
+        pyglet.text.Label(
+            f"Niveau {partie.niveau}",
+            x=LARGEUR_BARRE / 2, y=Y_NIVEAU, anchor_x="center", anchor_y="center",
+            font_size=13, color=(*COULEUR_TEXTE, 255), batch=lot,
+        ),
+        pyglet.text.Label(
+            f"{partie.argent} €",
+            x=LARGEUR_BARRE / 2, y=Y_ARGENT, anchor_x="center", anchor_y="center",
+            font_size=13, color=(*COULEUR_ARGENT, 255), batch=lot,
+        ),
+    ]
+    elements.extend(_dessiner_bouton(_rect_bouton_deck(), _ICONE_DECK, survole == "deck", lot))
+    elements.append(
+        pyglet.text.Label(
+            f"{len(partie.deck)} cartes",
+            x=LARGEUR_BARRE / 2, y=Y_COMPTEUR_DECK, anchor_x="center", anchor_y="center",
+            font_size=10, color=(*COULEUR_TEXTE, 255), batch=lot,
+        )
+    )
+    elements.extend(_dessiner_bouton(_rect_bouton_vaisseau(), _ICONE_VAISSEAU, survole == "vaisseau", lot))
+    return elements
+
+
+def _dessiner_bouton(
+    rect: tuple[float, float, float, float], icone: str, survole: bool, lot: pyglet.graphics.Batch
+) -> list:
+    x, y, largeur, hauteur = rect
+    cadre = shapes.BorderedRectangle(
+        x, y, largeur, hauteur, border=2, color=COULEUR_FOND_BOUTON,
+        border_color=COULEUR_CONTOUR_SURVOLE if survole else COULEUR_CONTOUR_BOUTON, batch=lot,
+    )
+    cadre.opacity = OPACITE_FOND
+    sprite = _sprite_ajuste(icone, x, y, largeur, hauteur, lot)
+    return [cadre, sprite]
+
+
+def ouvrir_survol(fenetre_survol: pyglet.window.Window) -> None:
+    """Ouvre un ecran de consultation (EcranDeck/EcranVaisseau) par-dessus l'ecran appelant, qui
+    reste ouvert et inchange derriere (aucun etat a preserver/rouvrir, contrairement a
+    main.py:_ouvrir_voir_deck qui fermait l'ecran appelant avant d'afficher celui-ci) -
+    fenetre_survol se referme toute seule via son bouton Retour (self.termine)."""
+
+    def verifier(_dt: float) -> None:
+        if not fenetre_survol.termine:
+            return
+        pyglet.clock.unschedule(verifier)
+        fenetre_survol.close()
+
+    pyglet.clock.schedule_interval(verifier, 1 / 30)

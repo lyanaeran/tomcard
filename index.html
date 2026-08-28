@@ -4,14 +4,27 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
     <title>Space Fight - prototype web</title>
-    <link rel="stylesheet" href="web/style.css?v=50">
-    <link rel="manifest" href="web/manifest.json?v=50">
+    <link rel="stylesheet" href="web/style.css?v=51">
+    <link rel="manifest" href="web/manifest.json?v=51">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0b1020">
 </head>
 <body>
     <div id="statut-chargement">Chargement...</div>
+    <div id="barre-laterale" class="cachee">
+        <div id="niveau-barre-laterale" class="barre-laterale-info"></div>
+        <div id="argent-barre-laterale" class="barre-laterale-info barre-laterale-argent"></div>
+        <div class="barre-laterale-groupe">
+            <button id="bouton-deck-barre-laterale" class="barre-laterale-bouton">
+                <img src="assets/interface/deck.png" alt="Deck">
+            </button>
+            <span id="compteur-deck-barre-laterale" class="barre-laterale-compteur"></span>
+        </div>
+        <button id="bouton-vaisseau-barre-laterale" class="barre-laterale-bouton">
+            <img src="assets/interface/vaisseau.png" alt="Vaisseau">
+        </button>
+    </div>
     <div id="ecran-selection-joueur" class="cachee">
         <h1>Choisir un joueur</h1>
         <div id="liste-joueurs"></div>
@@ -34,7 +47,6 @@
     <div id="app" class="cachee">
         <div id="entete">
             <span id="electricite"></span>
-            <span id="niveau-combat"></span>
             <div id="boutons-entete">
                 <button id="plein-ecran"></button>
                 <button id="fin-tour">Fin de tour</button>
@@ -122,13 +134,18 @@
         <div id="info-carte-victoire-finale"></div>
         <button id="bouton-continuer-victoire-finale">Continuer</button>
     </div>
-    <div id="ecran-deck" class="cachee">
+    <div id="ecran-deck" class="cachee ecran-survol">
         <h1>Deck</h1>
         <button id="bouton-retour-deck">Retour</button>
         <div id="grille-deck"></div>
         <div id="info-carte-deck"></div>
     </div>
+    <div id="ecran-vaisseau" class="cachee ecran-survol">
+        <h1>Vaisseau</h1>
+        <button id="bouton-retour-vaisseau">Retour</button>
+        <div id="modules-vaisseau"></div>
+    </div>
     <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
-    <script src="web/app.js?v=50"></script>
+    <script src="web/app.js?v=51"></script>
 </body>
 </html>
