@@ -14,8 +14,18 @@ from pyglet import shapes
 from src.gameplay.carte import Carte
 from src.gameplay.donnees import RACINE, charger_cartes, charger_modules, image_case_module
 from src.gameplay.parcours import pool_toutes_cartes, tirer_carte_recompense
-from src.gameplay.partie import DEGATS_ASTEROIDES, Partie, ajouter_carte, id_de_carte, subir_degats_module
+from src.gameplay.partie import (
+    DEGATS_ASTEROIDES,
+    Partie,
+    ajouter_carte,
+    deck_de_la_partie,
+    id_de_carte,
+    subir_degats_module,
+)
+from src.ui import barre_laterale
+from src.ui.ecran_deck import EcranDeck
 from src.ui.ecran_station_service import POSITIONS_AFFICHEES
+from src.ui.ecran_vaisseau import EcranVaisseau
 from src.ui.fenetre import (
     COULEUR_ETOILE_RARETE,
     HAUTEUR_FENETRE,
@@ -126,10 +136,9 @@ class EcranAventureAsteroides(pyglet.window.Window):
     le combat scripte (choix "Affronter") ; `self.termine` signale qu'il peut sauvegarder la
     partie et enchainer sur le choix du prochain niveau (choix "Traverser" resolu)."""
 
-    def __init__(self, partie: Partie, niveau: int):
+    def __init__(self, partie: Partie):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.partie = partie
-        self.niveau = niveau
         self.specs_par_id = {spec.id: spec for spec in charger_modules()}
         # Un seul chargement, reutilise pour le tirage (_resoudre_sequence_2) et pour retrouver
         # l'id de la carte offerte (_prendre_carte_offerte) : charger_cartes() reconstruit de
@@ -147,6 +156,7 @@ class EcranAventureAsteroides(pyglet.window.Window):
         # qu'1 ou 2 boutons, jamais de grille) - None si la souris n'est sur aucun bouton.
         self._dernier_survol: tuple[float, float, float, float] | None = None
         self.combat_demande: bool = False
+        self.survole_barre: str | None = None
         self.termine: bool = False
 
     def on_draw(self) -> None:
@@ -160,7 +170,7 @@ class EcranAventureAsteroides(pyglet.window.Window):
         elements = [_sprite_etire(FOND_ASTEROIDES, 0, 0, LARGEUR_FENETRE, HAUTEUR_FENETRE, lot)]
         elements.append(
             pyglet.text.Label(
-                f"Asteroides - Niveau {self.niveau}",
+                "Asteroides",
                 x=LARGEUR_FENETRE / 2,
                 y=HAUTEUR_FENETRE - 50,
                 anchor_x="center",
@@ -178,6 +188,7 @@ class EcranAventureAsteroides(pyglet.window.Window):
             elements.extend(self._dessiner_message_simple(lot))
         else:
             elements.extend(self._dessiner_carte_offerte(lot))
+        elements.extend(barre_laterale.dessiner(self.partie, self.survole_barre, lot))
         return elements
 
     def _dessiner_choix(self, lot: pyglet.graphics.Batch) -> list:
@@ -355,6 +366,7 @@ class EcranAventureAsteroides(pyglet.window.Window):
 
     def on_mouse_motion(self, x: int, y: int, dx: int, dy: int) -> None:
         self._dernier_survol = None
+        self.survole_barre = barre_laterale.bouton_survole(x, y)
         if self.etape == "choix":
             self.index_survole = self._index_a(x, y, len(CHOIX), _rect_choix)
         elif self.etape == "choix_module":
@@ -369,6 +381,13 @@ class EcranAventureAsteroides(pyglet.window.Window):
                 self._dernier_survol = _rect_bouton_passer()
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
+        bouton_barre = barre_laterale.bouton_survole(x, y)
+        if bouton_barre == "deck":
+            barre_laterale.ouvrir_survol(EcranDeck(deck_de_la_partie(self.partie)))
+            return
+        if bouton_barre == "vaisseau":
+            barre_laterale.ouvrir_survol(EcranVaisseau(self.partie))
+            return
         if self.etape == "choix":
             self._cliquer_choix(x, y)
         elif self.etape == "choix_module":

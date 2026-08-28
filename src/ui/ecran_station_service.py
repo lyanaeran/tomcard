@@ -18,11 +18,15 @@ from src.gameplay.partie import (
     EtatModule,
     Partie,
     ameliorer_module,
+    deck_de_la_partie,
     deplacer_module,
     mettre_a_jour_module,
     reparer_module,
 )
+from src.ui import barre_laterale
 from src.ui.animation import AnimationPopup
+from src.ui.ecran_deck import EcranDeck
+from src.ui.ecran_vaisseau import EcranVaisseau
 from src.ui.fenetre import (
     COULEUR_OMBRE_POPUP,
     COULEUR_POPUP_DEGATS,
@@ -121,6 +125,7 @@ class EcranStationService(pyglet.window.Window):
         self.index_module_survole: int | None = None
         self.index_action_survolee: int | None = None
         self.bouton_termine_survole: bool = False
+        self.survole_barre: str | None = None
         self.termine: bool = False
         # Popup +N/Niveau N affiche 2 secondes sur la carte du module apres Reparer/Ameliorer/
         # Mettre a jour, meme mecanisme que les popups de degats/soin du combat (specs.md 2.2 :
@@ -145,7 +150,7 @@ class EcranStationService(pyglet.window.Window):
         elements = [_sprite_etire(FOND_IMAGE, 0, 0, LARGEUR_FENETRE, HAUTEUR_FENETRE, lot)]
         elements.append(
             pyglet.text.Label(
-                f"Station service - Niveau {self.partie.niveau} - {self.partie.argent} €",
+                "Station service",
                 x=LARGEUR_FENETRE / 2,
                 y=HAUTEUR_FENETRE - 40,
                 anchor_x="center",
@@ -162,6 +167,7 @@ class EcranStationService(pyglet.window.Window):
         elements.extend(self._dessiner_instruction(lot))
         elements.extend(self._dessiner_bouton_termine(lot))
         elements.extend(self._dessiner_popups(lot))
+        elements.extend(barre_laterale.dessiner(self.partie, self.survole_barre, lot))
         return elements
 
     def _dessiner_popups(self, lot: pyglet.graphics.Batch) -> list:
@@ -384,8 +390,16 @@ class EcranStationService(pyglet.window.Window):
         self.index_module_survole = self._index_module_a(x, y)
         self.index_action_survolee = self._index_action_a(x, y)
         self.bouton_termine_survole = _point_dans_rectangle(x, y, *self._rect_bouton_termine())
+        self.survole_barre = barre_laterale.bouton_survole(x, y)
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
+        bouton_barre = barre_laterale.bouton_survole(x, y)
+        if bouton_barre == "deck":
+            barre_laterale.ouvrir_survol(EcranDeck(deck_de_la_partie(self.partie)))
+            return
+        if bouton_barre == "vaisseau":
+            barre_laterale.ouvrir_survol(EcranVaisseau(self.partie))
+            return
         if _point_dans_rectangle(x, y, *self._rect_bouton_termine()):
             self.termine = True
             return

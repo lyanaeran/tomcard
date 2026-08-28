@@ -11,6 +11,10 @@ from pyglet import shapes
 
 from src.gameplay.carte import Carte, RareteCarte
 from src.gameplay.donnees import SpecModule
+from src.gameplay.partie import Partie, deck_de_la_partie
+from src.ui import barre_laterale
+from src.ui.ecran_deck import EcranDeck
+from src.ui.ecran_vaisseau import EcranVaisseau
 from src.ui.fenetre import (
     COULEUR_ETOILE_RARETE,
     FOND_IMAGE,
@@ -58,15 +62,16 @@ class EcranFinCombat(pyglet.window.Window):
     recompense parmi les candidats, un par module utilise - specs.md 2.1/6)."""
 
     def __init__(
-        self, victoire: bool, candidats: list[tuple[SpecModule, Carte | None]] | None = None, niveau: int = 1
+        self, victoire: bool, partie: Partie, candidats: list[tuple[SpecModule, Carte | None]] | None = None
     ):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.victoire = victoire
-        self.niveau = niveau
+        self.partie = partie
         # Seuls les modules avec un candidat reel sont affiches/cliquables (specs.md 2.1/6 :
         # un pool vide - aucune carte jouable non-Base pour ce module - n'a rien a proposer).
         self.candidats = [(spec, carte) for spec, carte in (candidats or []) if carte is not None]
         self.index_survole: int | None = None
+        self.survole_barre: str | None = None
         self.carte_choisie: Carte | None = None
         # True une fois que l'ecran peut etre ferme : defaite (clic n'importe ou), ou victoire
         # avec une carte choisie (ou sans aucun candidat a choisir, cf. on_mouse_press) - un seul
@@ -86,6 +91,7 @@ class EcranFinCombat(pyglet.window.Window):
             elements.extend(self._dessiner_victoire(lot))
         else:
             elements.extend(self._dessiner_defaite(lot))
+        elements.extend(barre_laterale.dessiner(self.partie, self.survole_barre, lot))
         return elements
 
     def _dessiner_defaite(self, lot: pyglet.graphics.Batch) -> list:
@@ -99,11 +105,10 @@ class EcranFinCombat(pyglet.window.Window):
             color=(*COULEUR_DEFAITE, 255),
             batch=lot,
         )
-        niveau = self._dessiner_niveau(HAUTEUR_FENETRE - 170, lot)
         message = pyglet.text.Label(
             MESSAGE_DEFAITE,
             x=LARGEUR_FENETRE / 2,
-            y=HAUTEUR_FENETRE - 200,
+            y=HAUTEUR_FENETRE - 160,
             anchor_x="center",
             anchor_y="center",
             font_size=16,
@@ -120,19 +125,7 @@ class EcranFinCombat(pyglet.window.Window):
             color=(*COULEUR_TEXTE, 255),
             batch=lot,
         )
-        return [titre, niveau, message, instruction]
-
-    def _dessiner_niveau(self, y: float, lot: pyglet.graphics.Batch) -> pyglet.text.Label:
-        return pyglet.text.Label(
-            f"Niveau {self.niveau}",
-            x=LARGEUR_FENETRE / 2,
-            y=y,
-            anchor_x="center",
-            anchor_y="center",
-            font_size=16,
-            color=(*COULEUR_TEXTE, 255),
-            batch=lot,
-        )
+        return [titre, message, instruction]
 
     def _dessiner_victoire(self, lot: pyglet.graphics.Batch) -> list:
         elements = [
@@ -146,7 +139,6 @@ class EcranFinCombat(pyglet.window.Window):
                 color=(*COULEUR_VICTOIRE, 255),
                 batch=lot,
             ),
-            self._dessiner_niveau(HAUTEUR_FENETRE - 120, lot),
         ]
         total = len(self.candidats)
         for index, (spec, carte) in enumerate(self.candidats):
@@ -245,8 +237,16 @@ class EcranFinCombat(pyglet.window.Window):
 
     def on_mouse_motion(self, x: int, y: int, dx: int, dy: int) -> None:
         self.index_survole = self._index_a(x, y)
+        self.survole_barre = barre_laterale.bouton_survole(x, y)
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
+        bouton_barre = barre_laterale.bouton_survole(x, y)
+        if bouton_barre == "deck":
+            barre_laterale.ouvrir_survol(EcranDeck(deck_de_la_partie(self.partie)))
+            return
+        if bouton_barre == "vaisseau":
+            barre_laterale.ouvrir_survol(EcranVaisseau(self.partie))
+            return
         if not self.victoire or not self.candidats:
             # Defaite, ou victoire sans aucun candidat (pool vide pour tous les modules utilises) :
             # un clic n'importe ou suffit a continuer, il n'y a rien a choisir.

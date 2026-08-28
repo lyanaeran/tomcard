@@ -18,10 +18,14 @@ from src.gameplay.partie import (
     PV_REPARATION_VAISSEAU,
     Partie,
     ameliorer_module_aventure,
+    deck_de_la_partie,
     reparer_vaisseau,
     retirer_carte,
 )
+from src.ui import barre_laterale
+from src.ui.ecran_deck import EcranDeck
 from src.ui.ecran_station_service import POSITIONS_AFFICHEES
+from src.ui.ecran_vaisseau import EcranVaisseau
 from src.ui.fenetre import HAUTEUR_FENETRE, LARGEUR_FENETRE, _sprite_ajuste, _sprite_etire
 
 FOND_TROIS_LUNES = str(RACINE / "assets" / "aventure" / "trois_lunes.png")
@@ -130,10 +134,9 @@ class EcranAventureTroisLunes(pyglet.window.Window):
     resolu immediatement. `self.termine` signale a l'appelant qu'il peut sauvegarder la partie et
     enchainer sur le choix du prochain niveau."""
 
-    def __init__(self, partie: Partie, niveau: int):
+    def __init__(self, partie: Partie):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.partie = partie
-        self.niveau = niveau
         self.specs_par_id = {spec.id: spec for spec in charger_modules()}
         self.groupes_deck = _grouper_deck_par_id(partie.deck, charger_cartes())
         # "choix" (3 choix initiaux) -> "choix_module" (Ameliorer) ou "choix_carte" (Bricoler),
@@ -142,6 +145,7 @@ class EcranAventureTroisLunes(pyglet.window.Window):
         self.message_resolu: str = ""
         self.index_survole: int | None = None
         self.bouton_survole: bool = False
+        self.survole_barre: str | None = None
         self.termine: bool = False
 
     def on_draw(self) -> None:
@@ -155,7 +159,7 @@ class EcranAventureTroisLunes(pyglet.window.Window):
         elements = [_sprite_etire(FOND_TROIS_LUNES, 0, 0, LARGEUR_FENETRE, HAUTEUR_FENETRE, lot)]
         elements.append(
             pyglet.text.Label(
-                f"Trois lunes - Niveau {self.niveau}",
+                "Trois lunes",
                 x=LARGEUR_FENETRE / 2,
                 y=HAUTEUR_FENETRE - 50,
                 anchor_x="center",
@@ -173,6 +177,7 @@ class EcranAventureTroisLunes(pyglet.window.Window):
             elements.extend(self._dessiner_choix_carte(lot))
         else:
             elements.extend(self._dessiner_resolu(lot))
+        elements.extend(barre_laterale.dessiner(self.partie, self.survole_barre, lot))
         return elements
 
     def _dessiner_choix(self, lot: pyglet.graphics.Batch) -> list:
@@ -355,8 +360,16 @@ class EcranAventureTroisLunes(pyglet.window.Window):
         else:
             self.index_survole = None
         self.bouton_survole = self.etape == "resolu" and _point_dans_rectangle(x, y, *_rect_bouton())
+        self.survole_barre = barre_laterale.bouton_survole(x, y)
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
+        bouton_barre = barre_laterale.bouton_survole(x, y)
+        if bouton_barre == "deck":
+            barre_laterale.ouvrir_survol(EcranDeck(deck_de_la_partie(self.partie)))
+            return
+        if bouton_barre == "vaisseau":
+            barre_laterale.ouvrir_survol(EcranVaisseau(self.partie))
+            return
         if self.etape == "choix":
             self._cliquer_choix(x, y)
         elif self.etape == "choix_module":

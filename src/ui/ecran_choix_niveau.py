@@ -14,6 +14,10 @@ from pyglet import shapes
 
 from src.gameplay.donnees import RACINE
 from src.gameplay.parcours import TypeEtape
+from src.gameplay.partie import Partie, deck_de_la_partie
+from src.ui import barre_laterale
+from src.ui.ecran_deck import EcranDeck
+from src.ui.ecran_vaisseau import EcranVaisseau
 from src.ui.fenetre import FOND_IMAGE, HAUTEUR_FENETRE, LARGEUR_FENETRE, _sprite_ajuste, _sprite_etire
 
 COULEUR_FOND_CARTE = (20, 24, 34)
@@ -66,11 +70,12 @@ class EcranChoixNiveau(pyglet.window.Window):
     """Ecran de choix d'une etape parmi les propositions tirees pour ce niveau (specs.md 2.3/2.4) -
     3 d'ordinaire, une seule (TypeEtape.BOSS) a un niveau Boss."""
 
-    def __init__(self, niveau: int, propositions: list[TypeEtape]):
+    def __init__(self, partie: Partie, propositions: list[TypeEtape]):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
-        self.niveau = niveau
+        self.partie = partie
         self.propositions = propositions
         self.index_survole: int | None = None
+        self.survole_barre: str | None = None
         self.type_choisi: TypeEtape | None = None
 
     def on_draw(self) -> None:
@@ -84,7 +89,7 @@ class EcranChoixNiveau(pyglet.window.Window):
         elements = [_sprite_etire(FOND_IMAGE, 0, 0, LARGEUR_FENETRE, HAUTEUR_FENETRE, lot)]
         elements.append(
             pyglet.text.Label(
-                f"Niveau {self.niveau}",
+                "Choix du prochain niveau",
                 x=LARGEUR_FENETRE / 2,
                 y=HAUTEUR_FENETRE - 60,
                 anchor_x="center",
@@ -109,6 +114,7 @@ class EcranChoixNiveau(pyglet.window.Window):
                 batch=lot,
             )
         )
+        elements.extend(barre_laterale.dessiner(self.partie, self.survole_barre, lot))
         return elements
 
     def _dessiner_candidat(self, index: int, total: int, type_etape: TypeEtape, lot: pyglet.graphics.Batch) -> list:
@@ -147,8 +153,16 @@ class EcranChoixNiveau(pyglet.window.Window):
 
     def on_mouse_motion(self, x: int, y: int, dx: int, dy: int) -> None:
         self.index_survole = self._index_a(x, y)
+        self.survole_barre = barre_laterale.bouton_survole(x, y)
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
+        bouton_barre = barre_laterale.bouton_survole(x, y)
+        if bouton_barre == "deck":
+            barre_laterale.ouvrir_survol(EcranDeck(deck_de_la_partie(self.partie)))
+            return
+        if bouton_barre == "vaisseau":
+            barre_laterale.ouvrir_survol(EcranVaisseau(self.partie))
+            return
         index = self._index_a(x, y)
         if index is not None:
             self.type_choisi = self.propositions[index]

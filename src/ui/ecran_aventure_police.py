@@ -14,7 +14,16 @@ from pyglet import shapes
 from src.gameplay.carte import Carte
 from src.gameplay.donnees import RACINE, charger_cartes
 from src.gameplay.parcours import tirer_carte_deck
-from src.gameplay.partie import COUT_METTRE_AUX_NORMES, Partie, payer_mise_aux_normes, retirer_carte
+from src.gameplay.partie import (
+    COUT_METTRE_AUX_NORMES,
+    Partie,
+    deck_de_la_partie,
+    payer_mise_aux_normes,
+    retirer_carte,
+)
+from src.ui import barre_laterale
+from src.ui.ecran_deck import EcranDeck
+from src.ui.ecran_vaisseau import EcranVaisseau
 from src.ui.fenetre import COULEUR_ETOILE_RARETE, HAUTEUR_FENETRE, LARGEUR_FENETRE, _sprite_ajuste, _sprite_etire, texte_effet_carte
 
 FOND_POLICE = str(RACINE / "assets" / "aventure" / "police.png")
@@ -93,10 +102,9 @@ class EcranAventurePolice(pyglet.window.Window):
     """Aventure "Police" (specs.md 2.5). `self.termine` signale a l'appelant qu'il peut
     sauvegarder la partie et enchainer sur le choix du prochain niveau."""
 
-    def __init__(self, partie: Partie, niveau: int):
+    def __init__(self, partie: Partie):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.partie = partie
-        self.niveau = niveau
         # Un seul chargement, reutilise pour chaque tirage (charger_cartes() reconstruit de
         # nouvelles instances a chaque appel, ce qui casserait toute comparaison par identite).
         self.cartes = charger_cartes()
@@ -112,6 +120,7 @@ class EcranAventurePolice(pyglet.window.Window):
         self.message_erreur: str = ""
         self.index_survole: int | None = None
         self.bouton_survole: bool = False
+        self.survole_barre: str | None = None
         self.termine: bool = False
 
     def _carte_actuelle(self) -> Carte:
@@ -133,7 +142,7 @@ class EcranAventurePolice(pyglet.window.Window):
         elements = [_sprite_etire(FOND_POLICE, 0, 0, LARGEUR_FENETRE, HAUTEUR_FENETRE, lot)]
         elements.append(
             pyglet.text.Label(
-                f"Police - Niveau {self.niveau}",
+                "Police",
                 x=LARGEUR_FENETRE / 2,
                 y=HAUTEUR_FENETRE - 50,
                 anchor_x="center",
@@ -174,6 +183,7 @@ class EcranAventurePolice(pyglet.window.Window):
                 )
         else:
             elements.extend(self._dessiner_resolu(lot))
+        elements.extend(barre_laterale.dessiner(self.partie, self.survole_barre, lot))
         return elements
 
     def _dessiner_carte_actuelle(self, lot: pyglet.graphics.Batch) -> list:
@@ -270,8 +280,16 @@ class EcranAventurePolice(pyglet.window.Window):
         else:
             self.index_survole = None
         self.bouton_survole = self.etape == "resolu" and _point_dans_rectangle(x, y, *_rect_bouton())
+        self.survole_barre = barre_laterale.bouton_survole(x, y)
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
+        bouton_barre = barre_laterale.bouton_survole(x, y)
+        if bouton_barre == "deck":
+            barre_laterale.ouvrir_survol(EcranDeck(deck_de_la_partie(self.partie)))
+            return
+        if bouton_barre == "vaisseau":
+            barre_laterale.ouvrir_survol(EcranVaisseau(self.partie))
+            return
         if self.etape == "choix":
             self._cliquer_choix(x, y)
         elif _point_dans_rectangle(x, y, *_rect_bouton()):

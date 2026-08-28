@@ -12,6 +12,7 @@ from src.gameplay.config_poc import creer_combat_poc
 from src.gameplay.donnees import RACINE
 from src.gameplay.ennemi import DebuffActif, Ennemi
 from src.gameplay.module import BuffActif, Module
+from src.gameplay.partie import Partie, deck_de_la_partie
 from src.gameplay.position import Colonne, Position, Rangee
 from src.ui.animation import AnimationPopup
 
@@ -87,6 +88,11 @@ ENTETE_Y = HAUTEUR_FENETRE - ENTETE_HAUTEUR
 BOUTON_LARGEUR, BOUTON_HAUTEUR = 140, 40
 BOUTON_X = LARGEUR_FENETRE - BOUTON_LARGEUR - 20
 BOUTON_Y = ENTETE_Y + (ENTETE_HAUTEUR - BOUTON_HAUTEUR) / 2
+
+# Sommet de la barre laterale (src/ui/barre_laterale.py) en Combat : sous l'entete existant
+# (Electricite/Fin de tour), plutot que le haut de la fenetre comme sur les autres ecrans du
+# parcours qui n'ont pas ce bandeau - decision utilisateur (la barre reste affichee en Combat).
+Y_HAUT_BARRE_COMBAT = ENTETE_Y - 10
 
 COULEUR_BANDEAU = (10, 10, 12)
 OPACITE_BANDEAU = 190
@@ -412,14 +418,15 @@ def _lignes_buffs(module: Module) -> list[str]:
 class FenetreCombat(pyglet.window.Window):
     """Fenetre principale : affiche le combat du POC et gere les clics/survols de souris."""
 
-    def __init__(self, combat: Combat | None = None, niveau: int | None = None):
+    def __init__(self, combat: Combat | None = None, partie: Partie | None = None):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight - POC")
         self.combat = combat if combat is not None else creer_combat_poc()
-        # Niveau du parcours (specs.md 2.3), affiche dans l'entete - None en mode demo (POC,
-        # cf. config_poc.py) ou aucune partie ne l'accompagne.
-        self.niveau = niveau
+        # None en mode demo (POC, cf. config_poc.py) ou aucune partie ne l'accompagne : la barre
+        # laterale (Niveau/Argent/Deck/Vaisseau) n'a alors rien a afficher.
+        self.partie = partie
         self.index_carte_selectionnee: int | None = None
         self.entite_survolee: Module | Ennemi | None = None
+        self.survole_barre: str | None = None
         self.popups: list[tuple[AnimationPopup, str, tuple[int, int, int], float, float]] = []
         pyglet.clock.schedule_interval(self.update, 1 / 60.0)
 
@@ -443,6 +450,12 @@ class FenetreCombat(pyglet.window.Window):
         elements.extend(self._dessiner_main(lot))
         elements.extend(self._dessiner_entete(lot))
         elements.extend(self._dessiner_survol(lot))
+        if self.partie is not None:
+            # Import differe : barre_laterale importe de ce module (HAUTEUR_FENETRE,
+            # _sprite_ajuste), un import en tete de fichier creerait un cycle.
+            from src.ui import barre_laterale
+
+            elements.extend(barre_laterale.dessiner(self.partie, self.survole_barre, lot, y_haut=Y_HAUT_BARRE_COMBAT))
 
         if self.combat.etat != EtatCombat.EN_COURS:
             elements.extend(self._dessiner_message_fin(lot))
@@ -678,18 +691,6 @@ class FenetreCombat(pyglet.window.Window):
             group=GROUPE_SUPERPOSITION,
         )
         elements.append(texte)
-        if self.niveau is not None:
-            elements.append(
-                pyglet.text.Label(
-                    f"Niveau {self.niveau}",
-                    x=LARGEUR_FENETRE / 2,
-                    y=ENTETE_Y + ENTETE_HAUTEUR / 2,
-                    anchor_x="center",
-                    anchor_y="center",
-                    batch=lot,
-                    group=GROUPE_SUPERPOSITION,
-                )
-            )
         elements.extend(self._dessiner_bouton_fin_tour(lot))
         return elements
 
@@ -770,6 +771,20 @@ class FenetreCombat(pyglet.window.Window):
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
         """Gere les clics de souris : selection de carte, ciblage, fin de tour."""
+        if self.partie is not None:
+            # Imports differes, cf. on_draw : cycle avec ce module sinon.
+            from src.ui import barre_laterale
+            from src.ui.ecran_deck import EcranDeck
+            from src.ui.ecran_vaisseau import EcranVaisseau
+
+            bouton_barre = barre_laterale.bouton_survole(x, y, y_haut=Y_HAUT_BARRE_COMBAT)
+            if bouton_barre == "deck":
+                barre_laterale.ouvrir_survol(EcranDeck(deck_de_la_partie(self.partie)))
+                return
+            if bouton_barre == "vaisseau":
+                barre_laterale.ouvrir_survol(EcranVaisseau(self.partie))
+                return
+
         if self.combat.etat != EtatCombat.EN_COURS:
             return
 
@@ -795,6 +810,10 @@ class FenetreCombat(pyglet.window.Window):
     def on_mouse_motion(self, x: int, y: int, dx: int, dy: int) -> None:
         """Met a jour le module/ennemi actuellement survole par la souris, pour l'infobulle."""
         self.entite_survolee = self._ennemi_a(x, y) or self._module_a(x, y)
+        if self.partie is not None:
+            from src.ui import barre_laterale
+
+            self.survole_barre = barre_laterale.bouton_survole(x, y, y_haut=Y_HAUT_BARRE_COMBAT)
 
     def _trouver_carte_cliquee(self, x: int, y: int) -> int | None:
         """Renvoie l'index de la carte de la main cliquee, ou None si aucune."""

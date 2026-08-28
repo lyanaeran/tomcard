@@ -13,7 +13,11 @@ import pyglet
 from pyglet import shapes
 
 from src.gameplay.parcours import TypeEtape
+from src.gameplay.partie import Partie, deck_de_la_partie
+from src.ui import barre_laterale
 from src.ui.ecran_choix_niveau import LIBELLES_TYPE_ETAPE
+from src.ui.ecran_deck import EcranDeck
+from src.ui.ecran_vaisseau import EcranVaisseau
 from src.ui.fenetre import FOND_IMAGE, HAUTEUR_FENETRE, LARGEUR_FENETRE, _sprite_ajuste, _sprite_etire
 
 COULEUR_TEXTE = (255, 255, 255)
@@ -42,11 +46,12 @@ class EcranEtapePlaceholder(pyglet.window.Window):
     """Etape sans contenu prepare (Aventure, Planete commerciale) : icone + message + bouton
     "J'ai termine" qui signale a l'appelant d'avancer au niveau suivant, sans autre effet."""
 
-    def __init__(self, type_etape: TypeEtape, niveau: int):
+    def __init__(self, type_etape: TypeEtape, partie: Partie):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.type_etape = type_etape
-        self.niveau = niveau
+        self.partie = partie
         self.bouton_survole: bool = False
+        self.survole_barre: str | None = None
         self.termine: bool = False
 
     def on_draw(self) -> None:
@@ -61,7 +66,7 @@ class EcranEtapePlaceholder(pyglet.window.Window):
         elements = [_sprite_etire(FOND_IMAGE, 0, 0, LARGEUR_FENETRE, HAUTEUR_FENETRE, lot)]
         elements.append(
             pyglet.text.Label(
-                f"{titre} - Niveau {self.niveau}",
+                titre,
                 x=LARGEUR_FENETRE / 2,
                 y=HAUTEUR_FENETRE - 60,
                 anchor_x="center",
@@ -94,6 +99,7 @@ class EcranEtapePlaceholder(pyglet.window.Window):
             )
         )
         elements.extend(self._dessiner_bouton(lot))
+        elements.extend(barre_laterale.dessiner(self.partie, self.survole_barre, lot))
         return elements
 
     def _dessiner_bouton(self, lot: pyglet.graphics.Batch) -> list:
@@ -114,7 +120,15 @@ class EcranEtapePlaceholder(pyglet.window.Window):
 
     def on_mouse_motion(self, x: int, y: int, dx: int, dy: int) -> None:
         self.bouton_survole = _point_dans_rectangle(x, y, *_rect_bouton())
+        self.survole_barre = barre_laterale.bouton_survole(x, y)
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
+        bouton_barre = barre_laterale.bouton_survole(x, y)
+        if bouton_barre == "deck":
+            barre_laterale.ouvrir_survol(EcranDeck(deck_de_la_partie(self.partie)))
+            return
+        if bouton_barre == "vaisseau":
+            barre_laterale.ouvrir_survol(EcranVaisseau(self.partie))
+            return
         if _point_dans_rectangle(x, y, *_rect_bouton()):
             self.termine = True
