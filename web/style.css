@@ -303,7 +303,12 @@ body {
 }
 
 .case.ennemi {
-    border-color: #5c2a3a;
+    /* Transparent (pas de fond/bordure herites de .case) : les images d'ennemis ont un fond
+       PNG transparent (assets/ennemis/*.png), meme traitement que .case.emplacement-module
+       cote allie - le fond spatial (#fond) doit se voir autour du sprite, comme sur pc
+       (src/ui/fenetre.py:_dessiner_ennemi_case, aucun rectangle derriere le sprite). */
+    background: transparent;
+    border: none;
     padding: 0;
     height: var(--taille-case);
 }
