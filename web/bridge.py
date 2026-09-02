@@ -22,7 +22,6 @@ from src.gameplay.donnees import charger_cartes, charger_modules, image_case_mod
 from src.gameplay.ennemi import CibleActionEnnemi, TypeActionEnnemi
 from src.gameplay.module import Module
 from src.gameplay.parcours import (
-    TypeAventure,
     TypeEtape,
     aleatoire_pour_niveau,
     est_niveau_boss,
@@ -445,17 +444,6 @@ def continuer_partie_web(partie_json) -> str:
     return json.dumps({"etat": _etat_dict(), "popups": []})
 
 
-# TEMPORAIRE (pour tester manuellement les 3 Aventures en debut de run) - a retirer une fois le
-# test termine : force les niveaux 2/3/4 en Aventure (au lieu du tirage normal, 1/10 par niveau),
-# une Aventure differente a chaque fois plutot que le tirage uniforme habituel entre les 3. Meme
-# principe que main.py:_NIVEAUX_AVENTURE_FORCEE_POUR_TEST cote PC.
-_NIVEAUX_AVENTURE_FORCEE_POUR_TEST = {
-    2: TypeAventure.TROIS_LUNES,
-    3: TypeAventure.ASTEROIDES,
-    4: TypeAventure.POLICE,
-}
-
-
 def choix_niveau_web(partie_json) -> str:
     """Ecran "Choix du prochain niveau" (specs.md 2.3/2.4) : 3 propositions d'etape tirees de
     facon deterministe a partir de la graine et du niveau de la partie (ou une seule, BOSS, a un
@@ -463,18 +451,12 @@ def choix_niveau_web(partie_json) -> str:
     partie = partie_depuis_json(partie_json)
     aleatoire = aleatoire_pour_niveau(partie.graine, partie.niveau)
     propositions = tirer_propositions_niveau(partie.niveau, aleatoire)
-    if partie.niveau in _NIVEAUX_AVENTURE_FORCEE_POUR_TEST:  # TEMPORAIRE, cf. commentaire ci-dessus
-        propositions = [TypeEtape.AVENTURE] * len(propositions)
     return json.dumps({"niveau": partie.niveau, "propositions": [type_etape.name for type_etape in propositions]})
 
 
-def type_aventure_web(niveau=None) -> str:
+def type_aventure_web() -> str:
     """Tire quelle Aventure ouvrir pour une etape TypeEtape.AVENTURE (specs.md 2.5) - meme
-    logique que main.py cote PC (tirer_type_aventure), seule source de verite (CLAUDE.md).
-    `niveau` optionnel : uniquement pour le forcage temporaire de test ci-dessus, cf.
-    web/app.js qui le fournit desormais a l'appel."""
-    if niveau in _NIVEAUX_AVENTURE_FORCEE_POUR_TEST:  # TEMPORAIRE, cf. commentaire ci-dessus
-        return json.dumps(_NIVEAUX_AVENTURE_FORCEE_POUR_TEST[niveau].name)
+    logique que main.py cote PC (tirer_type_aventure), seule source de verite (CLAUDE.md)."""
     return json.dumps(tirer_type_aventure(random.Random()).name)
 
 
