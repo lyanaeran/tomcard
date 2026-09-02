@@ -39,7 +39,9 @@ Un deckbuilder roguelike inspiré de Slay the Spire, où le joueur incarne un va
   juste après `synchroniser_vaisseau_depuis_combat` (§2.2) — `main.py:_ouvrir_combat` (PC),
   `web/bridge.py:resoudre_victoire_partie_web` (web). Compte un ennemi par case de la flotte
   (`Flotte.positions()`), pas de fusion des ennemis L sur 2 cases pour l'instant (§3.2/§9.1). Une
-  partie démarre avec `ARGENT_DEPART` = 7 € (`nouvelle_partie`)
+  partie démarre avec `ARGENT_DEPART` = 7 € (`nouvelle_partie`). Montants inventés faute de spec
+  précise à l'origine de cette décision — à ajuster en playtest si besoin, comme les autres
+  valeurs numériques du même type (§13)
 - Il gagne aussi une carte : voir §6 pour le mécanisme de choix (candidate par module équipé). **Récompense garantie** à chaque victoire (pas probabiliste) — écran de fin de combat implémenté, voir §6
 - En cas de défaite, écran dédié avec message de défaite (pas de choix de carte) — implémenté, voir §6
 - Le joueur choisit ensuite l'étape suivante parmi celles qui apparaissent (Prime, Station service, Planète commerciale ou Aventure) — l'offre n'est pas forcément la même à chaque fois (voir §9.1)
@@ -59,7 +61,8 @@ Quatre actions indépendantes, appliquées à un module choisi par le joueur (vo
   sélectionne le module à déplacer, clique "Déplacer", puis clique l'emplacement de destination :
   vide, le module y est simplement déplacé ; occupé, les deux modules échangent leur position
 
-**Chaque action coûte `COUT_ACTION_STATION_SERVICE` = 20 €** (`src/gameplay/partie.py`), déduits de
+**Chaque action coûte `COUT_ACTION_STATION_SERVICE` = 20 €** (`src/gameplay/partie.py`, valeur
+inventée faute de spec précise, à ajuster en playtest si besoin), déduits de
 `partie.argent` au moment où l'action s'applique (Déplacer : au clic de destination, pas à
 l'armement). Si l'Argent est insuffisant, l'action est refusée sans rien modifier — les 4 fonctions
 (`reparer_module`/`ameliorer_module`/`mettre_a_jour_module`/`deplacer_module`) renvoient un booléen
@@ -447,8 +450,9 @@ n'est pas aux normes [...]." Une carte est tirée au hasard du deck réel du jou
 haut, texte en dessous, non cliquable), pas dans le format ligne image+texte des choix en dessous,
 pour ne pas donner l'impression que c'est elle-même une option :
 - *Confiscation* : retire cette carte du deck (`retirer_carte`, réutilisée de Trois lunes/Bricoler)
-- *Mettre aux normes* : coûte un montant fixe en Argent (`COUT_METTRE_AUX_NORMES`, 10 €, cf. §9.1)
-  plutôt qu'un pourcentage du prix de vente en magasin comme envisagé initialement — abandonné, la
+- *Mettre aux normes* : coûte un montant fixe en Argent (`COUT_METTRE_AUX_NORMES`, 10 € inventés
+  par symétrie avec les autres montants du jeu, à ajuster en playtest si besoin) plutôt qu'un
+  pourcentage du prix de vente en magasin comme envisagé initialement — abandonné, la
   Planète commerciale n'ayant pas de prix par carte (§9.1) ; garde la carte si l'Argent est
   suffisant (`payer_mise_aux_normes`), sinon reste sur l'écran avec un message d'erreur
 - *Détourner l'attention* : tire une **seconde** carte au hasard qui remplace la première affichée,
@@ -797,22 +801,11 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
 
 ### 9.1 Design / gameplay
 
-- Contenu exact de la Planète commerciale (uniquement des cartes, ou aussi d'autres bonus ?) reste
-  à définir (§2). Contenu de l'Aventure : 3 premières aventures spécifiées (Astéroïdes/Trois
-  lunes/Police), voir §2.5 — **les trois implémentées** (à en écrire d'autres pour varier le pool)
-- Montants d'Argent (récompense de combat, coût des actions de Station service, Argent de départ) :
-  **tranchés et implémentés**, voir §2.1/§2.2 — valeurs inventées faute de spec précise à l'origine
-  de cette décision, à ajuster en playtest si besoin. Même situation pour le coût de "Mettre aux
-  normes" (Aventure Police, §2.5) : **10 € inventés par symétrie avec les autres montants,
-  implémenté**
-- La Planète commerciale propose-t-elle des cartes pour tous les modules du pool, ou seulement pour les modules actuellement équipés ? (§2, §6)
-- **Persistance des modules hors combat/profils joueur** (§2.2/§10.3) : **implémentée** (profil +
-  partie, un seul joueur à la fois, écrans de sélection de profil/accueil du joueur, `main.py` en
-  vrai point d'entrée), et l'orchestration du parcours (§2.4) relie désormais Choix de module, Choix
-  du prochain niveau, Combat, Fin de combat, Station service et Aventure (ses trois variantes,
-  §2.5) à cette sauvegarde. Reste bloquant seulement pour la Planète commerciale (contenu non
-  préparé) — voir §10.3 "Limites connues" pour le détail restant (portée limitée aux points de
-  passage entre étapes)
+- Contenu exact de la Planète commerciale (uniquement des cartes, ou aussi d'autres bonus ? cartes
+  de tous les modules du pool, ou seulement des modules équipés ?) reste à définir (§2, §6) —
+  seul gros morceau de contenu encore non préparé du parcours (§10.3 "Limites connues")
+- Aventure (§2.5) : les 3 variantes spécifiées (Trois lunes/Astéroïdes/Police) sont implémentées ;
+  reste à en écrire d'autres pour varier le pool
 - Statistiques et déblocages par profil (parties jouées/victoires/défaites, niveau max, module le
   plus choisi, déblocages en fin de partie) : sciemment pas encore implémentés (§10.3, décision
   utilisateur "pas de stat pour le moment") — à faire dans une passe dédiée
@@ -830,7 +823,7 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
 - Formule exacte de pondération des doublons de modules au tirage (§2.3, §5) : plus un exemplaire supplémentaire compte-t-il, linéaire ou autre ?
 - Représentation visuelle d'un ennemi L occupant 2 emplacements (§3.2, §8.1) : rectangle fusionné sur les 2 cases, ou deux images liées logiquement ?
 - Compléter le jeu de cartes de chaque module : les archétypes de §4.3 (Bouclier énergétique, Radar, Propulseur, IA de combat, Générateur, Sabotage, Soute/Fret) n'ont pas encore de decks détaillés comme ceux de §4.1-4.2 ; les cartes déjà écrites en §4.1-4.2 n'ont pas encore de type/cible/rareté assignés (§7)
-- Munitions (§3.6/§7.4) : cas limite si la pioche et la défausse sont toutes les deux vides en cours de combat alors qu'il reste des cartes épuisées (qui ne sont jamais remélangées) — le joueur peut alors se retrouver sans carte à piocher ; à surveiller en playtest une fois des cartes à munitions limitées réellement jouables (voir §9.2 pour l'état d'implémentation actuel)
+- Munitions (§3.6/§7.4) : cas limite si la pioche et la défausse sont toutes les deux vides en cours de combat alors qu'il reste des cartes épuisées (qui ne sont jamais remélangées) — le joueur peut alors se retrouver sans carte à piocher ; à surveiller en playtest une fois des cartes à munitions limitées réellement jouables (voir §12.10 pour l'état d'implémentation actuel)
 - Munitions (§7.4) : pas de règle systématique reliant rareté et munitions pour l'instant (une carte de n'importe quel palier peut avoir des munitions limitées ou non) — à revisiter si un pattern se dégage en concevant plus de cartes
 
 ### 9.2 Technique / développement
@@ -1067,18 +1060,38 @@ cartes (§7) et la boucle de récompenses (§2.1, §6) stabilisés.
 
 ---
 
-## 12. Mécaniques de combat manquantes (constat issu du tableau de cartes)
+## 12. Mécaniques de carte : référence d'implémentation et manques restants
 
 En important le tableau de conception de cartes de l'utilisateur dans `config/cartes.json` (voir la
 PR "config : import des cartes Module principal, Lanceur de missiles, Blindage"), seules 6 des 38
 cartes du tableau correspondaient à ce que le moteur (`src/gameplay/carte.py`, `combat.py`) savait
-exécuter à l'époque. Ce nombre a augmenté au fil des mécaniques ajoutées ci-dessous (22/38 jouables
-au moment de la rédaction la plus récente de cette section) ; les cartes restantes
-sont stockées pour référence (champ `_non_jouable`) mais inertes en jeu tant que leur mécanique
-n'est pas implémentée. Cette section recense les mécaniques qui leur manquent, groupées par nature
-plutôt que par carte, pour servir de feuille de route à une future extension du moteur.
+exécuter à l'époque. Ce nombre a augmenté au fil des mécaniques ajoutées, groupées ci-dessous par
+nature plutôt que par carte : la plupart sont désormais **implémentées** (détail par mécanique dans
+chaque sous-section) ; les cartes dont la mécanique ne l'est pas encore restent stockées pour
+référence (champ `_non_jouable`) mais inertes en jeu.
 
-### 12.1 Cibles fixes ou par rang
+**Reste à implémenter** (résumé — le détail de chaque mécanique déjà en place est dans les
+sous-sections ci-dessous, ce résumé ne liste que ce qui manque encore) :
+
+- Effets à deux valeurs X/Y sur une même carte : cible cliquée + splash différencié (*Missiles*),
+  deux zones différentes en une carte (*Torpille*) — §12.2
+- Effets à durée : dégâts répétés pendant Y tours (*Embrasement, Guerre nucléaire*), pioche bonus
+  pendant Y tours (*Multi fonction*) — §12.3
+- Transfert des dégâts subis vers un autre module désigné (*Transfert*) ; renvoi des dégâts subis à
+  l'attaquant (*Renvoie*) — mécanique proche du Bouclier miroir ennemi (§13.2), mais pas encore
+  disponible comme carte jouable par le joueur — §12.6
+- Méta-effets : changer le coût en électricité de toutes les cartes d'une catégorie (*Optimisation
+  des boucliers, Attaques performantes*), dupliquer l'effet de toutes les cartes d'une catégorie
+  (*Double défense, Circuit parallèle*) — bloque aussi certaines cartes à munitions limitées
+  (§12.10) qui en dépendent — §12.7
+- Gain d'électricité en échange d'une défausse (*Manque de jus, Cannibalisme*) — §12.8
+- Manipulation de pioche/main/défausse : piocher puis défausser (*Changement d'outil*), tout
+  défausser puis repiocher (*Grand remplacement*), défausser une quantité choisie entre X et Y
+  (*Cannibalisme*, nécessite un sous-choix de quantité au moment de jouer la carte) — §12.9
+- Type Controle (stun, restriction d'action) : aucune carte taguée Controle dans le tableau pour
+  l'instant, rien à implémenter tant qu'aucune n'existe — §12.5
+
+### 12.1 Cibles fixes ou par rang — entièrement implémenté
 
 - **Module Principal** — cible toujours le module de base, sans choix du joueur — **implémenté**
   (`CibleCarte.MODULE_PRINCIPAL`, sans clic) : *Protéger le vaisseau, Réparation, Blindage maximal*
@@ -1137,7 +1150,7 @@ Reste manquant pour les autres effets à durée :
 - Dégâts répétés pendant Y tours (*Embrasement, Guerre nucléaire*)
 - Pioche bonus pendant Y tours (*Multi fonction*)
 
-### 12.4 Effets en pourcentage
+### 12.4 Effets en pourcentage — entièrement implémenté
 
 **Implémenté pour les debuffs** (somme des `valeur` des debuffs `VULNERABILITE` actifs dans
 `Ennemi.buffs_actifs`, majore les dégâts subis d'une attaque du joueur) : *Brèche, Ligne avant,
