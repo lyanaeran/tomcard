@@ -32,6 +32,22 @@ def _degats_effectifs(cible: Module | Ennemi, degats: int) -> int:
     return min(degats, cible.pv + getattr(cible, "bouclier", 0))
 
 
+# Seuil de dissipation naturelle du bouclier (specs.md 3.5) : en dessous ou egal a cette valeur
+# apres division, le reste de bouclier disparait entierement plutot que de continuer a decliner
+# indefiniment (ceil(1/2) = 1 ne convergerait jamais vers 0 sans ce seuil).
+SEUIL_DISSIPATION_BOUCLIER = 5
+
+
+def _dissiper_bouclier(entite: Module | Ennemi) -> None:
+    """Dissipation naturelle du bouclier a chaque tour (specs.md 3.5, meme regle pour un module
+    et un ennemi) : divise par deux (arrondi au-dessus), puis completement dissipe si le
+    resultat ne depasse pas SEUIL_DISSIPATION_BOUCLIER. Appelee une fois par tour pour chaque
+    camp (modules au debut de chaque tour joueur, ennemis au debut de chaque tour ennemi),
+    avant que les buffs de ce tour ne reposent eventuellement du bouclier frais par-dessus."""
+    moitie = (entite.bouclier + 1) // 2
+    entite.bouclier = 0 if moitie <= SEUIL_DISSIPATION_BOUCLIER else moitie
+
+
 class Combat:
     """Orchestre le deroulement du combat entre le joueur et la flotte ennemie."""
 
@@ -89,10 +105,14 @@ class Combat:
         return evenements
 
     def _declencher_buffs_debut_de_tour(self) -> None:
-        """Redeclenche l'effet de chaque buff actif sur les modules vivants et decompte
-        sa duree (specs.md 12.3/12.5) - meme principe que decrementer_buffs() cote
-        ennemi, mais au debut de chaque tour joueur plutot qu'a chaque tour ennemi."""
+        """Dissipe le bouclier restant de chaque module vivant (specs.md 3.5) puis redeclenche
+        l'effet de chaque buff actif et decompte sa duree (specs.md 12.3/12.5) - meme principe
+        que decrementer_buffs()/_dissiper_bouclier() cote ennemi, mais au debut de chaque tour
+        joueur plutot qu'a chaque tour ennemi. Dissipation avant redeclenchement : un buff
+        Bouclier qui se repose ce tour n'est jamais rogne par la dissipation du reste de
+        l'ancien bouclier."""
         for module in self._modules_vivants():
+            _dissiper_bouclier(module)
             module.declencher_buffs_tour()
 
     def prochaine_action_active(self, ennemi: Ennemi) -> ActionEnnemi | None:
@@ -256,6 +276,8 @@ class Combat:
         Leurre (specs.md 12.6) protege une cible visee par plusieurs actions dans le meme
         tour : seule la premiere resolue sur cette cible est annulee."""
         self.tour_ennemi_actuel += 1
+        for ennemi in self.flotte.ennemis_vivants():
+            _dissiper_bouclier(ennemi)
         evenements = []
         for position, ennemi in self.flotte.positions().items():
             if ennemi.est_detruit():

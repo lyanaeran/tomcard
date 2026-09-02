@@ -163,7 +163,9 @@ remplace les pistes encore ouvertes en §2 pour la Station service et la cadence
   - Reste (5/6) **Prime** (combat)
 - **Nombre d'ennemis en Prime** : 1 seul ennemi jusqu'au niveau 5, puis 2 à partir du niveau 6 —
   s'ajoute au système de tailles S/M/L existant (§3.2, deux axes de difficulté indépendants), ne le
-  remplace pas. Progression au-delà de 2 (après le niveau 10 ?) pas encore définie
+  remplace pas. **Implémenté** (`config_poc.creer_flotte_prime`/`nombre_ennemis_prime`, §13.4), de
+  même que la composition fixe du Boss (§13.4). Progression au-delà de 2 (après le niveau 10 ?)
+  pas encore définie
 - **Doublons de modules autorisés** (remplace la piste "interdire les doublons" de §5) : posséder
   déjà des exemplaires d'un module **augmente son poids au tirage** lors d'un prochain choix de
   module (Niveau 1 ou récompense de Boss) — formule de pondération exacte à définir (§9.1)
@@ -499,6 +501,20 @@ et les fonctions de clic associées)
 
 ### 3.5 Bouclier
 - Le Bouclier absorbe les dégâts subis **avant** les PV. Exemple : un module protégé par 5 Bouclier subit une attaque de 7 dégâts → le Bouclier absorbe 5, les **2 dégâts restants** sont retirés des PV
+- Un ennemi peut lui aussi avoir du Bouclier (specs.md §13), avec exactement la même règle
+  d'absorption qu'un module
+- **Dissipation naturelle** : à chaque tour (tour joueur pour un module, tour ennemi pour un
+  ennemi), le Bouclier restant est divisé par deux (arrondi au-dessus), puis retombe
+  complètement à 0 si le résultat est ≤ 5 (`SEUIL_DISSIPATION_BOUCLIER`, `combat.py`) — empêche
+  un Bouclier de protéger indéfiniment sans être renouvelé, et garantit qu'il finit toujours par
+  disparaître entièrement plutôt que de décliner sans fin (`ceil(1/2)=1` ne convergerait jamais
+  vers 0 sans ce seuil). La dissipation a lieu **avant** qu'un buff `BOUCLIER_PAR_TOUR` actif ce
+  tour-là ne repose du Bouclier frais (§12.3) : un Bouclier persistant ou à durée ne s'accumule
+  donc jamais indéfiniment, il se stabilise à sa valeur de pose (l'ancien reste dissipé avant
+  d'être remplacé). Ne s'applique **pas** au Bouclier miroir (§13.2), qui est un mécanisme
+  distinct (buff à part, consommé uniquement par le renvoi de dégâts, jamais par dissipation)
+- Valeur du seuil (5) inventée faute de spec précise — à ajuster à l'équilibrage, comme les
+  autres valeurs numériques du même type (§13)
 
 ### 3.6 Munitions (cartes à usage limité)
 
@@ -791,10 +807,10 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
 - **Persistance des modules hors combat/profils joueur** (§2.2/§10.3) : **implémentée** (profil +
   partie, un seul joueur à la fois, écrans de sélection de profil/accueil du joueur, `main.py` en
   vrai point d'entrée), et l'orchestration du parcours (§2.4) relie désormais Choix de module, Choix
-  du prochain niveau, Combat, Fin de combat et Station service à cette sauvegarde. Reste bloquant
-  pour relier Planète commerciale/Aventure (contenu non préparé) à un vrai parcours — voir §10.3
-  "Limites connues" pour le détail restant (portée limitée aux points de passage entre étapes,
-  flotte ennemie toujours tirée au hasard sans tenir compte du niveau)
+  du prochain niveau, Combat, Fin de combat, Station service et Aventure (ses trois variantes,
+  §2.5) à cette sauvegarde. Reste bloquant seulement pour la Planète commerciale (contenu non
+  préparé) — voir §10.3 "Limites connues" pour le détail restant (portée limitée aux points de
+  passage entre étapes)
 - Statistiques et déblocages par profil (parties jouées/victoires/défaites, niveau max, module le
   plus choisi, déblocages en fin de partie) : sciemment pas encore implémentés (§10.3, décision
   utilisateur "pas de stat pour le moment") — à faire dans une passe dédiée
@@ -817,12 +833,8 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
 
 ### 9.2 Technique / développement
 
-*(voir §10 pour les choix techniques déjà tranchés)*
-
-- Munitions (§3.6/§7.4) : mécanique pas encore implémentée dans `src/gameplay/` — les cartes du
-  tableau de conception qui en ont une (ex : Réparation, Bouclier perpétuel) sont pour l'instant
-  stockées dans `config/cartes.json` sans bloc "effet" (non jouables), voir la PR "config : import
-  des cartes Module principal, Lanceur de missiles, Blindage"
+*(voir §10 pour les choix techniques déjà tranchés ; aucun point technique ouvert pour le moment —
+les munitions, seul point qui figurait ici, sont implémentées depuis §3.6/§12.10)*
 
 ---
 
@@ -1009,9 +1021,9 @@ fond dédié.
 - Le run s'arrête réellement au Niveau 10 dans l'état actuel (décision utilisateur, provisoire,
   voir §2) : la Victoire finale (§2.4, étape 11) marque la partie `TERMINEE` sans proposer de
   continuation au-delà de ce niveau
-- La flotte ennemie d'un combat (Prime ou Boss) reste toujours tirée entièrement au hasard
-  (`combat_depuis_partie`/`creer_flotte`), sans appliquer les règles de difficulté par niveau du
-  §2.3/§3.2 (nombre d'ennemis, tailles S/M/L) — reste un tirage de démonstration
+- La flotte ennemie d'un combat (Prime ou Boss) applique désormais les règles de difficulté par
+  niveau (§13.4, `creer_flotte_prime`/`creer_flotte_boss`) : **résolu**, n'est plus un tirage de
+  démonstration
 - Écart PC/web sur la conservation des parties `TERMINEE` (voir "Partie" plus haut) : à corriger si
   un écran d'historique est construit côté web
 - `argent` progresse désormais via les combats gagnés et la Station service (§2.1/§2.2) ; la Planète
@@ -1105,7 +1117,9 @@ même mécanisme `BOUCLIER_PAR_TOUR` avec `duree` finie plutôt que nulle) jouab
 cartes Buff à effet périodique simple (les 3 autres cartes Buff restantes sont des méta-effets, cf.
 §12.5/§12.7). L'effet d'un buff se déclenche une première fois immédiatement à la pose de la carte
 (comme les autres types de carte), puis se redéclenche à chaque début de tour joueur tant qu'il
-reste actif.
+reste actif. Pour un buff `BOUCLIER_PAR_TOUR`, ce redéclenchement pose du Bouclier frais
+**après** la dissipation naturelle du tour (§3.5) : le Bouclier ne s'accumule donc jamais d'un
+tour à l'autre, il se stabilise à la valeur du buff.
 
 Un buff persistant cible toujours le **module principal** plutôt qu'un module au choix du joueur
 (déviation assumée de la cible "Module Unique" du tableau de conception, décision utilisateur) : lui
