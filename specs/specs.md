@@ -1238,7 +1238,7 @@ Deux listes distinctes, indépendantes l'une de l'autre (décision utilisateur) 
    - `repetitions` : nombre de fois que l'Action s'exécute **dans le même tour** quand elle se
      déclenche (axe indépendant de `frequence`/`tour_depart`, qui décide *quels* tours, pas combien
      de fois *dans* le tour) — ex. Le nettoyeur attaque 2 fois par tour (`repetitions=2`,
-     `frequence=1`), quand Petit Jean ne pose son bouclier qu'un tour sur trois (`frequence=3`,
+     `frequence=1`), quand Petit Jean ne pose son bouclier qu'un tour sur deux (`frequence=2`,
      `repetitions=1`)
    - `action_buff`/`duree_buff` (uniquement pour `type=POSE_BUFF`) : quel `ActionCarte` poser (les
      mêmes valeurs que sur une carte joueur, cf. §7.1/§12.5, ex. `BOUCLIER_PAR_TOUR`,
@@ -1291,7 +1291,7 @@ Remplacent entièrement les 3 ennemis placeholder du POC (ENM_1/2/3, retirés) :
 | --- | --- | --- |
 | Pat le Pirate | 50 | Attaque 5 dégâts par tour, cible de proximité |
 | Le nettoyeur | 25 | Attaque 7 dégâts, **2 fois** par tour (`repetitions=2`), cible de proximité |
-| Petit Jean | 100 | Attaque 2 dégâts par tour (proximité) ; tous les 3 tours (à partir du tour 1), se pose 3 bouclier pendant 3 tours |
+| Petit Jean | 100 | Attaque 2 dégâts par tour (proximité) ; tous les 2 tours (à partir du tour 1), se pose 3 bouclier pendant 2 tours |
 | Le puzzle | 50 | Attaque 5 dégâts **tous les modules du joueur** par tour (zone) |
 | Miroir | 50 | Chaque tour, pose un Bouclier miroir de valeur 5 (persistant) sur un module allié tiré au hasard (colonne avant sinon arrière) |
 

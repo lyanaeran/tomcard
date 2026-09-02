@@ -160,7 +160,7 @@ def test_active_au_tour_frequence_un_se_declenche_tous_les_tours():
 
 
 def test_active_au_tour_respecte_la_frequence_et_le_tour_de_depart():
-    """Petit Jean : tour_depart=1, frequence=3 -> actif aux tours 1, 4, 7..."""
+    """tour_depart=1, frequence=3 -> actif aux tours 1, 4, 7..."""
     action = ActionEnnemi(
         type=TypeActionEnnemi.POSE_BUFF, cible=CibleActionEnnemi.SOI_MEME, valeur=3, frequence=3, tour_depart=1
     )

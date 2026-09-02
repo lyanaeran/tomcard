@@ -35,9 +35,9 @@
           "type": "POSE_BUFF",
           "cible": "SOI_MEME",
           "valeur": 3,
-          "frequence": 3,
+          "frequence": 2,
           "action_buff": "BOUCLIER_PAR_TOUR",
-          "duree_buff": 3
+          "duree_buff": 2
         }
       ]
     },
