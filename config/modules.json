@@ -4,7 +4,7 @@
       "id": "MOD_1",
       "nom": "Principal",
       "image": "assets/modules/principal.png",
-      "points_de_vie": 15,
+      "points_de_vie": 50,
       "description": "Le coeur du vaisseau : attaque directe, defense et reparation.",
       "cartes": ["CRT_7", "CRT_8", "CRT_9", "CRT_10", "CRT_11", "CRT_12"]
     },
@@ -12,7 +12,7 @@
       "id": "MOD_2",
       "nom": "Lanceur de missiles",
       "image": "assets/modules/missiles.png",
-      "points_de_vie": 9,
+      "points_de_vie": 30,
       "description": "Attaque a zone : bombarde plusieurs ennemis a la fois, avec un soupcon de defense (leurre).",
       "cartes": ["CRT_15", "CRT_16", "CRT_18"]
     },
@@ -20,7 +20,7 @@
       "id": "MOD_3",
       "nom": "Blindage",
       "image": "assets/modules/bouclier.png",
-      "points_de_vie": 18,
+      "points_de_vie": 30,
       "description": "Defense : protege un module, toute la ligne avant, ou renforce le bouclier dans la duree.",
       "cartes": ["CRT_20", "CRT_21", "CRT_23", "CRT_24", "CRT_26"]
     },
@@ -28,7 +28,7 @@
       "id": "MOD_4",
       "nom": "Generateur",
       "image": "assets/modules/generateur.png",
-      "points_de_vie": 10,
+      "points_de_vie": 30,
       "description": "Outils : genere de l'electricite supplementaire pendant le combat.",
       "cartes": ["CRT_27", "CRT_31"]
     },
@@ -36,7 +36,7 @@
       "id": "MOD_5",
       "nom": "Soute",
       "image": "assets/modules/soute.png",
-      "points_de_vie": 10,
+      "points_de_vie": 30,
       "description": "Outils : pioche des cartes supplementaires, fluidifie votre main.",
       "cartes": ["CRT_39"]
     },
@@ -44,7 +44,7 @@
       "id": "MOD_6",
       "nom": "Sabotage",
       "image": "assets/modules/sabotage.png",
-      "points_de_vie": 10,
+      "points_de_vie": 30,
       "description": "Debuff : affaiblit les ennemis, reduit leurs degats ou augmente ceux qu'ils subissent.",
       "cartes": ["CRT_33", "CRT_34", "CRT_35", "CRT_36", "CRT_37", "CRT_38"]
     }

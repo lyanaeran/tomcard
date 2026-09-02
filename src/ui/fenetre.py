@@ -10,7 +10,7 @@ from src.gameplay.carte import CIBLES_SANS_CLIC, ActionCarte, Carte, CibleCarte,
 from src.gameplay.combat import Combat, EtatCombat
 from src.gameplay.config_poc import creer_combat_poc
 from src.gameplay.donnees import RACINE
-from src.gameplay.ennemi import DebuffActif, Ennemi
+from src.gameplay.ennemi import CibleActionEnnemi, Ennemi, TypeActionEnnemi
 from src.gameplay.module import BuffActif, Module
 from src.gameplay.partie import Partie, deck_de_la_partie
 from src.gameplay.position import Colonne, Position, Rangee
@@ -377,22 +377,19 @@ def _texte_et_couleur_effet(carte: Carte, valeur_effective: int) -> tuple[str, t
     return f"+{valeur_effective}", COULEUR_POPUP_SOIN
 
 
-def _libelle_debuff(debuff: DebuffActif) -> str:
-    """Texte d'une ligne d'infobulle pour un debuff actif (specs.md 12.1/12.4/12.6)."""
-    if debuff.action == ActionCarte.VULNERABILITE:
-        texte = f"Vulnerabilite +{debuff.valeur}%"
-    elif debuff.action == ActionCarte.REDIRECTION_CIBLE:
-        texte = "Tir detourne"
-    else:
-        texte = f"Degats reduits -{debuff.valeur}"
-    tour = "tour" if debuff.tours_restants == 1 else "tours"
-    return f"{texte} ({debuff.tours_restants} {tour})"
-
-
 def _libelle_buff(buff: BuffActif) -> str:
-    """Texte d'une ligne d'infobulle pour un buff actif (specs.md 12.3/12.5)."""
+    """Texte d'une ligne d'infobulle pour un buff/debuff actif, sur un module ou un ennemi
+    (specs.md 12.1/12.3/12.4/12.5/13 - meme modele des deux cotes, cf. carte.py:BuffActif)."""
     if buff.action == ActionCarte.BOUCLIER_PAR_TOUR:
         texte = f"+{buff.valeur} bouclier/tour"
+    elif buff.action == ActionCarte.BOUCLIER_MIROIR:
+        texte = f"Bouclier miroir {buff.valeur}"
+    elif buff.action == ActionCarte.VULNERABILITE:
+        texte = f"Vulnerabilite +{buff.valeur}%"
+    elif buff.action == ActionCarte.REDIRECTION_CIBLE:
+        texte = "Tir detourne"
+    elif buff.action == ActionCarte.REDUCTION_DEGATS:
+        texte = f"Degats reduits -{buff.valeur}"
     else:
         texte = f"Buff +{buff.valeur}"
     if buff.tours_restants is None:
@@ -522,20 +519,21 @@ class FenetreCombat(pyglet.window.Window):
         return elements
 
     def _dessiner_ennemi_case(self, lot: pyglet.graphics.Batch, position: Position, ennemi: Ennemi) -> list:
-        """Dessine une case ennemie (image + pastille PV, + pastille orange du nombre de
-        debuffs actifs s'il y en a au moins un), grisee si detruite."""
+        """Dessine une case ennemie (image + pastilles PV/Bouclier - les ennemis peuvent
+        desormais en avoir, specs.md 13 -, + pastille orange du nombre de buffs/debuffs
+        actifs s'il y en a au moins un), grisee si detruite."""
         x, y, largeur, hauteur = _rect_ennemi(position)
         detruit = ennemi.est_detruit()
         sprite = _sprite_ajuste(ennemi.image, x, y, largeur, hauteur, lot)
         if detruit:
             sprite.opacity = OPACITE_DETRUIT
             return [sprite, *self._texte_detruit(x, y, largeur, hauteur, lot)]
-        elements = [sprite, *_pastilles_pv_bouclier(x, y, largeur, hauteur, ennemi.pv, None, lot)]
-        if ennemi.debuffs_actifs:
+        elements = [sprite, *_pastilles_pv_bouclier(x, y, largeur, hauteur, ennemi.pv, ennemi.bouclier, lot)]
+        if ennemi.buffs_actifs:
             cx_pv = x + largeur - RAYON_PASTILLE - MARGE_PASTILLE
-            cx_debuffs = cx_pv - RAYON_PASTILLE * 2 - MARGE_PASTILLE
+            cx_debuffs = cx_pv - 2 * (RAYON_PASTILLE * 2 + MARGE_PASTILLE)
             cy = y + hauteur + MARGE_PASTILLE_HAUT + _RAYON_TOTAL_PASTILLE
-            elements += _pastille(cx_debuffs, cy, COULEUR_PASTILLE_DEBUFFS, len(ennemi.debuffs_actifs), lot)
+            elements += _pastille(cx_debuffs, cy, COULEUR_PASTILLE_DEBUFFS, len(ennemi.buffs_actifs), lot)
         return elements
 
     def _texte_detruit(self, x: float, y: float, largeur: float, hauteur: float, lot: pyglet.graphics.Batch) -> list:
@@ -711,16 +709,24 @@ class FenetreCombat(pyglet.window.Window):
             if position is None:
                 return []
             rect = _rect_ennemi(position)
-            lignes = [entite.nom, f"PV {entite.pv}/{entite.pv_max}"]
-            cible = self.combat.previsualiser_cible(entite)
-            if cible is not None:
-                lignes.append(f"Vise : {cible.nom} ({entite.degats_attaque_effectifs()} degats)")
-            elif any(debuff.action == ActionCarte.REDIRECTION_CIBLE for debuff in entite.debuffs_actifs):
-                # Tir allie actif (specs.md 12.6) : la cible reelle (un autre ennemi) n'est
-                # tiree au hasard qu'a la resolution du tour, jamais au survol - cf.
-                # Combat.previsualiser_cible/_cible_redirection pour rester deterministe.
-                lignes.append("Vise : un allie au hasard")
-            lignes.extend(_libelle_debuff(debuff) for debuff in entite.debuffs_actifs)
+            lignes = [entite.nom, f"PV {entite.pv}/{entite.pv_max}", f"Bouclier {entite.bouclier}"]
+            action = self.combat.prochaine_action_active(entite)
+            if action is not None and action.type == TypeActionEnnemi.ATTAQUE:
+                degats = entite.degats_attaque_effectifs(action.valeur)
+                if action.cible == CibleActionEnnemi.TOUS_MODULES_JOUEUR:
+                    lignes.append(f"Vise : tous les modules ({degats} degats)")
+                else:
+                    cible = self.combat.previsualiser_cible(entite)
+                    if cible is not None:
+                        lignes.append(f"Vise : {cible.nom} ({degats} degats)")
+                    elif any(buff.action == ActionCarte.REDIRECTION_CIBLE for buff in entite.buffs_actifs):
+                        # Tir allie actif (specs.md 12.6) : la cible reelle (un autre ennemi)
+                        # n'est tiree au hasard qu'a la resolution du tour, jamais au survol -
+                        # cf. Combat.previsualiser_cible/_cible_redirection, deterministe.
+                        lignes.append("Vise : un allie au hasard")
+            elif action is not None and action.type == TypeActionEnnemi.POSE_BUFF:
+                lignes.append(f"Pose un effet ({action.valeur})")
+            lignes.extend(_libelle_buff(buff) for buff in entite.buffs_actifs)
         else:
             rect = self._rect_du_module(entite)
             lignes = [entite.nom, f"PV {entite.pv}/{entite.pv_max}", f"Bouclier {entite.bouclier}"]
@@ -895,11 +901,18 @@ class FenetreCombat(pyglet.window.Window):
             texte, couleur = _texte_et_couleur_effet(carte, valeur_effective)
             self._ajouter_popup(cible, texte, couleur)
 
-    def _afficher_popups_attaques_ennemi(self, attaques: list[tuple[Position, Ennemi, Module | Ennemi, int]]) -> None:
-        """Affiche un popup -N (degats reellement infliges) sur chaque cible touchee par une
-        attaque ennemie - un module, ou un autre ennemi si Tir allie est actif (specs.md 12.6)."""
-        for _position, _ennemi, cible_touchee, degats_effectifs in attaques:
-            self._ajouter_popup(cible_touchee, f"-{degats_effectifs}", COULEUR_POPUP_DEGATS)
+    def _afficher_popups_attaques_ennemi(
+        self, evenements: list[tuple[Position, Ennemi, Module | Ennemi, int, str]]
+    ) -> None:
+        """Affiche un popup sur chaque cible touchee par une Action ennemie (specs.md 13) :
+        -N (degats) sur un module, sur un autre ennemi si Tir allie est actif (specs.md 12.6)
+        ou sur l'attaquant lui-meme en cas de renvoi par un Bouclier miroir, ou +N (bouclier)
+        sur la cible d'une Action POSE_BUFF."""
+        for _position, _ennemi, cible_touchee, valeur, type_evenement in evenements:
+            if type_evenement == "bouclier":
+                self._ajouter_popup(cible_touchee, f"+{valeur}", COULEUR_POPUP_BOUCLIER)
+            else:
+                self._ajouter_popup(cible_touchee, f"-{valeur}", COULEUR_POPUP_DEGATS)
 
     def _ajouter_popup(self, cible: Module | Ennemi, texte: str, couleur: tuple[int, int, int]) -> None:
         """Demarre l'affichage d'un popup +/-N centre sur la case de cette cible, pour 2 secondes."""

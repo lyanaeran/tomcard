@@ -152,12 +152,13 @@ def test_combat_depuis_partie_reprend_le_vaisseau_et_le_deck_persistants():
     assert len(combat.joueur.deck.pioche) + len(combat.joueur.deck.main) == 3
 
 
-def test_combat_depuis_partie_reflete_les_degats_meme_en_mode_test():
+def test_combat_depuis_partie_reflete_les_degats_meme_en_mode_test(monkeypatch):
     """La persistance des PV entre combats (specs.md 2.2) doit rester testable en mode test
-    (MODE_TEST, cf. config_poc.py) : seule la valeur de depart d'un module tout juste equipe est
-    plus elevee (cf. test_equiper_module_utilise_pv_module_mode_test_par_defaut plus bas), pas la
-    persistance elle-meme - sinon Reparer/Ameliorer n'auraient plus aucune utilite a tester."""
-    assert partie_module.MODE_TEST is True
+    (MODE_TEST, cf. config_poc.py, desactive par defaut en production) : seule la valeur de
+    depart d'un module tout juste equipe est plus elevee (cf.
+    test_equiper_module_utilise_pv_module_mode_test_par_defaut plus bas), pas la persistance
+    elle-meme - sinon Reparer/Ameliorer n'auraient plus aucune utilite a tester."""
+    monkeypatch.setattr(partie_module, "MODE_TEST", True)
     partie = _partie_exemple()
     partie.vaisseau["base"].pv = 3  # simule des degats subis au combat precedent
 
@@ -167,12 +168,12 @@ def test_combat_depuis_partie_reflete_les_degats_meme_en_mode_test():
     assert combat.joueur.vaisseau.base.pv_max == 15
 
 
-def test_combat_depuis_partie_en_mode_test_donne_20_degats_aux_cartes_attaque_de_base():
+def test_combat_depuis_partie_en_mode_test_donne_20_degats_aux_cartes_attaque_de_base(monkeypatch):
     """Meme comportement que creer_deck_mode_test (config_poc.py), applique cette fois au deck
     reel d'une partie (2 exemplaires de Laser dans _partie_exemple) plutot qu'a une demonstration."""
     from src.gameplay.config_poc import VALEUR_ATTAQUE_BASE_MODE_TEST
 
-    assert partie_module.MODE_TEST is True
+    monkeypatch.setattr(partie_module, "MODE_TEST", True)
     partie = _partie_exemple()
 
     combat = combat_depuis_partie(partie, random.Random(1))
@@ -243,14 +244,14 @@ def test_equiper_module_remplit_le_premier_emplacement_libre(monkeypatch):
     assert partie.vaisseau["avant_droite"] is None
 
 
-def test_equiper_module_utilise_pv_module_mode_test_par_defaut():
-    """MODE_TEST (cf. src/gameplay/config_poc.py) donne une valeur de depart plus elevee aux
-    modules tout juste equipes, mais uniquement au moment de l'equipement : les PV persistent
-    ensuite normalement d'un combat a l'autre (cf.
-    test_combat_depuis_partie_reflete_les_degats_meme_en_mode_test)."""
+def test_equiper_module_utilise_pv_module_mode_test_par_defaut(monkeypatch):
+    """MODE_TEST (cf. src/gameplay/config_poc.py, desactive par defaut en production) donne une
+    valeur de depart plus elevee aux modules tout juste equipes quand il est actif, mais
+    uniquement au moment de l'equipement : les PV persistent ensuite normalement d'un combat a
+    l'autre (cf. test_combat_depuis_partie_reflete_les_degats_meme_en_mode_test)."""
     from src.gameplay.config_poc import PV_MODULE_MODE_TEST
 
-    assert partie_module.MODE_TEST is True
+    monkeypatch.setattr(partie_module, "MODE_TEST", True)
     partie = nouvelle_partie(random.Random(1))
     spec = next(s for s in charger_modules() if s.id != "MOD_1")
 

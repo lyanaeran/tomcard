@@ -1090,10 +1090,13 @@ perçante (§3.1, §7.2), et non automatiquement comme Alliés/Ennemis multiples
 
 ### 12.3 Effets à durée (plusieurs tours)
 
-Debuff actif pendant Y tours (chaque application ajoutée à la liste `Ennemi.debuffs_actifs`, comme
+Debuff actif pendant Y tours (chaque application ajoutée à la liste `Ennemi.buffs_actifs`, comme
 une instance indépendante avec sa propre durée ; décrémentée à chaque tour ennemi écoulé même si
 l'ennemi concerné n'a pas agi, et retirée de la liste à 0) — **implémenté** pour les debuffs
-(§12.4/§12.5) : *Boucliers hors service* jouable.
+(§12.4/§12.5) : *Boucliers hors service* jouable. Depuis §13, cette liste est **partagée avec les
+buffs** posés par les Actions des ennemis eux-mêmes (ex. Petit Jean se pose du bouclier) : buffs et
+debuffs ne sont plus que des cas d'usage du même modèle `BuffActif` (`carte.py`), qu'ils s'appliquent
+à un `Module` ou à un `Ennemi`.
 
 Même mécanique côté allié (`Module.buffs_actifs`), avec en plus la possibilité d'une durée **nulle**
 (`tours_restants=None`) pour un buff **persistant** qui ne décompte jamais et dure tout le combat —
@@ -1120,7 +1123,7 @@ Reste manquant pour les autres effets à durée :
 ### 12.4 Effets en pourcentage
 
 **Implémenté pour les debuffs** (somme des `valeur` des debuffs `VULNERABILITE` actifs dans
-`Ennemi.debuffs_actifs`, majore les dégâts subis d'une attaque du joueur) : *Brèche, Ligne avant,
+`Ennemi.buffs_actifs`, majore les dégâts subis d'une attaque du joueur) : *Brèche, Ligne avant,
 Boucliers endommagés, Boucliers hors service* jouables. **Implémenté aussi côté allié**
 (`ActionCarte.BOUCLIER_POURCENTAGE_PV` sur une carte Defense : bouclier = `valeur`% des PV **max**
 de la cible cliquée — les PV actuels varieraient trop selon les dégâts déjà subis, l'effet doit
@@ -1214,3 +1217,105 @@ tableau source, incohérente pour des cartes qui ne visent aucun ennemi. Corrig�
 `config/cartes.json` : elles se jouent en cliquant **n'importe quel module allié**, dont l'identité
 n'a aucune influence sur l'effet (celui-ci porte sur le deck ou l'électricité, ressources communes
 au vaisseau, pas sur le module cliqué).
+
+---
+
+## 13. Comportement des ennemis (IA)
+
+Remplace les 3 ennemis placeholder du POC (ENM_1/2/3, dégâts fixes tirés au hasard chaque tour) par
+5 ennemis à comportement scripté (`config/ennemis.json`), et introduit le modèle qui les décrit.
+Deux listes distinctes, indépendantes l'une de l'autre (décision utilisateur) :
+
+1. **Les Actions** (`ennemi.py:ActionEnnemi`) — le *comportement* d'un ennemi : une liste ordonnée
+   d'Actions, chacune caractérisée par :
+   - `type` : `ATTAQUE` (inflige des dégâts) ou `POSE_BUFF` (pose un buff/debuff, cf. point 2)
+   - `cible` : qui l'Action touche (`CibleActionEnnemi`, cf. plus bas)
+   - `valeur` : montant de dégâts (ATTAQUE) ou valeur numérique du buff posé (POSE_BUFF)
+   - `frequence` : l'Action se déclenche tous les *frequence* tours ennemi (1 = tous les tours)
+   - `tour_depart` : à partir de quel tour ennemi elle peut se déclencher (1 = dès le premier tour
+     ennemi du combat) — ensemble, ces deux champs déterminent l'activation d'un tour donné :
+     `tour >= tour_depart et (tour - tour_depart) % frequence == 0` (`ActionEnnemi.active_au_tour`)
+   - `repetitions` : nombre de fois que l'Action s'exécute **dans le même tour** quand elle se
+     déclenche (axe indépendant de `frequence`/`tour_depart`, qui décide *quels* tours, pas combien
+     de fois *dans* le tour) — ex. Le nettoyeur attaque 2 fois par tour (`repetitions=2`,
+     `frequence=1`), quand Petit Jean ne pose son bouclier qu'un tour sur deux (`frequence=2`,
+     `repetitions=1`)
+   - `action_buff`/`duree_buff` (uniquement pour `type=POSE_BUFF`) : quel `ActionCarte` poser (les
+     mêmes valeurs que sur une carte joueur, cf. §7.1/§12.5, ex. `BOUCLIER_PAR_TOUR`,
+     `BOUCLIER_MIROIR`) et sa durée (`null` = persistant, comme un buff joueur §12.3)
+   Un ennemi vivant exécute, à son tour, chacune de ses Actions actives ce tour-là, dans l'ordre de
+   sa propre liste, chaque Action s'exécutant `repetitions` fois d'affilée avant de passer à la
+   suivante (`Combat._tour_ennemi`).
+
+2. **Les buffs/debuffs** (`carte.py:BuffActif`) — l'*état* passif d'un ennemi ou d'un module, une
+   liste de buffs actifs indépendants (aucune fusion entre instances, même modèle des deux côtés
+   des combattants, cf. §12.3) : `action` (un `ActionCarte`), `valeur`, `tours_restants` (`null` =
+   persistant). "Buff" et "debuff" ne sont qu'un usage différent du même modèle (décision
+   utilisateur) : un buff posé par le joueur sur un module se redéclenche à chaque tour joueur
+   (`Module.declencher_buffs_tour`, §12.3), alors qu'un buff posé par une Action ennemie (sur
+   l'ennemi lui-même ou sur un module joueur) ne se redéclenche **jamais** automatiquement — c'est
+   la `frequence` de l'Action qui le pose qui décide quand il est reposé, pour ne pas cumuler les
+   deux mécanismes de périodicité. Les ennemis peuvent désormais avoir du **Bouclier** comme les
+   modules (même principe d'absorption avant les PV, §3.5).
+
+### 13.1 Cibles d'une Action (`CibleActionEnnemi`)
+
+- `PROXIMITE` : même règle que le ciblage historique du POC (`ciblage.py:module_cible_par_ennemi`,
+  la rangée de l'ennemi d'abord, puis les rangées voisines si elle est vide) — sujette à Tir allié
+  (§12.6) comme avant
+- `TOUS_MODULES_JOUEUR` : tous les modules du joueur encore en vie (attaque de zone ennemie,
+  symétrique des cartes joueur de type Alliés/Ennemis multiples) — jamais redirigée par Tir allié
+  (pas de cible individuelle à rediriger)
+- `COLONNE_AVANT_SINON_ARRIERE_JOUEUR` : un module du joueur tiré au hasard dans la colonne avant
+  (base incluse, comme en §12.1) s'il y en a un de vivant, sinon dans la colonne arrière — le
+  tirage n'a lieu qu'à la résolution réelle du tour, jamais au survol/tap (même principe que Tir
+  allié, §12.6, pour rester déterministe)
+- `SOI_MEME` : l'ennemi qui exécute l'Action (uniquement pertinent pour `POSE_BUFF`)
+
+### 13.2 Bouclier miroir (`ActionCarte.BOUCLIER_MIROIR`)
+
+Buff posé sur un module du joueur (ennemi Miroir). Tant qu'il est actif, une attaque reçue par ce
+module est en partie **renvoyée à l'attaquant** : jusqu'à la valeur du bouclier miroir, les dégâts
+sont retirés à l'ennemi attaquant plutôt qu'au module protégé ; le reste (si les dégâts dépassent la
+valeur du bouclier miroir) s'applique normalement au module. Se consomme comme un bouclier classique
+(sa valeur diminue à chaque dégât renvoyé, l'instance est retirée à 0) ; plusieurs instances peuvent
+coexister sur un même module, consommées dans l'ordre de pose (`Combat._consommer_bouclier_miroir`).
+Uniquement pris en compte côté résolution du tour ennemi (`Combat._resoudre_attaque`) : le joueur ne
+s'attaque jamais lui-même, cette mécanique n'a de sens que pour une attaque ennemie.
+
+### 13.3 Les 5 ennemis (`config/ennemis.json`)
+
+Remplacent entièrement les 3 ennemis placeholder du POC (ENM_1/2/3, retirés) :
+
+| Ennemi | PV | Comportement |
+| --- | --- | --- |
+| Pat le Pirate | 50 | Attaque 5 dégâts par tour, cible de proximité |
+| Le nettoyeur | 25 | Attaque 7 dégâts, **2 fois** par tour (`repetitions=2`), cible de proximité |
+| Petit Jean | 100 | Attaque 2 dégâts par tour (proximité) ; tous les 2 tours (à partir du tour 1), se pose 3 bouclier pendant 2 tours |
+| Le puzzle | 50 | Attaque 5 dégâts **tous les modules du joueur** par tour (zone) |
+| Miroir | 50 | Chaque tour, pose un Bouclier miroir de valeur 5 (persistant) sur un module allié tiré au hasard (colonne avant sinon arrière) |
+
+Valeurs de PV/dégâts inventées faute de spec numérique précise (à ajuster à l'équilibrage) — à
+signaler comme telles, cf. règle du fichier `CLAUDE.md`.
+
+**Préférence de placement en flotte** (`SpecEnnemi.placement`, purement une préférence de
+composition, pas un attribut de l'`Ennemi` en combat) :
+
+- Le nettoyeur (`PROTEGE_ARRIERE`) : placé de préférence en colonne arrière
+- Petit Jean (`PROTECTEUR_AVANT`) : placé de préférence en colonne avant, pour protéger les autres
+- Les 3 autres (Pat le Pirate, Le puzzle, Miroir) : aucune préférence — placés dans les emplacements
+  restants, colonne avant en priorité puis arrière (choix par défaut, pas de spec précise)
+
+### 13.4 Composition des flottes de combat
+
+- **Combat Intermédiaire** (Prime) : 1 ennemi tiré au sort (parmi les 5) jusqu'au niveau 5 inclus,
+  puis 2 ennemis tirés au sort à partir du niveau 6 (`config_poc.creer_flotte_prime`)
+- **Combat de Boss** : composition fixe (pas de tirage) — 2x Petit Jean en colonne avant (gauche et
+  droite), Le nettoyeur et Le puzzle en colonne arrière (gauche et droite) ; les deux emplacements
+  du milieu restent vides (`config_poc.creer_flotte_boss`)
+
+### 13.5 Points de vie des modules (fin du mode test)
+
+Le combat ne tourne plus en "mode test" (PV artificiellement gonflés) : les PV définis dans
+`config/modules.json` s'appliquent réellement. Valeurs actuelles (inventées faute de spec précise,
+à ajuster) : **50 PV** pour le module principal, **30 PV** pour chaque module secondaire.

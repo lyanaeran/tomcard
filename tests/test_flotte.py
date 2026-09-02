@@ -8,8 +8,8 @@ from src.gameplay.flotte import Flotte
 
 
 def _flotte_deux_ennemis() -> tuple[Flotte, Ennemi, Ennemi]:
-    e1 = Ennemi(pv_max=8, degats_attaque=4)
-    e2 = Ennemi(pv_max=16, degats_attaque=8)
+    e1 = Ennemi(pv_max=8)
+    e2 = Ennemi(pv_max=16)
     flotte = Flotte(
         {
             Position(Colonne.AVANT, Rangee.GAUCHE): e1,

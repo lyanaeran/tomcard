@@ -37,13 +37,13 @@ def test_charger_modules_renvoie_6_modules_avec_images_existantes_et_cartes_conn
         assert len(module.cartes) > 0
 
 
-def test_charger_ennemis_renvoie_3_ennemis_avec_images_existantes():
+def test_charger_ennemis_renvoie_5_ennemis_avec_images_existantes():
     ennemis = charger_ennemis()
 
-    assert len(ennemis) == 3
+    assert len(ennemis) == 5
     for ennemi in ennemis:
         assert Path(ennemi.image).is_file()
-        assert ennemi.degats_attaque > 0
+        assert len(ennemi.actions) > 0
         assert ennemi.points_de_vie > 0
 
 

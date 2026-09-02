@@ -1,25 +1,72 @@
 {
   "ennemis": [
     {
-      "id": "ENM_1",
-      "nom": "Ennemi 1",
-      "image": "assets/ennemis/ennemi1.png",
-      "points_de_vie": 8,
-      "action": "ATK,4,AUTO"
+      "id": "ENM_PAT_LE_PIRATE",
+      "nom": "Pat le Pirate",
+      "taille": "S",
+      "image": "assets/ennemis/pat_le_pirate.png",
+      "points_de_vie": 50,
+      "placement": null,
+      "actions": [
+        {"type": "ATTAQUE", "cible": "PROXIMITE", "valeur": 5}
+      ]
     },
     {
-      "id": "ENM_2",
-      "nom": "Ennemi 2",
-      "image": "assets/ennemis/ennemi2.png",
-      "points_de_vie": 16,
-      "action": "ATK,8,AUTO"
+      "id": "ENM_LE_NETTOYEUR",
+      "nom": "Le nettoyeur",
+      "taille": "S",
+      "image": "assets/ennemis/le_nettoyeur.png",
+      "points_de_vie": 25,
+      "placement": "PROTEGE_ARRIERE",
+      "actions": [
+        {"type": "ATTAQUE", "cible": "PROXIMITE", "valeur": 7, "repetitions": 2}
+      ]
     },
     {
-      "id": "ENM_3",
-      "nom": "Ennemi 3",
-      "image": "assets/ennemis/ennemi3.png",
-      "points_de_vie": 22,
-      "action": "ATK,6,AUTO"
+      "id": "ENM_PETIT_JEAN",
+      "nom": "Petit Jean",
+      "taille": "S",
+      "image": "assets/ennemis/petit_jean.png",
+      "points_de_vie": 100,
+      "placement": "PROTECTEUR_AVANT",
+      "actions": [
+        {"type": "ATTAQUE", "cible": "PROXIMITE", "valeur": 2},
+        {
+          "type": "POSE_BUFF",
+          "cible": "SOI_MEME",
+          "valeur": 3,
+          "frequence": 2,
+          "action_buff": "BOUCLIER_PAR_TOUR",
+          "duree_buff": 2
+        }
+      ]
+    },
+    {
+      "id": "ENM_LE_PUZZLE",
+      "nom": "Le puzzle",
+      "taille": "S",
+      "image": "assets/ennemis/le_puzzle.png",
+      "points_de_vie": 50,
+      "placement": null,
+      "actions": [
+        {"type": "ATTAQUE", "cible": "TOUS_MODULES_JOUEUR", "valeur": 5}
+      ]
+    },
+    {
+      "id": "ENM_MIROIR",
+      "nom": "Miroir",
+      "taille": "S",
+      "image": "assets/ennemis/miroir.png",
+      "points_de_vie": 50,
+      "placement": null,
+      "actions": [
+        {
+          "type": "POSE_BUFF",
+          "cible": "COLONNE_AVANT_SINON_ARRIERE_JOUEUR",
+          "valeur": 5,
+          "action_buff": "BOUCLIER_MIROIR"
+        }
+      ]
     }
   ]
 }

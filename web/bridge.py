@@ -19,6 +19,7 @@ sys.path.insert(0, "/repo")
 from src.gameplay.carte import CIBLES_SANS_CLIC, ActionCarte, CibleCarte, regrouper_cartes
 from src.gameplay.config_poc import creer_combat_poc, creer_deck, creer_vaisseau
 from src.gameplay.donnees import charger_cartes, charger_modules, image_case_module
+from src.gameplay.ennemi import CibleActionEnnemi, TypeActionEnnemi
 from src.gameplay.module import Module
 from src.gameplay.parcours import (
     TypeAventure,
@@ -120,41 +121,50 @@ def _module_json(module, id_case: str):
 
 
 def _intention_json(ennemi):
-    """Intention de cet ennemi : module vise et degats que cet
-    ennemi infligerait, calcules avec la meme fonction que fenetre.py (previsualiser_cible
-    + degats_attaque_effectifs, aucune logique dupliquee).
+    """Intention de cet ennemi a son prochain tour (specs.md 13, ActionEnnemi), calculee avec
+    les memes fonctions que fenetre.py (prochaine_action_active/previsualiser_cible/
+    degats_attaque_effectifs, aucune logique dupliquee) - None si aucune Action n'est active
+    ce tour-la (ex. Petit Jean, dont le bouclier n'est pose qu'un tour sur 3).
 
-    Volontairement la valeur "brute" de l'ennemi, pas _degats_effectifs de combat.py (qui
-    plafonne selon PV+bouclier de la cible et renvoie 0 si un leurre est actif, specs.md
-    12.6) : l'intention doit montrer la vraie attaque de chaque ennemi, meme si plusieurs
-    ennemis visent un module leurre - un seul des deux sera reellement annule a la
-    resolution, mais lequel n'est determine qu'a ce moment-la (ordre de resolution).
-
-    Si Tir allie est actif (specs.md 12.6), previsualiser_cible renvoie None expres (la
-    cible reelle - un autre ennemi - n'est tiree au hasard qu'a la resolution du tour,
-    jamais au survol/tap, pour rester deterministe) : on le signale explicitement plutot
-    que de renvoyer None comme pour "aucune cible a portee", pour que l'UI l'affiche."""
+    type: "ATTAQUE" ou "POSE_BUFF" (cf. TypeActionEnnemi). Pour une ATTAQUE :
+    cible_type "TOUS" (attaque de zone, Le puzzle), "REDIRECTION" (Tir allie actif, specs.md
+    12.6 - la cible reelle, un autre ennemi, n'est tiree au hasard qu'a la resolution du
+    tour, jamais ici, pour rester deterministe au tap/redessin) ou "MODULE" (cible normale,
+    avec module_id/module_nom). Le "degats" est volontairement la valeur "brute" de
+    l'ennemi, pas _degats_effectifs de combat.py (qui plafonne selon PV+bouclier de la
+    cible et renvoie 0 si un leurre est actif, specs.md 12.6) : l'intention doit montrer la
+    vraie attaque de chaque ennemi. Pour une POSE_BUFF, seule la valeur du buff est fournie
+    (pas de cible a afficher - SOI_MEME ou un module tire au hasard a la resolution)."""
     if ennemi.est_detruit():
         return None
-    if any(debuff.action == ActionCarte.REDIRECTION_CIBLE for debuff in ennemi.debuffs_actifs):
-        return {"redirection": True}
+    action = combat.prochaine_action_active(ennemi)
+    if action is None:
+        return None
+    if action.type != TypeActionEnnemi.ATTAQUE:
+        return {"type": "POSE_BUFF", "valeur": action.valeur}
+    degats = ennemi.degats_attaque_effectifs(action.valeur)
+    if action.cible == CibleActionEnnemi.TOUS_MODULES_JOUEUR:
+        return {"type": "ATTAQUE", "cible_type": "TOUS", "degats": degats}
+    if any(buff.action == ActionCarte.REDIRECTION_CIBLE for buff in ennemi.buffs_actifs):
+        return {"type": "ATTAQUE", "cible_type": "REDIRECTION"}
     cible = combat.previsualiser_cible(ennemi)
     if cible is None:
         return None
     return {
-        "redirection": False,
+        "type": "ATTAQUE",
+        "cible_type": "MODULE",
         "module_id": _id_module(cible),
         "module_nom": cible.nom,
-        "degats": ennemi.degats_attaque_effectifs(),
+        "degats": degats,
     }
 
 
 def _debuffs_json(ennemi):
-    """Debuffs actifs de cet ennemi (specs.md 12.1/12.4), chacun independant des autres
-    (aucune fusion : la magnitude affichee est celle de cette instance, pas la somme)."""
+    """Buffs/debuffs actifs de cet ennemi (specs.md 12.1/12.4/13), chacun independant des
+    autres (aucune fusion : la magnitude affichee est celle de cette instance, pas la somme)."""
     return [
-        {"action": debuff.action.name, "valeur": debuff.valeur, "tours_restants": debuff.tours_restants}
-        for debuff in ennemi.debuffs_actifs
+        {"action": buff.action.name, "valeur": buff.valeur, "tours_restants": buff.tours_restants}
+        for buff in ennemi.buffs_actifs
     ]
 
 
@@ -166,9 +176,9 @@ def _ennemi_json(ennemi, id_case: str):
         "nom": ennemi.nom,
         "pv": ennemi.pv,
         "pv_max": ennemi.pv_max,
+        "bouclier": ennemi.bouclier,
         "detruit": ennemi.est_detruit(),
         "image": _chemin_web(ennemi.image),
-        "degats_attaque": ennemi.degats_attaque_effectifs(),
         "intention": _intention_json(ennemi),
         "debuffs": _debuffs_json(ennemi),
     }
@@ -763,17 +773,21 @@ def jouer_carte(index_carte: int, id_cible) -> str:
 
 
 def finir_tour() -> str:
-    """Termine le tour du joueur ; renvoie aussi un popup -N par attaque ennemie resolue.
-
-    La cible peut etre un module (cas normal) ou un autre ennemi si Tir allie est actif sur
-    l'attaquant (specs.md 12.6, resolu dans Combat._tour_ennemi)."""
-    attaques = combat.finir_tour_joueur()
+    """Termine le tour du joueur ; renvoie aussi un popup par evenement ennemi resolu
+    (specs.md 13) : -N (degats) sur un module, sur un autre ennemi si Tir allie est actif
+    sur l'attaquant (specs.md 12.6), ou sur l'attaquant lui-meme en cas de renvoi par un
+    Bouclier miroir ; +N (bouclier) sur la cible d'une Action POSE_BUFF."""
+    evenements = combat.finir_tour_joueur()
     popups = []
-    for _position, _ennemi, cible, degats_effectifs in attaques:
+    for _position, _ennemi, cible, valeur, type_evenement in evenements:
         if isinstance(cible, Module):
             id_case, camp = _id_module(cible), "allie"
         else:
             id_case, camp = _id_ennemi(cible), "ennemi"
-        if id_case is not None:
-            popups.append({"id": id_case, "camp": camp, "texte": f"-{degats_effectifs}", "couleur": "degats"})
+        if id_case is None:
+            continue
+        if type_evenement == "bouclier":
+            popups.append({"id": id_case, "camp": camp, "texte": f"+{valeur}", "couleur": "bouclier"})
+        else:
+            popups.append({"id": id_case, "camp": camp, "texte": f"-{valeur}", "couleur": "degats"})
     return json.dumps({"etat": _etat_dict(), "popups": popups})
