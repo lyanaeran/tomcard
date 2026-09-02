@@ -504,15 +504,17 @@ et les fonctions de clic associées)
 - Un ennemi peut lui aussi avoir du Bouclier (specs.md §13), avec exactement la même règle
   d'absorption qu'un module
 - **Dissipation naturelle** : à chaque tour (tour joueur pour un module, tour ennemi pour un
-  ennemi), le Bouclier restant est divisé par deux (arrondi au-dessus), puis retombe
-  complètement à 0 si le résultat est ≤ 5 (`SEUIL_DISSIPATION_BOUCLIER`, `combat.py`) — empêche
-  un Bouclier de protéger indéfiniment sans être renouvelé, et garantit qu'il finit toujours par
-  disparaître entièrement plutôt que de décliner sans fin (`ceil(1/2)=1` ne convergerait jamais
-  vers 0 sans ce seuil). La dissipation a lieu **avant** qu'un buff `BOUCLIER_PAR_TOUR` actif ce
-  tour-là ne repose du Bouclier frais (§12.3) : un Bouclier persistant ou à durée ne s'accumule
-  donc jamais indéfiniment, il se stabilise à sa valeur de pose (l'ancien reste dissipé avant
-  d'être remplacé). Ne s'applique **pas** au Bouclier miroir (§13.2), qui est un mécanisme
-  distinct (buff à part, consommé uniquement par le renvoi de dégâts, jamais par dissipation)
+  ennemi), si le Bouclier actuel est ≤ 5 (`SEUIL_DISSIPATION_BOUCLIER`, `combat.py`) il disparaît
+  complètement ; sinon il est divisé par deux (arrondi au-dessus) — la valeur est vérifiée
+  **avant** la division, pas après. Garantit qu'un Bouclier finit toujours par disparaître
+  entièrement plutôt que de décliner sans fin (`ceil(1/2)=1` ne convergerait jamais vers 0 sans ce
+  seuil). La dissipation a lieu **avant** qu'un buff `BOUCLIER_PAR_TOUR` actif ce tour-là ne repose
+  du Bouclier frais (§12.3) : un Bouclier persistant ou à durée n'est donc pas simplement remis à
+  sa valeur de pose à chaque tour, il peut croître au-dessus si sa valeur reste supérieure au seuil
+  après division (ex. buff de valeur 10 : 10 → 5+10=15 → 8+10=18 → ... → se stabilise à 20, point
+  fixe où diviser par deux puis rajouter 10 redonne 20). Ne s'applique **pas** au Bouclier miroir
+  (§13.2), qui est un mécanisme distinct (buff à part, consommé uniquement par le renvoi de
+  dégâts, jamais par dissipation)
 - Valeur du seuil (5) inventée faute de spec précise — à ajuster à l'équilibrage, comme les
   autres valeurs numériques du même type (§13)
 
@@ -1118,8 +1120,9 @@ cartes Buff à effet périodique simple (les 3 autres cartes Buff restantes sont
 §12.5/§12.7). L'effet d'un buff se déclenche une première fois immédiatement à la pose de la carte
 (comme les autres types de carte), puis se redéclenche à chaque début de tour joueur tant qu'il
 reste actif. Pour un buff `BOUCLIER_PAR_TOUR`, ce redéclenchement pose du Bouclier frais
-**après** la dissipation naturelle du tour (§3.5) : le Bouclier ne s'accumule donc jamais d'un
-tour à l'autre, il se stabilise à la valeur du buff.
+**après** la dissipation naturelle du tour (§3.5), qui ne fait que diviser par deux la valeur
+existante tant qu'elle dépasse le seuil : le Bouclier peut donc croître au-dessus de la valeur du
+buff avant de se stabiliser à un palier plus élevé (cf. §3.5 pour l'exemple chiffré).
 
 Un buff persistant cible toujours le **module principal** plutôt qu'un module au choix du joueur
 (déviation assumée de la cible "Module Unique" du tableau de conception, décision utilisateur) : lui

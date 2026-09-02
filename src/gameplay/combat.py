@@ -32,20 +32,23 @@ def _degats_effectifs(cible: Module | Ennemi, degats: int) -> int:
     return min(degats, cible.pv + getattr(cible, "bouclier", 0))
 
 
-# Seuil de dissipation naturelle du bouclier (specs.md 3.5) : en dessous ou egal a cette valeur
-# apres division, le reste de bouclier disparait entierement plutot que de continuer a decliner
-# indefiniment (ceil(1/2) = 1 ne convergerait jamais vers 0 sans ce seuil).
+# Seuil de dissipation naturelle du bouclier (specs.md 3.5) : en dessous ou egal a cette valeur,
+# le bouclier disparait entierement au lieu d'etre divise par deux - evite qu'il continue a
+# decliner indefiniment (ceil(1/2) = 1 ne convergerait jamais vers 0 sans ce seuil).
 SEUIL_DISSIPATION_BOUCLIER = 5
 
 
 def _dissiper_bouclier(entite: Module | Ennemi) -> None:
     """Dissipation naturelle du bouclier a chaque tour (specs.md 3.5, meme regle pour un module
-    et un ennemi) : divise par deux (arrondi au-dessus), puis completement dissipe si le
-    resultat ne depasse pas SEUIL_DISSIPATION_BOUCLIER. Appelee une fois par tour pour chaque
-    camp (modules au debut de chaque tour joueur, ennemis au debut de chaque tour ennemi),
-    avant que les buffs de ce tour ne reposent eventuellement du bouclier frais par-dessus."""
-    moitie = (entite.bouclier + 1) // 2
-    entite.bouclier = 0 if moitie <= SEUIL_DISSIPATION_BOUCLIER else moitie
+    et un ennemi) : si sa valeur actuelle ne depasse pas SEUIL_DISSIPATION_BOUCLIER, il disparait
+    completement ; sinon il est divise par deux (arrondi au-dessus). Appelee une fois par tour
+    pour chaque camp (modules au debut de chaque tour joueur, ennemis au debut de chaque tour
+    ennemi), avant que les buffs de ce tour ne reposent eventuellement du bouclier frais
+    par-dessus."""
+    if entite.bouclier <= SEUIL_DISSIPATION_BOUCLIER:
+        entite.bouclier = 0
+    else:
+        entite.bouclier = (entite.bouclier + 1) // 2
 
 
 class Combat:

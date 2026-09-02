@@ -538,20 +538,21 @@ def test_buff_bouclier_perpetuel_donne_du_bouclier_immediatement():
 
 
 def test_buff_bouclier_perpetuel_se_redeclenche_a_chaque_tour_joueur_sans_expirer():
-    """Le buff (persistant) ne s'arrete jamais, mais la dissipation naturelle du bouclier
-    (specs.md 3.5, tous les tours) s'applique avant chaque redeclenchement : avec une valeur de
-    10, la dissipation (ceil(10/2)=5 <= SEUIL_DISSIPATION_BOUCLIER) ramene le bouclier a 0 avant
-    que le buff ne le repose a 10 - un etat stable, plutot qu'une croissance sans fin."""
+    """Le buff (persistant) ne s'arrete jamais. La dissipation naturelle du bouclier (specs.md
+    3.5) verifie d'abord si la valeur ACTUELLE est <= SEUIL_DISSIPATION_BOUCLIER (10 > 5 : elle
+    ne disparait pas completement, elle est divisee par deux), puis le buff repose sa valeur
+    par-dessus : le bouclier ne se stabilise donc pas a la valeur du buff, il croit tant qu'il
+    reste au-dessus du seuil apres division (10 -> 5+10=15 -> 8+10=18 -> ...)."""
     combat, vaisseau, _flotte = _nouveau_combat(degats_ennemi=0)
     combat.joueur.deck.main = [CARTE_BOUCLIER_PERPETUEL]
     combat.joueur.electricite = 5
     combat.jouer_carte(CARTE_BOUCLIER_PERPETUEL, None)
 
     combat.finir_tour_joueur()
-    assert vaisseau.base.bouclier == 10  # dissipe a 0, puis repose a 10
+    assert vaisseau.base.bouclier == 15  # dissipe 10 -> 5 (10 > seuil), puis repose a +10
 
     combat.finir_tour_joueur()
-    assert vaisseau.base.bouclier == 10  # etat stable : jamais plus de 10
+    assert vaisseau.base.bouclier == 18  # dissipe 15 -> 8 (ceil(15/2)), puis repose a +10
     assert len(vaisseau.base.buffs_actifs) == 1
 
 
@@ -702,11 +703,11 @@ def test_blindage_maximal_donne_du_bouclier_immediatement():
 
 
 def test_blindage_maximal_expire_apres_3_tours():
-    """La dissipation naturelle du bouclier (specs.md 3.5) s'applique avant chaque
-    redeclenchement du buff (ceil(8/2)=4 <= SEUIL_DISSIPATION_BOUCLIER -> 0, puis repose a 8) :
-    le bouclier reste donc a 8 tant que le buff est actif, jamais cumulatif. Une fois le buff
-    expire (3 tours), plus rien ne le repose : la dissipation, elle, continue de s'appliquer et
-    fait tomber le bouclier a 0 au tour suivant."""
+    """La dissipation naturelle du bouclier (specs.md 3.5) verifie d'abord la valeur ACTUELLE
+    contre SEUIL_DISSIPATION_BOUCLIER (8 > 5 : divisee par deux, pas annulee) avant que le buff
+    ne repose sa valeur par-dessus : le bouclier croit tant que le buff est actif
+    (8 -> 4+8=12 -> 6+8=14 -> 7+8=15), puis, une fois le buff expire (3 tours), plus rien ne le
+    repose : seule la dissipation continue de s'appliquer, jusqu'a tomber sous le seuil."""
     combat, vaisseau, _flotte = _nouveau_combat(degats_ennemi=0)
     combat.joueur.deck.main = [CARTE_BLINDAGE_MAXIMAL]
     combat.joueur.electricite = 2
@@ -715,34 +716,46 @@ def test_blindage_maximal_expire_apres_3_tours():
     combat.finir_tour_joueur()
     combat.finir_tour_joueur()
     combat.finir_tour_joueur()
-    assert vaisseau.base.bouclier == 8  # dissipe puis repose a 8 a chaque tour tant que le buff dure
+    assert vaisseau.base.bouclier == 15  # 8 -> 12 -> 14 -> 15 (dissipation puis +8 a chaque tour)
     assert vaisseau.base.buffs_actifs == []  # buff expire apres ce 3e redeclenchement
 
     combat.finir_tour_joueur()
-    assert vaisseau.base.bouclier == 0  # plus de buff pour le reposer : la dissipation l'annule
+    assert vaisseau.base.bouclier == 8  # plus de buff pour le reposer : ceil(15/2)=8
+
+    combat.finir_tour_joueur()
+    assert vaisseau.base.bouclier == 4  # ceil(8/2)=4
+
+    combat.finir_tour_joueur()
+    assert vaisseau.base.bouclier == 0  # 4 <= SEUIL_DISSIPATION_BOUCLIER
 
 
 # --- Dissipation naturelle du bouclier (specs.md 3.5) ---
 
 
 def test_bouclier_module_se_dissipe_de_moitie_a_chaque_tour_joueur():
+    """La valeur ACTUELLE est comparee au seuil avant division (specs.md 3.5) : 20 et 10 sont
+    tous deux > SEUIL_DISSIPATION_BOUCLIER, ils sont donc divises par deux ; seul 5 (<= seuil)
+    disparait completement plutot que d'etre divise."""
     combat, vaisseau, _flotte = _nouveau_combat(degats_ennemi=0)
     vaisseau.base.ajouter_bouclier(20)
 
     combat.finir_tour_joueur()
-    assert vaisseau.base.bouclier == 10  # ceil(20/2)
+    assert vaisseau.base.bouclier == 10  # 20 > seuil : ceil(20/2)
 
     combat.finir_tour_joueur()
-    assert vaisseau.base.bouclier == 0  # ceil(10/2)=5 <= SEUIL_DISSIPATION_BOUCLIER -> dissipe
+    assert vaisseau.base.bouclier == 5  # 10 > seuil : ceil(10/2)
+
+    combat.finir_tour_joueur()
+    assert vaisseau.base.bouclier == 0  # 5 <= SEUIL_DISSIPATION_BOUCLIER : dissipe completement
 
 
-def test_bouclier_module_sous_le_seuil_dissipe_completement_en_un_tour():
+def test_bouclier_module_au_ou_sous_le_seuil_dissipe_completement_en_un_tour():
     combat, vaisseau, _flotte = _nouveau_combat(degats_ennemi=0)
-    vaisseau.base.ajouter_bouclier(6)
+    vaisseau.base.ajouter_bouclier(5)
 
     combat.finir_tour_joueur()
 
-    assert vaisseau.base.bouclier == 0  # ceil(6/2)=3 <= SEUIL_DISSIPATION_BOUCLIER
+    assert vaisseau.base.bouclier == 0  # 5 <= SEUIL_DISSIPATION_BOUCLIER : pas de division
 
 
 def test_bouclier_module_au_dessus_du_seuil_diminue_sans_disparaitre():
@@ -751,7 +764,7 @@ def test_bouclier_module_au_dessus_du_seuil_diminue_sans_disparaitre():
 
     combat.finir_tour_joueur()
 
-    assert vaisseau.base.bouclier == 6  # ceil(12/2)=6 > SEUIL_DISSIPATION_BOUCLIER : reste actif
+    assert vaisseau.base.bouclier == 6  # 12 > SEUIL_DISSIPATION_BOUCLIER : ceil(12/2)=6
 
 
 def test_bouclier_ennemi_se_dissipe_a_chaque_tour_ennemi():
@@ -760,10 +773,13 @@ def test_bouclier_ennemi_se_dissipe_a_chaque_tour_ennemi():
     ennemi.ajouter_bouclier(20)
 
     combat.finir_tour_joueur()
-    assert ennemi.bouclier == 10
+    assert ennemi.bouclier == 10  # 20 > seuil : ceil(20/2)
 
     combat.finir_tour_joueur()
-    assert ennemi.bouclier == 0
+    assert ennemi.bouclier == 5  # 10 > seuil : ceil(10/2)
+
+    combat.finir_tour_joueur()
+    assert ennemi.bouclier == 0  # 5 <= SEUIL_DISSIPATION_BOUCLIER
 
 
 # --- Bouclier adaptatif (Blindage, specs.md 12.4) ---
