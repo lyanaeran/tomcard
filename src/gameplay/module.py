@@ -2,21 +2,7 @@
 Le module de base du vaisseau du joueur : points de vie et bouclier.
 """
 
-from dataclasses import dataclass
-
-from src.gameplay.carte import ActionCarte
-
-
-@dataclass
-class BuffActif:
-    """Un buff applique sur un module (specs.md 12.3/12.5), sur le meme modele que
-    DebuffActif sur Ennemi : chaque application reste une instance independante (pas de
-    fusion). tours_restants est None pour un buff persistant (dure tout le combat, ne
-    decompte jamais - ex. Bouclier perpetuel, specs.md 12.3)."""
-
-    action: ActionCarte
-    valeur: int
-    tours_restants: int | None
+from src.gameplay.carte import ActionCarte, BuffActif
 
 
 class Module:

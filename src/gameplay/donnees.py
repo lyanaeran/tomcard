@@ -7,9 +7,13 @@ Format de chaque fichier (contenu declaratif du jeu, cf. specs.md paragraphe 10.
   points_de_vie, description (type de carte debloque, sans reveler les cartes - utilisee par
   l'ecran de choix de module du parcours, specs.md 2.3), cartes (liste d'ids CRT_N jouables).
 - ennemis.json : un ennemi par entree - id (ENM_N), nom, image (assets/ennemis/), points_de_vie,
-  action : chaine "TYPE,valeur,cible" (ex. "ATK,8,AUTO") - seul TYPE=ATK (attaque) est interprete
-  ici pour l'instant, les autres types ignores ; cible vaut toujours AUTO (ciblage automatique,
-  cf. ciblage.py), prevu pour accueillir d'autres modes plus tard si besoin.
+  taille (S/M/L, cf. specs.md 3.2 - purement informatif pour l'instant, seule S est utilisee),
+  placement (absent/null, ou "PROTECTEUR_AVANT"/"PROTEGE_ARRIERE" - preference de position en
+  flotte, specs.md 13), actions : liste d'objets {type, cible, valeur, frequence?, tour_depart?,
+  repetitions?, action_buff?, duree_buff?} - type/cible reprennent TypeActionEnnemi/
+  CibleActionEnnemi (cf. ennemi.py), action_buff un ActionCarte (cf. carte.py, uniquement pour
+  type=POSE_BUFF). frequence/tour_depart/repetitions par defaut a 1, duree_buff a null
+  (persistant) - cf. ennemi.py:ActionEnnemi pour le detail de chaque champ (specs.md 13).
 - cartes.json : une carte par entree - id (CRT_N), nom, image (assets/cartes/), cout (electricite),
   rarete (Base/Commune/Rare/Legendaire, cf. RareteCarte), munition (nombre de munitions, absent/
   null = illimitees, cf. carte.py), effet (absent = carte non jouable, ignoree par charger_cartes) :
@@ -23,6 +27,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from src.gameplay.carte import ActionCarte, Carte, CibleCarte, RareteCarte, TypeCarte
+from src.gameplay.ennemi import ActionEnnemi, CibleActionEnnemi, TypeActionEnnemi
 
 RACINE = Path(__file__).resolve().parents[2]
 DOSSIER_CONFIG = RACINE / "config"
@@ -42,16 +47,15 @@ class SpecModule:
 
 @dataclass(frozen=True)
 class SpecEnnemi:
-    """Description d'un ennemi, telle que lue dans config/ennemis.json.
-
-    Seule l'action ATK (attaque) est supportee pour l'instant (cf. module docstring ci-dessus).
-    """
+    """Description d'un ennemi, telle que lue dans config/ennemis.json (specs.md 13)."""
 
     id: str
     nom: str
     image: str
     points_de_vie: int
-    degats_attaque: int
+    taille: str
+    actions: tuple[ActionEnnemi, ...]
+    placement: str | None
 
 
 def _chemin_image(chemin_relatif: str) -> str:
@@ -122,21 +126,33 @@ def charger_modules() -> list[SpecModule]:
     ]
 
 
+def _action_ennemi_depuis_json(action: dict) -> ActionEnnemi:
+    return ActionEnnemi(
+        type=TypeActionEnnemi[action["type"]],
+        cible=CibleActionEnnemi[action["cible"]],
+        valeur=action["valeur"],
+        frequence=action.get("frequence", 1),
+        tour_depart=action.get("tour_depart", 1),
+        repetitions=action.get("repetitions", 1),
+        action_buff=ActionCarte[action["action_buff"]] if "action_buff" in action else None,
+        duree_buff=action.get("duree_buff"),
+    )
+
+
 def charger_ennemis() -> list[SpecEnnemi]:
-    """Charge config/ennemis.json. Ignore les actions autres que ATK pour l'instant."""
+    """Charge config/ennemis.json (specs.md 13)."""
     donnees = json.loads((DOSSIER_CONFIG / "ennemis.json").read_text())
     specs = []
     for entree in donnees["ennemis"]:
-        type_action, valeur, _cible = entree["action"].split(",")
-        if type_action != "ATK":
-            continue
         specs.append(
             SpecEnnemi(
                 id=entree["id"],
                 nom=entree["nom"],
                 image=_chemin_image(entree["image"]),
                 points_de_vie=entree["points_de_vie"],
-                degats_attaque=int(valeur),
+                taille=entree.get("taille", "S"),
+                placement=entree.get("placement"),
+                actions=tuple(_action_ennemi_depuis_json(action) for action in entree["actions"]),
             )
         )
     return specs

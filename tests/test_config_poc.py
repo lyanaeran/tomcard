@@ -12,8 +12,11 @@ from src.gameplay.config_poc import (
     ELECTRICITE_PAR_TOUR,
     ID_MODULE_PRINCIPAL,
     MODE_TEST,
+    NIVEAU_PRIME_DEUX_ENNEMIS,
     NOMBRE_ENNEMIS_ASTEROIDES,
     NOMBRE_ENNEMIS_MODE_TEST,
+    NOMBRE_ENNEMIS_PRIME_NIVEAU_ELEVE,
+    NOMBRE_ENNEMIS_PRIME_NIVEAU_FAIBLE,
     NOMBRE_MODULES_EQUIPES,
     PV_ENNEMI_MODE_TEST,
     PV_MODULE_MODE_TEST,
@@ -23,10 +26,14 @@ from src.gameplay.config_poc import (
     creer_deck_mode_test,
     creer_flotte,
     creer_flotte_asteroides,
+    creer_flotte_boss,
+    creer_flotte_prime,
     creer_vaisseau,
+    nombre_ennemis_prime,
     tirer_cartes,
 )
 from src.gameplay.donnees import charger_cartes, charger_ennemis, charger_modules
+from src.gameplay.position import Colonne
 
 
 def test_charger_modules_contient_le_module_principal():
@@ -35,7 +42,25 @@ def test_charger_modules_contient_le_module_principal():
     principal = next(spec for spec in specs if spec.id == ID_MODULE_PRINCIPAL)
 
     assert principal.nom == "Principal"
+    assert principal.points_de_vie == 50
     assert len(specs) >= NOMBRE_MODULES_EQUIPES + 1  # le principal + au moins 4 equipables
+
+
+def test_charger_modules_secondaires_ont_30_pv():
+    specs = charger_modules()
+
+    secondaires = [spec for spec in specs if spec.id != ID_MODULE_PRINCIPAL]
+
+    assert secondaires
+    assert all(spec.points_de_vie == 30 for spec in secondaires)
+
+
+def test_charger_ennemis_contient_les_5_ennemis():
+    specs = charger_ennemis()
+
+    noms = {spec.nom for spec in specs}
+
+    assert noms == {"Pat le Pirate", "Le nettoyeur", "Petit Jean", "Le puzzle", "Miroir"}
 
 
 def test_creer_vaisseau_place_le_principal_et_4_modules_differents():
@@ -64,9 +89,9 @@ def test_creer_vaisseau_est_deterministe_pour_une_meme_graine():
     assert noms_1 == noms_2
 
 
-def test_creer_flotte_remplit_les_6_cases(monkeypatch):
-    """Hors mode test (cf. test_creer_flotte_en_mode_test_ne_remplit_que_2_cases ci-dessous)."""
-    monkeypatch.setattr(config_poc_module, "MODE_TEST", False)
+def test_creer_flotte_remplit_les_6_cases():
+    """Hors mode test (MODE_TEST est desormais False en production, cf. sa docstring)."""
+    assert MODE_TEST is False
     specs = charger_ennemis()
     aleatoire = random.Random(1)
 
@@ -74,15 +99,15 @@ def test_creer_flotte_remplit_les_6_cases(monkeypatch):
 
     assert len(flotte.positions()) == 6
     assert len(flotte.ennemis_vivants()) == 6
-    ids_connus = {spec.nom for spec in specs}
+    noms_connus = {spec.nom for spec in specs}
     for ennemi in flotte.ennemis_vivants():
-        assert ennemi.nom in ids_connus
+        assert ennemi.nom in noms_connus
 
 
-def test_creer_flotte_en_mode_test_ne_remplit_que_2_cases():
-    """Moins d'ennemis a vaincre par combat en mode test (cf. NOMBRE_ENNEMIS_MODE_TEST), pour
-    accelerer les essais manuels du parcours."""
-    assert MODE_TEST is True
+def test_creer_flotte_en_mode_test_ne_remplit_que_2_cases(monkeypatch):
+    """MODE_TEST reste utilisable pour accelerer les essais manuels (cf. sa docstring), meme
+    si desactive par defaut en production."""
+    monkeypatch.setattr(config_poc_module, "MODE_TEST", True)
     specs = charger_ennemis()
     aleatoire = random.Random(1)
 
@@ -102,6 +127,63 @@ def test_creer_flotte_asteroides_remplit_3_cases():
 
     assert len(flotte.positions()) == NOMBRE_ENNEMIS_ASTEROIDES == 3
     assert len(flotte.ennemis_vivants()) == NOMBRE_ENNEMIS_ASTEROIDES
+
+
+def test_nombre_ennemis_prime_un_ennemi_avant_le_niveau_6():
+    assert nombre_ennemis_prime(1) == NOMBRE_ENNEMIS_PRIME_NIVEAU_FAIBLE == 1
+    assert nombre_ennemis_prime(NIVEAU_PRIME_DEUX_ENNEMIS - 1) == 1
+
+
+def test_nombre_ennemis_prime_deux_ennemis_a_partir_du_niveau_6():
+    assert nombre_ennemis_prime(NIVEAU_PRIME_DEUX_ENNEMIS) == NOMBRE_ENNEMIS_PRIME_NIVEAU_ELEVE == 2
+    assert nombre_ennemis_prime(NIVEAU_PRIME_DEUX_ENNEMIS + 4) == 2
+
+
+def test_creer_flotte_prime_niveau_faible_a_un_seul_ennemi():
+    specs = charger_ennemis()
+
+    flotte = creer_flotte_prime(specs, niveau=1, aleatoire=random.Random(1))
+
+    assert len(flotte.ennemis_vivants()) == 1
+
+
+def test_creer_flotte_prime_niveau_eleve_a_deux_ennemis():
+    specs = charger_ennemis()
+
+    flotte = creer_flotte_prime(specs, niveau=NIVEAU_PRIME_DEUX_ENNEMIS, aleatoire=random.Random(1))
+
+    assert len(flotte.ennemis_vivants()) == 2
+
+
+def test_creer_flotte_prime_respecte_la_preference_de_placement():
+    """Petit Jean (PROTECTEUR_AVANT) et Le nettoyeur (PROTEGE_ARRIERE) doivent se retrouver
+    sur leurs colonnes preferees, meme si le tirage les place ensemble."""
+    specs = charger_ennemis()
+    specs_par_id = {spec.id: spec for spec in specs}
+    petit_jean = specs_par_id["ENM_PETIT_JEAN"]
+    nettoyeur = specs_par_id["ENM_LE_NETTOYEUR"]
+
+    aleatoire = random.Random(0)
+    positions = config_poc_module._placer_specs_avec_preference([petit_jean, nettoyeur], aleatoire)
+
+    position_jean = next(pos for pos, spec in positions.items() if spec is petit_jean)
+    position_nettoyeur = next(pos for pos, spec in positions.items() if spec is nettoyeur)
+    assert position_jean.colonne == Colonne.AVANT
+    assert position_nettoyeur.colonne == Colonne.ARRIERE
+
+
+def test_creer_flotte_boss_composition_fixe():
+    specs = charger_ennemis()
+
+    flotte = creer_flotte_boss(specs)
+
+    noms = sorted(ennemi.nom for ennemi in flotte.ennemis_vivants())
+    assert noms == sorted(["Petit Jean", "Petit Jean", "Le nettoyeur", "Le puzzle"])
+    for position, ennemi in flotte.positions().items():
+        if ennemi.nom == "Petit Jean":
+            assert position.colonne == Colonne.AVANT
+        else:
+            assert position.colonne == Colonne.ARRIERE
 
 
 def test_tirer_cartes_pioche_la_bonne_quantite_dans_la_pool():
@@ -159,9 +241,17 @@ def test_creer_combat_poc_initialise_un_combat_complet():
     assert combat.etat == EtatCombat.EN_COURS
     assert combat.joueur.vaisseau.base.nom == "Principal"
     assert len(combat.joueur.vaisseau.modules_equipes()) == NOMBRE_MODULES_EQUIPES
-    assert len(combat.flotte.positions()) == NOMBRE_ENNEMIS_MODE_TEST  # MODE_TEST actif
+    assert len(combat.flotte.positions()) == 6  # MODE_TEST desactive : les 6 cases sont peuplees
     assert combat.joueur.electricite == ELECTRICITE_PAR_TOUR
     assert len(combat.joueur.deck.main) == 5
+
+
+def test_creer_combat_poc_utilise_le_deck_reel_quand_mode_test_desactive():
+    combat = creer_combat_poc(random.Random(4))
+
+    total = len(combat.joueur.deck.pioche) + len(combat.joueur.deck.main) + len(combat.joueur.deck.defausse)
+    attendu = 12 + CARTES_PAR_MODULE_EQUIPE * NOMBRE_MODULES_EQUIPES
+    assert total == attendu == 24
 
 
 def test_deux_combats_successifs_ont_des_ennemis_independants():
@@ -173,7 +263,7 @@ def test_deux_combats_successifs_ont_des_ennemis_independants():
     assert combat_2.flotte.ennemis_vivants()[0].pv > 0
 
 
-# --- Mode test ---
+# --- Mode test (bascule manuelle, desactivee par defaut - cf. MODE_TEST) ---
 
 
 def test_creer_deck_mode_test_contient_un_exemplaire_de_chaque_carte_jouable():
@@ -187,10 +277,11 @@ def test_creer_deck_mode_test_contient_un_exemplaire_de_chaque_carte_jouable():
     assert sorted(carte.nom for carte in toutes) == sorted(carte.nom for carte in cartes.values())
 
 
-def test_mode_test_actif_donne_200_pv_aux_modules_et_aux_ennemis():
-    """MODE_TEST est la variable de bascule pour les tests manuels (cf. sa docstring) :
-    ce test verifie son effet quand elle est active, comme actuellement configure."""
-    assert MODE_TEST is True
+def test_mode_test_actif_donne_200_pv_aux_modules_et_aux_ennemis(monkeypatch):
+    """MODE_TEST est la variable de bascule pour les tests manuels (cf. sa docstring),
+    desactivee par defaut en production (MODE_TEST is False) - ce test verifie son effet
+    quand elle est reactivee explicitement."""
+    monkeypatch.setattr(config_poc_module, "MODE_TEST", True)
     specs_modules = charger_modules()
     specs_ennemis = charger_ennemis()
 
@@ -222,7 +313,8 @@ def test_creer_deck_mode_test_donne_20_degats_aux_cartes_attaque_de_base():
         assert carte.valeur == carte_originale.valeur
 
 
-def test_creer_combat_poc_utilise_le_deck_mode_test_quand_actif():
+def test_creer_combat_poc_utilise_le_deck_mode_test_quand_actif(monkeypatch):
+    monkeypatch.setattr(config_poc_module, "MODE_TEST", True)
     combat = creer_combat_poc(random.Random(4))
 
     total = len(combat.joueur.deck.pioche) + len(combat.joueur.deck.main) + len(combat.joueur.deck.defausse)

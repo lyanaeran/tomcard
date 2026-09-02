@@ -22,14 +22,16 @@ from src.gameplay.config_poc import (
     MODE_TEST,
     PV_MODULE_MODE_TEST,
     appliquer_degats_mode_test,
-    creer_flotte,
     creer_flotte_asteroides,
+    creer_flotte_boss,
+    creer_flotte_prime,
     ids_deck_module_principal,
 )
 from src.gameplay.deck import Deck
 from src.gameplay.donnees import SpecModule, charger_cartes, charger_ennemis, charger_modules
 from src.gameplay.joueur import Joueur
 from src.gameplay.module import Module
+from src.gameplay.parcours import est_niveau_boss
 from src.gameplay.position import Colonne, Position, Rangee
 from src.gameplay.vaisseau import Vaisseau
 
@@ -259,13 +261,17 @@ def _joueur_depuis_partie(partie: Partie, cartes: dict[str, Carte], aleatoire: r
 
 def combat_depuis_partie(partie: Partie, aleatoire: random.Random | None = None) -> Combat:
     """Construit un Combat a partir d'une partie sauvegardee : vaisseau et deck reels du joueur
-    (_joueur_depuis_partie), mais flotte ennemie tiree au hasard - approximation temporaire
-    (bouton "Continuer", decision utilisateur) en attendant que l'orchestration du parcours
-    (specs.md 2.3/10.3) determine precisement quel combat affronter a ce niveau."""
+    (_joueur_depuis_partie), flotte ennemie liee au niveau (specs.md 2.1/2.3/13) - composition
+    fixe du Boss (creer_flotte_boss) aux niveaux multiples de 10 (est_niveau_boss), sinon un
+    combat Prime standard (creer_flotte_prime : 1 ennemi jusqu'au Niveau 5, 2 au-dela)."""
     aleatoire = aleatoire or random.Random(partie.graine + partie.niveau)
     cartes = charger_cartes()
     joueur = _joueur_depuis_partie(partie, cartes, aleatoire)
-    flotte = creer_flotte(charger_ennemis(), aleatoire)
+    specs_ennemis = charger_ennemis()
+    if est_niveau_boss(partie.niveau):
+        flotte = creer_flotte_boss(specs_ennemis)
+    else:
+        flotte = creer_flotte_prime(specs_ennemis, partie.niveau, aleatoire)
     return Combat(joueur=joueur, flotte=flotte, aleatoire=aleatoire)
 
 

@@ -16,7 +16,7 @@ const DUREE_INFOBULLE_MS = 2500;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "52";
+const VERSION_CACHE = "53";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -265,32 +265,38 @@ function afficherInfobulle(idCase, typeCase) {
         // Groupes separes (jamais melanges), meme separation que les deux pastilles de
         // buffs (cf. rendrePastillesBuffs) : buffs a duree limitee, puis persistants. Pas
         // d'en-tete "Persistants" : chaque ligne de buff persistant se termine deja par
-        // "(illimite)" (cf. libelleBuffActif), suffisant pour les distinguer.
+        // "(illimite)" (cf. libelleEffetActif), suffisant pour les distinguer.
         const buffsDuree = objet.buffs.filter((buff) => buff.tours_restants !== null);
         const buffsPersistants = objet.buffs.filter((buff) => buff.tours_restants === null);
         for (const buff of buffsDuree) {
-            lignes.push(`<div>${libelleBuffActif(buff)}</div>`);
+            lignes.push(`<div>${libelleEffetActif(buff)}</div>`);
         }
         for (const buff of buffsPersistants) {
-            lignes.push(`<div>${libelleBuffActif(buff)}</div>`);
+            lignes.push(`<div>${libelleEffetActif(buff)}</div>`);
         }
         if (objet.leurre_actif) {
             lignes.push(`<div>Leurre actif (annule la prochaine attaque)</div>`);
         }
     } else {
-        lignes.push(`<div>⚔️ ${objet.degats_attaque}</div>`);
+        lignes.push(`<div>🔵 ${objet.bouclier}</div>`);
         if (objet.intention) {
             // Tir allie actif (specs.md 12.6) : la cible reelle (un autre ennemi) n'est
             // tiree au hasard qu'a la resolution du tour, jamais ici (cf. bridge.py
-            // _intention_json), pour rester deterministe au tap/redessin.
-            if (objet.intention.redirection) {
+            // _intention_json), pour rester deterministe au tap/redessin. Idem pour une
+            // Action POSE_BUFF (specs.md 13) : pas de cible individuelle a afficher.
+            const intention = objet.intention;
+            if (intention.type === "POSE_BUFF") {
+                lignes.push(`<div>🛡️ Pose un effet (${intention.valeur})</div>`);
+            } else if (intention.cible_type === "REDIRECTION") {
                 lignes.push(`<div>🎯 Vise un allie au hasard</div>`);
+            } else if (intention.cible_type === "TOUS") {
+                lignes.push(`<div>🎯 Tous les modules (-${intention.degats})</div>`);
             } else {
-                lignes.push(`<div>🎯 ${objet.intention.module_nom} (-${objet.intention.degats})</div>`);
+                lignes.push(`<div>🎯 ${intention.module_nom} (-${intention.degats})</div>`);
             }
         }
         for (const debuff of objet.debuffs) {
-            lignes.push(`<div>${libelleDebuffActif(debuff)}</div>`);
+            lignes.push(`<div>${libelleEffetActif(debuff)}</div>`);
         }
     }
     const panneau = document.getElementById("info-case");
@@ -330,15 +336,14 @@ function rendrePastillesBuffs(module) {
     return `${badgeDuree}${badgePersistants}${badgeLeurre}`;
 }
 
-// Pastilles PV (rouge) / Bouclier (bleu, allies uniquement) : memes couleurs
-// que COULEUR_PASTILLE_PV/COULEUR_PASTILLE_BOUCLIER dans src/ui/fenetre.py.
-// Masquees si detruit, comme sur pc (le bandeau "Detruit" les remplace).
+// Pastilles PV (rouge) / Bouclier (bleu, les ennemis peuvent desormais en avoir aussi,
+// specs.md 13) : memes couleurs que COULEUR_PASTILLE_PV/COULEUR_PASTILLE_BOUCLIER dans
+// src/ui/fenetre.py. Masquees si detruit, comme sur pc (le bandeau "Detruit" les remplace).
 function rendrePastilles(objet, typeCase) {
     if (objet.detruit) return "";
-    const bouclier =
-        typeCase === "allie" ? `<span class="pastille pastille-bouclier">${objet.bouclier}</span>` : "";
-    // Pastille orange du nombre de debuffs actifs (pas de bouclier chez les
-    // ennemis, meme emplacement) ; absente si aucun debuff actif.
+    const bouclier = `<span class="pastille pastille-bouclier">${objet.bouclier}</span>`;
+    // Pastille orange du nombre de buffs/debuffs actifs sur cet ennemi ; absente si aucun
+    // n'est actif.
     const debuffs =
         typeCase === "ennemi" && objet.debuffs.length > 0
             ? `<span class="pastille pastille-debuffs">${objet.debuffs.length}</span>`
@@ -473,20 +478,6 @@ const LIBELLES_ACTION_DEBUFF = {
     REDIRECTION_CIBLE: (carte, cible) => `Detourne l'attaque de ${cible} vers un autre ennemi tire au hasard, pendant ${carte.duree} tour(s).`,
 };
 
-// Libelle d'un debuff actif sur un ennemi (specs.md 12.1/12.4), affiche dans son
-// infobulle. Chaque debuff est independant : la valeur affichee est celle de cette
-// instance uniquement, plusieurs debuffs du meme type peuvent apparaitre en meme temps.
-const LIBELLES_ACTION_DEBUFF_ACTIF = {
-    REDUCTION_DEGATS: (debuff) => `Degats reduits -${debuff.valeur}`,
-    VULNERABILITE: (debuff) => `Vulnerabilite +${debuff.valeur}%`,
-    REDIRECTION_CIBLE: () => `Tir detourne`,
-};
-
-function libelleDebuffActif(debuff) {
-    const tour = debuff.tours_restants === 1 ? "tour" : "tours";
-    return `${LIBELLES_ACTION_DEBUFF_ACTIF[debuff.action](debuff)} (${debuff.tours_restants} ${tour})`;
-}
-
 const LIBELLES_ACTION_BUFF = {
     BOUCLIER_PAR_TOUR: (carte, cible) => {
         const duree = carte.duree ? ` pendant ${carte.duree} tour(s)` : "";
@@ -494,17 +485,23 @@ const LIBELLES_ACTION_BUFF = {
     },
 };
 
-// Libelle d'un buff actif sur un module (specs.md 12.3/12.5), affiche dans son infobulle,
-// meme principe que libelleDebuffActif cote ennemi. tours_restants null = buff persistant
-// (dure tout le combat, ex. Bouclier perpetuel).
-const LIBELLES_ACTION_BUFF_ACTIF = {
+// Libelle d'un buff/debuff actif sur un module ou un ennemi (specs.md 12.1/12.3/12.4/
+// 12.5/13 - meme modele des deux cotes, cf. bridge.py:_buffs_json/_debuffs_json), affiche
+// dans son infobulle. Chaque instance est independante : la valeur affichee est la sienne,
+// jamais une somme, plusieurs buffs/debuffs du meme type pouvant coexister.
+const LIBELLES_ACTION_ACTIF = {
     BOUCLIER_PAR_TOUR: (buff) => `+${buff.valeur} bouclier/tour`,
+    BOUCLIER_MIROIR: (buff) => `Bouclier miroir ${buff.valeur}`,
+    REDUCTION_DEGATS: (buff) => `Degats reduits -${buff.valeur}`,
+    VULNERABILITE: (buff) => `Vulnerabilite +${buff.valeur}%`,
+    REDIRECTION_CIBLE: () => `Tir detourne`,
 };
 
-function libelleBuffActif(buff) {
-    if (buff.tours_restants === null) return `${LIBELLES_ACTION_BUFF_ACTIF[buff.action](buff)} (illimite)`;
+function libelleEffetActif(buff) {
+    const texte = LIBELLES_ACTION_ACTIF[buff.action](buff);
+    if (buff.tours_restants === null) return `${texte} (illimite)`;
     const tour = buff.tours_restants === 1 ? "tour" : "tours";
-    return `${LIBELLES_ACTION_BUFF_ACTIF[buff.action](buff)} (${buff.tours_restants} ${tour})`;
+    return `${texte} (${buff.tours_restants} ${tour})`;
 }
 
 function texteEffetCarte(carte) {

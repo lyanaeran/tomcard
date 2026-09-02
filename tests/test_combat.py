@@ -7,7 +7,7 @@ import random
 from src.gameplay.carte import ActionCarte, Carte, CibleCarte, TypeCarte
 from src.gameplay.combat import Combat, EtatCombat
 from src.gameplay.deck import Deck
-from src.gameplay.ennemi import Ennemi
+from src.gameplay.ennemi import ActionEnnemi, CibleActionEnnemi, Ennemi, TypeActionEnnemi
 from src.gameplay.flotte import Flotte
 from src.gameplay.joueur import Joueur
 from src.gameplay.module import Module
@@ -65,6 +65,13 @@ CARTE_LEURRE = Carte(
 POSITION_ENNEMI = Position(Colonne.AVANT, Rangee.GAUCHE)
 
 
+def _ennemi_attaque(pv_max: int, degats: int, nom: str = "Ennemi") -> Ennemi:
+    """Ennemi de test simple : une seule Action, ATTAQUE de proximite tous les tours (memes
+    valeurs par defaut que l'ancienne API Ennemi(pv_max=, degats_attaque=))."""
+    action = ActionEnnemi(type=TypeActionEnnemi.ATTAQUE, cible=CibleActionEnnemi.PROXIMITE, valeur=degats)
+    return Ennemi(pv_max=pv_max, actions=[action], nom=nom)
+
+
 def _nouveau_combat(
     pv_base: int = 15,
     pv_ennemi: int = 15,
@@ -79,7 +86,7 @@ def _nouveau_combat(
         vaisseau = Vaisseau(base=Module(pv_max=pv_base))
     joueur = Joueur(vaisseau=vaisseau, deck=deck, electricite_par_tour=3)
     if ennemis is None:
-        ennemis = {POSITION_ENNEMI: Ennemi(pv_max=pv_ennemi, degats_attaque=degats_ennemi)}
+        ennemis = {POSITION_ENNEMI: _ennemi_attaque(pv_ennemi, degats_ennemi)}
     flotte = Flotte(ennemis)
     combat = Combat(joueur=joueur, flotte=flotte, aleatoire=aleatoire)
     return combat, vaisseau, flotte
@@ -227,8 +234,8 @@ def test_victoire_quand_l_ennemi_est_detruit():
 
 
 def test_pas_de_victoire_tant_qu_un_ennemi_survit():
-    e1 = Ennemi(pv_max=7, degats_attaque=4)
-    e2 = Ennemi(pv_max=7, degats_attaque=4)
+    e1 = _ennemi_attaque(7, 4)
+    e2 = _ennemi_attaque(7, 4)
     ennemis = {
         Position(Colonne.AVANT, Rangee.GAUCHE): e1,
         Position(Colonne.AVANT, Rangee.DROITE): e2,
@@ -242,8 +249,8 @@ def test_pas_de_victoire_tant_qu_un_ennemi_survit():
 
 
 def test_victoire_seulement_quand_tous_les_ennemis_sont_detruits():
-    e1 = Ennemi(pv_max=7, degats_attaque=4)
-    e2 = Ennemi(pv_max=7, degats_attaque=4)
+    e1 = _ennemi_attaque(7, 4)
+    e2 = _ennemi_attaque(7, 4)
     ennemis = {
         Position(Colonne.AVANT, Rangee.GAUCHE): e1,
         Position(Colonne.AVANT, Rangee.DROITE): e2,
@@ -271,7 +278,7 @@ def test_defaite_independante_de_la_destruction_d_un_module_non_base():
     module_fragile = Module(pv_max=1)
     vaisseau = Vaisseau(base=Module(pv_max=15), avant_gauche=module_fragile)
     joueur = Joueur(vaisseau=vaisseau, deck=deck, electricite_par_tour=3)
-    flotte = Flotte({POSITION_ENNEMI: Ennemi(pv_max=15, degats_attaque=7)})
+    flotte = Flotte({POSITION_ENNEMI: _ennemi_attaque(15, 7)})
     combat = Combat(joueur=joueur, flotte=flotte)
 
     module_fragile.subir_degats(100)  # detruit un module non-base, hors du moteur de combat
@@ -287,12 +294,12 @@ def test_finir_tour_joueur_renvoie_les_attaques_resolues():
 
     attaques = combat.finir_tour_joueur()
 
-    assert attaques == [(POSITION_ENNEMI, ennemi, vaisseau.base, 7)]
+    assert attaques == [(POSITION_ENNEMI, ennemi, vaisseau.base, 7, "degats")]
 
 
 def test_plusieurs_ennemis_attaquent_dans_le_meme_tour():
-    e1 = Ennemi(pv_max=15, degats_attaque=4)
-    e2 = Ennemi(pv_max=15, degats_attaque=6)
+    e1 = _ennemi_attaque(15, 4)
+    e2 = _ennemi_attaque(15, 6)
     position_e1 = Position(Colonne.AVANT, Rangee.GAUCHE)
     position_e2 = Position(Colonne.AVANT, Rangee.DROITE)
     combat, vaisseau, _flotte = _nouveau_combat(ennemis={position_e1: e1, position_e2: e2})
@@ -313,19 +320,19 @@ def test_ordre_de_resolution_avant_haut_bas_puis_arriere_haut_bas():
         Position(Colonne.ARRIERE, Rangee.MID),
         Position(Colonne.ARRIERE, Rangee.DROITE),
     ]
-    ennemis = {position: Ennemi(pv_max=15, degats_attaque=1, nom=str(position)) for position in positions_ordonnees}
+    ennemis = {position: _ennemi_attaque(15, 1, nom=str(position)) for position in positions_ordonnees}
     combat, _vaisseau, _flotte = _nouveau_combat(vaisseau=_vaisseau_complet(), ennemis=ennemis)
 
     attaques = combat.finir_tour_joueur()
 
-    assert [position for position, _e, _c, _d in attaques] == positions_ordonnees
+    assert [position for position, _e, _c, _d, _t in attaques] == positions_ordonnees
 
 
 def test_leurre_avec_deux_attaquants_n_annule_que_la_premiere_attaque_resolue():
     """Cf. test_ordre_de_resolution_avant_haut_bas_puis_arriere_haut_bas : le premier
     attaquant dans cet ordre est celui dont l'attaque est annulee par le leurre."""
-    e_avant = Ennemi(pv_max=15, degats_attaque=5, nom="avant")
-    e_arriere = Ennemi(pv_max=15, degats_attaque=3, nom="arriere")
+    e_avant = _ennemi_attaque(15, 5, nom="avant")
+    e_arriere = _ennemi_attaque(15, 3, nom="arriere")
     ennemis = {
         Position(Colonne.AVANT, Rangee.GAUCHE): e_avant,
         Position(Colonne.ARRIERE, Rangee.GAUCHE): e_arriere,
@@ -340,13 +347,13 @@ def test_leurre_avec_deux_attaquants_n_annule_que_la_premiere_attaque_resolue():
 
     attaques = combat.finir_tour_joueur()
 
-    assert [degats for _p, _e, _c, degats in attaques] == [0, 3]  # avant (premier resolu) annule, arriere non
+    assert [degats for _p, _e, _c, degats, _t in attaques] == [0, 3]  # avant (premier resolu) annule, arriere non
     assert arriere_gauche.pv == arriere_gauche.pv_max - 3
 
 
 def test_arret_immediat_si_la_base_est_detruite_en_cours_de_tour():
-    e1 = Ennemi(pv_max=15, degats_attaque=20)  # detruit la base d'un coup
-    e2 = Ennemi(pv_max=15, degats_attaque=5)
+    e1 = _ennemi_attaque(15, 20)  # detruit la base d'un coup
+    e2 = _ennemi_attaque(15, 5)
     position_e1 = Position(Colonne.AVANT, Rangee.GAUCHE)
     position_e2 = Position(Colonne.AVANT, Rangee.DROITE)
     combat, vaisseau, _flotte = _nouveau_combat(pv_base=10, ennemis={position_e1: e1, position_e2: e2})
@@ -354,16 +361,16 @@ def test_arret_immediat_si_la_base_est_detruite_en_cours_de_tour():
     attaques = combat.finir_tour_joueur()
 
     assert combat.etat == EtatCombat.DEFAITE
-    assert attaques == [(position_e1, e1, vaisseau.base, 10)]  # e2 n'a pas agi, degats plafonnes aux 10 PV restants
+    assert attaques == [(position_e1, e1, vaisseau.base, 10, "degats")]  # e2 n'a pas agi, degats plafonnes aux 10 PV restants
 
 
 # --- Cibles multiples (LIGNE_ENNEMIE, ALLIES_MULTIPLES, ENNEMIS_MULTIPLES) ---
 
 
 def test_ligne_ennemie_touche_l_avant_et_l_arriere_de_la_rangee():
-    avant = Ennemi(pv_max=10, degats_attaque=4)
-    arriere = Ennemi(pv_max=10, degats_attaque=4)
-    autre_rangee = Ennemi(pv_max=10, degats_attaque=4)
+    avant = _ennemi_attaque(10, 4)
+    arriere = _ennemi_attaque(10, 4)
+    autre_rangee = _ennemi_attaque(10, 4)
     ennemis = {
         Position(Colonne.AVANT, Rangee.GAUCHE): avant,
         Position(Colonne.ARRIERE, Rangee.GAUCHE): arriere,
@@ -381,7 +388,7 @@ def test_ligne_ennemie_touche_l_avant_et_l_arriere_de_la_rangee():
 
 
 def test_ligne_ennemie_ne_plante_pas_si_l_arriere_est_absent():
-    seul = Ennemi(pv_max=10, degats_attaque=4)
+    seul = _ennemi_attaque(10, 4)
     combat, _vaisseau, _flotte = _nouveau_combat(ennemis={Position(Colonne.AVANT, Rangee.GAUCHE): seul})
     combat.joueur.deck.main = [CARTE_PERCER]
     combat.joueur.electricite = 2
@@ -398,7 +405,7 @@ def test_proteger_donne_du_bouclier_a_tous_les_modules_vivants():
     vaisseau = Vaisseau(base=Module(pv_max=15), avant_gauche=module_equipe, arriere_gauche=module_detruit)
     deck = Deck(cartes=[CARTE_PROTEGER], generateur_aleatoire=random.Random(0))
     joueur = Joueur(vaisseau=vaisseau, deck=deck, electricite_par_tour=3)
-    flotte = Flotte({POSITION_ENNEMI: Ennemi(pv_max=15, degats_attaque=7)})
+    flotte = Flotte({POSITION_ENNEMI: _ennemi_attaque(15, 7)})
     combat = Combat(joueur=joueur, flotte=flotte)
     combat.joueur.deck.main = [CARTE_PROTEGER]
     combat.joueur.electricite = 2
@@ -411,8 +418,8 @@ def test_proteger_donne_du_bouclier_a_tous_les_modules_vivants():
 
 
 def test_mitrailler_touche_tous_les_ennemis_vivants():
-    e1 = Ennemi(pv_max=15, degats_attaque=4)
-    e2 = Ennemi(pv_max=15, degats_attaque=4)
+    e1 = _ennemi_attaque(15, 4)
+    e2 = _ennemi_attaque(15, 4)
     ennemis = {
         Position(Colonne.AVANT, Rangee.GAUCHE): e1,
         Position(Colonne.AVANT, Rangee.DROITE): e2,
@@ -480,9 +487,9 @@ def test_vulnerabilite_majore_les_degats_d_une_attaque_du_joueur():
 
 
 def test_colonne_avant_ennemie_touche_toute_la_colonne_avant_uniquement():
-    avant_g = Ennemi(pv_max=15, degats_attaque=1)
-    avant_d = Ennemi(pv_max=15, degats_attaque=1)
-    arriere_g = Ennemi(pv_max=15, degats_attaque=1)
+    avant_g = _ennemi_attaque(15, 1)
+    avant_d = _ennemi_attaque(15, 1)
+    arriere_g = _ennemi_attaque(15, 1)
     ennemis = {
         Position(Colonne.AVANT, Rangee.GAUCHE): avant_g,
         Position(Colonne.AVANT, Rangee.DROITE): avant_d,
@@ -494,14 +501,14 @@ def test_colonne_avant_ennemie_touche_toute_la_colonne_avant_uniquement():
 
     combat.jouer_carte(CARTE_COLONNE_AVANT, avant_g)  # clic sur un ennemi de la colonne avant
 
-    assert avant_g.debuffs_actifs[0].valeur == 100
-    assert avant_d.debuffs_actifs[0].valeur == 100
-    assert arriere_g.debuffs_actifs == []  # colonne arriere non touchee
+    assert avant_g.buffs_actifs[0].valeur == 100
+    assert avant_d.buffs_actifs[0].valeur == 100
+    assert arriere_g.buffs_actifs == []  # colonne arriere non touchee
 
 
 def test_colonne_avant_ennemie_refuse_un_clic_sur_l_arriere():
-    avant = Ennemi(pv_max=15, degats_attaque=1)
-    arriere = Ennemi(pv_max=15, degats_attaque=1)
+    avant = _ennemi_attaque(15, 1)
+    arriere = _ennemi_attaque(15, 1)
     ennemis = {
         Position(Colonne.AVANT, Rangee.GAUCHE): avant,
         Position(Colonne.ARRIERE, Rangee.GAUCHE): arriere,
@@ -512,8 +519,8 @@ def test_colonne_avant_ennemie_refuse_un_clic_sur_l_arriere():
 
     combat.jouer_carte(CARTE_COLONNE_AVANT, arriere)  # clic sur l'arriere -> refuse
 
-    assert arriere.debuffs_actifs == []
-    assert avant.debuffs_actifs == []
+    assert arriere.buffs_actifs == []
+    assert avant.buffs_actifs == []
 
 
 # --- Buff (Blindage, specs.md 12.3/12.5) ---
@@ -548,11 +555,11 @@ def test_buff_bouclier_perpetuel_se_redeclenche_a_chaque_tour_joueur_sans_expire
 
 
 def test_tir_allie_redirige_l_attaque_vers_un_autre_ennemi_vivant():
-    attaquant = Ennemi(pv_max=15, degats_attaque=7)
+    attaquant = _ennemi_attaque(15, 7)
     # degats_attaque=0 : isole l'assertion sur le joueur (sinon cible_potentielle
     # attaquerait aussi normalement le joueur de son cote, ce qui est correct mais
     # brouillerait l'assertion "attaquant n'a pas touche le joueur").
-    cible_potentielle = Ennemi(pv_max=15, degats_attaque=0)
+    cible_potentielle = _ennemi_attaque(15, 0)
     ennemis = {
         Position(Colonne.AVANT, Rangee.GAUCHE): attaquant,
         Position(Colonne.ARRIERE, Rangee.GAUCHE): cible_potentielle,
@@ -569,7 +576,7 @@ def test_tir_allie_redirige_l_attaque_vers_un_autre_ennemi_vivant():
 
 
 def test_tir_allie_sans_autre_ennemi_attaque_normalement():
-    seul = Ennemi(pv_max=15, degats_attaque=7)
+    seul = _ennemi_attaque(15, 7)
     ennemis = {POSITION_ENNEMI: seul}
     combat, vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
     combat.joueur.deck.main = [CARTE_TIR_ALLIE]
@@ -582,8 +589,8 @@ def test_tir_allie_sans_autre_ennemi_attaque_normalement():
 
 
 def test_tir_allie_expire_apres_un_tour():
-    attaquant = Ennemi(pv_max=15, degats_attaque=7)
-    autre = Ennemi(pv_max=15, degats_attaque=0)
+    attaquant = _ennemi_attaque(15, 7)
+    autre = _ennemi_attaque(15, 0)
     ennemis = {
         Position(Colonne.AVANT, Rangee.GAUCHE): attaquant,
         Position(Colonne.ARRIERE, Rangee.GAUCHE): autre,
@@ -601,8 +608,8 @@ def test_tir_allie_expire_apres_un_tour():
 
 
 def test_previsualiser_cible_masque_le_module_si_redirection_active():
-    attaquant = Ennemi(pv_max=15, degats_attaque=7)
-    autre = Ennemi(pv_max=15, degats_attaque=1)
+    attaquant = _ennemi_attaque(15, 7)
+    autre = _ennemi_attaque(15, 1)
     ennemis = {
         Position(Colonne.AVANT, Rangee.GAUCHE): attaquant,
         Position(Colonne.ARRIERE, Rangee.GAUCHE): autre,
@@ -771,11 +778,11 @@ def test_leurre_annule_totalement_la_prochaine_attaque_puis_se_consomme():
 
     attaques = combat.finir_tour_joueur()
 
-    assert attaques == [(POSITION_ENNEMI, ennemi, vaisseau.base, 0)]
+    assert attaques == [(POSITION_ENNEMI, ennemi, vaisseau.base, 0, "degats")]
     assert vaisseau.base.pv == 15  # aucun degat, meme sans bouclier
     assert vaisseau.base.leurre_actif is False  # consomme par cette attaque
 
     attaques_suivantes = combat.finir_tour_joueur()
 
-    assert attaques_suivantes == [(POSITION_ENNEMI, ennemi, vaisseau.base, 7)]  # plus de leurre : degats normaux
+    assert attaques_suivantes == [(POSITION_ENNEMI, ennemi, vaisseau.base, 7, "degats")]  # plus de leurre : degats normaux
     assert vaisseau.base.pv == 15 - 7

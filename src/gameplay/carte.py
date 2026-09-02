@@ -67,8 +67,20 @@ class RareteCarte(Enum):
 
 class ActionCarte(Enum):
     """Effet precis d'une carte DEFENSE, OUTILS, DEBUFF ou BUFF (chaque carte est un
-    mecanisme different, cf. specs.md paragraphe 12.4/12.8/12.9/12.1/12.5) : la valeur de
-    la carte s'interprete differemment selon cette action."""
+    mecanisme different, cf. specs.md paragraphe 12.4/12.8/12.9/12.1/12.5), ou d'un buff pose
+    par une Action ennemie (specs.md 13, meme modele BuffActif reutilise sur Ennemi) : la
+    valeur s'interprete differemment selon cette action.
+
+    BOUCLIER_PAR_TOUR : ajoute du bouclier des la pose. Cote module (carte Buff), redeclenche
+    en plus a chaque tour joueur tant que le buff reste actif (Module.declencher_buffs_tour).
+    Cote ennemi (Action de type POSE_BUFF, specs.md 13), aucun redeclenchement automatique :
+    c'est la frequence de l'Action elle-meme qui decide quand le buff est repose.
+
+    BOUCLIER_MIROIR (specs.md 13, ennemi Miroir) : buff pose sur un module du joueur. Tant
+    qu'actif, les degats subis par ce module sont renvoyes a l'attaquant jusqu'a sa valeur (la
+    cible ne subit rien pour cette part, l'attaquant subit ce montant a la place) ; les degats
+    au-dela s'appliquent normalement au module. Se consomme comme un bouclier classique (sa
+    valeur diminue de ce qui a ete renvoye), pas de redeclenchement automatique non plus."""
 
     GAIN_ELECTRICITE = auto()
     GAIN_ELECTRICITE_PAR_MODULE = auto()
@@ -77,8 +89,21 @@ class ActionCarte(Enum):
     VULNERABILITE = auto()
     BOUCLIER_PAR_TOUR = auto()
     BOUCLIER_POURCENTAGE_PV = auto()
+    BOUCLIER_MIROIR = auto()
     REDIRECTION_CIBLE = auto()
     ANNULATION_PROCHAINE_ATTAQUE = auto()
+
+
+@dataclass
+class BuffActif:
+    """Un buff (ou un debuff : meme modele, la difference n'est que semantique - specs.md 13)
+    actif sur un Module ou un Ennemi. Chaque application reste une instance independante, pas
+    de fusion meme entre deux buffs du meme type sur la meme entite. tours_restants est None
+    pour un buff persistant (dure tout le combat, ne decompte jamais)."""
+
+    action: ActionCarte
+    valeur: int
+    tours_restants: int | None
 
 
 @dataclass(eq=False)
