@@ -49,13 +49,17 @@ class _AleatoireFixe:
         return self._index
 
 
-def test_modules_equipables_exclut_le_module_principal():
+def test_modules_equipables_exclut_le_module_principal_et_les_modules_sans_cartes():
+    """4 des 10 modules (Canon lourd/Controle/Atelier/Radar) ont une liste de cartes vide (pas
+    encore concues) : exclus aussi, en plus du module principal, pour ne jamais etre tires dans
+    un deck (specs.md 5)."""
     specs = charger_modules()
 
     equipables = modules_equipables(specs)
 
     assert all(spec.id != ID_MODULE_PRINCIPAL for spec in equipables)
-    assert len(equipables) == len(specs) - 1
+    assert all(spec.cartes for spec in equipables)
+    assert len(equipables) == len([s for s in specs if s.id != ID_MODULE_PRINCIPAL and s.cartes])
 
 
 def test_tirer_candidats_module_renvoie_3_modules_differents():

@@ -39,7 +39,9 @@ Un deckbuilder roguelike inspiré de Slay the Spire, où le joueur incarne un va
   juste après `synchroniser_vaisseau_depuis_combat` (§2.2) — `main.py:_ouvrir_combat` (PC),
   `web/bridge.py:resoudre_victoire_partie_web` (web). Compte un ennemi par case de la flotte
   (`Flotte.positions()`), pas de fusion des ennemis L sur 2 cases pour l'instant (§3.2/§9.1). Une
-  partie démarre avec `ARGENT_DEPART` = 7 € (`nouvelle_partie`)
+  partie démarre avec `ARGENT_DEPART` = 7 € (`nouvelle_partie`). Montants inventés faute de spec
+  précise à l'origine de cette décision — à ajuster en playtest si besoin, comme les autres
+  valeurs numériques du même type (§13)
 - Il gagne aussi une carte : voir §6 pour le mécanisme de choix (candidate par module équipé). **Récompense garantie** à chaque victoire (pas probabiliste) — écran de fin de combat implémenté, voir §6
 - En cas de défaite, écran dédié avec message de défaite (pas de choix de carte) — implémenté, voir §6
 - Le joueur choisit ensuite l'étape suivante parmi celles qui apparaissent (Prime, Station service, Planète commerciale ou Aventure) — l'offre n'est pas forcément la même à chaque fois (voir §9.1)
@@ -59,7 +61,8 @@ Quatre actions indépendantes, appliquées à un module choisi par le joueur (vo
   sélectionne le module à déplacer, clique "Déplacer", puis clique l'emplacement de destination :
   vide, le module y est simplement déplacé ; occupé, les deux modules échangent leur position
 
-**Chaque action coûte `COUT_ACTION_STATION_SERVICE` = 20 €** (`src/gameplay/partie.py`), déduits de
+**Chaque action coûte `COUT_ACTION_STATION_SERVICE` = 20 €** (`src/gameplay/partie.py`, valeur
+inventée faute de spec précise, à ajuster en playtest si besoin), déduits de
 `partie.argent` au moment où l'action s'applique (Déplacer : au clic de destination, pas à
 l'armement). Si l'Argent est insuffisant, l'action est refusée sans rien modifier — les 4 fonctions
 (`reparer_module`/`ameliorer_module`/`mettre_a_jour_module`/`deplacer_module`) renvoient un booléen
@@ -148,9 +151,12 @@ remplace les pistes encore ouvertes en §2 pour la Station service et la cadence
   côté web `web/bridge.py:choisir_module_partie_web` + `web/app.js:ouvrirChoixModulePartie`/
   `choisirModule`. Reste aussi accessible en démonstration isolée (candidats tirés indépendamment
   d'une partie) via `web/app.js` (`nouveauChoixModule`, exposée sur `window`) + `web/bridge.py`
-  (`nouveau_choix_module`), utilisée quand `partieActive` est `null`. Chaque module a désormais un champ
-  `description` dans `config/modules.json` (type de carte débloqué, sans révéler les cartes) —
-  fond de combat réutilisé en placeholder (décision utilisateur), à remplacer par un fond dédié
+  (`nouveau_choix_module`), utilisée quand `partieActive` est `null`. Écran présenté **empilé
+  verticalement, image carrée à gauche et rectangle de texte (nom + `description`) à droite**, même
+  convention que le choix du prochain niveau (§2.3 ci-dessus) et les choix d'Aventure/Station
+  service — voir §4 pour le détail du champ `description` par module et l'exclusion des modules
+  sans deck de cartes de ce tirage — fond de combat réutilisé en placeholder (décision
+  utilisateur), à remplacer par un fond dédié
 - **Niveaux 5 et 9** — 3 propositions dont une **Station service garantie** (les 2 autres tirées
   normalement, voir ci-dessous) — le joueur garde le choix, la Station service n'est pas forcée
 - **Niveau 10** — **Boss**, obligatoire, pas de tirage d'étape. Se répète tous les 10 niveaux (20,
@@ -163,7 +169,9 @@ remplace les pistes encore ouvertes en §2 pour la Station service et la cadence
   - Reste (5/6) **Prime** (combat)
 - **Nombre d'ennemis en Prime** : 1 seul ennemi jusqu'au niveau 5, puis 2 à partir du niveau 6 —
   s'ajoute au système de tailles S/M/L existant (§3.2, deux axes de difficulté indépendants), ne le
-  remplace pas. Progression au-delà de 2 (après le niveau 10 ?) pas encore définie
+  remplace pas. **Implémenté** (`config_poc.creer_flotte_prime`/`nombre_ennemis_prime`, §13.4), de
+  même que la composition fixe du Boss (§13.4). Progression au-delà de 2 (après le niveau 10 ?)
+  pas encore définie
 - **Doublons de modules autorisés** (remplace la piste "interdire les doublons" de §5) : posséder
   déjà des exemplaires d'un module **augmente son poids au tirage** lors d'un prochain choix de
   module (Niveau 1 ou récompense de Boss) — formule de pondération exacte à définir (§9.1)
@@ -227,6 +235,16 @@ terminé à ce stade).
   de chevauchement sur tous les formats (fenêtre large et haute, tablette en paysage...),
   `actualiserBarreLaterale`/`barreChevaucheVaisseau` vérifient le chevauchement réel après affichage
   (comparaison des rectangles DOM) et masquent la barre au lieu de deviner un second seuil.
+- **`EcranVaisseau`** : cliquer/taper un module équipé (non vide) affiche son nom et sa
+  `description` (§4) dans une infobulle temporaire (4 secondes), superposée au-dessus de la case
+  cliquée. PC (`src/ui/ecran_vaisseau.py`) : réutilise le minuteur `AnimationPopup` existant
+  (`src/ui/animation.py`), avec une durée dédiée `DUREE_INFOBULLE_MODULE` plus longue que celle
+  des popups de combat (le temps de lire la phrase) ; nécessite une boucle
+  `pyglet.clock.schedule_interval` que cet écran n'avait pas jusqu'ici. Web (`web/app.js`) : réutilise
+  le panneau `position: fixed` centré déjà utilisé pour `#info-carte`/`#info-case`/`#info-carte-deck`
+  (nouveau `#info-carte-vaisseau` dans `index.html`), rempli par `afficherDescriptionModuleVaisseau`
+  et effacé après le même délai via `setTimeout` ; `web/bridge.py:infos_vaisseau_web` inclut
+  désormais `description` par module équipé pour l'alimenter.
 
 1. **Sélection du joueur** (implémenté, §10.3) — choisir un profil existant ou en créer un →
    Écran de partie (étape 2). Bouton "Quitter le jeu" (**PC uniquement** : ferme l'application ;
@@ -445,8 +463,9 @@ n'est pas aux normes [...]." Une carte est tirée au hasard du deck réel du jou
 haut, texte en dessous, non cliquable), pas dans le format ligne image+texte des choix en dessous,
 pour ne pas donner l'impression que c'est elle-même une option :
 - *Confiscation* : retire cette carte du deck (`retirer_carte`, réutilisée de Trois lunes/Bricoler)
-- *Mettre aux normes* : coûte un montant fixe en Argent (`COUT_METTRE_AUX_NORMES`, 10 €, cf. §9.1)
-  plutôt qu'un pourcentage du prix de vente en magasin comme envisagé initialement — abandonné, la
+- *Mettre aux normes* : coûte un montant fixe en Argent (`COUT_METTRE_AUX_NORMES`, 10 € inventés
+  par symétrie avec les autres montants du jeu, à ajuster en playtest si besoin) plutôt qu'un
+  pourcentage du prix de vente en magasin comme envisagé initialement — abandonné, la
   Planète commerciale n'ayant pas de prix par carte (§9.1) ; garde la carte si l'Argent est
   suffisant (`payer_mise_aux_normes`), sinon reste sur l'écran avec un message d'erreur
 - *Détourner l'attention* : tire une **seconde** carte au hasard qui remplace la première affichée,
@@ -499,6 +518,22 @@ et les fonctions de clic associées)
 
 ### 3.5 Bouclier
 - Le Bouclier absorbe les dégâts subis **avant** les PV. Exemple : un module protégé par 5 Bouclier subit une attaque de 7 dégâts → le Bouclier absorbe 5, les **2 dégâts restants** sont retirés des PV
+- Un ennemi peut lui aussi avoir du Bouclier (specs.md §13), avec exactement la même règle
+  d'absorption qu'un module
+- **Dissipation naturelle** : à chaque tour (tour joueur pour un module, tour ennemi pour un
+  ennemi), si le Bouclier actuel est ≤ 5 (`SEUIL_DISSIPATION_BOUCLIER`, `combat.py`) il disparaît
+  complètement ; sinon il est divisé par deux (arrondi au-dessus) — la valeur est vérifiée
+  **avant** la division, pas après. Garantit qu'un Bouclier finit toujours par disparaître
+  entièrement plutôt que de décliner sans fin (`ceil(1/2)=1` ne convergerait jamais vers 0 sans ce
+  seuil). La dissipation a lieu **avant** qu'un buff `BOUCLIER_PAR_TOUR` actif ce tour-là ne repose
+  du Bouclier frais (§12.3) : un Bouclier persistant ou à durée n'est donc pas simplement remis à
+  sa valeur de pose à chaque tour, il peut croître au-dessus si sa valeur reste supérieure au seuil
+  après division (ex. buff de valeur 10 : 10 → 5+10=15 → 8+10=18 → ... → se stabilise à 20, point
+  fixe où diviser par deux puis rajouter 10 redonne 20). Ne s'applique **pas** au Bouclier miroir
+  (§13.2), qui est un mécanisme distinct (buff à part, consommé uniquement par le renvoi de
+  dégâts, jamais par dissipation)
+- Valeur du seuil (5) inventée faute de spec précise — à ajuster à l'équilibrage, comme les
+  autres valeurs numériques du même type (§13)
 
 ### 3.6 Munitions (cartes à usage limité)
 
@@ -515,6 +550,17 @@ Certaines cartes ont un nombre de munitions limité en plus de leur coût en él
 ## 4. Modules
 
 Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fil de l'avancée. Chaque module a son propre deck de cartes (certaines cartes communes entre modules).
+
+**10 modules dans `config/modules.json`** (nom, image, PV, description) : les 6 déjà dotés d'un
+deck de cartes jouable (Principal, Lanceur de missiles, Blindage, Générateur, Soute, Sabotage) et
+4 nouveaux ajoutés avec leur nom/image/description mais **sans deck de cartes pour l'instant**
+(Canon lourd, Contrôle, Atelier — proche de l'archétype "Réparation" ci-dessous, Radar — proche de
+l'archétype "Radar / Ciblage" en §4.3) : exclus du tirage de choix de module tant qu'ils n'ont pas
+de cartes (`modules_equipables`/`specs_equipables`, §5), pour ne jamais planter le tirage du deck.
+Chaque module a une seule `description` (une phrase, accroche narrative spécifiée par
+l'utilisateur), affichée à l'écran de choix de module et reprise telle quelle dans l'infobulle de
+l'écran Vaisseau au clic/tap sur un module (§2.4) — les decks de cartes détaillés ci-dessous
+restent le plan cible pour les 4 nouveaux modules, à concevoir dans une passe dédiée.
 
 ### 4.1 Modules d'attaque (spécialisés, pas un seul module générique)
 
@@ -588,6 +634,9 @@ Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fi
 - **Doublons de modules autorisés** (décision utilisateur, remplace l'ancienne proposition
   "interdire les doublons") : posséder déjà des exemplaires d'un module augmente son poids au
   tirage lors d'un prochain choix de module — détail en §2.3
+- Un module dont le deck de cartes n'est pas encore conçu (`cartes` vide dans `config/modules.json`,
+  §4) n'est **jamais proposé** au tirage (`modules_equipables`/`config_poc.specs_equipables`
+  l'excluent) : le proposer planterait le tirage du deck (`Deck`/`tirer_cartes` sur une pool vide)
 
 ---
 
@@ -716,7 +765,7 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────┐
-│  SPACE FIGHT — ÉCRAN DE COMBAT                                  ⚡ Électricité: 5 │
+│  SPACE FIGHT — ÉCRAN DE COMBAT                                  ⚡ Électricité: 3 │
 │                                                                                    │
 │  VAISSEAU DU JOUEUR                                FLOTTE ENNEMIE (6 emplacements)│
 │  (fond commun aux 5 emplacements)                                                 │
@@ -746,6 +795,15 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
 
 - **Vaisseau du joueur** (haut gauche) : grille de **2 colonnes (arrière/avant) x 3 rangées (gauche/mid/droite)**. La colonne **avant est tournée vers l'ennemi** (la plus proche du centre de l'écran), la colonne arrière est la plus éloignée. Le tout repose sur un **fond commun** qui regroupe visuellement les 5 emplacements. Le **module de base** occupe la rangée mid en entier (arrière-mid + avant-mid fusionnés) ; les 4 autres modules équipés prennent FG/FD/AG/AD
 - **Flotte ennemie** (haut droite) : grille symétrique 2x3, 6 emplacements libres (pas de base adverse). La colonne **avant est tournée vers le joueur** (la plus proche du centre de l'écran) et c'est elle qui est exposée au corps à corps (voir 3.1) ; la colonne arrière est la plus éloignée
+- **Les 3 rangées ennemies sont alignées verticalement sur celles du vaisseau du joueur** (décision
+  utilisateur) : rangée du haut face aux modules du haut (FG/FD), rangée du bas face aux modules
+  du bas (AG/AD), rangée du milieu face au vaisseau (module de base, au centre). PC
+  (`src/ui/fenetre.py:RANGEE_Y`) : centres dérivés directement des mêmes emplacements que
+  `_rect_module` (rangée du milieu = moyenne des centres haut/bas). Web (`web/style.css`) :
+  `.grille.grille-ennemis` définit un `row-gap` dérivé du même ratio (`--taille-case`), et un
+  padding haut/bas égal (contrairement à une version antérieure, plus généreuse en haut pour la
+  pastille PV/Bouclier) pour que la rangée du milieu reste centrée sur le bloc vaisseau — les deux
+  blocs étant déjà centrés l'un sur l'autre par `#grilles` (`align-items:center`)
 - **Compteur d'électricité** restante affiché en haut de l'écran
 - **Main de cartes** : alignée en bas de l'écran (pas en éventail, pour la lisibilité)
 - **Pioche, défausse et cartes épuisées** (§3.6) : regroupées ensemble dans un coin de l'écran (compteurs de nombre de cartes), séparées de la main
@@ -779,22 +837,11 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
 
 ### 9.1 Design / gameplay
 
-- Contenu exact de la Planète commerciale (uniquement des cartes, ou aussi d'autres bonus ?) reste
-  à définir (§2). Contenu de l'Aventure : 3 premières aventures spécifiées (Astéroïdes/Trois
-  lunes/Police), voir §2.5 — **les trois implémentées** (à en écrire d'autres pour varier le pool)
-- Montants d'Argent (récompense de combat, coût des actions de Station service, Argent de départ) :
-  **tranchés et implémentés**, voir §2.1/§2.2 — valeurs inventées faute de spec précise à l'origine
-  de cette décision, à ajuster en playtest si besoin. Même situation pour le coût de "Mettre aux
-  normes" (Aventure Police, §2.5) : **10 € inventés par symétrie avec les autres montants,
-  implémenté**
-- La Planète commerciale propose-t-elle des cartes pour tous les modules du pool, ou seulement pour les modules actuellement équipés ? (§2, §6)
-- **Persistance des modules hors combat/profils joueur** (§2.2/§10.3) : **implémentée** (profil +
-  partie, un seul joueur à la fois, écrans de sélection de profil/accueil du joueur, `main.py` en
-  vrai point d'entrée), et l'orchestration du parcours (§2.4) relie désormais Choix de module, Choix
-  du prochain niveau, Combat, Fin de combat et Station service à cette sauvegarde. Reste bloquant
-  pour relier Planète commerciale/Aventure (contenu non préparé) à un vrai parcours — voir §10.3
-  "Limites connues" pour le détail restant (portée limitée aux points de passage entre étapes,
-  flotte ennemie toujours tirée au hasard sans tenir compte du niveau)
+- Contenu exact de la Planète commerciale (uniquement des cartes, ou aussi d'autres bonus ? cartes
+  de tous les modules du pool, ou seulement des modules équipés ?) reste à définir (§2, §6) —
+  seul gros morceau de contenu encore non préparé du parcours (§10.3 "Limites connues")
+- Aventure (§2.5) : les 3 variantes spécifiées (Trois lunes/Astéroïdes/Police) sont implémentées ;
+  reste à en écrire d'autres pour varier le pool
 - Statistiques et déblocages par profil (parties jouées/victoires/défaites, niveau max, module le
   plus choisi, déblocages en fin de partie) : sciemment pas encore implémentés (§10.3, décision
   utilisateur "pas de stat pour le moment") — à faire dans une passe dédiée
@@ -812,17 +859,13 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
 - Formule exacte de pondération des doublons de modules au tirage (§2.3, §5) : plus un exemplaire supplémentaire compte-t-il, linéaire ou autre ?
 - Représentation visuelle d'un ennemi L occupant 2 emplacements (§3.2, §8.1) : rectangle fusionné sur les 2 cases, ou deux images liées logiquement ?
 - Compléter le jeu de cartes de chaque module : les archétypes de §4.3 (Bouclier énergétique, Radar, Propulseur, IA de combat, Générateur, Sabotage, Soute/Fret) n'ont pas encore de decks détaillés comme ceux de §4.1-4.2 ; les cartes déjà écrites en §4.1-4.2 n'ont pas encore de type/cible/rareté assignés (§7)
-- Munitions (§3.6/§7.4) : cas limite si la pioche et la défausse sont toutes les deux vides en cours de combat alors qu'il reste des cartes épuisées (qui ne sont jamais remélangées) — le joueur peut alors se retrouver sans carte à piocher ; à surveiller en playtest une fois des cartes à munitions limitées réellement jouables (voir §9.2 pour l'état d'implémentation actuel)
+- Munitions (§3.6/§7.4) : cas limite si la pioche et la défausse sont toutes les deux vides en cours de combat alors qu'il reste des cartes épuisées (qui ne sont jamais remélangées) — le joueur peut alors se retrouver sans carte à piocher ; à surveiller en playtest une fois des cartes à munitions limitées réellement jouables (voir §12.10 pour l'état d'implémentation actuel)
 - Munitions (§7.4) : pas de règle systématique reliant rareté et munitions pour l'instant (une carte de n'importe quel palier peut avoir des munitions limitées ou non) — à revisiter si un pattern se dégage en concevant plus de cartes
 
 ### 9.2 Technique / développement
 
-*(voir §10 pour les choix techniques déjà tranchés)*
-
-- Munitions (§3.6/§7.4) : mécanique pas encore implémentée dans `src/gameplay/` — les cartes du
-  tableau de conception qui en ont une (ex : Réparation, Bouclier perpétuel) sont pour l'instant
-  stockées dans `config/cartes.json` sans bloc "effet" (non jouables), voir la PR "config : import
-  des cartes Module principal, Lanceur de missiles, Blindage"
+*(voir §10 pour les choix techniques déjà tranchés ; aucun point technique ouvert pour le moment —
+les munitions, seul point qui figurait ici, sont implémentées depuis §3.6/§12.10)*
 
 ---
 
@@ -1009,9 +1052,9 @@ fond dédié.
 - Le run s'arrête réellement au Niveau 10 dans l'état actuel (décision utilisateur, provisoire,
   voir §2) : la Victoire finale (§2.4, étape 11) marque la partie `TERMINEE` sans proposer de
   continuation au-delà de ce niveau
-- La flotte ennemie d'un combat (Prime ou Boss) reste toujours tirée entièrement au hasard
-  (`combat_depuis_partie`/`creer_flotte`), sans appliquer les règles de difficulté par niveau du
-  §2.3/§3.2 (nombre d'ennemis, tailles S/M/L) — reste un tirage de démonstration
+- La flotte ennemie d'un combat (Prime ou Boss) applique désormais les règles de difficulté par
+  niveau (§13.4, `creer_flotte_prime`/`creer_flotte_boss`) : **résolu**, n'est plus un tirage de
+  démonstration
 - Écart PC/web sur la conservation des parties `TERMINEE` (voir "Partie" plus haut) : à corriger si
   un écran d'historique est construit côté web
 - `argent` progresse désormais via les combats gagnés et la Station service (§2.1/§2.2) ; la Planète
@@ -1053,18 +1096,38 @@ cartes (§7) et la boucle de récompenses (§2.1, §6) stabilisés.
 
 ---
 
-## 12. Mécaniques de combat manquantes (constat issu du tableau de cartes)
+## 12. Mécaniques de carte : référence d'implémentation et manques restants
 
 En important le tableau de conception de cartes de l'utilisateur dans `config/cartes.json` (voir la
 PR "config : import des cartes Module principal, Lanceur de missiles, Blindage"), seules 6 des 38
 cartes du tableau correspondaient à ce que le moteur (`src/gameplay/carte.py`, `combat.py`) savait
-exécuter à l'époque. Ce nombre a augmenté au fil des mécaniques ajoutées ci-dessous (22/38 jouables
-au moment de la rédaction la plus récente de cette section) ; les cartes restantes
-sont stockées pour référence (champ `_non_jouable`) mais inertes en jeu tant que leur mécanique
-n'est pas implémentée. Cette section recense les mécaniques qui leur manquent, groupées par nature
-plutôt que par carte, pour servir de feuille de route à une future extension du moteur.
+exécuter à l'époque. Ce nombre a augmenté au fil des mécaniques ajoutées, groupées ci-dessous par
+nature plutôt que par carte : la plupart sont désormais **implémentées** (détail par mécanique dans
+chaque sous-section) ; les cartes dont la mécanique ne l'est pas encore restent stockées pour
+référence (champ `_non_jouable`) mais inertes en jeu.
 
-### 12.1 Cibles fixes ou par rang
+**Reste à implémenter** (résumé — le détail de chaque mécanique déjà en place est dans les
+sous-sections ci-dessous, ce résumé ne liste que ce qui manque encore) :
+
+- Effets à deux valeurs X/Y sur une même carte : cible cliquée + splash différencié (*Missiles*),
+  deux zones différentes en une carte (*Torpille*) — §12.2
+- Effets à durée : dégâts répétés pendant Y tours (*Embrasement, Guerre nucléaire*), pioche bonus
+  pendant Y tours (*Multi fonction*) — §12.3
+- Transfert des dégâts subis vers un autre module désigné (*Transfert*) ; renvoi des dégâts subis à
+  l'attaquant (*Renvoie*) — mécanique proche du Bouclier miroir ennemi (§13.2), mais pas encore
+  disponible comme carte jouable par le joueur — §12.6
+- Méta-effets : changer le coût en électricité de toutes les cartes d'une catégorie (*Optimisation
+  des boucliers, Attaques performantes*), dupliquer l'effet de toutes les cartes d'une catégorie
+  (*Double défense, Circuit parallèle*) — bloque aussi certaines cartes à munitions limitées
+  (§12.10) qui en dépendent — §12.7
+- Gain d'électricité en échange d'une défausse (*Manque de jus, Cannibalisme*) — §12.8
+- Manipulation de pioche/main/défausse : piocher puis défausser (*Changement d'outil*), tout
+  défausser puis repiocher (*Grand remplacement*), défausser une quantité choisie entre X et Y
+  (*Cannibalisme*, nécessite un sous-choix de quantité au moment de jouer la carte) — §12.9
+- Type Controle (stun, restriction d'action) : aucune carte taguée Controle dans le tableau pour
+  l'instant, rien à implémenter tant qu'aucune n'existe — §12.5
+
+### 12.1 Cibles fixes ou par rang — entièrement implémenté
 
 - **Module Principal** — cible toujours le module de base, sans choix du joueur — **implémenté**
   (`CibleCarte.MODULE_PRINCIPAL`, sans clic) : *Protéger le vaisseau, Réparation, Blindage maximal*
@@ -1105,7 +1168,10 @@ même mécanisme `BOUCLIER_PAR_TOUR` avec `duree` finie plutôt que nulle) jouab
 cartes Buff à effet périodique simple (les 3 autres cartes Buff restantes sont des méta-effets, cf.
 §12.5/§12.7). L'effet d'un buff se déclenche une première fois immédiatement à la pose de la carte
 (comme les autres types de carte), puis se redéclenche à chaque début de tour joueur tant qu'il
-reste actif.
+reste actif. Pour un buff `BOUCLIER_PAR_TOUR`, ce redéclenchement pose du Bouclier frais
+**après** la dissipation naturelle du tour (§3.5), qui ne fait que diviser par deux la valeur
+existante tant qu'elle dépasse le seuil : le Bouclier peut donc croître au-dessus de la valeur du
+buff avant de se stabiliser à un palier plus élevé (cf. §3.5 pour l'exemple chiffré).
 
 Un buff persistant cible toujours le **module principal** plutôt qu'un module au choix du joueur
 (déviation assumée de la cible "Module Unique" du tableau de conception, décision utilisateur) : lui
@@ -1120,7 +1186,7 @@ Reste manquant pour les autres effets à durée :
 - Dégâts répétés pendant Y tours (*Embrasement, Guerre nucléaire*)
 - Pioche bonus pendant Y tours (*Multi fonction*)
 
-### 12.4 Effets en pourcentage
+### 12.4 Effets en pourcentage — entièrement implémenté
 
 **Implémenté pour les debuffs** (somme des `valeur` des debuffs `VULNERABILITE` actifs dans
 `Ennemi.buffs_actifs`, majore les dégâts subis d'une attaque du joueur) : *Brèche, Ligne avant,

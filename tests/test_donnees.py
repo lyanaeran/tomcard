@@ -26,15 +26,18 @@ def test_charger_cartes_ignore_les_cartes_sans_bloc_effet():
     assert "CRT_13" not in cartes  # non jouable (Missiles, effet a deux valeurs)
 
 
-def test_charger_modules_renvoie_6_modules_avec_images_existantes_et_cartes_connues():
+def test_charger_modules_renvoie_10_modules_avec_images_existantes_et_cartes_connues():
+    """4 des 10 modules (Canon lourd/Controle/Atelier/Radar) ont volontairement une liste de
+    cartes vide : leurs cartes ne sont pas encore concues (cf. modules_equipables qui les exclut
+    du tirage pour cette raison, src/gameplay/parcours.py)."""
     modules = charger_modules()
     ids_cartes_connus = set(charger_cartes())
 
-    assert len(modules) == 6
+    assert len(modules) == 10
     for module in modules:
         assert Path(module.image).is_file()
         assert set(module.cartes).issubset(ids_cartes_connus)
-        assert len(module.cartes) > 0
+        assert module.description
 
 
 def test_charger_ennemis_renvoie_5_ennemis_avec_images_existantes():

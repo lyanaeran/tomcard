@@ -5,7 +5,7 @@
       "nom": "Principal",
       "image": "assets/modules/principal.png",
       "points_de_vie": 50,
-      "description": "Le coeur du vaisseau : attaque directe, defense et reparation.",
+      "description": "Votre vaisseau, plus cabosse que le Faucon Millenium, mais la prunelle de vos yeux.",
       "cartes": ["CRT_7", "CRT_8", "CRT_9", "CRT_10", "CRT_11", "CRT_12"]
     },
     {
@@ -13,7 +13,7 @@
       "nom": "Lanceur de missiles",
       "image": "assets/modules/missiles.png",
       "points_de_vie": 30,
-      "description": "Attaque a zone : bombarde plusieurs ennemis a la fois, avec un soupcon de defense (leurre).",
+      "description": "Tout dans la finesse, des bons vieux missiles qui explosent partout (sauf la ou vous etes, on espere).",
       "cartes": ["CRT_15", "CRT_16", "CRT_18"]
     },
     {
@@ -21,7 +21,7 @@
       "nom": "Blindage",
       "image": "assets/modules/bouclier.png",
       "points_de_vie": 30,
-      "description": "Defense : protege un module, toute la ligne avant, ou renforce le bouclier dans la duree.",
+      "description": "Quand la diplomatie a echoue et qu'on passe a la suite, mieux vaut pouvoir s'abriter.",
       "cartes": ["CRT_20", "CRT_21", "CRT_23", "CRT_24", "CRT_26"]
     },
     {
@@ -29,7 +29,7 @@
       "nom": "Generateur",
       "image": "assets/modules/generateur.png",
       "points_de_vie": 30,
-      "description": "Outils : genere de l'electricite supplementaire pendant le combat.",
+      "description": "Une eolienne dans l'espace ? Vous etes sur ?",
       "cartes": ["CRT_27", "CRT_31"]
     },
     {
@@ -37,7 +37,7 @@
       "nom": "Soute",
       "image": "assets/modules/soute.png",
       "points_de_vie": 30,
-      "description": "Outils : pioche des cartes supplementaires, fluidifie votre main.",
+      "description": "Une soute bien remplie pour parer a toutes les (mauvaises) surprises...",
       "cartes": ["CRT_39"]
     },
     {
@@ -45,8 +45,40 @@
       "nom": "Sabotage",
       "image": "assets/modules/sabotage.png",
       "points_de_vie": 30,
-      "description": "Debuff : affaiblit les ennemis, reduit leurs degats ou augmente ceux qu'ils subissent.",
+      "description": "Comment ca ton canon est tombe en panne ? C'est marrant parce que le mien non. Regarde...",
       "cartes": ["CRT_33", "CRT_34", "CRT_35", "CRT_36", "CRT_37", "CRT_38"]
+    },
+    {
+      "id": "MOD_7",
+      "nom": "Canon lourd",
+      "image": "assets/modules/canon_lourd.png",
+      "points_de_vie": 30,
+      "description": "Ce module envoie du lourd, mieux vaut ne pas se trouver en face.",
+      "cartes": []
+    },
+    {
+      "id": "MOD_8",
+      "nom": "Controle",
+      "image": "assets/modules/controle.png",
+      "points_de_vie": 30,
+      "description": "La meilleure facon de se proteger des attaques de l'ennemi, c'est encore de l'empecher de les lancer.",
+      "cartes": []
+    },
+    {
+      "id": "MOD_9",
+      "nom": "Atelier",
+      "image": "assets/modules/atelier.png",
+      "points_de_vie": 30,
+      "description": "Bricoler le vaisseau alors que ca tire de tout cote ? Meme pas peur !",
+      "cartes": []
+    },
+    {
+      "id": "MOD_10",
+      "nom": "Radar",
+      "image": "assets/modules/radar.png",
+      "points_de_vie": 30,
+      "description": "Quand on connait les points faibles, on peut faire beaucoup plus mal.",
+      "cartes": []
     }
   ]
 }

@@ -24,53 +24,75 @@ HAUTEUR_FENETRE = 800
 # clic de ciblage precis, meme principe que CIBLES_ALLIEES dans web/app.js.
 CIBLES_CAMP_ALLIE = (CibleCarte.ALLIE_UNIQUE, CibleCarte.ALLIES_MULTIPLES, CibleCarte.MODULE_PRINCIPAL)
 
-# Cases de la flotte ennemie, cf. specs.md paragraphe 8.1
-CELLULE_LARGEUR, CELLULE_HAUTEUR = 110, 90
-ESPACEMENT_CELLULE = 14
-# Espacement vertical entre rangees : plus grand que l'espacement horizontal
-# pour laisser la place aux pastilles PV/Bouclier flottant au-dessus de
-# chaque case sans chevaucher la case de la rangee suivante.
-ESPACEMENT_LIGNE = 44
+# Cases de la flotte ennemie, cf. specs.md paragraphe 8.1. Agrandies (etaient 110x90, decision
+# utilisateur : paraissaient petites a cote des modules, y compris apres un premier passage a
+# 120x98 - encore trop timide) : alignees sur le meme empreinte que les modules du vaisseau
+# (250x220 mis a l'echelle, cf. _EMPLACEMENTS_MODULES_IMAGE plus bas, ~135x119) plutot qu'une
+# taille independante. La rangee du haut colle a l'entete d'a peu pres la meme marge que les
+# modules eux-memes (verifie par echantillonnage de pixels : le contour sombre de leur pastille
+# se fond deja dans le bandeau, sans que ce soit visible a l'oeil vu les couleurs tres proches),
+# donc pas de regression a reprendre cette meme empreinte pour les ennemis.
+CELLULE_LARGEUR, CELLULE_HAUTEUR = 135, 119
+ESPACEMENT_CELLULE = 17
 HAUTEUR_BANDEAU_CASE = 42
-
-ENNEMI_AVANT_X = 953
-ENNEMI_ARRIERE_X = ENNEMI_AVANT_X + CELLULE_LARGEUR + ESPACEMENT_CELLULE
-
-RANGEE_Y = {
-    Rangee.GAUCHE: 580,
-    Rangee.MID: 580 - (CELLULE_HAUTEUR + ESPACEMENT_LIGNE),
-    Rangee.DROITE: 580 - 2 * (CELLULE_HAUTEUR + ESPACEMENT_LIGNE),
-}
 
 # Vaisseau du joueur : le module de base (assets/modules/principal.png) est
 # affiche en grand, et les modules equipes se placent dans les emplacements
 # vides visibles sur cette image (mesures directement sur l'image source).
-# VAISSEAU_X/ENNEMI_AVANT_X sont choisis pour que le bloc vaisseau+flotte
-# soit centre horizontalement dans la fenetre (marges egales des deux cotes),
-# comme la disposition #grilles (justify-content:center) de la version web.
-VAISSEAU_X = 93
-VAISSEAU_Y = 300
-VAISSEAU_LARGEUR = 640
-_TAILLE_IMAGE_PRINCIPAL = (1205, 651)  # largeur, hauteur de assets/modules/principal.png
+# VAISSEAU_LARGEUR/VAISSEAU_Y bornes par la bande verticale disponible entre
+# la main de cartes (CARTE_Y/CARTE_HAUTEUR) et l'en-tete (ENTETE_Y) : l'image
+# fournie par l'utilisateur (quasi carree, contrairement a l'ancienne tres
+# large) impose une hauteur bien plus grande a largeur egale.
+VAISSEAU_X = 150
+VAISSEAU_Y = 190
+VAISSEAU_LARGEUR = 527
+_TAILLE_IMAGE_PRINCIPAL = (978, 965)  # largeur, hauteur de assets/modules/principal.png
 VAISSEAU_HAUTEUR = VAISSEAU_LARGEUR * _TAILLE_IMAGE_PRINCIPAL[1] / _TAILLE_IMAGE_PRINCIPAL[0]
 _ECHELLE_VAISSEAU = VAISSEAU_LARGEUR / _TAILLE_IMAGE_PRINCIPAL[0]
+
+# ENNEMI_AVANT_X derive (plutot qu'une valeur fixe) pour que le bloc vaisseau+flotte reste
+# centre horizontalement dans la fenetre (marges egales des deux cotes, meme principe que
+# #grilles/justify-content:center cote web) quelle que soit la taille des cases ennemies :
+# marge gauche (VAISSEAU_X) = marge droite (LARGEUR_FENETRE - bord droit de la colonne arriere).
+ENNEMI_AVANT_X = LARGEUR_FENETRE - 2 * CELLULE_LARGEUR - ESPACEMENT_CELLULE - VAISSEAU_X
+ENNEMI_ARRIERE_X = ENNEMI_AVANT_X + CELLULE_LARGEUR + ESPACEMENT_CELLULE
 
 # Emplacements des modules mesures sur l'image (coordonnees locales, origine
 # bas-gauche de l'image, avant la mise a l'echelle). Mesures sur le cadre
 # metallique complet du vaisseau (pas seulement le trou noir interieur), pour
-# que le cadre du module equipe vienne recouvrir celui du vaisseau.
+# que le cadre du module equipe vienne recouvrir celui du vaisseau. Nouvelle
+# image (bras mecaniques vers 4 cadres, 2 en haut/2 en bas plutot que les 4
+# coins d'une image large) : GAUCHE reste la paire du haut, DROITE celle du
+# bas, meme convention que l'ancienne image (deja GAUCHE = y le plus haut).
 _EMPLACEMENTS_MODULES_IMAGE = {
-    Position(Colonne.ARRIERE, Rangee.GAUCHE): (350, 407, 223, 216),
-    Position(Colonne.AVANT, Rangee.GAUCHE): (606, 407, 223, 216),
-    Position(Colonne.ARRIERE, Rangee.DROITE): (349, 29, 223, 215),
-    Position(Colonne.AVANT, Rangee.DROITE): (607, 29, 223, 215),
+    Position(Colonne.ARRIERE, Rangee.GAUCHE): (230, 745, 250, 220),
+    Position(Colonne.AVANT, Rangee.GAUCHE): (580, 745, 250, 220),
+    Position(Colonne.ARRIERE, Rangee.DROITE): (230, 0, 250, 220),
+    Position(Colonne.AVANT, Rangee.DROITE): (580, 0, 250, 220),
+}
+
+# Rangees de la flotte ennemie alignees verticalement sur celles du vaisseau
+# joueur (decision utilisateur) : rangee du haut face aux modules du haut,
+# rangee du bas face aux modules du bas, rangee du milieu face au vaisseau
+# (entre les deux, au niveau du module principal). Centres derives des memes
+# emplacements que _rect_module, pour rester coherents si l'image change encore.
+_, _ey_gauche, _, _eh_gauche = _EMPLACEMENTS_MODULES_IMAGE[Position(Colonne.AVANT, Rangee.GAUCHE)]
+_, _ey_droite, _, _eh_droite = _EMPLACEMENTS_MODULES_IMAGE[Position(Colonne.AVANT, Rangee.DROITE)]
+_CENTRE_Y_RANGEE_GAUCHE = VAISSEAU_Y + (_ey_gauche + _eh_gauche / 2) * _ECHELLE_VAISSEAU
+_CENTRE_Y_RANGEE_DROITE = VAISSEAU_Y + (_ey_droite + _eh_droite / 2) * _ECHELLE_VAISSEAU
+_CENTRE_Y_RANGEE_MID = (_CENTRE_Y_RANGEE_GAUCHE + _CENTRE_Y_RANGEE_DROITE) / 2
+
+RANGEE_Y = {
+    Rangee.GAUCHE: _CENTRE_Y_RANGEE_GAUCHE - CELLULE_HAUTEUR / 2,
+    Rangee.MID: _CENTRE_Y_RANGEE_MID - CELLULE_HAUTEUR / 2,
+    Rangee.DROITE: _CENTRE_Y_RANGEE_DROITE - CELLULE_HAUTEUR / 2,
 }
 
 # Repere du pare-brise mesure sur l'image source (coordonnees locales,
 # origine bas-gauche : centre horizontal, bord superieur), pour placer la
 # pastille PV/Bouclier de la base juste au-dessus de lui.
-_CENTRE_PARE_BRISE_IMAGE = 853
-_HAUT_PARE_BRISE_IMAGE = 360
+_CENTRE_PARE_BRISE_IMAGE = 785
+_HAUT_PARE_BRISE_IMAGE = 615
 CENTRE_PARE_BRISE_VAISSEAU_X = VAISSEAU_X + _CENTRE_PARE_BRISE_IMAGE * _ECHELLE_VAISSEAU
 HAUT_PARE_BRISE_VAISSEAU_Y = VAISSEAU_Y + _HAUT_PARE_BRISE_IMAGE * _ECHELLE_VAISSEAU
 

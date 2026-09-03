@@ -47,7 +47,7 @@ NOMBRE_ENNEMIS_MODE_TEST = 2
 # un coup. Les autres cartes gardent leur valeur normale (config/cartes.json).
 VALEUR_ATTAQUE_BASE_MODE_TEST = 20
 
-ELECTRICITE_PAR_TOUR = 5
+ELECTRICITE_PAR_TOUR = 3
 ID_MODULE_PRINCIPAL = "MOD_1"
 NOMBRE_MODULES_EQUIPES = 4
 # Deck de base du module principal (12 cartes) : chaque carte de rarete Base une fois, sauf
@@ -118,7 +118,9 @@ def deck_module_principal(spec_principal: SpecModule, cartes: dict[str, Carte]) 
 def creer_vaisseau(specs_modules: list[SpecModule], aleatoire: random.Random) -> tuple[Vaisseau, list[SpecModule]]:
     """Place le module principal et tire au sort 4 modules differents sur les 4 emplacements."""
     spec_principal = next(spec for spec in specs_modules if spec.id == ID_MODULE_PRINCIPAL)
-    specs_equipables = [spec for spec in specs_modules if spec.id != ID_MODULE_PRINCIPAL]
+    # Exclut les modules dont les cartes ne sont pas encore concues (cartes vide dans
+    # modules.json) : les tirer planterait creer_deck (tirer_cartes sur une pool vide).
+    specs_equipables = [spec for spec in specs_modules if spec.id != ID_MODULE_PRINCIPAL and spec.cartes]
     specs_choisies = aleatoire.sample(specs_equipables, NOMBRE_MODULES_EQUIPES)
 
     modules_par_position = dict(zip(POSITIONS_MODULES_EQUIPES, (_module_depuis_spec(spec) for spec in specs_choisies)))
