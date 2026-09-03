@@ -38,7 +38,6 @@ def test_charger_modules_renvoie_10_modules_avec_images_existantes_et_cartes_con
         assert Path(module.image).is_file()
         assert set(module.cartes).issubset(ids_cartes_connus)
         assert module.description
-        assert module.description_gameplay
 
 
 def test_charger_ennemis_renvoie_5_ennemis_avec_images_existantes():

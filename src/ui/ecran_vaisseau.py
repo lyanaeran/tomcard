@@ -24,11 +24,10 @@ from src.ui.fenetre import (
 )
 
 # Duree d'affichage de la description d'un module clique (specs.md 5) - plus longue qu'un popup
-# +/-N (AnimationPopup.DUREE) pour laisser le temps de lire les deux phrases (accroche narrative
-# + indice gameplay).
+# +/-N (AnimationPopup.DUREE) pour laisser le temps de lire la phrase.
 DUREE_INFOBULLE_MODULE = 4.0
 LARGEUR_INFOBULLE_MODULE = 340
-HAUTEUR_INFOBULLE_MODULE = 100
+HAUTEUR_INFOBULLE_MODULE = 70
 
 COULEUR_TEXTE = (255, 255, 255)
 COULEUR_SOUS_TITRE = (200, 200, 205)
@@ -126,8 +125,8 @@ class EcranVaisseau(pyglet.window.Window):
         return elements
 
     def _dessiner_description(self, index: int, lot: pyglet.graphics.Batch) -> list:
-        """Infobulle (specs.md 5) : accroche narrative + indice gameplay du module clique,
-        affichee quelques secondes au-dessus de sa case (DUREE_INFOBULLE_MODULE)."""
+        """Infobulle (specs.md 5) : accroche narrative du module clique, affichee quelques
+        secondes au-dessus de sa case (DUREE_INFOBULLE_MODULE)."""
         etat = self.partie.vaisseau[POSITIONS_AFFICHEES[index][0]]
         if etat is None:
             return []
@@ -141,7 +140,7 @@ class EcranVaisseau(pyglet.window.Window):
         )
         bandeau.opacity = 210
         texte = pyglet.text.Label(
-            f"{spec.description}\n{spec.description_gameplay}",
+            spec.description,
             x=bx + LARGEUR_INFOBULLE_MODULE / 2,
             y=by + HAUTEUR_INFOBULLE_MODULE / 2,
             anchor_x="center",

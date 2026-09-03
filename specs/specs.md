@@ -154,9 +154,9 @@ remplace les pistes encore ouvertes en §2 pour la Station service et la cadence
   (`nouveau_choix_module`), utilisée quand `partieActive` est `null`. Écran présenté **empilé
   verticalement, image carrée à gauche et rectangle de texte (nom + `description`) à droite**, même
   convention que le choix du prochain niveau (§2.3 ci-dessus) et les choix d'Aventure/Station
-  service — voir §4 pour le détail des deux champs de texte par module (`description`/
-  `description_gameplay`) et l'exclusion des modules sans deck de cartes de ce tirage — fond de
-  combat réutilisé en placeholder (décision utilisateur), à remplacer par un fond dédié
+  service — voir §4 pour le détail du champ `description` par module et l'exclusion des modules
+  sans deck de cartes de ce tirage — fond de combat réutilisé en placeholder (décision
+  utilisateur), à remplacer par un fond dédié
 - **Niveaux 5 et 9** — 3 propositions dont une **Station service garantie** (les 2 autres tirées
   normalement, voir ci-dessous) — le joueur garde le choix, la Station service n'est pas forcée
 - **Niveau 10** — **Boss**, obligatoire, pas de tirage d'étape. Se répète tous les 10 niveaux (20,
@@ -235,16 +235,16 @@ terminé à ce stade).
   de chevauchement sur tous les formats (fenêtre large et haute, tablette en paysage...),
   `actualiserBarreLaterale`/`barreChevaucheVaisseau` vérifient le chevauchement réel après affichage
   (comparaison des rectangles DOM) et masquent la barre au lieu de deviner un second seuil.
-- **`EcranVaisseau`** : cliquer/taper un module équipé (non vide) affiche son nom et ses deux textes
-  (`description` + `description_gameplay`, §4) dans une infobulle temporaire (4 secondes), superposée
-  au-dessus de la case cliquée. PC (`src/ui/ecran_vaisseau.py`) : réutilise le minuteur
-  `AnimationPopup` existant (`src/ui/animation.py`), avec une durée dédiée `DUREE_INFOBULLE_MODULE`
-  plus longue que celle des popups de combat (deux phrases à lire) ; nécessite une boucle
+- **`EcranVaisseau`** : cliquer/taper un module équipé (non vide) affiche son nom et sa
+  `description` (§4) dans une infobulle temporaire (4 secondes), superposée au-dessus de la case
+  cliquée. PC (`src/ui/ecran_vaisseau.py`) : réutilise le minuteur `AnimationPopup` existant
+  (`src/ui/animation.py`), avec une durée dédiée `DUREE_INFOBULLE_MODULE` plus longue que celle
+  des popups de combat (le temps de lire la phrase) ; nécessite une boucle
   `pyglet.clock.schedule_interval` que cet écran n'avait pas jusqu'ici. Web (`web/app.js`) : réutilise
   le panneau `position: fixed` centré déjà utilisé pour `#info-carte`/`#info-case`/`#info-carte-deck`
   (nouveau `#info-carte-vaisseau` dans `index.html`), rempli par `afficherDescriptionModuleVaisseau`
   et effacé après le même délai via `setTimeout` ; `web/bridge.py:infos_vaisseau_web` inclut
-  désormais `description`/`description_gameplay` par module équipé pour l'alimenter.
+  désormais `description` par module équipé pour l'alimenter.
 
 1. **Sélection du joueur** (implémenté, §10.3) — choisir un profil existant ou en créer un →
    Écran de partie (étape 2). Bouton "Quitter le jeu" (**PC uniquement** : ferme l'application ;
@@ -557,11 +557,10 @@ deck de cartes jouable (Principal, Lanceur de missiles, Blindage, Générateur, 
 (Canon lourd, Contrôle, Atelier — proche de l'archétype "Réparation" ci-dessous, Radar — proche de
 l'archétype "Radar / Ciblage" en §4.3) : exclus du tirage de choix de module tant qu'ils n'ont pas
 de cartes (`modules_equipables`/`specs_equipables`, §5), pour ne jamais planter le tirage du deck.
-Chaque module a deux textes distincts (`description`/`description_gameplay`) : une accroche
-narrative (affichée à l'écran de choix de module, spécifiée par l'utilisateur) et un indice
-gameplay plus terse (affiché en plus dans l'infobulle de l'écran Vaisseau au clic/tap sur un
-module, §2.4) — les decks de cartes détaillés ci-dessous restent le plan cible pour les 4
-nouveaux modules, à concevoir dans une passe dédiée.
+Chaque module a une seule `description` (une phrase, accroche narrative spécifiée par
+l'utilisateur), affichée à l'écran de choix de module et reprise telle quelle dans l'infobulle de
+l'écran Vaisseau au clic/tap sur un module (§2.4) — les decks de cartes détaillés ci-dessous
+restent le plan cible pour les 4 nouveaux modules, à concevoir dans une passe dédiée.
 
 ### 4.1 Modules d'attaque (spécialisés, pas un seul module générique)
 
@@ -796,6 +795,15 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
 
 - **Vaisseau du joueur** (haut gauche) : grille de **2 colonnes (arrière/avant) x 3 rangées (gauche/mid/droite)**. La colonne **avant est tournée vers l'ennemi** (la plus proche du centre de l'écran), la colonne arrière est la plus éloignée. Le tout repose sur un **fond commun** qui regroupe visuellement les 5 emplacements. Le **module de base** occupe la rangée mid en entier (arrière-mid + avant-mid fusionnés) ; les 4 autres modules équipés prennent FG/FD/AG/AD
 - **Flotte ennemie** (haut droite) : grille symétrique 2x3, 6 emplacements libres (pas de base adverse). La colonne **avant est tournée vers le joueur** (la plus proche du centre de l'écran) et c'est elle qui est exposée au corps à corps (voir 3.1) ; la colonne arrière est la plus éloignée
+- **Les 3 rangées ennemies sont alignées verticalement sur celles du vaisseau du joueur** (décision
+  utilisateur) : rangée du haut face aux modules du haut (FG/FD), rangée du bas face aux modules
+  du bas (AG/AD), rangée du milieu face au vaisseau (module de base, au centre). PC
+  (`src/ui/fenetre.py:RANGEE_Y`) : centres dérivés directement des mêmes emplacements que
+  `_rect_module` (rangée du milieu = moyenne des centres haut/bas). Web (`web/style.css`) :
+  `.grille.grille-ennemis` définit un `row-gap` dérivé du même ratio (`--taille-case`), et un
+  padding haut/bas égal (contrairement à une version antérieure, plus généreuse en haut pour la
+  pastille PV/Bouclier) pour que la rangée du milieu reste centrée sur le bloc vaisseau — les deux
+  blocs étant déjà centrés l'un sur l'autre par `#grilles` (`align-items:center`)
 - **Compteur d'électricité** restante affiché en haut de l'écran
 - **Main de cartes** : alignée en bas de l'écran (pas en éventail, pour la lisibilité)
 - **Pioche, défausse et cartes épuisées** (§3.6) : regroupées ensemble dans un coin de l'écran (compteurs de nombre de cartes), séparées de la main

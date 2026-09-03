@@ -253,11 +253,18 @@ body {
 .grille {
     display: grid;
     grid-template-columns: repeat(2, var(--taille-case));
-    /* Assez d'ecart pour que les pastilles PV/Bouclier (qui debordent au-dessus
-       de chaque case, cf. .pastille) ne chevauchent pas la rangee du dessus. */
+    /* Ecart horizontal entre colonnes avant/arriere, assez large pour que les pastilles
+       PV/Bouclier (qui debordent au-dessus de chaque case, cf. .pastille) ne chevauchent pas
+       la case voisine - l'ecart vertical entre rangees est repris par .grille.grille-ennemis
+       (row-gap, ci-dessous) pour aligner les rangees ennemies sur celles du vaisseau. */
     gap: calc(var(--taille-pastille) * 0.7);
     background: #10162c;
-    padding: calc(0.5rem + var(--taille-pastille) * 0.5) 0.5rem 0.5rem;
+    /* Padding haut/bas egaux (contrairement a une version precedente qui reservait plus de
+       place en haut pour la pastille PV/Bouclier de la rangee du dessus) : necessaire pour que
+       la rangee du milieu reste centree sur le bloc vaisseau (cf. .grille.grille-ennemis
+       ci-dessous) - sans overflow:hidden sur ce conteneur, la pastille peut de toute facon
+       deborder du fond sans etre rognee, comme celles du vaisseau (.pastilles-base). */
+    padding: 0.5rem;
     border-radius: 10px;
 }
 
@@ -274,6 +281,20 @@ body {
        sont mesures relativement a l'image du vaisseau elle-meme, sans marge. */
     padding: 0;
     width: calc(var(--taille-case) / 0.2556);
+}
+
+/* Alignement vertical des 3 rangees ennemies sur celles du vaisseau joueur (decision
+   utilisateur) : rangee du haut face aux modules du haut, rangee du bas face aux modules du
+   bas, rangee du milieu face au vaisseau. Les deux blocs sont centres l'un sur l'autre par
+   #grilles (align-items:center) : il suffit donc que l'ecart case+row-gap entre deux rangees
+   ennemies adjacentes reproduise l'ecart (en unites de --taille-case) entre le centre d'une
+   rangee de modules et le centre du vaisseau, mesure depuis EMPLACEMENTS_MODULES (app.js)
+   comme _CENTRE_Y_RANGEE_GAUCHE/_DROITE cote pc (src/ui/fenetre.py) : distance centre haut -
+   centre milieu = 0.3860 * hauteur vaisseau, hauteur vaisseau = largeur / 0.2556 * 965 / 978
+   ~= 3.8604 * --taille-case, d'ou l'ecart voulu ~= 1.4902 * --taille-case, moins 1 case pleine
+   pour obtenir le row-gap. */
+.grille.grille-ennemis {
+    row-gap: calc(var(--taille-case) * 0.4902);
 }
 
 .case {

@@ -12,7 +12,7 @@
 const DUREE_POPUP_MS = 2000;
 const DUREE_INFOBULLE_MS = 2500;
 // Plus longue que DUREE_INFOBULLE_MS : laisse le temps de lire les deux phrases (accroche
-// narrative + indice gameplay) d'un module, meme principe que DUREE_INFOBULLE_MODULE cote pc
+// narrative) d'un module, meme principe que DUREE_INFOBULLE_MODULE cote pc
 // (src/ui/ecran_vaisseau.py).
 const DUREE_INFOBULLE_MODULE_MS = 4000;
 
@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "55";
+const VERSION_CACHE = "56";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -1735,7 +1735,7 @@ function ouvrirSurvolDeck() {
 // #vaisseau-accueil/#modules-station-service (infos_vaisseau_web) - jamais masque via
 // masquerTousLesEcrans en s'ouvrant (cf. ouvrirSurvolDeck ci-dessus), donc pas besoin d'un
 // equivalent de deckOuvertEnSurvol : "Retour" referme toujours simplement ce survol. Un tap sur
-// un module affiche sa description (accroche narrative + indice gameplay, specs.md 5) pendant
+// un module affiche sa description (accroche narrative, specs.md 5) pendant
 // DUREE_INFOBULLE_MODULE_MS, meme principe que #info-case (afficherInfobulle) - equivalent tactile
 // du clic PC (src/ui/ecran_vaisseau.py:EcranVaisseau._dessiner_description).
 let minuteurInfobulleVaisseau = null;
@@ -1770,8 +1770,7 @@ function afficherDescriptionModuleVaisseau(position) {
     const panneau = document.getElementById("info-carte-vaisseau");
     panneau.innerHTML = `
         <div class="info-carte-nom">${etat.nom}</div>
-        <div class="info-carte-effet">${etat.description}</div>
-        <div class="info-carte-effet">${etat.description_gameplay}</div>`;
+        <div class="info-carte-effet">${etat.description}</div>`;
     minuteurInfobulleVaisseau = setTimeout(() => {
         panneau.innerHTML = "";
     }, DUREE_INFOBULLE_MODULE_MS);

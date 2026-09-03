@@ -27,20 +27,10 @@ CIBLES_CAMP_ALLIE = (CibleCarte.ALLIE_UNIQUE, CibleCarte.ALLIES_MULTIPLES, Cible
 # Cases de la flotte ennemie, cf. specs.md paragraphe 8.1
 CELLULE_LARGEUR, CELLULE_HAUTEUR = 110, 90
 ESPACEMENT_CELLULE = 14
-# Espacement vertical entre rangees : plus grand que l'espacement horizontal
-# pour laisser la place aux pastilles PV/Bouclier flottant au-dessus de
-# chaque case sans chevaucher la case de la rangee suivante.
-ESPACEMENT_LIGNE = 44
 HAUTEUR_BANDEAU_CASE = 42
 
 ENNEMI_AVANT_X = 897
 ENNEMI_ARRIERE_X = ENNEMI_AVANT_X + CELLULE_LARGEUR + ESPACEMENT_CELLULE
-
-RANGEE_Y = {
-    Rangee.GAUCHE: 580,
-    Rangee.MID: 580 - (CELLULE_HAUTEUR + ESPACEMENT_LIGNE),
-    Rangee.DROITE: 580 - 2 * (CELLULE_HAUTEUR + ESPACEMENT_LIGNE),
-}
 
 # Vaisseau du joueur : le module de base (assets/modules/principal.png) est
 # affiche en grand, et les modules equipes se placent dans les emplacements
@@ -71,6 +61,23 @@ _EMPLACEMENTS_MODULES_IMAGE = {
     Position(Colonne.AVANT, Rangee.GAUCHE): (580, 745, 250, 220),
     Position(Colonne.ARRIERE, Rangee.DROITE): (230, 0, 250, 220),
     Position(Colonne.AVANT, Rangee.DROITE): (580, 0, 250, 220),
+}
+
+# Rangees de la flotte ennemie alignees verticalement sur celles du vaisseau
+# joueur (decision utilisateur) : rangee du haut face aux modules du haut,
+# rangee du bas face aux modules du bas, rangee du milieu face au vaisseau
+# (entre les deux, au niveau du module principal). Centres derives des memes
+# emplacements que _rect_module, pour rester coherents si l'image change encore.
+_, _ey_gauche, _, _eh_gauche = _EMPLACEMENTS_MODULES_IMAGE[Position(Colonne.AVANT, Rangee.GAUCHE)]
+_, _ey_droite, _, _eh_droite = _EMPLACEMENTS_MODULES_IMAGE[Position(Colonne.AVANT, Rangee.DROITE)]
+_CENTRE_Y_RANGEE_GAUCHE = VAISSEAU_Y + (_ey_gauche + _eh_gauche / 2) * _ECHELLE_VAISSEAU
+_CENTRE_Y_RANGEE_DROITE = VAISSEAU_Y + (_ey_droite + _eh_droite / 2) * _ECHELLE_VAISSEAU
+_CENTRE_Y_RANGEE_MID = (_CENTRE_Y_RANGEE_GAUCHE + _CENTRE_Y_RANGEE_DROITE) / 2
+
+RANGEE_Y = {
+    Rangee.GAUCHE: _CENTRE_Y_RANGEE_GAUCHE - CELLULE_HAUTEUR / 2,
+    Rangee.MID: _CENTRE_Y_RANGEE_MID - CELLULE_HAUTEUR / 2,
+    Rangee.DROITE: _CENTRE_Y_RANGEE_DROITE - CELLULE_HAUTEUR / 2,
 }
 
 # Repere du pare-brise mesure sur l'image source (coordonnees locales,
