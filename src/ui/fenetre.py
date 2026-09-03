@@ -25,13 +25,15 @@ HAUTEUR_FENETRE = 800
 CIBLES_CAMP_ALLIE = (CibleCarte.ALLIE_UNIQUE, CibleCarte.ALLIES_MULTIPLES, CibleCarte.MODULE_PRINCIPAL)
 
 # Cases de la flotte ennemie, cf. specs.md paragraphe 8.1. Agrandies (etaient 110x90, decision
-# utilisateur : paraissaient petites a cote des modules) en gardant la meme proportion
-# largeur/hauteur qu'avant (1.2245) - la plupart des images d'ennemis etant proches du carre
-# (assets/ennemis/*.png), c'est la hauteur qui borne leur taille affichee (_sprite_ajuste
-# preserve l'aspect, cf. plus bas), plafonnee par la place disponible entre le centre de la
-# rangee du haut (alignee sur les modules, cf. RANGEE_Y ci-dessous) et l'entete.
-CELLULE_LARGEUR, CELLULE_HAUTEUR = 120, 98
-ESPACEMENT_CELLULE = 15
+# utilisateur : paraissaient petites a cote des modules, y compris apres un premier passage a
+# 120x98 - encore trop timide) : alignees sur le meme empreinte que les modules du vaisseau
+# (250x220 mis a l'echelle, cf. _EMPLACEMENTS_MODULES_IMAGE plus bas, ~135x119) plutot qu'une
+# taille independante. La rangee du haut colle a l'entete d'a peu pres la meme marge que les
+# modules eux-memes (verifie par echantillonnage de pixels : le contour sombre de leur pastille
+# se fond deja dans le bandeau, sans que ce soit visible a l'oeil vu les couleurs tres proches),
+# donc pas de regression a reprendre cette meme empreinte pour les ennemis.
+CELLULE_LARGEUR, CELLULE_HAUTEUR = 135, 119
+ESPACEMENT_CELLULE = 17
 HAUTEUR_BANDEAU_CASE = 42
 
 # Vaisseau du joueur : le module de base (assets/modules/principal.png) est
