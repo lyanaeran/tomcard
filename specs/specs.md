@@ -738,7 +738,7 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────┐
-│  SPACE FIGHT — ÉCRAN DE COMBAT                                  ⚡ Électricité: 5 │
+│  SPACE FIGHT — ÉCRAN DE COMBAT                                  ⚡ Électricité: 3 │
 │                                                                                    │
 │  VAISSEAU DU JOUEUR                                FLOTTE ENNEMIE (6 emplacements)│
 │  (fond commun aux 5 emplacements)                                                 │

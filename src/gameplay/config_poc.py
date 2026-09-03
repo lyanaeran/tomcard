@@ -47,7 +47,7 @@ NOMBRE_ENNEMIS_MODE_TEST = 2
 # un coup. Les autres cartes gardent leur valeur normale (config/cartes.json).
 VALEUR_ATTAQUE_BASE_MODE_TEST = 20
 
-ELECTRICITE_PAR_TOUR = 5
+ELECTRICITE_PAR_TOUR = 3
 ID_MODULE_PRINCIPAL = "MOD_1"
 NOMBRE_MODULES_EQUIPES = 4
 # Deck de base du module principal (12 cartes) : chaque carte de rarete Base une fois, sauf
