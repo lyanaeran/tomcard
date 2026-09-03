@@ -16,8 +16,10 @@ NOMBRE_CANDIDATS_MODULE = 3
 
 def modules_equipables(specs_modules: list[SpecModule]) -> list[SpecModule]:
     """Modules pouvant etre proposes en choix : tous sauf le module principal, deja acquis
-    d'office en debut de run (specs.md paragraphe 5)."""
-    return [spec for spec in specs_modules if spec.id != ID_MODULE_PRINCIPAL]
+    d'office en debut de run (specs.md paragraphe 5), et sauf ceux dont les cartes ne sont pas
+    encore concues (cartes vide dans modules.json, ex. Canon lourd/Controle/Atelier/Radar) - les
+    proposer planterait le tirage du deck (Deck.piocher_cartes/tirer_cartes sur une pool vide)."""
+    return [spec for spec in specs_modules if spec.id != ID_MODULE_PRINCIPAL and spec.cartes]
 
 
 def tirer_candidats_module(

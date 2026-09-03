@@ -118,7 +118,9 @@ def deck_module_principal(spec_principal: SpecModule, cartes: dict[str, Carte]) 
 def creer_vaisseau(specs_modules: list[SpecModule], aleatoire: random.Random) -> tuple[Vaisseau, list[SpecModule]]:
     """Place le module principal et tire au sort 4 modules differents sur les 4 emplacements."""
     spec_principal = next(spec for spec in specs_modules if spec.id == ID_MODULE_PRINCIPAL)
-    specs_equipables = [spec for spec in specs_modules if spec.id != ID_MODULE_PRINCIPAL]
+    # Exclut les modules dont les cartes ne sont pas encore concues (cartes vide dans
+    # modules.json) : les tirer planterait creer_deck (tirer_cartes sur une pool vide).
+    specs_equipables = [spec for spec in specs_modules if spec.id != ID_MODULE_PRINCIPAL and spec.cartes]
     specs_choisies = aleatoire.sample(specs_equipables, NOMBRE_MODULES_EQUIPES)
 
     modules_par_position = dict(zip(POSITIONS_MODULES_EQUIPES, (_module_depuis_spec(spec) for spec in specs_choisies)))

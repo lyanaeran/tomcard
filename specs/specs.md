@@ -151,9 +151,12 @@ remplace les pistes encore ouvertes en §2 pour la Station service et la cadence
   côté web `web/bridge.py:choisir_module_partie_web` + `web/app.js:ouvrirChoixModulePartie`/
   `choisirModule`. Reste aussi accessible en démonstration isolée (candidats tirés indépendamment
   d'une partie) via `web/app.js` (`nouveauChoixModule`, exposée sur `window`) + `web/bridge.py`
-  (`nouveau_choix_module`), utilisée quand `partieActive` est `null`. Chaque module a désormais un champ
-  `description` dans `config/modules.json` (type de carte débloqué, sans révéler les cartes) —
-  fond de combat réutilisé en placeholder (décision utilisateur), à remplacer par un fond dédié
+  (`nouveau_choix_module`), utilisée quand `partieActive` est `null`. Écran présenté **empilé
+  verticalement, image carrée à gauche et rectangle de texte (nom + `description`) à droite**, même
+  convention que le choix du prochain niveau (§2.3 ci-dessus) et les choix d'Aventure/Station
+  service — voir §4 pour le détail des deux champs de texte par module (`description`/
+  `description_gameplay`) et l'exclusion des modules sans deck de cartes de ce tirage — fond de
+  combat réutilisé en placeholder (décision utilisateur), à remplacer par un fond dédié
 - **Niveaux 5 et 9** — 3 propositions dont une **Station service garantie** (les 2 autres tirées
   normalement, voir ci-dessous) — le joueur garde le choix, la Station service n'est pas forcée
 - **Niveau 10** — **Boss**, obligatoire, pas de tirage d'étape. Se répète tous les 10 niveaux (20,
@@ -232,6 +235,16 @@ terminé à ce stade).
   de chevauchement sur tous les formats (fenêtre large et haute, tablette en paysage...),
   `actualiserBarreLaterale`/`barreChevaucheVaisseau` vérifient le chevauchement réel après affichage
   (comparaison des rectangles DOM) et masquent la barre au lieu de deviner un second seuil.
+- **`EcranVaisseau`** : cliquer/taper un module équipé (non vide) affiche son nom et ses deux textes
+  (`description` + `description_gameplay`, §4) dans une infobulle temporaire (4 secondes), superposée
+  au-dessus de la case cliquée. PC (`src/ui/ecran_vaisseau.py`) : réutilise le minuteur
+  `AnimationPopup` existant (`src/ui/animation.py`), avec une durée dédiée `DUREE_INFOBULLE_MODULE`
+  plus longue que celle des popups de combat (deux phrases à lire) ; nécessite une boucle
+  `pyglet.clock.schedule_interval` que cet écran n'avait pas jusqu'ici. Web (`web/app.js`) : réutilise
+  le panneau `position: fixed` centré déjà utilisé pour `#info-carte`/`#info-case`/`#info-carte-deck`
+  (nouveau `#info-carte-vaisseau` dans `index.html`), rempli par `afficherDescriptionModuleVaisseau`
+  et effacé après le même délai via `setTimeout` ; `web/bridge.py:infos_vaisseau_web` inclut
+  désormais `description`/`description_gameplay` par module équipé pour l'alimenter.
 
 1. **Sélection du joueur** (implémenté, §10.3) — choisir un profil existant ou en créer un →
    Écran de partie (étape 2). Bouton "Quitter le jeu" (**PC uniquement** : ferme l'application ;
@@ -538,6 +551,18 @@ Certaines cartes ont un nombre de munitions limité en plus de leur coût en él
 
 Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fil de l'avancée. Chaque module a son propre deck de cartes (certaines cartes communes entre modules).
 
+**10 modules dans `config/modules.json`** (nom, image, PV, description) : les 6 déjà dotés d'un
+deck de cartes jouable (Principal, Lanceur de missiles, Blindage, Générateur, Soute, Sabotage) et
+4 nouveaux ajoutés avec leur nom/image/description mais **sans deck de cartes pour l'instant**
+(Canon lourd, Contrôle, Atelier — proche de l'archétype "Réparation" ci-dessous, Radar — proche de
+l'archétype "Radar / Ciblage" en §4.3) : exclus du tirage de choix de module tant qu'ils n'ont pas
+de cartes (`modules_equipables`/`specs_equipables`, §5), pour ne jamais planter le tirage du deck.
+Chaque module a deux textes distincts (`description`/`description_gameplay`) : une accroche
+narrative (affichée à l'écran de choix de module, spécifiée par l'utilisateur) et un indice
+gameplay plus terse (affiché en plus dans l'infobulle de l'écran Vaisseau au clic/tap sur un
+module, §2.4) — les decks de cartes détaillés ci-dessous restent le plan cible pour les 4
+nouveaux modules, à concevoir dans une passe dédiée.
+
 ### 4.1 Modules d'attaque (spécialisés, pas un seul module générique)
 
 **Canon lourd** — mono-cible, gros dégâts. Fort contre les L, faible contre les essaims de S.
@@ -610,6 +635,9 @@ Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fi
 - **Doublons de modules autorisés** (décision utilisateur, remplace l'ancienne proposition
   "interdire les doublons") : posséder déjà des exemplaires d'un module augmente son poids au
   tirage lors d'un prochain choix de module — détail en §2.3
+- Un module dont le deck de cartes n'est pas encore conçu (`cartes` vide dans `config/modules.json`,
+  §4) n'est **jamais proposé** au tirage (`modules_equipables`/`config_poc.specs_equipables`
+  l'excluent) : le proposer planterait le tirage du deck (`Deck`/`tirer_cartes` sur une pool vide)
 
 ---
 

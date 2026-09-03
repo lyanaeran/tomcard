@@ -265,7 +265,7 @@ body {
    en grand, les 4 modules equipes sont positionnes par-dessus dans les
    emplacements mesures sur cette image (EMPLACEMENTS_MODULES dans app.js,
    memes reperes que src/ui/fenetre.py), comme dans la version pc.
-   Largeur derivee de --taille-case pour qu'un emplacement de module (18.51%
+   Largeur derivee de --taille-case pour qu'un emplacement de module (25.56%
    de cette largeur) fasse la meme taille qu'une case ennemie. */
 .grille.grille-joueur {
     display: block;
@@ -273,7 +273,7 @@ body {
        padding de .grille) : les pourcentages d'EMPLACEMENTS_MODULES (app.js)
        sont mesures relativement a l'image du vaisseau elle-meme, sans marge. */
     padding: 0;
-    width: calc(var(--taille-case) / 0.1851);
+    width: calc(var(--taille-case) / 0.2556);
 }
 
 .case {
@@ -332,7 +332,7 @@ body {
 
 .case.vaisseau-base {
     width: 100%;
-    aspect-ratio: 1205 / 651;
+    aspect-ratio: 978 / 965;
     border-radius: 8px;
     /* Pas d'overflow:hidden (contrairement a la version precedente) : les
        pastilles de la base (.pastilles-base) doivent pouvoir deborder
@@ -488,11 +488,11 @@ body {
 
 /* Pastilles PV/Bouclier du module de base : dans l'espace libre a droite du
    nez du vaisseau, a hauteur du pare-brise (repere CENTRE_PARE_BRISE_VAISSEAU_X
-   / HAUT_PARE_BRISE_VAISSEAU_Y de src/ui/fenetre.py, ~42% depuis le haut de
+   / HAUT_PARE_BRISE_VAISSEAU_Y de src/ui/fenetre.py, ~36% depuis le haut de
    l'image), plutot qu'un coin comme les autres cases. */
 .pastilles-base {
     position: absolute;
-    top: 42%;
+    top: 36%;
     left: 100%;
     transform: translate(6px, -50%);
     display: flex;
@@ -625,7 +625,8 @@ body {
 #info-carte,
 #info-case,
 #info-carte-deck,
-#info-carte-victoire-finale {
+#info-carte-victoire-finale,
+#info-carte-vaisseau {
     position: fixed;
     top: 45%;
     left: 50%;
@@ -647,7 +648,8 @@ body {
 #info-carte:empty,
 #info-case:empty,
 #info-carte-deck:empty,
-#info-carte-victoire-finale:empty {
+#info-carte-victoire-finale:empty,
+#info-carte-vaisseau:empty {
     display: none;
 }
 
@@ -774,45 +776,6 @@ body {
 #ecran-choix-module .instruction {
     margin: 0;
     font-size: 1.1rem;
-}
-
-#candidats-module {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 1.5rem;
-}
-
-.candidat-module {
-    width: clamp(160px, 22vw, 260px);
-    background: rgba(20, 24, 34, 0.75);
-    border: 2px solid #5a6e91;
-    border-radius: 10px;
-    padding: 1rem;
-    cursor: pointer;
-}
-
-.candidat-module:hover {
-    border-color: #ffffff;
-}
-
-.candidat-module img {
-    display: block;
-    width: 100%;
-    aspect-ratio: 1/1;
-    object-fit: contain;
-    margin-bottom: 0.5rem;
-}
-
-.candidat-module-nom {
-    font-weight: bold;
-    color: #ffdc78;
-    margin-bottom: 0.6rem;
-}
-
-.candidat-module-description {
-    font-size: 0.85rem;
-    color: #dcdce1;
 }
 
 /* Ecran "Choix du prochain niveau" (specs.md 2.3/2.4). Fond de combat reutilise en placeholder
@@ -1011,7 +974,8 @@ body {
 #choix-aventure-trois-lunes,
 #choix-aventure-asteroides,
 #choix-aventure-police,
-#candidats-niveau {
+#candidats-niveau,
+#candidats-module {
     display: flex;
     flex-direction: column;
     align-items: center;

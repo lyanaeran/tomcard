@@ -386,6 +386,8 @@ def infos_vaisseau_web(partie_json) -> str:
                 "niveau_maj": etat.niveau_maj,
                 "nom": spec.nom,
                 "image": _chemin_web(image_case_module(spec)),
+                "description": spec.description,
+                "description_gameplay": spec.description_gameplay,
             }
     return json.dumps(resultat)
 

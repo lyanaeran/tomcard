@@ -11,22 +11,26 @@
 
 const DUREE_POPUP_MS = 2000;
 const DUREE_INFOBULLE_MS = 2500;
+// Plus longue que DUREE_INFOBULLE_MS : laisse le temps de lire les deux phrases (accroche
+// narrative + indice gameplay) d'un module, meme principe que DUREE_INFOBULLE_MODULE cote pc
+// (src/ui/ecran_vaisseau.py).
+const DUREE_INFOBULLE_MODULE_MS = 4000;
 
 // Casse-cache manuel : GitHub Pages ne permet pas de fixer les en-tetes
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "54";
+const VERSION_CACHE = "55";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
-// (1205x651) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
+// (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
 // src/ui/fenetre.py, convertis en pourcentages CSS (origine haut-gauche) pour
 // un positionnement absolu independant de la taille d'affichage.
 const EMPLACEMENTS_MODULES = {
-    AR_G: { left: 29.05, top: 4.3, width: 18.51, height: 33.18 },
-    AV_G: { left: 50.29, top: 4.3, width: 18.51, height: 33.18 },
-    AR_D: { left: 28.96, top: 62.52, width: 18.51, height: 33.03 },
-    AV_D: { left: 50.37, top: 62.52, width: 18.51, height: 33.03 },
+    AR_G: { left: 23.52, top: 0, width: 25.56, height: 22.8 },
+    AV_G: { left: 59.31, top: 0, width: 25.56, height: 22.8 },
+    AR_D: { left: 23.52, top: 77.2, width: 25.56, height: 22.8 },
+    AV_D: { left: 59.31, top: 77.2, width: 25.56, height: 22.8 },
 };
 
 const RACINE_PYODIDE = "/repo/";
@@ -585,17 +589,10 @@ function rendre() {
 function afficherChoixModule(candidats) {
     document.getElementById("titre-choix-module").textContent = "Nouveau module";
     document.getElementById("candidats-module").innerHTML = candidats
-        .map(
-            (candidat, index) => `
-        <div class="candidat-module" data-index="${index}">
-            <img src="${candidat.image}" alt="${candidat.nom}">
-            <div class="candidat-module-nom">${candidat.nom}</div>
-            <div class="candidat-module-description">${candidat.description}</div>
-        </div>`
-        )
+        .map((candidat, index) => construireLigneChoixHtml(String(index), candidat.image, candidat.nom, candidat.description))
         .join("");
-    document.querySelectorAll(".candidat-module").forEach((element) => {
-        element.addEventListener("click", () => choisirModule(candidats[Number(element.dataset.index)]));
+    document.querySelectorAll("#candidats-module .choix-aventure").forEach((element) => {
+        element.addEventListener("click", () => choisirModule(candidats[Number(element.dataset.choix)]));
     });
     masquerTousLesEcrans();
     document.getElementById("ecran-choix-module").classList.remove("cachee");
@@ -1737,14 +1734,21 @@ function ouvrirSurvolDeck() {
 // Vaisseau en survol (barre laterale) : cartes module en lecture seule, memes donnees que
 // #vaisseau-accueil/#modules-station-service (infos_vaisseau_web) - jamais masque via
 // masquerTousLesEcrans en s'ouvrant (cf. ouvrirSurvolDeck ci-dessus), donc pas besoin d'un
-// equivalent de deckOuvertEnSurvol : "Retour" referme toujours simplement ce survol.
+// equivalent de deckOuvertEnSurvol : "Retour" referme toujours simplement ce survol. Un tap sur
+// un module affiche sa description (accroche narrative + indice gameplay, specs.md 5) pendant
+// DUREE_INFOBULLE_MODULE_MS, meme principe que #info-case (afficherInfobulle) - equivalent tactile
+// du clic PC (src/ui/ecran_vaisseau.py:EcranVaisseau._dessiner_description).
+let minuteurInfobulleVaisseau = null;
+let modulesVaisseauAffiches = {};
+
 function ouvrirSurvolVaisseau() {
     const vaisseau = appelerBridge("infos_vaisseau_web", JSON.stringify(partieActive));
+    modulesVaisseauAffiches = vaisseau;
     document.getElementById("modules-vaisseau").innerHTML = Object.entries(vaisseau)
-        .map(([_position, etat]) => {
+        .map(([position, etat]) => {
             if (!etat) return `<div class="module-accueil module-accueil-vide">Emplacement vide</div>`;
             return `
-            <div class="module-accueil">
+            <div class="module-accueil" data-position="${position}">
                 <img src="${etat.image}" alt="${etat.nom}">
                 <div class="module-accueil-nom">${etat.nom}</div>
                 <div class="module-accueil-pv">${etat.pv} / ${etat.pv_max} PV</div>
@@ -1752,10 +1756,30 @@ function ouvrirSurvolVaisseau() {
             </div>`;
         })
         .join("");
+    document.getElementById("info-carte-vaisseau").innerHTML = "";
+    document.querySelectorAll("#modules-vaisseau .module-accueil:not(.module-accueil-vide)").forEach((element) => {
+        element.addEventListener("click", () => afficherDescriptionModuleVaisseau(element.dataset.position));
+    });
     document.getElementById("ecran-vaisseau").classList.remove("cachee");
 }
 
+function afficherDescriptionModuleVaisseau(position) {
+    const etat = modulesVaisseauAffiches[position];
+    if (!etat) return;
+    clearTimeout(minuteurInfobulleVaisseau);
+    const panneau = document.getElementById("info-carte-vaisseau");
+    panneau.innerHTML = `
+        <div class="info-carte-nom">${etat.nom}</div>
+        <div class="info-carte-effet">${etat.description}</div>
+        <div class="info-carte-effet">${etat.description_gameplay}</div>`;
+    minuteurInfobulleVaisseau = setTimeout(() => {
+        panneau.innerHTML = "";
+    }, DUREE_INFOBULLE_MODULE_MS);
+}
+
 function fermerSurvolVaisseau() {
+    clearTimeout(minuteurInfobulleVaisseau);
+    document.getElementById("info-carte-vaisseau").innerHTML = "";
     document.getElementById("ecran-vaisseau").classList.add("cachee");
 }
 

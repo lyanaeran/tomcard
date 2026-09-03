@@ -25,20 +25,23 @@ COULEUR_DESCRIPTION = (220, 220, 225)
 COULEUR_TEXTE = (255, 255, 255)
 OPACITE_FOND_CARTE = 190
 
-LARGEUR_CARTE_MODULE = 320
-IMAGE_TAILLE = 220
-ESPACEMENT_CARTES = 60
-Y_IMAGE = 400
-HAUTEUR_CARTE = IMAGE_TAILLE + 120
+# Choix empiles verticalement : image carree a gauche, rectangle de texte (nom + description) a
+# droite - meme convention que le choix du prochain niveau (specs.md 2.3, EcranChoixNiveau) et
+# les choix d'Aventure.
+LARGEUR_LIGNE = 820
+HAUTEUR_LIGNE = 110
+TAILLE_IMAGE = 100
+ESPACEMENT_IMAGE_TEXTE = 16
+ESPACEMENT_LIGNES = 16
+Y_HAUT = HAUTEUR_FENETRE - 140
 
 
-def _rect_candidat(index: int) -> tuple[float, float, float, float]:
-    """Rectangle (x, y, largeur, hauteur) de la case cliquable du candidat a cet index (0-2),
-    3 cases centrees horizontalement dans la fenetre."""
-    largeur_totale = 3 * LARGEUR_CARTE_MODULE + 2 * ESPACEMENT_CARTES
-    x_depart = (LARGEUR_FENETRE - largeur_totale) / 2
-    x = x_depart + index * (LARGEUR_CARTE_MODULE + ESPACEMENT_CARTES)
-    return x, Y_IMAGE - 20, LARGEUR_CARTE_MODULE, HAUTEUR_CARTE
+def _rect_candidat(index: int, _total: int) -> tuple[float, float, float, float]:
+    """Ligne complete (image + rectangle de texte) du candidat a cet index, empilees du haut vers
+    le bas (3 candidats)."""
+    x = (LARGEUR_FENETRE - LARGEUR_LIGNE) / 2
+    y = Y_HAUT - HAUTEUR_LIGNE - index * (HAUTEUR_LIGNE + ESPACEMENT_LIGNES)
+    return x, y, LARGEUR_LIGNE, HAUTEUR_LIGNE
 
 
 def _point_dans_rectangle(px: float, py: float, x: float, y: float, largeur: float, hauteur: float) -> bool:
@@ -77,8 +80,9 @@ class EcranChoixModule(pyglet.window.Window):
                 batch=lot,
             )
         )
+        total = len(self.candidats)
         for index, candidat in enumerate(self.candidats):
-            elements.extend(self._dessiner_candidat(index, candidat, lot))
+            elements.extend(self._dessiner_candidat(index, total, candidat, lot))
         elements.append(
             pyglet.text.Label(
                 "Choisissez un nouveau module pour votre vaisseau.",
@@ -94,48 +98,38 @@ class EcranChoixModule(pyglet.window.Window):
         elements.extend(barre_laterale.dessiner(self.partie, self.survole_barre, lot))
         return elements
 
-    def _dessiner_candidat(self, index: int, candidat: SpecModule, lot: pyglet.graphics.Batch) -> list:
-        x, y, largeur, hauteur = _rect_candidat(index)
+    def _dessiner_candidat(self, index: int, total: int, candidat: SpecModule, lot: pyglet.graphics.Batch) -> list:
+        """Une ligne de candidat : image carree a gauche, rectangle de texte (nom + accroche
+        narrative, specs.md 5) a droite - meme convention que le choix du prochain niveau."""
+        x, y, largeur, hauteur = _rect_candidat(index, total)
         survole = index == self.index_survole
-        cadre = shapes.BorderedRectangle(
-            x,
-            y,
-            largeur,
-            hauteur,
-            border=2,
-            color=COULEUR_FOND_CARTE,
-            border_color=COULEUR_CONTOUR_CARTE_SURVOLEE if survole else COULEUR_CONTOUR_CARTE,
-            batch=lot,
+        couleur_contour = COULEUR_CONTOUR_CARTE_SURVOLEE if survole else COULEUR_CONTOUR_CARTE
+
+        y_image = y + (hauteur - TAILLE_IMAGE) / 2
+        cadre_image = shapes.BorderedRectangle(
+            x, y_image, TAILLE_IMAGE, TAILLE_IMAGE, border=2,
+            color=COULEUR_FOND_CARTE, border_color=couleur_contour, batch=lot,
         )
-        cadre.opacity = OPACITE_FOND_CARTE
-        cx = x + largeur / 2
+        cadre_image.opacity = OPACITE_FOND_CARTE
+        sprite = _sprite_ajuste(candidat.image, x, y_image, TAILLE_IMAGE, TAILLE_IMAGE, lot)
 
-        sprite = _sprite_ajuste(candidat.image, cx - IMAGE_TAILLE / 2, Y_IMAGE + 20, IMAGE_TAILLE, IMAGE_TAILLE, lot)
-
+        x_texte = x + TAILLE_IMAGE + ESPACEMENT_IMAGE_TEXTE
+        largeur_texte = largeur - TAILLE_IMAGE - ESPACEMENT_IMAGE_TEXTE
+        cadre_texte = shapes.BorderedRectangle(
+            x_texte, y, largeur_texte, hauteur, border=2,
+            color=COULEUR_FOND_CARTE, border_color=couleur_contour, batch=lot,
+        )
+        cadre_texte.opacity = OPACITE_FOND_CARTE
         nom = pyglet.text.Label(
-            candidat.nom,
-            x=cx,
-            y=Y_IMAGE + 5,
-            anchor_x="center",
-            anchor_y="center",
-            font_size=16,
-            color=(*COULEUR_NOM_MODULE, 255),
-            batch=lot,
+            candidat.nom, x=x_texte + 20, y=y + hauteur - 30, anchor_x="left", anchor_y="center",
+            font_size=16, color=(*COULEUR_NOM_MODULE, 255), batch=lot,
         )
         description = pyglet.text.Label(
-            candidat.description,
-            x=cx,
-            y=Y_IMAGE - 30,
-            anchor_x="center",
-            anchor_y="top",
-            font_size=12,
-            color=(*COULEUR_DESCRIPTION, 255),
-            multiline=True,
-            width=LARGEUR_CARTE_MODULE - 30,
-            align="center",
-            batch=lot,
+            candidat.description, x=x_texte + 20, y=y + hauteur - 52, anchor_x="left", anchor_y="top",
+            font_size=13, color=(*COULEUR_DESCRIPTION, 255), multiline=True, width=largeur_texte - 40,
+            align="left", batch=lot,
         )
-        return [cadre, sprite, nom, description]
+        return [cadre_image, sprite, cadre_texte, nom, description]
 
     def on_mouse_motion(self, x: int, y: int, dx: int, dy: int) -> None:
         self.index_survole = self._index_a(x, y)
@@ -154,7 +148,8 @@ class EcranChoixModule(pyglet.window.Window):
             self.module_choisi = self.candidats[index]
 
     def _index_a(self, x: int, y: int) -> int | None:
-        for index in range(len(self.candidats)):
-            if _point_dans_rectangle(x, y, *_rect_candidat(index)):
+        total = len(self.candidats)
+        for index in range(total):
+            if _point_dans_rectangle(x, y, *_rect_candidat(index, total)):
                 return index
         return None

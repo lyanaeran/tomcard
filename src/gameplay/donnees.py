@@ -4,8 +4,11 @@ Chargement des fichiers de configuration (config/*.json).
 Format de chaque fichier (contenu declaratif du jeu, cf. specs.md paragraphe 10.2) :
 
 - modules.json : un module par entree - id (MOD_N), nom, image (chemin sous assets/modules/),
-  points_de_vie, description (type de carte debloque, sans reveler les cartes - utilisee par
-  l'ecran de choix de module du parcours, specs.md 2.3), cartes (liste d'ids CRT_N jouables).
+  points_de_vie, description (accroche narrative, une phrase - affichee a l'ecran de choix de
+  module du parcours, specs.md 2.3), description_gameplay (indice sur le type de carte debloque,
+  sans reveler les cartes - affiche en plus de description dans l'infobulle de l'ecran Vaisseau),
+  cartes (liste d'ids CRT_N jouables - vide pour un module dont les cartes ne sont pas encore
+  concues : cf. modules_equipables/specs_equipables qui l'excluent alors du tirage, specs.md 5).
 - ennemis.json : un ennemi par entree - id (ENM_N), nom, image (assets/ennemis/), points_de_vie,
   taille (S/M/L, cf. specs.md 3.2 - purement informatif pour l'instant, seule S est utilisee),
   placement (absent/null, ou "PROTECTEUR_AVANT"/"PROTEGE_ARRIERE" - preference de position en
@@ -42,6 +45,7 @@ class SpecModule:
     image: str
     points_de_vie: int
     description: str
+    description_gameplay: str
     cartes: tuple[str, ...]
 
 
@@ -120,6 +124,7 @@ def charger_modules() -> list[SpecModule]:
             image=_chemin_image(entree["image"]),
             points_de_vie=entree["points_de_vie"],
             description=entree["description"],
+            description_gameplay=entree["description_gameplay"],
             cartes=tuple(entree["cartes"]),
         )
         for entree in donnees["modules"]
