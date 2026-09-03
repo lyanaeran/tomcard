@@ -24,20 +24,19 @@ HAUTEUR_FENETRE = 800
 # clic de ciblage precis, meme principe que CIBLES_ALLIEES dans web/app.js.
 CIBLES_CAMP_ALLIE = (CibleCarte.ALLIE_UNIQUE, CibleCarte.ALLIES_MULTIPLES, CibleCarte.MODULE_PRINCIPAL)
 
-# Cases de la flotte ennemie, cf. specs.md paragraphe 8.1
-CELLULE_LARGEUR, CELLULE_HAUTEUR = 110, 90
-ESPACEMENT_CELLULE = 14
+# Cases de la flotte ennemie, cf. specs.md paragraphe 8.1. Agrandies (etaient 110x90, decision
+# utilisateur : paraissaient petites a cote des modules) en gardant la meme proportion
+# largeur/hauteur qu'avant (1.2245) - la plupart des images d'ennemis etant proches du carre
+# (assets/ennemis/*.png), c'est la hauteur qui borne leur taille affichee (_sprite_ajuste
+# preserve l'aspect, cf. plus bas), plafonnee par la place disponible entre le centre de la
+# rangee du haut (alignee sur les modules, cf. RANGEE_Y ci-dessous) et l'entete.
+CELLULE_LARGEUR, CELLULE_HAUTEUR = 120, 98
+ESPACEMENT_CELLULE = 15
 HAUTEUR_BANDEAU_CASE = 42
-
-ENNEMI_AVANT_X = 897
-ENNEMI_ARRIERE_X = ENNEMI_AVANT_X + CELLULE_LARGEUR + ESPACEMENT_CELLULE
 
 # Vaisseau du joueur : le module de base (assets/modules/principal.png) est
 # affiche en grand, et les modules equipes se placent dans les emplacements
 # vides visibles sur cette image (mesures directement sur l'image source).
-# VAISSEAU_X/ENNEMI_AVANT_X sont choisis pour que le bloc vaisseau+flotte
-# soit centre horizontalement dans la fenetre (marges egales des deux cotes),
-# comme la disposition #grilles (justify-content:center) de la version web.
 # VAISSEAU_LARGEUR/VAISSEAU_Y bornes par la bande verticale disponible entre
 # la main de cartes (CARTE_Y/CARTE_HAUTEUR) et l'en-tete (ENTETE_Y) : l'image
 # fournie par l'utilisateur (quasi carree, contrairement a l'ancienne tres
@@ -48,6 +47,13 @@ VAISSEAU_LARGEUR = 527
 _TAILLE_IMAGE_PRINCIPAL = (978, 965)  # largeur, hauteur de assets/modules/principal.png
 VAISSEAU_HAUTEUR = VAISSEAU_LARGEUR * _TAILLE_IMAGE_PRINCIPAL[1] / _TAILLE_IMAGE_PRINCIPAL[0]
 _ECHELLE_VAISSEAU = VAISSEAU_LARGEUR / _TAILLE_IMAGE_PRINCIPAL[0]
+
+# ENNEMI_AVANT_X derive (plutot qu'une valeur fixe) pour que le bloc vaisseau+flotte reste
+# centre horizontalement dans la fenetre (marges egales des deux cotes, meme principe que
+# #grilles/justify-content:center cote web) quelle que soit la taille des cases ennemies :
+# marge gauche (VAISSEAU_X) = marge droite (LARGEUR_FENETRE - bord droit de la colonne arriere).
+ENNEMI_AVANT_X = LARGEUR_FENETRE - 2 * CELLULE_LARGEUR - ESPACEMENT_CELLULE - VAISSEAU_X
+ENNEMI_ARRIERE_X = ENNEMI_AVANT_X + CELLULE_LARGEUR + ESPACEMENT_CELLULE
 
 # Emplacements des modules mesures sur l'image (coordonnees locales, origine
 # bas-gauche de l'image, avant la mise a l'echelle). Mesures sur le cadre
