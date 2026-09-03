@@ -3,22 +3,28 @@
 }
 
 :root {
+    /* Largeur d'une carte de la main (#main), et estimation de la hauteur totale de #main a
+       partir de cette largeur (aspect-ratio 3/4 de l'image, cf. .carte/.carte img plus bas, +
+       la bordure de .carte + le padding vertical de #main) - variable partagee pour que
+       --taille-case (juste apres) puisse reserver la place necessaire sans dupliquer le calcul. */
+    --largeur-carte: clamp(56px, 8vw, 96px);
+    --hauteur-main-estimee: calc(var(--largeur-carte) * 4 / 3 + 4px + 1rem);
+
     /* Taille des cases (modules du vaisseau et cases ennemies), pilotee par la
        hauteur d'ecran disponible pour que vaisseau/flotte remplissent le
        maximum de hauteur (3 rangees de cases dans la grille ennemie, la plus
        haute des deux grilles pour un --taille-case donne - le vaisseau,
        proportionnellement plus large que haut, reste plus court : centre
        verticalement via align-items sur #grilles plutot que force a la meme
-       hauteur, cf. #grilles). ~150px = entete + compteurs-deck + paddings.
-       Ne reserve PAS de place pour #main (la main de cartes, sous #grilles) :
-       le vaisseau/la flotte gardent leur taille maximale meme si la main ne
-       tient plus dans l'ecran restant, auquel cas la page defile (#app n'a
-       qu'un min-height, pas de overflow:hidden qui l'empecherait).
+       hauteur, cf. #grilles). ~150px = entete + compteurs-deck + paddings ;
+       --hauteur-main-estimee reserve en plus la place de la main de cartes (decision
+       utilisateur : le vaisseau/la flotte doivent plutot retrecir que faire deborder/masquer
+       la main en bas d'ecran, contrairement a un choix precedent qui laissait deborder).
        Bornee aussi par la largeur (vaisseau + ecart pour .pastilles-base +
        flotte cote a cote font environ 7.9x --taille-case, cf. #grilles/
        .grille-joueur/.grille-ennemis) pour eviter que la flotte ennemie soit
        repoussee hors champ sur un ecran large et court. */
-    --taille-case: clamp(30px, min(calc((100vh - 150px) / 3), calc((100vw - 100px) / 7.9)), 180px);
+    --taille-case: clamp(30px, min(calc((100vh - 150px - var(--hauteur-main-estimee)) / 3), calc((100vw - 100px) / 7.9)), 160px);
     --taille-pastille: calc(var(--taille-case) * 0.34);
 }
 
@@ -258,14 +264,12 @@ body {
        la case voisine - l'ecart vertical entre rangees est repris par .grille.grille-ennemis
        (row-gap, ci-dessous) pour aligner les rangees ennemies sur celles du vaisseau. */
     gap: calc(var(--taille-pastille) * 0.7);
-    background: #10162c;
-    /* Padding haut/bas egaux (contrairement a une version precedente qui reservait plus de
-       place en haut pour la pastille PV/Bouclier de la rangee du dessus) : necessaire pour que
-       la rangee du milieu reste centree sur le bloc vaisseau (cf. .grille.grille-ennemis
-       ci-dessous) - sans overflow:hidden sur ce conteneur, la pastille peut de toute facon
-       deborder du fond sans etre rognee, comme celles du vaisseau (.pastilles-base). */
-    padding: 0.5rem;
-    border-radius: 10px;
+    /* Pas de fond/coins arrondis (decision utilisateur - "carres" juges superflus derriere le
+       vaisseau/la flotte) : les sprites flottent directement sur le fond spatial, comme sur pc
+       (aucun rectangle derriere le vaisseau ou les ennemis dans src/ui/fenetre.py). Padding
+       haut/bas quand meme egaux (ici 0) pour que la rangee du milieu reste centree sur le bloc
+       vaisseau (cf. .grille.grille-ennemis ci-dessous). */
+    padding: 0;
 }
 
 /* Grille joueur : le module de base (assets/modules/principal.png) est affiche
@@ -617,7 +621,7 @@ body {
 .carte {
     flex: 0 0 auto;
     position: relative;
-    width: clamp(56px, 8vw, 96px);
+    width: var(--largeur-carte);
     background: #1c2547;
     border: 2px solid transparent;
     border-radius: 8px;
