@@ -65,3 +65,43 @@ def test_positions_inclut_les_detruits():
 
     assert len(positions) == 2
     assert e1 in positions.values()
+
+
+def _flotte_avec_boss() -> tuple[Flotte, Ennemi, Ennemi]:
+    """Un ennemi a 2 emplacements (specs.md 3.2, ex. Boss des pirates) - meme objet range aux
+    Positions Avant et Arriere de la rangee du milieu -, plus un ennemi classique a une case."""
+    boss = Ennemi(pv_max=150, emplacements=2)
+    autre = Ennemi(pv_max=10)
+    flotte = Flotte(
+        {
+            Position(Colonne.AVANT, Rangee.MID): boss,
+            Position(Colonne.ARRIERE, Rangee.MID): boss,
+            Position(Colonne.AVANT, Rangee.GAUCHE): autre,
+        }
+    )
+    return flotte, boss, autre
+
+
+def test_positions_de_renvoie_toutes_les_cases_d_un_ennemi_a_plusieurs_emplacements():
+    flotte, boss, autre = _flotte_avec_boss()
+
+    positions_boss = flotte.positions_de(boss)
+
+    assert {p.colonne for p in positions_boss} == {Colonne.AVANT, Colonne.ARRIERE}
+    assert all(p.rangee == Rangee.MID for p in positions_boss)
+    assert flotte.positions_de(autre) == [Position(Colonne.AVANT, Rangee.GAUCHE)]
+
+
+def test_ennemis_vivants_ne_compte_qu_une_fois_un_ennemi_a_plusieurs_emplacements():
+    flotte, boss, autre = _flotte_avec_boss()
+
+    vivants = flotte.ennemis_vivants()
+
+    assert vivants == [boss, autre]
+
+
+def test_ennemis_vivants_exclut_un_boss_detruit_meme_range_a_deux_positions():
+    flotte, boss, autre = _flotte_avec_boss()
+    boss.subir_degats(1000)
+
+    assert flotte.ennemis_vivants() == [autre]

@@ -80,7 +80,12 @@ class ActionCarte(Enum):
     qu'actif, les degats subis par ce module sont renvoyes a l'attaquant jusqu'a sa valeur (la
     cible ne subit rien pour cette part, l'attaquant subit ce montant a la place) ; les degats
     au-dela s'appliquent normalement au module. Se consomme comme un bouclier classique (sa
-    valeur diminue de ce qui a ete renvoye), pas de redeclenchement automatique non plus."""
+    valeur diminue de ce qui a ete renvoye), pas de redeclenchement automatique non plus.
+
+    AUGMENTATION_DEGATS (specs.md 13, Boss des pirates) : augmente les degats infliges par les
+    Actions ATTAQUE de l'ennemi qui porte ce buff (symetrique de REDUCTION_DEGATS, qui diminue
+    les degats subis) - cf. Ennemi.degats_attaque_effectifs. Pas encore utilisee par une carte
+    joueur, uniquement par une Action ennemie pour l'instant."""
 
     GAIN_ELECTRICITE = auto()
     GAIN_ELECTRICITE_PAR_MODULE = auto()
@@ -92,6 +97,7 @@ class ActionCarte(Enum):
     BOUCLIER_MIROIR = auto()
     REDIRECTION_CIBLE = auto()
     ANNULATION_PROCHAINE_ATTAQUE = auto()
+    AUGMENTATION_DEGATS = auto()
 
 
 @dataclass

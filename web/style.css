@@ -336,6 +336,13 @@ body {
     height: 100%;
 }
 
+/* .case-fusionnee (ennemi a plusieurs emplacements, specs.md 3.2, ex. le Boss des pirates) :
+   une seule case sur les 2 colonnes Avant/Arriere d'une rangee (grid-row/grid-column poses en
+   ligne par app.js:rendreGrilleEnnemis, cf. _PAIRES_CASES_ENNEMIES cote bridge.py). Pas de regle
+   dediee necessaire : la largeur vient automatiquement des 2 pistes de grille fusionnees, et
+   .case.ennemi img (width/height:100%, sans aspect-ratio force) remplit deja n'importe quelle
+   case rectangulaire sans etirement force - la classe ne sert qu'a identifier la case au besoin. */
+
 .case.detruit {
     opacity: 0.4;
 }

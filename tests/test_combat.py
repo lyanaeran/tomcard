@@ -855,3 +855,87 @@ def test_leurre_annule_totalement_la_prochaine_attaque_puis_se_consomme():
 
     assert attaques_suivantes == [(POSITION_ENNEMI, ennemi, vaisseau.base, 7, "degats")]  # plus de leurre : degats normaux
     assert vaisseau.base.pv == 15 - 7
+
+
+# --- Ennemi a plusieurs emplacements (specs.md 3.2, ex. Boss des pirates) ---
+
+CARTE_COLONNE_ARRIERE = Carte(
+    nom="Ligne arriere", image=IMG, type=TypeCarte.DEBUFF, cible=CibleCarte.COLONNE_ARRIERE_ENNEMIE,
+    cout=1, valeur=100, action=ActionCarte.VULNERABILITE, duree=1,
+)
+
+
+def _boss_deux_emplacements(pv_max: int = 150, actions: list | None = None) -> dict[Position, Ennemi]:
+    """Un ennemi range aux 2 Positions Avant/Arriere de la rangee du milieu (specs.md 3.2)."""
+    boss = Ennemi(pv_max=pv_max, actions=actions or [], nom="Boss", emplacements=2)
+    return {
+        Position(Colonne.AVANT, Rangee.MID): boss,
+        Position(Colonne.ARRIERE, Rangee.MID): boss,
+    }
+
+
+def test_ennemis_multiples_ne_touche_qu_une_fois_un_ennemi_a_2_emplacements():
+    ennemis = _boss_deux_emplacements()
+    combat, _vaisseau, flotte = _nouveau_combat(ennemis=ennemis)
+    combat.joueur.deck.main = [CARTE_MITRAILLER]
+    combat.joueur.electricite = 2
+    boss = flotte.ennemis_vivants()[0]
+
+    resultat = combat.jouer_carte(CARTE_MITRAILLER)  # CIBLES_SANS_CLIC, pas de cible cliquee
+
+    assert len(resultat) == 1
+    assert boss.pv == boss.pv_max - CARTE_MITRAILLER.valeur
+
+
+def test_ligne_ennemie_ne_touche_qu_une_fois_un_ennemi_a_2_emplacements():
+    ennemis = _boss_deux_emplacements()
+    combat, _vaisseau, flotte = _nouveau_combat(ennemis=ennemis)
+    combat.joueur.deck.main = [CARTE_PERCER]
+    combat.joueur.electricite = 2
+    boss = flotte.ennemis_vivants()[0]
+
+    resultat = combat.jouer_carte(CARTE_PERCER, boss)
+
+    assert len(resultat) == 1
+    assert boss.pv == boss.pv_max - CARTE_PERCER.valeur
+
+
+def test_colonne_avant_ennemie_accepte_un_clic_sur_un_ennemi_a_2_emplacements():
+    ennemis = _boss_deux_emplacements()
+    combat, _vaisseau, flotte = _nouveau_combat(ennemis=ennemis)
+    combat.joueur.deck.main = [CARTE_COLONNE_AVANT]
+    combat.joueur.electricite = 2
+    boss = flotte.ennemis_vivants()[0]
+
+    resultat = combat.jouer_carte(CARTE_COLONNE_AVANT, boss)
+
+    assert len(resultat) == 1
+    assert any(buff.action == ActionCarte.VULNERABILITE for buff in boss.buffs_actifs)
+
+
+def test_colonne_arriere_ennemie_accepte_aussi_un_clic_sur_le_meme_ennemi():
+    """Un ennemi a 2 emplacements occupe l'Avant ET l'Arriere de sa rangee (specs.md 3.2) : un
+    clic dessus doit etre une cible valide pour les deux cartes de colonne, pas seulement une."""
+    ennemis = _boss_deux_emplacements()
+    combat, _vaisseau, flotte = _nouveau_combat(ennemis=ennemis)
+    combat.joueur.deck.main = [CARTE_COLONNE_ARRIERE]
+    combat.joueur.electricite = 2
+    boss = flotte.ennemis_vivants()[0]
+
+    resultat = combat.jouer_carte(CARTE_COLONNE_ARRIERE, boss)
+
+    assert len(resultat) == 1
+
+
+def test_tour_ennemi_n_execute_qu_une_fois_les_actions_d_un_ennemi_a_2_emplacements():
+    action = ActionEnnemi(type=TypeActionEnnemi.ATTAQUE, cible=CibleActionEnnemi.TOUS_MODULES_JOUEUR, valeur=5)
+    ennemis = _boss_deux_emplacements(actions=[action])
+    vaisseau = _vaisseau_complet(pv=50)
+    combat, vaisseau, _flotte = _nouveau_combat(ennemis=ennemis, vaisseau=vaisseau)
+
+    combat.finir_tour_joueur()
+
+    # 5 modules (base + 4 equipes) x 5 degats chacun - le double si l'action se declenchait
+    # deux fois (une par emplacement occupe) au lieu d'une seule.
+    assert vaisseau.base.pv == 45
+    assert vaisseau.module_en(Colonne.AVANT, Rangee.GAUCHE).pv == 45

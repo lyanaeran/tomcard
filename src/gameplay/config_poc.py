@@ -87,7 +87,22 @@ def _module_depuis_spec(spec: SpecModule) -> Module:
 
 def _ennemi_depuis_spec(spec: SpecEnnemi) -> Ennemi:
     pv_max = PV_ENNEMI_MODE_TEST if MODE_TEST else spec.points_de_vie
-    return Ennemi(pv_max=pv_max, actions=list(spec.actions), nom=spec.nom, image=spec.image, taille=spec.taille)
+    return Ennemi(
+        pv_max=pv_max,
+        actions=list(spec.actions),
+        nom=spec.nom,
+        image=spec.image,
+        taille=spec.taille,
+        emplacements=spec.emplacements,
+    )
+
+
+def _pool_ennemis_standard(specs_ennemis: list[SpecEnnemi]) -> list[SpecEnnemi]:
+    """Exclut les ennemis a plusieurs emplacements (specs.md 3.2, ex. Boss des pirates) du pool
+    de tirage au hasard : leur composition/placement n'est prevue que pour une flotte scriptee
+    (creer_flotte_boss), jamais un combat Prime/demonstration/Asteroides standard, qui ne sait
+    pas placer un ennemi sur 2 cases a la fois."""
+    return [spec for spec in specs_ennemis if spec.emplacements == 1]
 
 
 def tirer_cartes(pool_ids: tuple, quantite: int, cartes: dict[str, Carte], aleatoire: random.Random) -> list[Carte]:
@@ -176,7 +191,8 @@ def creer_flotte(specs_ennemis: list[SpecEnnemi], aleatoire: random.Random) -> F
     notion de niveau) - le vrai parcours utilise creer_flotte_prime/creer_flotte_boss ci-dessous
     (specs.md 2.1/13)."""
     positions = POSITIONS_ENNEMIES[:NOMBRE_ENNEMIS_MODE_TEST] if MODE_TEST else POSITIONS_ENNEMIES
-    ennemis = {position: _ennemi_depuis_spec(aleatoire.choice(specs_ennemis)) for position in positions}
+    pool = _pool_ennemis_standard(specs_ennemis)
+    ennemis = {position: _ennemi_depuis_spec(aleatoire.choice(pool)) for position in positions}
     return Flotte(ennemis)
 
 
@@ -236,30 +252,32 @@ def creer_flotte_prime(specs_ennemis: list[SpecEnnemi], niveau: int, aleatoire: 
     """Flotte d'un combat Prime standard (specs.md 2.1/2.3/13) : nombre_ennemis_prime(niveau)
     ennemis tires au hasard (avec remise) dans le pool actuel, places selon leur preference de
     position (_placer_specs_avec_preference)."""
-    specs_tirees = [aleatoire.choice(specs_ennemis) for _ in range(nombre_ennemis_prime(niveau))]
+    pool = _pool_ennemis_standard(specs_ennemis)
+    specs_tirees = [aleatoire.choice(pool) for _ in range(nombre_ennemis_prime(niveau))]
     positions = _placer_specs_avec_preference(specs_tirees, aleatoire)
     return Flotte({position: _ennemi_depuis_spec(spec) for position, spec in positions.items()})
 
 
 # Composition fixe du Boss (specs.md 2.3/13, niveaux multiples de 10, decision utilisateur) :
-# aucun tirage aleatoire, contrairement a un combat Prime standard.
-ID_ENNEMI_PETIT_JEAN = "ENM_PETIT_JEAN"
-ID_ENNEMI_LE_NETTOYEUR = "ENM_LE_NETTOYEUR"
-ID_ENNEMI_LE_PUZZLE = "ENM_LE_PUZZLE"
+# aucun tirage aleatoire, contrairement a un combat Prime standard. Un seul Boss pour l'instant
+# (utilise a tous les niveaux Boss) - l'utilisateur prevoit d'en ajouter d'autres avec un tirage
+# au sort parmi plusieurs a terme, pas encore implemente.
+ID_ENNEMI_BOSS_PIRATES = "ENM_BOSS_PIRATES"
 
 
 def creer_flotte_boss(specs_ennemis: list[SpecEnnemi]) -> Flotte:
-    """Flotte du Boss (specs.md 2.3/13) : 2 Petit Jean en avant (protecteurs), Le nettoyeur et
-    Le puzzle en arriere - composition fixe donnee par l'utilisateur, pas de tirage au sort."""
-    specs_par_id = {spec.id: spec for spec in specs_ennemis}
-    petit_jean = specs_par_id[ID_ENNEMI_PETIT_JEAN]
-    ennemis = {
-        Position(Colonne.AVANT, Rangee.GAUCHE): _ennemi_depuis_spec(petit_jean),
-        Position(Colonne.AVANT, Rangee.DROITE): _ennemi_depuis_spec(petit_jean),
-        Position(Colonne.ARRIERE, Rangee.GAUCHE): _ennemi_depuis_spec(specs_par_id[ID_ENNEMI_LE_NETTOYEUR]),
-        Position(Colonne.ARRIERE, Rangee.DROITE): _ennemi_depuis_spec(specs_par_id[ID_ENNEMI_LE_PUZZLE]),
-    }
-    return Flotte(ennemis)
+    """Flotte du Boss (specs.md 2.3/13) : le Boss des pirates seul, sur la rangee du milieu -
+    il occupe a la fois la case Avant et la case Arriere de cette rangee (specs.md 3.2, meme
+    objet Ennemi range aux deux Positions - cf. Flotte). Composition fixe donnee par
+    l'utilisateur, pas de tirage au sort."""
+    spec_boss = next(spec for spec in specs_ennemis if spec.id == ID_ENNEMI_BOSS_PIRATES)
+    boss = _ennemi_depuis_spec(spec_boss)
+    return Flotte(
+        {
+            Position(Colonne.AVANT, Rangee.MID): boss,
+            Position(Colonne.ARRIERE, Rangee.MID): boss,
+        }
+    )
 
 
 # Combat scripte du choix "Affronter les pirates" (Aventure Asteroides, specs.md 2.5) :
@@ -272,7 +290,8 @@ def creer_flotte_asteroides(specs_ennemis: list[SpecEnnemi], aleatoire: random.R
     """Flotte scriptee a NOMBRE_ENNEMIS_ASTEROIDES ennemis tires au hasard (avec remise) dans le
     pool actuel, sur les premieres cases de POSITIONS_ENNEMIES."""
     positions = POSITIONS_ENNEMIES[:NOMBRE_ENNEMIS_ASTEROIDES]
-    ennemis = {position: _ennemi_depuis_spec(aleatoire.choice(specs_ennemis)) for position in positions}
+    pool = _pool_ennemis_standard(specs_ennemis)
+    ennemis = {position: _ennemi_depuis_spec(aleatoire.choice(pool)) for position in positions}
     return Flotte(ennemis)
 
 

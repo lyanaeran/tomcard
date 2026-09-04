@@ -67,6 +67,34 @@
           "action_buff": "BOUCLIER_MIROIR"
         }
       ]
+    },
+    {
+      "id": "ENM_BOSS_PIRATES",
+      "nom": "Le Boss des pirates",
+      "taille": "M",
+      "emplacements": 2,
+      "image": "assets/ennemis/boss_pirates.png",
+      "points_de_vie": 150,
+      "placement": null,
+      "actions": [
+        {"type": "ATTAQUE", "cible": "TOUS_MODULES_JOUEUR", "valeur": 5},
+        {
+          "type": "POSE_BUFF",
+          "cible": "SOI_MEME",
+          "valeur": 2,
+          "frequence": 3,
+          "tour_depart": 2,
+          "action_buff": "AUGMENTATION_DEGATS"
+        },
+        {
+          "type": "POSE_BUFF",
+          "cible": "SOI_MEME",
+          "valeur": 5,
+          "frequence": 3,
+          "tour_depart": 3,
+          "action_buff": "BOUCLIER_PAR_TOUR"
+        }
+      ]
     }
   ]
 }

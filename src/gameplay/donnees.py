@@ -9,13 +9,18 @@ Format de chaque fichier (contenu declaratif du jeu, cf. specs.md paragraphe 10.
   d'ids CRT_N jouables - vide pour un module dont les cartes ne sont pas encore concues : cf.
   modules_equipables/specs_equipables qui l'excluent alors du tirage, specs.md 5).
 - ennemis.json : un ennemi par entree - id (ENM_N), nom, image (assets/ennemis/), points_de_vie,
-  taille (S/M/L, cf. specs.md 3.2 - purement informatif pour l'instant, seule S est utilisee),
-  placement (absent/null, ou "PROTECTEUR_AVANT"/"PROTEGE_ARRIERE" - preference de position en
-  flotte, specs.md 13), actions : liste d'objets {type, cible, valeur, frequence?, tour_depart?,
-  repetitions?, action_buff?, duree_buff?} - type/cible reprennent TypeActionEnnemi/
-  CibleActionEnnemi (cf. ennemi.py), action_buff un ActionCarte (cf. carte.py, uniquement pour
-  type=POSE_BUFF). frequence/tour_depart/repetitions par defaut a 1, duree_buff a null
-  (persistant) - cf. ennemi.py:ActionEnnemi pour le detail de chaque champ (specs.md 13).
+  taille (S/M/L, cf. specs.md 3.2 - purement informatif, n'importe laquelle peut etre utilisee),
+  emplacements (nombre de cases de la grille ennemie occupees, specs.md 3.2 - absent/1 pour tous
+  les ennemis sauf le Boss des pirates (2, une case Avant + une Arriere de la meme rangee) ;
+  independant de `taille`, c'est ce champ qui pilote l'occupation reelle dans Flotte, pas la
+  taille), placement (absent/null, ou "PROTECTEUR_AVANT"/"PROTEGE_ARRIERE" - preference de
+  position en flotte, specs.md 13, ignore pour un ennemi a plusieurs emplacements - reserve aux
+  flottes scriptees comme creer_flotte_boss, jamais tire au hasard), actions : liste d'objets
+  {type, cible, valeur, frequence?, tour_depart?, repetitions?, action_buff?, duree_buff?} -
+  type/cible reprennent TypeActionEnnemi/CibleActionEnnemi (cf. ennemi.py), action_buff un
+  ActionCarte (cf. carte.py, uniquement pour type=POSE_BUFF). frequence/tour_depart/repetitions
+  par defaut a 1, duree_buff a null (persistant) - cf. ennemi.py:ActionEnnemi pour le detail de
+  chaque champ (specs.md 13).
 - cartes.json : une carte par entree - id (CRT_N), nom, image (assets/cartes/), cout (electricite),
   rarete (Base/Commune/Rare/Legendaire, cf. RareteCarte), munition (nombre de munitions, absent/
   null = illimitees, cf. carte.py), effet (absent = carte non jouable, ignoree par charger_cartes) :
@@ -56,6 +61,7 @@ class SpecEnnemi:
     image: str
     points_de_vie: int
     taille: str
+    emplacements: int
     actions: tuple[ActionEnnemi, ...]
     placement: str | None
 
@@ -153,6 +159,7 @@ def charger_ennemis() -> list[SpecEnnemi]:
                 image=_chemin_image(entree["image"]),
                 points_de_vie=entree["points_de_vie"],
                 taille=entree.get("taille", "S"),
+                emplacements=entree.get("emplacements", 1),
                 placement=entree.get("placement"),
                 actions=tuple(_action_ennemi_depuis_json(action) for action in entree["actions"]),
             )

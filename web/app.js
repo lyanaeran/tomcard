@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "58";
+const VERSION_CACHE = "59";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -381,14 +381,15 @@ function rendrePastillesBase(base) {
         </div>`;
 }
 
-function rendreCaseEnnemi(objet) {
+function rendreCaseEnnemi(objet, style) {
     if (objet === null) {
-        return `<div class="case case-vide"></div>`;
+        return `<div class="case case-vide" style="${style}"></div>`;
     }
     const classes = ["case", "ennemi"];
     if (objet.detruit) classes.push("detruit");
+    if (objet.fusionne) classes.push("case-fusionnee");
     return `
-        <div class="${classes.join(" ")}" data-id="${objet.id}" data-type="ennemi">
+        <div class="${classes.join(" ")}" style="${style}" data-id="${objet.id}" data-type="ennemi">
             <img src="${objet.image}" alt="${objet.nom}">
             ${rendrePastilles(objet, "ennemi")}
             ${objet.detruit ? '<div class="etiquette-detruite">Detruit</div>' : ""}
@@ -428,12 +429,35 @@ function rendreGrilleJoueur() {
         </div>`;
 }
 
+// Une paire (Avant, Arriere) par rangee, avec son numero de ligne CSS (1 colonne = 1 case,
+// cf. .grille.grille-ennemis dans style.css : grid-template-columns: repeat(2, ...)). Un
+// ennemi fusionne (specs.md 3.2, occupe les 2 colonnes de sa rangee, ex. le Boss des pirates)
+// est place explicitement (grid-row/grid-column) plutot que de compter sur l'ordre du DOM :
+// sa case Arriere n'est pas rendue du tout (bridge.py:_ennemis_json la laisse a null), donc
+// une place explicite evite que le flux automatique de la grille ne decale les rangees
+// suivantes.
+const RANGEES_GRILLE_ENNEMIS = [
+    ["AV_G", "AR_G", 1],
+    ["AV_M", "AR_M", 2],
+    ["AV_D", "AR_D", 3],
+];
+
 function rendreGrilleEnnemis() {
-    const ids = ["AV_G", "AR_G", "AV_M", "AR_M", "AV_D", "AR_D"];
-    const parIndex = Object.fromEntries(etatCourant.ennemis.map((e) => [e && e.id, e]));
+    const parIndex = Object.fromEntries(etatCourant.ennemis.filter(Boolean).map((e) => [e.id, e]));
+    const cellules = RANGEES_GRILLE_ENNEMIS.map(([idAvant, idArriere, ligne]) => {
+        const avant = parIndex[idAvant] ?? null;
+        if (avant && avant.fusionne) {
+            return rendreCaseEnnemi(avant, `grid-row:${ligne}; grid-column:1 / span 2;`);
+        }
+        const arriere = parIndex[idArriere] ?? null;
+        return (
+            rendreCaseEnnemi(avant, `grid-row:${ligne}; grid-column:1;`) +
+            rendreCaseEnnemi(arriere, `grid-row:${ligne}; grid-column:2;`)
+        );
+    });
     return `
         <div class="grille grille-ennemis">
-            ${ids.map((id) => rendreCaseEnnemi(parIndex[id] ?? null)).join("")}
+            ${cellules.join("")}
         </div>`;
 }
 

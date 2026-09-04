@@ -167,7 +167,7 @@ def _debuffs_json(ennemi):
     ]
 
 
-def _ennemi_json(ennemi, id_case: str):
+def _ennemi_json(ennemi, id_case: str, fusionne: bool = False):
     if ennemi is None:
         return None
     return {
@@ -180,7 +180,29 @@ def _ennemi_json(ennemi, id_case: str):
         "image": _chemin_web(ennemi.image),
         "intention": _intention_json(ennemi),
         "debuffs": _debuffs_json(ennemi),
+        # Occupe aussi la case Arriere de cette rangee (specs.md 3.2, ex. le Boss des pirates) :
+        # app.js n'affiche alors qu'une seule case, sur les 2 colonnes (cf. _ennemis_json).
+        "fusionne": fusionne,
     }
+
+
+_PAIRES_CASES_ENNEMIES = (("AV_G", "AR_G"), ("AV_M", "AR_M"), ("AV_D", "AR_D"))
+
+
+def _ennemis_json(flotte) -> list:
+    """Un objet JSON par case de la grille ennemie (ordre de IDS_ENNEMIS), None si vide. Un
+    ennemi occupant 2 emplacements Avant+Arriere de la meme rangee (specs.md 3.2, ex. le Boss
+    des pirates) n'est publie qu'une fois, sur sa case Avant (fusionne=True) : sa case Arriere
+    reste a None, web/app.js n'affichant alors qu'une seule case fusionnee sur les 2 colonnes."""
+    positions = flotte.positions()
+    resultat = {}
+    for id_avant, id_arriere in _PAIRES_CASES_ENNEMIES:
+        ennemi_avant = positions.get(IDS_ENNEMIS[id_avant])
+        ennemi_arriere = positions.get(IDS_ENNEMIS[id_arriere])
+        fusionne = ennemi_avant is not None and ennemi_avant is ennemi_arriere
+        resultat[id_avant] = _ennemi_json(ennemi_avant, id_avant, fusionne)
+        resultat[id_arriere] = None if fusionne else _ennemi_json(ennemi_arriere, id_arriere)
+    return [resultat[id_case] for id_case in IDS_ENNEMIS]
 
 
 def _carte_json(carte, index: int):
@@ -210,7 +232,7 @@ def _etat_dict() -> dict:
         "base": _module_json(vaisseau.base, "base"),
         "modules": [_module_json(modules_equipes.get(pos), id_case) for id_case, pos in IDS_MODULES.items()],
     }
-    ennemis_json = [_ennemi_json(flotte.positions().get(pos), id_case) for id_case, pos in IDS_ENNEMIS.items()]
+    ennemis_json = _ennemis_json(flotte)
     main_json = [_carte_json(carte, i) for i, carte in enumerate(combat.joueur.deck.main)]
 
     return {

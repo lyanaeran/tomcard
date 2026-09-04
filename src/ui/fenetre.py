@@ -303,6 +303,19 @@ def _rect_ennemi(position: Position) -> tuple[float, float, float, float]:
     return x, RANGEE_Y[position.rangee], CELLULE_LARGEUR, CELLULE_HAUTEUR
 
 
+def _rect_fusionne(positions: list[Position]) -> tuple[float, float, float, float]:
+    """Rectangle englobant plusieurs cases ennemies (specs.md 3.2 : un ennemi a plusieurs
+    emplacements, ex. le Boss des pirates sur l'Avant et l'Arriere d'une meme rangee, est
+    dessine comme un seul rectangle fusionne plutot que deux sprites/pastilles PV redondants) -
+    union des rectangles individuels de chaque case."""
+    rects = [_rect_ennemi(position) for position in positions]
+    x0 = min(x for x, _y, _l, _h in rects)
+    y0 = min(y for _x, y, _l, _h in rects)
+    x1 = max(x + largeur for x, _y, largeur, _h in rects)
+    y1 = max(y + hauteur for _x, y, _l, hauteur in rects)
+    return x0, y0, x1 - x0, y1 - y0
+
+
 def _pastilles_buffs_module(module: Module, cx_pv: float, cy: float, lot: pyglet.graphics.Batch) -> list:
     """Pastilles du nombre de buffs actifs sur un module (specs.md 12.3/12.5), a gauche de
     sa pastille PV (par-dessus l'emplacement Bouclier) : une doree pour les buffs a duree
@@ -537,17 +550,25 @@ class FenetreCombat(pyglet.window.Window):
         return elements
 
     def _dessiner_flotte(self, lot: pyglet.graphics.Batch) -> list:
-        """Dessine chaque case ennemie declaree (grisee si detruite, absente si jamais occupee)."""
+        """Dessine chaque ennemi vivant ou detruit de la flotte (Flotte.positions(), y compris
+        les detruits pour l'affichage grise) une seule fois, meme s'il occupe plusieurs cases
+        (specs.md 3.2, ex. le Boss des pirates - deduplique comme Flotte.ennemis_vivants())."""
         elements = []
-        for position, ennemi in self.combat.flotte.positions().items():
-            elements.extend(self._dessiner_ennemi_case(lot, position, ennemi))
+        dessines: list[Ennemi] = []
+        for _position, ennemi in self.combat.flotte.positions().items():
+            if any(existant is ennemi for existant in dessines):
+                continue
+            dessines.append(ennemi)
+            rect = _rect_fusionne(self.combat.flotte.positions_de(ennemi))
+            elements.extend(self._dessiner_ennemi_case(lot, rect, ennemi))
         return elements
 
-    def _dessiner_ennemi_case(self, lot: pyglet.graphics.Batch, position: Position, ennemi: Ennemi) -> list:
+    def _dessiner_ennemi_case(self, lot: pyglet.graphics.Batch, rect: tuple[float, float, float, float], ennemi: Ennemi) -> list:
         """Dessine une case ennemie (image + pastilles PV/Bouclier - les ennemis peuvent
         desormais en avoir, specs.md 13 -, + pastille orange du nombre de buffs/debuffs
-        actifs s'il y en a au moins un), grisee si detruite."""
-        x, y, largeur, hauteur = _rect_ennemi(position)
+        actifs s'il y en a au moins un), grisee si detruite. `rect` couvre une seule case, ou
+        plusieurs fusionnees pour un ennemi a plusieurs emplacements (cf. _rect_fusionne)."""
+        x, y, largeur, hauteur = rect
         detruit = ennemi.est_detruit()
         sprite = _sprite_ajuste(ennemi.image, x, y, largeur, hauteur, lot)
         if detruit:
@@ -747,10 +768,9 @@ class FenetreCombat(pyglet.window.Window):
             return []
 
         if isinstance(entite, Ennemi):
-            position = self._position_ennemi(entite)
-            if position is None:
+            rect = self._rect_ennemi_affiche(entite)
+            if rect is None:
                 return []
-            rect = _rect_ennemi(position)
             lignes = [entite.nom, f"PV {entite.pv}/{entite.pv_max}", f"Bouclier {entite.bouclier}"]
             action = self.combat.prochaine_action_active(entite)
             if action is not None and action.type == TypeActionEnnemi.ATTAQUE:
@@ -940,12 +960,11 @@ class FenetreCombat(pyglet.window.Window):
                 return ennemi
         return None
 
-    def _position_ennemi(self, ennemi: Ennemi) -> Position | None:
-        """Retrouve la position d'un ennemi dans la flotte affichee, ou None."""
-        for position, occupant in self.combat.flotte.positions().items():
-            if occupant is ennemi:
-                return position
-        return None
+    def _rect_ennemi_affiche(self, ennemi: Ennemi) -> tuple[float, float, float, float] | None:
+        """Rectangle affiche de cet ennemi dans la flotte (fusion de ses cases s'il en occupe
+        plusieurs, specs.md 3.2, cf. _rect_fusionne), ou None s'il n'y est pas."""
+        positions = self.combat.flotte.positions_de(ennemi)
+        return _rect_fusionne(positions) if positions else None
 
     def _afficher_popups_carte(self, carte: Carte, cibles: list[tuple[Module | Ennemi, int]]) -> None:
         """Affiche un popup +/-N (montant reellement applique) sur chaque cible touchee par une carte jouee."""
@@ -974,10 +993,11 @@ class FenetreCombat(pyglet.window.Window):
         self.popups.append((animation, texte, couleur, x + largeur / 2, y + hauteur / 2))
 
     def _rect_de_cible(self, cible: Module | Ennemi) -> tuple[float, float, float, float]:
-        """Rectangle (x, y, largeur, hauteur) de la case d'un module ou d'un ennemi."""
+        """Rectangle (x, y, largeur, hauteur) de la case d'un module ou d'un ennemi (fusion de
+        ses cases pour un ennemi a plusieurs emplacements, specs.md 3.2)."""
         if isinstance(cible, Ennemi):
-            position = self._position_ennemi(cible)
-            return _rect_ennemi(position) if position is not None else (0, 0, 0, 0)
+            rect = self._rect_ennemi_affiche(cible)
+            return rect if rect is not None else (0, 0, 0, 0)
         return self._rect_du_module(cible)
 
     def _rect_du_module(self, module: Module) -> tuple[float, float, float, float]:
