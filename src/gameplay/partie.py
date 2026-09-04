@@ -10,6 +10,7 @@ bas de ce fichier.
 
 import json
 import random
+import shutil
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
@@ -540,6 +541,13 @@ def sauvegarder_profil(profil: Profil) -> None:
     dossier = _dossier_profil(profil.id)
     dossier.mkdir(parents=True, exist_ok=True)
     (dossier / "profil.json").write_text(profil_vers_json(profil))
+
+
+def supprimer_profil(joueur_id: str) -> None:
+    """Supprime definitivement un profil (PC) et toutes ses parties sauvegardees - action
+    destructive, l'UI (ecran_selection_joueur.py) doit demander confirmation avant d'appeler
+    cette fonction. Ne fait rien si le dossier n'existe pas (deja supprime)."""
+    shutil.rmtree(_dossier_profil(joueur_id), ignore_errors=True)
 
 
 def partie_en_cours(joueur_id: str) -> Partie | None:

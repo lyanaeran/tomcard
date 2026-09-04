@@ -1025,10 +1025,21 @@ utilisateur), plus des écrans autonomes non reliés comme les précédents.
 Fond de combat réutilisé en placeholder (comme les autres écrans du parcours), à remplacer par un
 fond dédié.
 
-- **Sélection/création de profil** — liste des profils existants (clic pour choisir) + création
-  d'un profil par un nom (Entrée/bouton "Créer"). `src/ui/ecran_selection_joueur.py` (PC, saisie de
-  texte gérée manuellement via `on_text`/`on_key_press`, pas de widget pyglet dédié) ; `web/app.js`
-  (`afficherSelectionJoueur`/`creerNouveauJoueur`) + `web/bridge.py` (`creer_profil_web`)
+- **Sélection/création/suppression de profil** — liste des profils existants (clic pour choisir) +
+  création d'un profil par un nom (Entrée/bouton "Créer"). `src/ui/ecran_selection_joueur.py` (PC,
+  saisie de texte gérée manuellement via `on_text`/`on_key_press`, pas de widget pyglet dédié) ;
+  `web/app.js` (`afficherSelectionJoueur`/`creerNouveauJoueur`) + `web/bridge.py`
+  (`creer_profil_web`)
+  - **Suppression d'un profil** : bouton croix rouge sur chaque ligne (même icône que "Quitter" en
+    combat, `assets/interface/quitter.png`, déjà associée dans le jeu à une action destructive) —
+    action irréversible, jamais exécutée sans confirmation explicite ("Vous allez détruire le
+    joueur *nom*, êtes-vous sûr ?"). PC : dialogue de confirmation dessiné par-dessus la liste
+    (`EcranSelectionJoueur._dessiner_dialogue_confirmation`, `GROUPE_SUPERPOSITION` pour garantir
+    l'ordre de dessin, cf. "Pièges pyglet connus" du `CLAUDE.md`), Oui appelle
+    `src/gameplay/partie.py:supprimer_profil` (supprime le dossier du profil sous `saves/`, parties
+    sauvegardées incluses). Web : `confirm()` natif du navigateur plutôt qu'une boîte de dialogue
+    maison (aucune infrastructure de modale ailleurs dans le web du jeu) — `supprimerJoueurLocal`
+    (`web/app.js`) retire le profil de l'index `localStorage` et sa partie sauvegardée éventuelle
 - **Accueil du joueur** — si une partie `EN_COURS` existe : niveau, vaisseau (grille des modules
   équipés avec PV/PV max/niveau de mise à jour, ou "Emplacement vide"), boutons **Continuer** /
   **Abandonner la partie** / **Voir le deck**. Sinon : bouton **Nouvelle partie**.
@@ -1061,8 +1072,8 @@ fond dédié.
 - `src/gameplay/partie.py` (nouveau) : dataclasses `Profil`/`Partie`/`EtatModule`, sérialisation
   JSON pure (`profil_vers_json`/`profil_depuis_json`, `partie_vers_json`/`partie_depuis_json`,
   testables sans I/O), `nouveau_profil`/`nouvelle_partie`/`combat_depuis_partie`/`marquer_terminee`,
-  et l'I/O fichier PC (`lister_profils`, `creer_profil`, `sauvegarder_partie`, `partie_en_cours`,
-  `abandonner_partie`, sous `saves/`, nouveau dossier ajouté au `.gitignore`)
+  et l'I/O fichier PC (`lister_profils`, `creer_profil`, `supprimer_profil`, `sauvegarder_partie`,
+  `partie_en_cours`, `abandonner_partie`, sous `saves/`, nouveau dossier ajouté au `.gitignore`)
   - Nom `Profil` retenu plutôt que `Joueur` (déjà pris par `src/gameplay/joueur.py`, l'état de
     combat éphémère vaisseau + deck + électricité, §3.3) — pas de collision
   - `config_poc.deck_module_principal` factorisé en `ids_deck_module_principal` (renvoie des ids

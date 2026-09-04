@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "60";
+const VERSION_CACHE = "61";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -1616,15 +1616,47 @@ function sauvegarderPartieLocale(joueurId, partie) {
     localStorage.setItem(clePartie(joueurId), JSON.stringify(partie));
 }
 
+// Supprime definitivement un joueur (index CLE_JOUEURS) et sa partie sauvegardee eventuelle -
+// action destructive, appelee uniquement apres confirmation (cf. bouton-supprimer-joueur dans
+// afficherSelectionJoueur ci-dessous). Meme principe que src/gameplay/partie.py:supprimer_profil
+// cote PC, mais purement localStorage ici (pas de FS Pyodide, cf. commentaire plus haut).
+function supprimerJoueurLocal(joueurId) {
+    const joueurs = listerJoueursLocal().filter((joueur) => joueur.id !== joueurId);
+    localStorage.setItem(CLE_JOUEURS, JSON.stringify(joueurs));
+    localStorage.removeItem(clePartie(joueurId));
+}
+
 let joueurCourant = null;
 
 function afficherSelectionJoueur() {
     const joueurs = listerJoueursLocal();
     document.getElementById("liste-joueurs").innerHTML = joueurs
-        .map((joueur, index) => `<div class="ligne-joueur" data-index="${index}">${joueur.nom}</div>`)
+        .map(
+            (joueur, index) => `
+            <div class="ligne-joueur" data-index="${index}">
+                <span class="nom-joueur">${joueur.nom}</span>
+                <button class="bouton-supprimer-joueur" data-index="${index}" title="Supprimer ce joueur" aria-label="Supprimer ce joueur">
+                    <img src="assets/interface/quitter.png" alt="">
+                </button>
+            </div>`
+        )
         .join("");
     document.querySelectorAll(".ligne-joueur").forEach((element) => {
         element.addEventListener("click", () => choisirJoueur(joueurs[Number(element.dataset.index)]));
+    });
+    // Bouton croix rouge (specs.md 10.3) : stopPropagation pour ne pas aussi declencher le clic
+    // de la ligne (choisirJoueur) qui le contient. confirm() natif plutot qu'une boite de dialogue
+    // maison (aucune infrastructure de modale ailleurs dans ce projet web, cf. CLAUDE.md - pas
+    // d'abstraction au-dela du necessaire) - suppression irreversible, jamais sans confirmation.
+    document.querySelectorAll(".bouton-supprimer-joueur").forEach((element) => {
+        element.addEventListener("click", (evenement) => {
+            evenement.stopPropagation();
+            const joueur = joueurs[Number(element.dataset.index)];
+            if (confirm(`Vous allez detruire le joueur ${joueur.nom}, etes-vous sur ?`)) {
+                supprimerJoueurLocal(joueur.id);
+                afficherSelectionJoueur();
+            }
+        });
     });
     document.getElementById("nom-nouveau-joueur").value = "";
     masquerTousLesEcrans();
