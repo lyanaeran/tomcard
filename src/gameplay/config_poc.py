@@ -50,8 +50,12 @@ VALEUR_ATTAQUE_BASE_MODE_TEST = 20
 ELECTRICITE_PAR_TOUR = 3
 ID_MODULE_PRINCIPAL = "MOD_1"
 NOMBRE_MODULES_EQUIPES = 4
-# Deck de base du module principal (12 cartes) : chaque carte de rarete Base une fois, sauf
+# Deck de base du module principal (10 cartes) : chaque carte de rarete Base une fois, sauf
 # Laser et Bouclier, 4 exemplaires chacune (regle donnee explicitement par l'utilisateur).
+# Bombardement et Reparation retires de ce module (decision utilisateur) : Bombardement sera
+# reintroduit sous une forme modifiee comme carte du Lanceur de missiles, Reparation comme carte
+# de l'Atelier - aucun des deux n'est encore pret (cf. config/modules.json, cartes.json les garde
+# telles quelles en attendant, juste detachees de la liste `cartes` du module principal).
 NOMS_QUADRUPLES_MODULE_PRINCIPAL = ("Laser", "Bouclier")
 # Nombre de cartes tirees au hasard par module equipe (regle interimaire : la regle cible
 # "2 Communes + 1 Rare + 1 Legendaire" par module equipe necessite qu'aucun module n'ait de
@@ -110,7 +114,7 @@ def ids_deck_module_principal(spec_principal: SpecModule, cartes: dict[str, Cart
 
 
 def deck_module_principal(spec_principal: SpecModule, cartes: dict[str, Carte]) -> list[Carte]:
-    """Deck de base fixe du module principal (12 cartes, pas de tirage aleatoire) : chaque
+    """Deck de base fixe du module principal (10 cartes, pas de tirage aleatoire) : chaque
     carte de rarete Base de sa pool une fois, sauf Laser et Bouclier en 4 exemplaires."""
     return [cartes[id_carte].copie() for id_carte in ids_deck_module_principal(spec_principal, cartes)]
 
@@ -135,7 +139,7 @@ def creer_vaisseau(specs_modules: list[SpecModule], aleatoire: random.Random) ->
 
 
 def creer_deck(specs_utilisees: list[SpecModule], cartes: dict[str, Carte], aleatoire: random.Random) -> Deck:
-    """Deck de base fixe du module principal (le premier de la liste, 12 cartes, cf.
+    """Deck de base fixe du module principal (le premier de la liste, 10 cartes, cf.
     `deck_module_principal`) + 3 cartes tirees au sort dans la pool de chaque autre module."""
     spec_principal, *specs_equipes = specs_utilisees
     deck_cartes = deck_module_principal(spec_principal, cartes)

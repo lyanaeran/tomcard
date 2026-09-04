@@ -207,8 +207,8 @@ def test_tirer_cartes_renvoie_des_exemplaires_independants():
     assert tirees[0] is not cartes["CRT_12"]
 
 
-def test_creer_deck_contient_24_cartes():
-    """12 cartes fixes du module principal (deck de base) + 3 par module equipe."""
+def test_creer_deck_contient_22_cartes():
+    """10 cartes fixes du module principal (deck de base) + 3 par module equipe."""
     specs_modules = charger_modules()
     cartes = charger_cartes()
     aleatoire = random.Random(5)
@@ -217,8 +217,8 @@ def test_creer_deck_contient_24_cartes():
     deck = creer_deck(specs_utilisees, cartes, aleatoire)
 
     total = len(deck.pioche) + len(deck.main) + len(deck.defausse)
-    attendu = 12 + CARTES_PAR_MODULE_EQUIPE * NOMBRE_MODULES_EQUIPES
-    assert total == attendu == 24
+    attendu = 10 + CARTES_PAR_MODULE_EQUIPE * NOMBRE_MODULES_EQUIPES
+    assert total == attendu == 22
 
 
 def test_creer_deck_module_principal_a_4_laser_et_4_bouclier():
@@ -250,8 +250,8 @@ def test_creer_combat_poc_utilise_le_deck_reel_quand_mode_test_desactive():
     combat = creer_combat_poc(random.Random(4))
 
     total = len(combat.joueur.deck.pioche) + len(combat.joueur.deck.main) + len(combat.joueur.deck.defausse)
-    attendu = 12 + CARTES_PAR_MODULE_EQUIPE * NOMBRE_MODULES_EQUIPES
-    assert total == attendu == 24
+    attendu = 10 + CARTES_PAR_MODULE_EQUIPE * NOMBRE_MODULES_EQUIPES
+    assert total == attendu == 22
 
 
 def test_deux_combats_successifs_ont_des_ennemis_independants():

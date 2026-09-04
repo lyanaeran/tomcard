@@ -6,7 +6,7 @@
       "image": "assets/modules/principal.png",
       "points_de_vie": 50,
       "description": "Votre vaisseau, plus cabosse que le Faucon Millenium, mais la prunelle de vos yeux.",
-      "cartes": ["CRT_7", "CRT_8", "CRT_9", "CRT_10", "CRT_11", "CRT_12"]
+      "cartes": ["CRT_7", "CRT_8", "CRT_10", "CRT_11"]
     },
     {
       "id": "MOD_2",
