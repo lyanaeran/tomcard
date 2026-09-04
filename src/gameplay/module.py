@@ -42,11 +42,15 @@ class Module:
         """Repare des points de vie, sans depasser le maximum."""
         self.pv = min(self.pv_max, self.pv + valeur)
 
-    def appliquer_buff(self, action: ActionCarte, valeur: int, tours: int | None) -> None:
+    def appliquer_buff(
+        self, action: ActionCarte, valeur: int, tours: int | None, cible_reflet: "Module | None" = None
+    ) -> None:
         """Ajoute un nouveau buff actif et declenche son effet immediatement (comme les
         autres types de carte), en plus des declenchements suivants a chaque debut de
-        tour joueur tant que le buff reste actif (cf. declencher_buffs_tour)."""
-        buff = BuffActif(action=action, valeur=valeur, tours_restants=tours)
+        tour joueur tant que le buff reste actif (cf. declencher_buffs_tour). cible_reflet :
+        signature alignee sur Ennemi.appliquer_buff (specs.md 13, BOUCLIER_MIROIR) - sans effet
+        ici, aucune carte/mecanique ne pose ce buff sur un Module pour l'instant."""
+        buff = BuffActif(action=action, valeur=valeur, tours_restants=tours, cible_reflet=cible_reflet)
         self.buffs_actifs.append(buff)
         self._declencher_buff(buff)
 

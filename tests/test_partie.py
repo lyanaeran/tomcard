@@ -56,6 +56,7 @@ from src.gameplay.partie import (
     sauvegarder_partie,
     specs_utilisees_partie,
     subir_degats_module,
+    supprimer_profil,
     synchroniser_vaisseau_depuis_combat,
 )
 
@@ -511,6 +512,30 @@ def test_creer_profil_puis_le_retrouver_dans_lister_profils(dossier_saves_isole)
     noms = [profil.nom for profil in lister_profils()]
 
     assert noms == ["Alice", "Bob"]  # trie par nom
+
+
+def test_supprimer_profil_le_retire_de_lister_profils(dossier_saves_isole):
+    bob = creer_profil("Bob")
+    creer_profil("Alice")
+
+    supprimer_profil(bob.id)
+
+    noms = [profil.nom for profil in lister_profils()]
+    assert noms == ["Alice"]
+
+
+def test_supprimer_profil_efface_aussi_ses_parties_sauvegardees(dossier_saves_isole):
+    profil = creer_profil("Alice")
+    sauvegarder_partie(profil.id, nouvelle_partie(random.Random(1)))
+    assert partie_en_cours(profil.id) is not None
+
+    supprimer_profil(profil.id)
+
+    assert not (dossier_saves_isole / profil.id).exists()
+
+
+def test_supprimer_profil_inexistant_ne_leve_pas(dossier_saves_isole):
+    supprimer_profil("joueur_inexistant")  # ne doit pas lever, cf. docstring
 
 
 def test_partie_en_cours_renvoie_none_si_aucune_partie(dossier_saves_isole):

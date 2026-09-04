@@ -86,8 +86,9 @@ class Combat:
         cible est ignoree pour les cartes de CIBLES_SANS_CLIC (elles touchent tout
         un camp) et obligatoire sinon. Renvoie, pour chaque cible effectivement
         touchee, le montant reellement applique (degats/bouclier/soin, qui peut etre
-        inferieur a carte.valeur : cf. `_appliquer_effet_simple`) ; liste vide si la
-        carte n'a pas ete jouee.
+        inferieur a carte.valeur : cf. `_appliquer_effet_simple`) - peut inclure un
+        module du joueur en plus de la cible visee, si celle-ci portait un Bouclier
+        miroir actif (specs.md 13) ; liste vide si la carte n'a pas ete jouee.
         """
         if self.etat != EtatCombat.EN_COURS:
             return []
@@ -129,15 +130,22 @@ class Combat:
             _dissiper_bouclier(module)
             module.declencher_buffs_tour()
 
-    def prochaine_action_active(self, ennemi: Ennemi) -> ActionEnnemi | None:
-        """Premiere Action de cet ennemi qui se declenchera a son prochain tour (specs.md 13),
-        pour l'affichage de son intention (survol/tap) - None si aucune de ses actions n'est
-        active a ce tour-la."""
+    def prochaines_actions_actives(self, ennemi: Ennemi) -> list[ActionEnnemi]:
+        """Toutes les Actions de cet ennemi qui se declencheront a son prochain tour (specs.md
+        13), dans l'ordre de sa liste - plusieurs peuvent l'etre le meme tour (ex. le Boss des
+        pirates, qui attaque ET pose un buff au meme tour) : l'affichage de son intention
+        (survol/tap) doit toutes les montrer, pas seulement la premiere. Liste vide si aucune
+        n'est active a ce tour-la."""
         prochain_tour = self.tour_ennemi_actuel + 1
-        for action in ennemi.actions:
-            if action.active_au_tour(prochain_tour):
-                return action
-        return None
+        return [action for action in ennemi.actions if action.active_au_tour(prochain_tour)]
+
+    def prochaine_action_active(self, ennemi: Ennemi) -> ActionEnnemi | None:
+        """Premiere des Actions actives de cet ennemi au prochain tour (specs.md 13,
+        cf. prochaines_actions_actives) - utilisee par previsualiser_cible, qui ne s'interesse
+        qu'a une eventuelle Attaque de proximite ; None si aucune de ses actions n'est active a
+        ce tour-la."""
+        actions = self.prochaines_actions_actives(ennemi)
+        return actions[0] if actions else None
 
     def previsualiser_cible(self, ennemi: Ennemi) -> Module | None:
         """Renvoie le module que cet ennemi attaquerait a son prochain tour si sa prochaine
@@ -194,7 +202,11 @@ class Combat:
     def _appliquer_effet(self, carte: Carte, cible: Module | Ennemi | None) -> list[tuple[Module | Ennemi, int]]:
         """Applique l'effet d'une carte selon sa cible (specs.md 7.1/7.2).
 
-        Renvoie, pour chaque cible effectivement touchee, le montant reellement applique.
+        Renvoie, pour chaque cible effectivement touchee, le montant reellement applique -
+        y compris, en plus de la cible visee par la carte, un module du joueur touche par un
+        renvoi de Bouclier miroir (specs.md 13, ennemi Miroir desormais pose sur un allie
+        ennemi plutot que sur le joueur) si la cible en portait un actif (cf.
+        _appliquer_effet_simple).
         """
         if carte.type == TypeCarte.OUTILS:
             # Une carte Outils ne touche jamais de module/ennemi : sa cible ne sert qu'a
@@ -227,17 +239,31 @@ class Combat:
             cibles = [occupant for occupant in occupants if occupant is not None]
         else:
             cibles = [cible]
-        return [(une_cible, self._appliquer_effet_simple(carte, une_cible)) for une_cible in cibles]
+        resultats: list[tuple[Module | Ennemi, int]] = []
+        for une_cible in cibles:
+            valeur_effective, renvois = self._appliquer_effet_simple(carte, une_cible)
+            resultats.append((une_cible, valeur_effective))
+            resultats.extend(renvois)
+        return resultats
 
-    def _appliquer_effet_simple(self, carte: Carte, cible: Module | Ennemi) -> int:
+    def _appliquer_effet_simple(self, carte: Carte, cible: Module | Ennemi) -> tuple[int, list[tuple[Module, int]]]:
         """Applique l'effet d'une carte a une seule cible, selon son type (specs.md 7.1).
 
-        Renvoie le montant reellement applique, qui peut etre inferieur a carte.valeur :
-        les degats sont plafonnes par les PV+bouclier restants de la cible, le soin par
-        son PV max (le bouclier, lui, n'est jamais plafonne).
+        Renvoie (montant reellement applique a `cible`, qui peut etre inferieur a carte.valeur -
+        les degats sont plafonnes par les PV+bouclier restants de la cible, le soin par son PV
+        max, le bouclier n'etant lui jamais plafonne -, [(module, montant)...] pour chaque
+        module du joueur touche par un renvoi de Bouclier miroir actif sur `cible`, vide dans
+        tous les autres cas - specs.md 13, ennemi Miroir).
         """
+        renvois: list[tuple[Module, int]] = []
         if carte.type == TypeCarte.ATTAQUE:
             degats_bruts = cible.degats_subis(carte.valeur) if isinstance(cible, Ennemi) else carte.valeur
+            if isinstance(cible, Ennemi):
+                degats_bruts, renvois_bruts = self._consommer_bouclier_miroir_vers_joueur(cible, degats_bruts)
+                for module, montant in renvois_bruts:
+                    degats_module = _degats_effectifs(module, montant)
+                    module.subir_degats(montant)
+                    renvois.append((module, degats_module))
             valeur_effective = _degats_effectifs(cible, degats_bruts)
             cible.subir_degats(degats_bruts)
         elif carte.type == TypeCarte.DEFENSE:
@@ -257,7 +283,7 @@ class Combat:
         else:
             valeur_effective = min(carte.valeur, cible.pv_max - cible.pv)
             cible.soigner(carte.valeur)
-        return valeur_effective
+        return valeur_effective, renvois
 
     def _appliquer_buff_ou_debuff(self, carte: Carte, cible: Module | Ennemi) -> int:
         """Applique un buff/debuff d'une carte a une cible (specs.md 12.1/12.3/12.4/12.5/13) :
@@ -381,22 +407,75 @@ class Combat:
         ]
         return total_reflete
 
+    def _consommer_bouclier_miroir_vers_joueur(self, cible: Ennemi, degats: int) -> tuple[int, list[tuple[Module, int]]]:
+        """Variante de _consommer_bouclier_miroir pour une attaque du JOUEUR (une carte, pas
+        une Action ennemie) sur `cible` : il n'y a pas d'"attaquant" a qui renvoyer les degats
+        (une carte n'est liee a aucun module), donc chaque instance de Bouclier miroir les
+        renvoie plutot vers SON PROPRE module cible, tire au hasard une bonne fois pour toutes
+        a la pose du buff (BuffActif.cible_reflet, cf. _executer_pose_buff) plutot qu'ici.
+        Renvoie (degats restants apres reflet, [(module, montant brut renvoye), ...] dans
+        l'ordre de pose des instances consommees - montant brut, pas encore plafonne par les
+        PV+bouclier du module receveur, cf. appelant)."""
+        restant = degats
+        renvois: list[tuple[Module, int]] = []
+        for buff in cible.buffs_actifs:
+            if buff.action != ActionCarte.BOUCLIER_MIROIR or restant <= 0 or buff.cible_reflet is None:
+                continue
+            consomme = min(buff.valeur, restant)
+            buff.valeur -= consomme
+            renvois.append((buff.cible_reflet, consomme))
+            restant -= consomme
+        cible.buffs_actifs = [
+            buff for buff in cible.buffs_actifs if not (buff.action == ActionCarte.BOUCLIER_MIROIR and buff.valeur <= 0)
+        ]
+        return restant, renvois
+
     def _executer_pose_buff(
         self, ennemi: Ennemi, position: Position, action: ActionEnnemi
     ) -> list[tuple[Position, Ennemi, Module | Ennemi, int, str]]:
         """Pose le buff d'une Action POSE_BUFF (specs.md 13) sur sa cible - SOI_MEME (l'ennemi
-        lui-meme, ex. Petit Jean se met du bouclier) ou COLONNE_AVANT_SINON_ARRIERE_JOUEUR (un
-        module du joueur tire au hasard, ex. Miroir pose un Bouclier miroir)."""
+        lui-meme, ex. Petit Jean se met du bouclier), COLONNE_AVANT_SINON_ARRIERE_JOUEUR (un
+        module du joueur tire au hasard) ou COLONNE_AVANT_SINON_ARRIERE_ENNEMIE (un ennemi de
+        la flotte tire au hasard, lui-meme inclus - ex. Miroir pose un Bouclier miroir sur un
+        allie plutot que sur le joueur). Pour un BOUCLIER_MIROIR, tire aussi une bonne fois
+        pour toutes, ici a la pose (jamais a la resolution, cf. determinisme du survol/tap), le
+        module du joueur qui recevra les degats renvoyes (BuffActif.cible_reflet) - affiche des
+        la pose dans l'infobulle de l'ennemi protege, contrairement a Tir allie dont la cible
+        reelle n'est decouverte qu'a la resolution du tour."""
         if action.cible == CibleActionEnnemi.SOI_MEME:
             cible = ennemi
         elif action.cible == CibleActionEnnemi.COLONNE_AVANT_SINON_ARRIERE_JOUEUR:
             cible = self._cible_ligne_avant_ou_arriere_joueur()
+        elif action.cible == CibleActionEnnemi.COLONNE_AVANT_SINON_ARRIERE_ENNEMIE:
+            cible = self._cible_ligne_avant_ou_arriere_ennemie()
         else:
             cible = None
         if cible is None:
             return []
-        cible.appliquer_buff(action.action_buff, action.valeur, action.duree_buff)
+        cible_reflet = None
+        if action.action_buff == ActionCarte.BOUCLIER_MIROIR:
+            cible_reflet = self._cible_ligne_avant_ou_arriere_joueur()
+        cible.appliquer_buff(action.action_buff, action.valeur, action.duree_buff, cible_reflet=cible_reflet)
         return [(position, ennemi, cible, action.valeur, "bouclier")]
+
+    def _cible_ligne_avant_ou_arriere_ennemie(self) -> Ennemi | None:
+        """Tire au hasard un ennemi de la flotte (l'ennemi qui pose l'action y compris, specs.md
+        13 - ex. Miroir peut se cibler lui-meme) dans la colonne avant si elle compte au moins
+        un ennemi vivant, sinon dans la colonne arriere - None si la flotte n'a plus aucun
+        ennemi vivant (combat deja termine dans ce cas)."""
+        avant = _dedupe_ennemis(
+            occupant
+            for occupant in (self.flotte.ennemi_en(Colonne.AVANT, rangee) for rangee in (Rangee.GAUCHE, Rangee.MID, Rangee.DROITE))
+            if occupant is not None
+        )
+        candidats = avant or _dedupe_ennemis(
+            occupant
+            for occupant in (self.flotte.ennemi_en(Colonne.ARRIERE, rangee) for rangee in (Rangee.GAUCHE, Rangee.MID, Rangee.DROITE))
+            if occupant is not None
+        )
+        if not candidats:
+            return None
+        return self.aleatoire.choice(candidats)
 
     def _cible_ligne_avant_ou_arriere_joueur(self) -> Module | None:
         """Tire au hasard un module du joueur dans la colonne avant (base incluse, specs.md

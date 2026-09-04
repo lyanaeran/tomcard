@@ -1441,10 +1441,41 @@ body {
     border: 2px solid #5a6e91;
     border-radius: 8px;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
 }
 
 .ligne-joueur:hover {
     border-color: #ffffff;
+}
+
+.nom-joueur {
+    overflow-wrap: anywhere;
+}
+
+/* Bouton de suppression d'un joueur (croix rouge, specs.md 10.3) - meme icone que
+   #bouton-quitter-combat (assets/interface/quitter.png), deja associee dans le jeu a une action
+   destructive/de sortie. Selecteur prefixe par #liste-joueurs (specificite ID+classe) pour
+   l'emporter sur la regle generique "#ecran-selection-joueur button" (ID+element) plus bas,
+   qui donnerait sinon un fond bleu plein et un padding a ce bouton icone. */
+#liste-joueurs .bouton-supprimer-joueur {
+    flex: 0 0 auto;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+}
+
+#liste-joueurs .bouton-supprimer-joueur img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
 }
 
 #creation-joueur {

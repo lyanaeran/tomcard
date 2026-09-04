@@ -632,6 +632,55 @@ def test_previsualiser_cible_masque_le_module_si_redirection_active():
     assert combat.previsualiser_cible(attaquant) is None
 
 
+def test_prochaines_actions_actives_renvoie_toutes_les_actions_du_meme_tour():
+    """Un ennemi comme le Boss des pirates (specs.md 13) attaque a chaque tour ET pose un buff
+    a partir d'un certain tour : les deux doivent apparaitre au meme tour, pas seulement la
+    premiere de la liste (ce que prochaine_action_active, utilisee par previsualiser_cible,
+    renvoie seule - cf. test suivant)."""
+    attaque = ActionEnnemi(type=TypeActionEnnemi.ATTAQUE, cible=CibleActionEnnemi.TOUS_MODULES_JOUEUR, valeur=5)
+    buff = ActionEnnemi(
+        type=TypeActionEnnemi.POSE_BUFF, cible=CibleActionEnnemi.SOI_MEME, valeur=2, frequence=3, tour_depart=2,
+        action_buff=ActionCarte.AUGMENTATION_DEGATS,
+    )
+    boss = Ennemi(pv_max=150, actions=[attaque, buff], nom="Boss")
+    ennemis = {Position(Colonne.AVANT, Rangee.GAUCHE): boss}
+    combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
+
+    assert combat.prochaines_actions_actives(boss) == [attaque]  # tour 1 : le buff n'est pas encore actif
+
+    combat.finir_tour_joueur()  # ecoule le tour ennemi 1
+
+    assert combat.prochaines_actions_actives(boss) == [attaque, buff]  # tour 2 : les deux
+
+
+def test_prochaine_action_active_renvoie_la_premiere_des_actions_actives():
+    attaque = ActionEnnemi(type=TypeActionEnnemi.ATTAQUE, cible=CibleActionEnnemi.TOUS_MODULES_JOUEUR, valeur=5)
+    buff = ActionEnnemi(
+        type=TypeActionEnnemi.POSE_BUFF, cible=CibleActionEnnemi.SOI_MEME, valeur=2, frequence=3, tour_depart=2,
+        action_buff=ActionCarte.AUGMENTATION_DEGATS,
+    )
+    boss = Ennemi(pv_max=150, actions=[attaque, buff], nom="Boss")
+    ennemis = {Position(Colonne.AVANT, Rangee.GAUCHE): boss}
+    combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
+    combat.finir_tour_joueur()
+
+    assert combat.prochaine_action_active(boss) is attaque
+
+
+def test_prochaine_action_active_renvoie_none_sans_action_active():
+    buff = ActionEnnemi(
+        type=TypeActionEnnemi.POSE_BUFF, cible=CibleActionEnnemi.SOI_MEME, valeur=3, frequence=2, tour_depart=1,
+        action_buff=ActionCarte.BOUCLIER_PAR_TOUR,
+    )
+    petit_jean = Ennemi(pv_max=100, actions=[buff], nom="Petit Jean")
+    ennemis = {Position(Colonne.AVANT, Rangee.GAUCHE): petit_jean}
+    combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
+    combat.finir_tour_joueur()  # tour 1 ecoule : buff pose (tour_depart=1)
+
+    assert combat.prochaines_actions_actives(petit_jean) == []  # tour 2 : frequence=2, pas actif
+    assert combat.prochaine_action_active(petit_jean) is None
+
+
 # --- Colonne avant alliee (Blindage, specs.md 12.1) ---
 
 
@@ -939,3 +988,112 @@ def test_tour_ennemi_n_execute_qu_une_fois_les_actions_d_un_ennemi_a_2_emplaceme
     # deux fois (une par emplacement occupe) au lieu d'une seule.
     assert vaisseau.base.pv == 45
     assert vaisseau.module_en(Colonne.AVANT, Rangee.GAUCHE).pv == 45
+
+
+# --- Bouclier miroir sur un ennemi allie (specs.md 13, ennemi Miroir - pose desormais sur un
+# allie ennemi plutot que sur un module du joueur) ---
+
+
+def _pose_bouclier_miroir_ennemie() -> ActionEnnemi:
+    return ActionEnnemi(
+        type=TypeActionEnnemi.POSE_BUFF,
+        cible=CibleActionEnnemi.COLONNE_AVANT_SINON_ARRIERE_ENNEMIE,
+        valeur=5,
+        action_buff=ActionCarte.BOUCLIER_MIROIR,
+    )
+
+
+def test_pose_bouclier_miroir_cible_un_ennemi_en_priorite_avant():
+    miroir = Ennemi(pv_max=50, actions=[_pose_bouclier_miroir_ennemie()], nom="Miroir")
+    protege_avant = Ennemi(pv_max=20, nom="Protege avant")
+    ennemis = {
+        Position(Colonne.ARRIERE, Rangee.GAUCHE): miroir,
+        Position(Colonne.AVANT, Rangee.DROITE): protege_avant,
+    }
+    combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis, aleatoire=random.Random(1))
+
+    combat.finir_tour_joueur()
+
+    assert any(buff.action == ActionCarte.BOUCLIER_MIROIR for buff in protege_avant.buffs_actifs)
+    assert not any(buff.action == ActionCarte.BOUCLIER_MIROIR for buff in miroir.buffs_actifs)
+
+
+def test_pose_bouclier_miroir_se_cible_lui_meme_si_seul_ennemi_vivant():
+    miroir = Ennemi(pv_max=50, actions=[_pose_bouclier_miroir_ennemie()], nom="Miroir")
+    ennemis = {Position(Colonne.AVANT, Rangee.GAUCHE): miroir}
+    combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis, aleatoire=random.Random(1))
+
+    combat.finir_tour_joueur()
+
+    assert any(buff.action == ActionCarte.BOUCLIER_MIROIR for buff in miroir.buffs_actifs)
+
+
+def test_bouclier_miroir_choisit_le_module_de_reflet_des_la_pose():
+    """Le module qui recevra les degats renvoyes est tire au moment de la pose (tour ennemi),
+    pas a la resolution de l'attaque joueur - il doit etre visible dans l'infobulle avant meme
+    que le joueur n'attaque (decision utilisateur)."""
+    miroir = Ennemi(pv_max=50, actions=[_pose_bouclier_miroir_ennemie()], nom="Miroir")
+    ennemis = {Position(Colonne.AVANT, Rangee.GAUCHE): miroir}
+    vaisseau = _vaisseau_complet(pv=20)
+    combat, vaisseau, _flotte = _nouveau_combat(ennemis=ennemis, vaisseau=vaisseau, aleatoire=random.Random(1))
+
+    combat.finir_tour_joueur()
+
+    buff = next(b for b in miroir.buffs_actifs if b.action == ActionCarte.BOUCLIER_MIROIR)
+    modules_possibles = [vaisseau.base, *vaisseau.modules_equipes().values()]
+    assert buff.cible_reflet in modules_possibles
+
+
+def test_bouclier_miroir_renvoie_les_degats_de_l_attaque_joueur_vers_le_module_tire():
+    miroir = Ennemi(pv_max=50, nom="Miroir")
+    cible_reflet = Module(pv_max=20, nom="Cible")
+    miroir.appliquer_buff(ActionCarte.BOUCLIER_MIROIR, 5, tours=None, cible_reflet=cible_reflet)
+    ennemis = {Position(Colonne.AVANT, Rangee.GAUCHE): miroir}
+    combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
+    combat.joueur.deck.main = [CARTE_ATTAQUE]  # ENNEMI_UNIQUE, valeur 7
+    combat.joueur.electricite = 3
+
+    resultat = combat.jouer_carte(CARTE_ATTAQUE, miroir)
+
+    # 5 renvoyes vers cible_reflet (bouclier entierement consomme), 2 restants a Miroir.
+    assert cible_reflet.pv == 20 - 5
+    assert miroir.pv == 50 - 2
+    assert (cible_reflet, 5) in resultat
+    assert (miroir, 2) in resultat
+    assert not any(buff.action == ActionCarte.BOUCLIER_MIROIR for buff in miroir.buffs_actifs)
+
+
+def test_bouclier_miroir_absorbe_totalement_si_inferieur_a_sa_valeur():
+    miroir = Ennemi(pv_max=50, nom="Miroir")
+    cible_reflet = Module(pv_max=20, nom="Cible")
+    miroir.appliquer_buff(ActionCarte.BOUCLIER_MIROIR, 10, tours=None, cible_reflet=cible_reflet)
+    ennemis = {Position(Colonne.AVANT, Rangee.GAUCHE): miroir}
+    combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
+    combat.joueur.deck.main = [CARTE_ATTAQUE]  # valeur 7
+    combat.joueur.electricite = 3
+
+    combat.jouer_carte(CARTE_ATTAQUE, miroir)
+
+    assert cible_reflet.pv == 20 - 7
+    assert miroir.pv == 50  # rien subi, tout absorbe
+    buff = next(b for b in miroir.buffs_actifs if b.action == ActionCarte.BOUCLIER_MIROIR)
+    assert buff.valeur == 3  # 10 - 7 restant, buff toujours actif
+
+
+def test_bouclier_miroir_plusieurs_instances_renvoient_chacune_vers_son_propre_module():
+    miroir = Ennemi(pv_max=50, nom="Miroir")
+    module_a = Module(pv_max=20, nom="A")
+    module_b = Module(pv_max=20, nom="B")
+    miroir.appliquer_buff(ActionCarte.BOUCLIER_MIROIR, 3, tours=None, cible_reflet=module_a)
+    miroir.appliquer_buff(ActionCarte.BOUCLIER_MIROIR, 3, tours=None, cible_reflet=module_b)
+    ennemis = {Position(Colonne.AVANT, Rangee.GAUCHE): miroir}
+    combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
+    carte = Carte(nom="Gros coup", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMI_UNIQUE, cout=1, valeur=8)
+    combat.joueur.deck.main = [carte]
+    combat.joueur.electricite = 3
+
+    combat.jouer_carte(carte, miroir)
+
+    assert module_a.pv == 20 - 3
+    assert module_b.pv == 20 - 3
+    assert miroir.pv == 50 - 2  # 8 - 3 - 3 = 2 restant

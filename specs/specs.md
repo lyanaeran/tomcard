@@ -1025,10 +1025,21 @@ utilisateur), plus des écrans autonomes non reliés comme les précédents.
 Fond de combat réutilisé en placeholder (comme les autres écrans du parcours), à remplacer par un
 fond dédié.
 
-- **Sélection/création de profil** — liste des profils existants (clic pour choisir) + création
-  d'un profil par un nom (Entrée/bouton "Créer"). `src/ui/ecran_selection_joueur.py` (PC, saisie de
-  texte gérée manuellement via `on_text`/`on_key_press`, pas de widget pyglet dédié) ; `web/app.js`
-  (`afficherSelectionJoueur`/`creerNouveauJoueur`) + `web/bridge.py` (`creer_profil_web`)
+- **Sélection/création/suppression de profil** — liste des profils existants (clic pour choisir) +
+  création d'un profil par un nom (Entrée/bouton "Créer"). `src/ui/ecran_selection_joueur.py` (PC,
+  saisie de texte gérée manuellement via `on_text`/`on_key_press`, pas de widget pyglet dédié) ;
+  `web/app.js` (`afficherSelectionJoueur`/`creerNouveauJoueur`) + `web/bridge.py`
+  (`creer_profil_web`)
+  - **Suppression d'un profil** : bouton croix rouge sur chaque ligne (même icône que "Quitter" en
+    combat, `assets/interface/quitter.png`, déjà associée dans le jeu à une action destructive) —
+    action irréversible, jamais exécutée sans confirmation explicite ("Vous allez détruire le
+    joueur *nom*, êtes-vous sûr ?"). PC : dialogue de confirmation dessiné par-dessus la liste
+    (`EcranSelectionJoueur._dessiner_dialogue_confirmation`, `GROUPE_SUPERPOSITION` pour garantir
+    l'ordre de dessin, cf. "Pièges pyglet connus" du `CLAUDE.md`), Oui appelle
+    `src/gameplay/partie.py:supprimer_profil` (supprime le dossier du profil sous `saves/`, parties
+    sauvegardées incluses). Web : `confirm()` natif du navigateur plutôt qu'une boîte de dialogue
+    maison (aucune infrastructure de modale ailleurs dans le web du jeu) — `supprimerJoueurLocal`
+    (`web/app.js`) retire le profil de l'index `localStorage` et sa partie sauvegardée éventuelle
 - **Accueil du joueur** — si une partie `EN_COURS` existe : niveau, vaisseau (grille des modules
   équipés avec PV/PV max/niveau de mise à jour, ou "Emplacement vide"), boutons **Continuer** /
   **Abandonner la partie** / **Voir le deck**. Sinon : bouton **Nouvelle partie**.
@@ -1061,8 +1072,8 @@ fond dédié.
 - `src/gameplay/partie.py` (nouveau) : dataclasses `Profil`/`Partie`/`EtatModule`, sérialisation
   JSON pure (`profil_vers_json`/`profil_depuis_json`, `partie_vers_json`/`partie_depuis_json`,
   testables sans I/O), `nouveau_profil`/`nouvelle_partie`/`combat_depuis_partie`/`marquer_terminee`,
-  et l'I/O fichier PC (`lister_profils`, `creer_profil`, `sauvegarder_partie`, `partie_en_cours`,
-  `abandonner_partie`, sous `saves/`, nouveau dossier ajouté au `.gitignore`)
+  et l'I/O fichier PC (`lister_profils`, `creer_profil`, `supprimer_profil`, `sauvegarder_partie`,
+  `partie_en_cours`, `abandonner_partie`, sous `saves/`, nouveau dossier ajouté au `.gitignore`)
   - Nom `Profil` retenu plutôt que `Joueur` (déjà pris par `src/gameplay/joueur.py`, l'état de
     combat éphémère vaisseau + deck + électricité, §3.3) — pas de collision
   - `config_poc.deck_module_principal` factorisé en `ids_deck_module_principal` (renvoie des ids
@@ -1373,19 +1384,44 @@ Deux listes distinctes, indépendantes l'une de l'autre (décision utilisateur) 
 - `COLONNE_AVANT_SINON_ARRIERE_JOUEUR` : un module du joueur tiré au hasard dans la colonne avant
   (base incluse, comme en §12.1) s'il y en a un de vivant, sinon dans la colonne arrière — le
   tirage n'a lieu qu'à la résolution réelle du tour, jamais au survol/tap (même principe que Tir
-  allié, §12.6, pour rester déterministe)
+  allié, §12.6, pour rester déterministe). Plus utilisée par aucun ennemi actuel (Miroir, seul
+  utilisateur, cible désormais un ennemi allié - cf. `COLONNE_AVANT_SINON_ARRIERE_ENNEMIE`
+  ci-dessous et §13.2), conservée pour un futur ennemi qui ciblerait le joueur de cette façon
+- `COLONNE_AVANT_SINON_ARRIERE_ENNEMIE` : un ennemi de la flotte tiré au hasard (l'ennemi qui
+  exécute l'Action y compris — ex. Miroir peut se cibler lui-même) dans la colonne avant s'il y en
+  a un de vivant, sinon dans la colonne arrière (ex. Miroir pose un Bouclier miroir sur un allié,
+  §13.2)
 - `SOI_MEME` : l'ennemi qui exécute l'Action (uniquement pertinent pour `POSE_BUFF`)
 
 ### 13.2 Bouclier miroir (`ActionCarte.BOUCLIER_MIROIR`)
 
-Buff posé sur un module du joueur (ennemi Miroir). Tant qu'il est actif, une attaque reçue par ce
-module est en partie **renvoyée à l'attaquant** : jusqu'à la valeur du bouclier miroir, les dégâts
-sont retirés à l'ennemi attaquant plutôt qu'au module protégé ; le reste (si les dégâts dépassent la
-valeur du bouclier miroir) s'applique normalement au module. Se consomme comme un bouclier classique
-(sa valeur diminue à chaque dégât renvoyé, l'instance est retirée à 0) ; plusieurs instances peuvent
-coexister sur un même module, consommées dans l'ordre de pose (`Combat._consommer_bouclier_miroir`).
-Uniquement pris en compte côté résolution du tour ennemi (`Combat._resoudre_attaque`) : le joueur ne
-s'attaque jamais lui-même, cette mécanique n'a de sens que pour une attaque ennemie.
+**Changement de cible (décision utilisateur) :** posé désormais sur un **ennemi allié**
+(`COLONNE_AVANT_SINON_ARRIERE_ENNEMIE`, §13.1 — colonne avant de la flotte si elle compte un
+ennemi vivant, sinon arrière, Miroir peut se cibler lui-même) plutôt que sur un module du joueur
+comme dans la version initiale de cette mécanique. Objectif inversé : protéger un allié ennemi
+contre les attaques **du joueur**, plutôt qu'un module du joueur contre les attaques ennemies.
+
+Tant qu'il est actif, une attaque reçue par l'ennemi protégé est en partie **renvoyée** : jusqu'à
+la valeur du bouclier miroir, les dégâts sont retirés à l'attaquant plutôt qu'à la cible protégée ;
+le reste (si les dégâts dépassent la valeur du bouclier miroir) s'applique normalement à la cible.
+Se consomme comme un bouclier classique (sa valeur diminue à chaque dégât renvoyé, l'instance est
+retirée à 0) ; plusieurs instances peuvent coexister sur une même cible, consommées dans l'ordre de
+pose. Deux mécanismes distincts selon qui attaque, chacun avec sa propre méthode de consommation :
+
+- **Une Action ennemie attaque l'ennemi protégé** (ex. Tir allié détourne un tir vers lui,
+  §12.6) : l'« attaquant » est un `Ennemi` bien identifié — les dégâts lui sont renvoyés
+  directement (`Combat._consommer_bouclier_miroir`/`_resoudre_attaque`), comme dans la version
+  initiale de cette mécanique
+- **Le joueur attaque l'ennemi protégé** (une carte) : il n'y a pas d'« attaquant » identifiable
+  côté joueur (une carte n'est liée à aucun module, l'électricité est une ressource commune) — donc
+  chaque instance de Bouclier miroir renvoie plutôt vers **son propre module du joueur**, tiré au
+  hasard **une bonne fois pour toutes à la pose du buff** (`BuffActif.cible_reflet`,
+  `Combat._executer_pose_buff`/`_consommer_bouclier_miroir_vers_joueur`), jamais à la résolution de
+  l'attaque : contrairement à Tir allié (cible réelle découverte seulement à la résolution, pour
+  rester déterministe au survol/tap), ce choix est **affiché dès la pose** dans l'infobulle de
+  l'ennemi protégé (`Bouclier miroir 5 -> Principal`, PC `_libelle_buff`/web
+  `libelleEffetActif`+`cible_reflet_nom`) : le joueur peut anticiper quel module de son vaisseau
+  est en jeu avant de décider d'attaquer ou non la cible protégée
 
 ### 13.3 Les ennemis (`config/ennemis.json`)
 
@@ -1398,7 +1434,7 @@ Boss des pirates a été ajouté séparément comme boss unique du parcours (§1
 | Le nettoyeur | S | 25 | Attaque 7 dégâts, **2 fois** par tour (`repetitions=2`), cible de proximité |
 | Petit Jean | S | 100 | Attaque 2 dégâts par tour (proximité) ; tous les 2 tours (à partir du tour 1), se pose 3 bouclier pendant 2 tours |
 | Le puzzle | S | 50 | Attaque 5 dégâts **tous les modules du joueur** par tour (zone) |
-| Miroir | S | 50 | Chaque tour, pose un Bouclier miroir de valeur 5 (persistant) sur un module allié tiré au hasard (colonne avant sinon arrière) |
+| Miroir | S | 50 | Attaque 2 dégâts par tour (proximité) ; chaque tour, pose un Bouclier miroir de valeur 5 (persistant) sur un ennemi allié tiré au hasard (lui-même inclus, colonne avant sinon arrière) |
 | Le Boss des pirates | M, 2 emplacements | 150 | Attaque 5 dégâts **tous les modules du joueur** par tour (zone) ; à partir du tour 2, tous les 3 tours, augmente ses dégâts d'attaque de 2 (persistant, cumulatif) ; à partir du tour 3, tous les 3 tours, se pose un bouclier de 5 |
 
 Valeurs de PV/dégâts inventées faute de spec numérique précise (à ajuster à l'équilibrage) — à
@@ -1424,6 +1460,29 @@ composition, pas un attribut de l'`Ennemi` en combat) :
 - Le Boss des pirates n'a pas de préférence de placement au sens de `SpecEnnemi.placement` : sa
   position (Avant + Arrière de la rangée du milieu) est câblée en dur dans `creer_flotte_boss`
   (§13.4), puisqu'il n'est jamais mélangé avec d'autres ennemis dans une même flotte
+
+**Intention affichée au survol/tap** (décision utilisateur, suite au Boss des pirates qui a révélé
+deux lacunes) — une ligne par Action active au prochain tour, pas seulement la première :
+
+- `Combat.prochaines_actions_actives(ennemi)` renvoie **toutes** les Actions actives au prochain
+  tour (`prochaine_action_active` n'en renvoyait qu'une seule — toujours la première de la liste,
+  ce qui masquait silencieusement toute Action suivante comme un `POSE_BUFF` déclenché le même tour
+  qu'une `ATTAQUE`, ex. le Boss des pirates ; conservée telle quelle, utilisée par
+  `previsualiser_cible` qui ne s'intéresse qu'à une éventuelle Attaque de proximité). PC
+  (`fenetre.py:_dessiner_survol`) et web (`bridge.py:_intentions_json`, une liste — remplace
+  l'ancien champ singulier `intention`) itèrent désormais sur cette liste complète
+- **Répétitions** (`ActionEnnemi.repetitions > 1`, ex. Le nettoyeur) : la ligne d'intention
+  précise "x{repetitions}" (`Vise : Module (7 dégâts x2)`) — auparavant la valeur affichée
+  correspondait à un seul coup sans l'indiquer, laissant croire que l'ennemi n'inflige que cette
+  valeur alors que l'Action se répète plusieurs fois dans le même tour
+- **Type de buff/debuff posé** (`POSE_BUFF`) : la ligne d'intention décrit désormais l'effet par
+  son type (`_texte_type_buff`/`texteTypeBuff`, même mapping que les buffs déjà actifs, §13 point 2
+  ci-dessus — ex. "Va poser Dégâts augmentés +2 (sur lui-même)") plutôt que le générique "Pose un
+  effet (X)" d'origine, qui ne précisait ni le type d'effet ni sa cible (soi-même ou un module tiré
+  au hasard)
+- Corrigé au passage un bug latent côté web : `app.js:LIBELLES_ACTION_ACTIF` n'avait pas d'entrée
+  pour `AUGMENTATION_DEGATS`, ce qui aurait fait planter l'infobulle web au survol/tap d'un ennemi
+  portant ce buff déjà actif (jamais déclenché avant le Boss des pirates, premier à l'utiliser)
 
 ### 13.4 Composition des flottes de combat
 

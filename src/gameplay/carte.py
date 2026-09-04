@@ -5,6 +5,10 @@ Definition des cartes jouables pour le combat.
 import dataclasses
 from dataclasses import dataclass
 from enum import Enum, auto
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.gameplay.module import Module
 
 
 class TypeCarte(Enum):
@@ -105,11 +109,18 @@ class BuffActif:
     """Un buff (ou un debuff : meme modele, la difference n'est que semantique - specs.md 13)
     actif sur un Module ou un Ennemi. Chaque application reste une instance independante, pas
     de fusion meme entre deux buffs du meme type sur la meme entite. tours_restants est None
-    pour un buff persistant (dure tout le combat, ne decompte jamais)."""
+    pour un buff persistant (dure tout le combat, ne decompte jamais).
+
+    cible_reflet : uniquement pour BOUCLIER_MIROIR pose sur un Ennemi (specs.md 13, ennemi
+    Miroir) - le module du joueur qui recevra les degats renvoyes quand le JOUEUR (pas un
+    ennemi) attaquera l'ennemi protege. Tire une seule fois, a la pose du buff
+    (Combat._executer_pose_buff), jamais a la resolution : contrairement a Tir allie, ce choix
+    est affiche au joueur des la pose plutot que decouvert seulement a la resolution du tour."""
 
     action: ActionCarte
     valeur: int
     tours_restants: int | None
+    cible_reflet: "Module | None" = None
 
 
 @dataclass(eq=False)

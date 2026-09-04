@@ -424,21 +424,36 @@ def _texte_et_couleur_effet(carte: Carte, valeur_effective: int) -> tuple[str, t
     return f"+{valeur_effective}", COULEUR_POPUP_SOIN
 
 
+def _texte_type_buff(action: ActionCarte, valeur: int) -> str:
+    """Texte decrivant un buff/debuff par son seul type (specs.md 12.1/12.3/12.4/12.5/13), sans
+    mention de duree - reutilise par _libelle_buff (buff deja actif, duree ajoutee autour) et
+    par la prochaine action d'un ennemi (POSE_BUFF, cf. _dessiner_survol, pas encore active
+    donc pas de duree ecoulee a afficher)."""
+    if action == ActionCarte.BOUCLIER_PAR_TOUR:
+        return f"+{valeur} bouclier/tour"
+    if action == ActionCarte.BOUCLIER_MIROIR:
+        return f"Bouclier miroir {valeur}"
+    if action == ActionCarte.VULNERABILITE:
+        return f"Vulnerabilite +{valeur}%"
+    if action == ActionCarte.REDIRECTION_CIBLE:
+        return "Tir detourne"
+    if action == ActionCarte.REDUCTION_DEGATS:
+        return f"Degats reduits -{valeur}"
+    if action == ActionCarte.AUGMENTATION_DEGATS:
+        return f"Degats augmentes +{valeur}"
+    return f"Buff +{valeur}"
+
+
 def _libelle_buff(buff: BuffActif) -> str:
     """Texte d'une ligne d'infobulle pour un buff/debuff actif, sur un module ou un ennemi
-    (specs.md 12.1/12.3/12.4/12.5/13 - meme modele des deux cotes, cf. carte.py:BuffActif)."""
-    if buff.action == ActionCarte.BOUCLIER_PAR_TOUR:
-        texte = f"+{buff.valeur} bouclier/tour"
-    elif buff.action == ActionCarte.BOUCLIER_MIROIR:
-        texte = f"Bouclier miroir {buff.valeur}"
-    elif buff.action == ActionCarte.VULNERABILITE:
-        texte = f"Vulnerabilite +{buff.valeur}%"
-    elif buff.action == ActionCarte.REDIRECTION_CIBLE:
-        texte = "Tir detourne"
-    elif buff.action == ActionCarte.REDUCTION_DEGATS:
-        texte = f"Degats reduits -{buff.valeur}"
-    else:
-        texte = f"Buff +{buff.valeur}"
+    (specs.md 12.1/12.3/12.4/12.5/13 - meme modele des deux cotes, cf. carte.py:BuffActif).
+
+    Pour un Bouclier miroir (specs.md 13, ennemi Miroir), precise le module du joueur qui
+    recevra les degats renvoyes (BuffActif.cible_reflet, tire une bonne fois pour toutes a la
+    pose du buff) - le joueur doit pouvoir l'anticiper avant d'attaquer l'ennemi protege."""
+    texte = _texte_type_buff(buff.action, buff.valeur)
+    if buff.action == ActionCarte.BOUCLIER_MIROIR and buff.cible_reflet is not None:
+        texte += f" -> {buff.cible_reflet.nom}"
     if buff.tours_restants is None:
         duree = "illimite"
     else:
@@ -779,8 +794,11 @@ class FenetreCombat(pyglet.window.Window):
     def _dessiner_survol(self, lot: pyglet.graphics.Batch) -> list:
         """Affiche une infobulle (nom, PV/PV max, Bouclier) sur le module/ennemi survole.
 
-        Pour un ennemi, ajoute aussi son intention (cible visee et degats, cf. ciblage.py).
-        Pour un module, ajoute le detail de ses buffs actifs (specs.md 12.3/12.5).
+        Pour un ennemi, ajoute aussi son intention (specs.md 13) : cible visee et degats pour
+        une ATTAQUE, type de buff/debuff pose (via _texte_type_buff) et sa cible pour une
+        POSE_BUFF - "x{repetitions}" dans les deux cas si l'action se declenche plusieurs fois
+        dans le meme tour (ex. Le nettoyeur). Pour un module, ajoute le detail de ses buffs
+        actifs (specs.md 12.3/12.5).
         """
         if self.combat.etat != EtatCombat.EN_COURS:
             return []
@@ -793,22 +811,33 @@ class FenetreCombat(pyglet.window.Window):
             if rect is None:
                 return []
             lignes = [entite.nom, f"PV {entite.pv}/{entite.pv_max}", f"Bouclier {entite.bouclier}"]
-            action = self.combat.prochaine_action_active(entite)
-            if action is not None and action.type == TypeActionEnnemi.ATTAQUE:
-                degats = entite.degats_attaque_effectifs(action.valeur)
-                if action.cible == CibleActionEnnemi.TOUS_MODULES_JOUEUR:
-                    lignes.append(f"Vise : tous les modules ({degats} degats)")
-                else:
-                    cible = self.combat.previsualiser_cible(entite)
-                    if cible is not None:
-                        lignes.append(f"Vise : {cible.nom} ({degats} degats)")
-                    elif any(buff.action == ActionCarte.REDIRECTION_CIBLE for buff in entite.buffs_actifs):
-                        # Tir allie actif (specs.md 12.6) : la cible reelle (un autre ennemi)
-                        # n'est tiree au hasard qu'a la resolution du tour, jamais au survol -
-                        # cf. Combat.previsualiser_cible/_cible_redirection, deterministe.
-                        lignes.append("Vise : un allie au hasard")
-            elif action is not None and action.type == TypeActionEnnemi.POSE_BUFF:
-                lignes.append(f"Pose un effet ({action.valeur})")
+            # Toutes les Actions actives au prochain tour (specs.md 13), pas seulement la
+            # premiere : plusieurs peuvent se declencher le meme tour (ex. le Boss des pirates,
+            # qui attaque ET pose un buff), chacune donne sa propre ligne.
+            for action in self.combat.prochaines_actions_actives(entite):
+                # "x{repetitions}" (specs.md 13, ex. Le nettoyeur) : l'action se declenche
+                # plusieurs fois dans le meme tour, chaque occurrence infligeant/posant la
+                # valeur affichee - sans cette mention, l'infobulle laisse croire a un seul
+                # coup alors que les degats/effet reels sont multiplies par ce nombre.
+                repetition = f" x{action.repetitions}" if action.repetitions > 1 else ""
+                if action.type == TypeActionEnnemi.ATTAQUE:
+                    degats = entite.degats_attaque_effectifs(action.valeur)
+                    if action.cible == CibleActionEnnemi.TOUS_MODULES_JOUEUR:
+                        lignes.append(f"Vise : tous les modules ({degats} degats{repetition})")
+                    else:
+                        cible = self.combat.previsualiser_cible(entite)
+                        if cible is not None:
+                            lignes.append(f"Vise : {cible.nom} ({degats} degats{repetition})")
+                        elif any(buff.action == ActionCarte.REDIRECTION_CIBLE for buff in entite.buffs_actifs):
+                            # Tir allie actif (specs.md 12.6) : la cible reelle (un autre
+                            # ennemi) n'est tiree au hasard qu'a la resolution du tour, jamais
+                            # au survol - cf. Combat.previsualiser_cible/_cible_redirection,
+                            # deterministe.
+                            lignes.append(f"Vise : un allie au hasard{repetition}")
+                elif action.type == TypeActionEnnemi.POSE_BUFF:
+                    texte_buff = _texte_type_buff(action.action_buff, action.valeur)
+                    cible_texte = "sur lui-meme" if action.cible == CibleActionEnnemi.SOI_MEME else "sur un allie au hasard"
+                    lignes.append(f"Va poser {texte_buff} ({cible_texte}){repetition}")
             lignes.extend(_libelle_buff(buff) for buff in entite.buffs_actifs)
         else:
             rect = self._rect_du_module(entite)

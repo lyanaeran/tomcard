@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "60";
+const VERSION_CACHE = "63";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -294,20 +294,24 @@ function afficherInfobulle(idCase, typeCase) {
         }
     } else {
         lignes.push(`<div>🔵 ${objet.bouclier}</div>`);
-        if (objet.intention) {
-            // Tir allie actif (specs.md 12.6) : la cible reelle (un autre ennemi) n'est
-            // tiree au hasard qu'a la resolution du tour, jamais ici (cf. bridge.py
-            // _intention_json), pour rester deterministe au tap/redessin. Idem pour une
-            // Action POSE_BUFF (specs.md 13) : pas de cible individuelle a afficher.
-            const intention = objet.intention;
+        // Une ligne par Action active au prochain tour (specs.md 13, bridge.py:_intentions_json) -
+        // plusieurs peuvent l'etre le meme tour (ex. le Boss des pirates, qui attaque ET pose un
+        // buff). Tir allie actif (specs.md 12.6) : la cible reelle (un autre ennemi) n'est tiree
+        // au hasard qu'a la resolution du tour, jamais ici, pour rester deterministe au tap/
+        // redessin. "x{repetitions}" (ex. Le nettoyeur) : l'action se declenche plusieurs fois
+        // dans le meme tour, sans quoi l'infobulle laisserait croire a un seul coup/pose.
+        for (const intention of objet.intentions) {
+            const repetition = intention.repetitions > 1 ? ` x${intention.repetitions}` : "";
             if (intention.type === "POSE_BUFF") {
-                lignes.push(`<div>🛡️ Pose un effet (${intention.valeur})</div>`);
+                const texteBuff = texteTypeBuff(intention.action_buff, intention.valeur);
+                const cibleTexte = intention.soi_meme ? "sur lui-meme" : "sur un allie au hasard";
+                lignes.push(`<div>🛡️ Va poser ${texteBuff} (${cibleTexte})${repetition}</div>`);
             } else if (intention.cible_type === "REDIRECTION") {
-                lignes.push(`<div>🎯 Vise un allie au hasard</div>`);
+                lignes.push(`<div>🎯 Vise un allie au hasard${repetition}</div>`);
             } else if (intention.cible_type === "TOUS") {
-                lignes.push(`<div>🎯 Tous les modules (-${intention.degats})</div>`);
+                lignes.push(`<div>🎯 Tous les modules (-${intention.degats}${repetition})</div>`);
             } else {
-                lignes.push(`<div>🎯 ${intention.module_nom} (-${intention.degats})</div>`);
+                lignes.push(`<div>🎯 ${intention.module_nom} (-${intention.degats}${repetition})</div>`);
             }
         }
         for (const debuff of objet.debuffs) {
@@ -532,12 +536,29 @@ const LIBELLES_ACTION_ACTIF = {
     BOUCLIER_PAR_TOUR: (buff) => `+${buff.valeur} bouclier/tour`,
     BOUCLIER_MIROIR: (buff) => `Bouclier miroir ${buff.valeur}`,
     REDUCTION_DEGATS: (buff) => `Degats reduits -${buff.valeur}`,
+    AUGMENTATION_DEGATS: (buff) => `Degats augmentes +${buff.valeur}`,
     VULNERABILITE: (buff) => `Vulnerabilite +${buff.valeur}%`,
     REDIRECTION_CIBLE: () => `Tir detourne`,
 };
 
+// Texte d'un buff/debuff par son seul type (sans duree), reutilise par libelleEffetActif
+// (buff deja actif) et par l'intention POSE_BUFF d'un ennemi (pas encore active, cf.
+// afficherInfobulle) - repli generique si jamais un type sans libelle dedie apparaissait,
+// pour ne jamais planter (contrairement a un acces direct LIBELLES_ACTION_ACTIF[action](...)).
+function texteTypeBuff(action, valeur) {
+    const fabrique = LIBELLES_ACTION_ACTIF[action];
+    return fabrique ? fabrique({ valeur }) : `Buff +${valeur}`;
+}
+
 function libelleEffetActif(buff) {
-    const texte = LIBELLES_ACTION_ACTIF[buff.action](buff);
+    // Bouclier miroir (specs.md 13, ennemi Miroir) : precise le module du joueur qui recevra
+    // les degats renvoyes (cible_reflet_nom, tire une bonne fois pour toutes a la pose du
+    // buff, cf. bridge.py:_debuffs_json) - le joueur doit pouvoir l'anticiper avant d'attaquer
+    // l'ennemi protege.
+    let texte = texteTypeBuff(buff.action, buff.valeur);
+    if (buff.action === "BOUCLIER_MIROIR" && buff.cible_reflet_nom) {
+        texte += ` -> ${buff.cible_reflet_nom}`;
+    }
     if (buff.tours_restants === null) return `${texte} (illimite)`;
     const tour = buff.tours_restants === 1 ? "tour" : "tours";
     return `${texte} (${buff.tours_restants} ${tour})`;
@@ -1616,15 +1637,47 @@ function sauvegarderPartieLocale(joueurId, partie) {
     localStorage.setItem(clePartie(joueurId), JSON.stringify(partie));
 }
 
+// Supprime definitivement un joueur (index CLE_JOUEURS) et sa partie sauvegardee eventuelle -
+// action destructive, appelee uniquement apres confirmation (cf. bouton-supprimer-joueur dans
+// afficherSelectionJoueur ci-dessous). Meme principe que src/gameplay/partie.py:supprimer_profil
+// cote PC, mais purement localStorage ici (pas de FS Pyodide, cf. commentaire plus haut).
+function supprimerJoueurLocal(joueurId) {
+    const joueurs = listerJoueursLocal().filter((joueur) => joueur.id !== joueurId);
+    localStorage.setItem(CLE_JOUEURS, JSON.stringify(joueurs));
+    localStorage.removeItem(clePartie(joueurId));
+}
+
 let joueurCourant = null;
 
 function afficherSelectionJoueur() {
     const joueurs = listerJoueursLocal();
     document.getElementById("liste-joueurs").innerHTML = joueurs
-        .map((joueur, index) => `<div class="ligne-joueur" data-index="${index}">${joueur.nom}</div>`)
+        .map(
+            (joueur, index) => `
+            <div class="ligne-joueur" data-index="${index}">
+                <span class="nom-joueur">${joueur.nom}</span>
+                <button class="bouton-supprimer-joueur" data-index="${index}" title="Supprimer ce joueur" aria-label="Supprimer ce joueur">
+                    <img src="assets/interface/quitter.png" alt="">
+                </button>
+            </div>`
+        )
         .join("");
     document.querySelectorAll(".ligne-joueur").forEach((element) => {
         element.addEventListener("click", () => choisirJoueur(joueurs[Number(element.dataset.index)]));
+    });
+    // Bouton croix rouge (specs.md 10.3) : stopPropagation pour ne pas aussi declencher le clic
+    // de la ligne (choisirJoueur) qui le contient. confirm() natif plutot qu'une boite de dialogue
+    // maison (aucune infrastructure de modale ailleurs dans ce projet web, cf. CLAUDE.md - pas
+    // d'abstraction au-dela du necessaire) - suppression irreversible, jamais sans confirmation.
+    document.querySelectorAll(".bouton-supprimer-joueur").forEach((element) => {
+        element.addEventListener("click", (evenement) => {
+            evenement.stopPropagation();
+            const joueur = joueurs[Number(element.dataset.index)];
+            if (confirm(`Vous allez detruire le joueur ${joueur.nom}, etes-vous sur ?`)) {
+                supprimerJoueurLocal(joueur.id);
+                afficherSelectionJoueur();
+            }
+        });
     });
     document.getElementById("nom-nouveau-joueur").value = "";
     masquerTousLesEcrans();
