@@ -42,16 +42,20 @@ PV_ENNEMI_MODE_TEST = 20
 # Nombre de cases ennemies peuplees (sur les 6 de la grille, POSITIONS_ENNEMIES) en mode test -
 # moins d'ennemis a vaincre par combat pour accelerer les essais manuels.
 NOMBRE_ENNEMIS_MODE_TEST = 2
-# Valeur (degats) appliquee aux cartes ATTAQUE de rarete Base (Laser, Laser percant,
-# Bombardement) en mode test uniquement - superieure a PV_ENNEMI_MODE_TEST pour tuer un ennemi en
-# un coup. Les autres cartes gardent leur valeur normale (config/cartes.json).
+# Valeur (degats) appliquee aux cartes ATTAQUE de rarete Base (Laser, Laser percant) en mode test
+# uniquement - superieure a PV_ENNEMI_MODE_TEST pour tuer un ennemi en un coup. Les autres cartes
+# gardent leur valeur normale (config/cartes.json).
 VALEUR_ATTAQUE_BASE_MODE_TEST = 20
 
 ELECTRICITE_PAR_TOUR = 3
 ID_MODULE_PRINCIPAL = "MOD_1"
 NOMBRE_MODULES_EQUIPES = 4
-# Deck de base du module principal (12 cartes) : chaque carte de rarete Base une fois, sauf
+# Deck de base du module principal (10 cartes) : chaque carte de rarete Base une fois, sauf
 # Laser et Bouclier, 4 exemplaires chacune (regle donnee explicitement par l'utilisateur).
+# Bombardement et Reparation retires de ce module (decision utilisateur). Bombardement est
+# devenu une carte Commune du Lanceur de missiles (cout 1, cf. config/cartes.json, config/
+# modules.json). Reparation deviendra une carte de l'Atelier - pas encore pret (cartes.json la
+# garde telle quelle en attendant, juste detachee de la liste `cartes` du module principal).
 NOMS_QUADRUPLES_MODULE_PRINCIPAL = ("Laser", "Bouclier")
 # Nombre de cartes tirees au hasard par module equipe (regle interimaire : la regle cible
 # "2 Communes + 1 Rare + 1 Legendaire" par module equipe necessite qu'aucun module n'ait de
@@ -110,7 +114,7 @@ def ids_deck_module_principal(spec_principal: SpecModule, cartes: dict[str, Cart
 
 
 def deck_module_principal(spec_principal: SpecModule, cartes: dict[str, Carte]) -> list[Carte]:
-    """Deck de base fixe du module principal (12 cartes, pas de tirage aleatoire) : chaque
+    """Deck de base fixe du module principal (10 cartes, pas de tirage aleatoire) : chaque
     carte de rarete Base de sa pool une fois, sauf Laser et Bouclier en 4 exemplaires."""
     return [cartes[id_carte].copie() for id_carte in ids_deck_module_principal(spec_principal, cartes)]
 
@@ -135,7 +139,7 @@ def creer_vaisseau(specs_modules: list[SpecModule], aleatoire: random.Random) ->
 
 
 def creer_deck(specs_utilisees: list[SpecModule], cartes: dict[str, Carte], aleatoire: random.Random) -> Deck:
-    """Deck de base fixe du module principal (le premier de la liste, 12 cartes, cf.
+    """Deck de base fixe du module principal (le premier de la liste, 10 cartes, cf.
     `deck_module_principal`) + 3 cartes tirees au sort dans la pool de chaque autre module."""
     spec_principal, *specs_equipes = specs_utilisees
     deck_cartes = deck_module_principal(spec_principal, cartes)
@@ -145,8 +149,8 @@ def creer_deck(specs_utilisees: list[SpecModule], cartes: dict[str, Carte], alea
 
 
 def appliquer_degats_mode_test(cartes: list[Carte]) -> None:
-    """Mode test (cf. MODE_TEST) : les cartes ATTAQUE de rarete Base (Laser, Laser percant,
-    Bombardement) infligent VALEUR_ATTAQUE_BASE_MODE_TEST degats (tuer un ennemi en un coup, cf.
+    """Mode test (cf. MODE_TEST) : les cartes ATTAQUE de rarete Base (Laser, Laser percant)
+    infligent VALEUR_ATTAQUE_BASE_MODE_TEST degats (tuer un ennemi en un coup, cf.
     PV_ENNEMI_MODE_TEST) ; les autres cartes gardent leur valeur normale. Modifie `cartes` en
     place - reutilisee par creer_deck_mode_test() ci-dessous et par
     src/gameplay/partie.py:combat_depuis_partie() (vrai combat du parcours, deck reel de la

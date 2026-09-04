@@ -120,7 +120,7 @@ def test_nouvelle_partie_commence_au_niveau_1_avec_seulement_le_module_principal
 def test_nouvelle_partie_deck_de_depart_du_module_principal():
     partie = nouvelle_partie(random.Random(1))
 
-    assert len(partie.deck) == 12
+    assert len(partie.deck) == 10
     assert partie.deck.count("CRT_7") == 4  # Laser
     assert partie.deck.count("CRT_10") == 4  # Bouclier
 

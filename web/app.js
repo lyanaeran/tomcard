@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "57";
+const VERSION_CACHE = "58";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -124,11 +124,11 @@ const IDS_ECRANS = [
 
 function masquerTousLesEcrans() {
     IDS_ECRANS.forEach((id) => document.getElementById(id).classList.add("cachee"));
-    // Masquee par defaut a chaque changement d'ecran : seuls les ecrans du parcours hors combat la
-    // reaffichent explicitement (actualiserBarreLaterale(), appelee apres masquerTousLesEcrans()
-    // dans leur fonction d'affichage/rendu) - sans ce reset, elle resterait visible en passant par
-    // exemple de Station service a l'accueil ou au combat.
+    // Masquees par defaut a chaque changement d'ecran : seul le Combat les reaffiche explicitement
+    // (actualiserBarreLaterale(true), appelee depuis rendre()) - sans ce reset, elles resteraient
+    // visibles en passant par exemple de Station service a l'accueil ou au combat.
     document.getElementById("barre-laterale").classList.add("cachee");
+    document.getElementById("controles-combat").classList.add("cachee");
 }
 
 async function demarrer() {
@@ -208,6 +208,17 @@ function jouerCarte(index, idCible) {
 
 function finirTour() {
     appliquerResultat(appelerBridge("finir_tour"));
+}
+
+function quitterCombat() {
+    // Bouton "Quitter" (specs.md 8.1, icone rouge) : ferme le combat en cours sans le
+    // synchroniser ni le sauvegarder (decision utilisateur, meme principe que
+    // FenetreCombat.quitte_demandee cote pc/main.py:_ouvrir_combat) - la partie sauvegardee
+    // (localStorage) reste EN_COURS telle qu'elle etait avant ce combat, qui repartira de zero
+    // (nouveau tirage de flotte) au prochain "Continuer" depuis l'accueil du joueur.
+    partieActive = null;
+    joueurCourant = null;
+    afficherSelectionJoueur();
 }
 
 function afficherPopups(popups) {
@@ -565,8 +576,8 @@ function rendre() {
     document.getElementById("info-carte").innerHTML = rendreInfoCarte();
     document.getElementById("banniere").innerHTML = rendreBanniereFin();
 
-    const boutonFinTour = document.getElementById("fin-tour");
-    boutonFinTour.disabled = etatCourant.etat !== "EN_COURS";
+    const boutonTourSuivant = document.getElementById("tour-suivant");
+    boutonTourSuivant.disabled = etatCourant.etat !== "EN_COURS";
 
     document.querySelectorAll(".case[data-id]").forEach((element) => {
         attacherPressionCase(element, element.dataset.id, element.dataset.type);
@@ -1693,19 +1704,24 @@ function retourDepuisDeck() {
 // le deck changent sans quitter l'ecran (Station service, Aventures).
 function actualiserBarreLaterale(enCombat = false) {
     const barre = document.getElementById("barre-laterale");
+    const controlesCombat = document.getElementById("controles-combat");
+    // #controles-combat (Electricite/tour suivant/Quitter) reste affiche en Combat meme quand la
+    // barre elle-meme ne l'est pas (mode demonstration ci-dessous, portrait, ecran trop etroit ou
+    // chevauchement plus bas) : contrairement a Niveau/Argent/Deck/Vaisseau, mettre fin a son tour
+    // reste une action essentielle (cf. commentaire CSS de #controles-combat, style.css).
+    controlesCombat.classList.toggle("cachee", !enCombat);
     if (!partieActive) {
         // Mode demonstration (window.nouveauChoixModule/choixNiveau/...) : pas de vraie Partie,
-        // rien a afficher (meme situation que src/ui/fenetre.py:self.niveau en mode POC).
+        // rien a afficher sur la barre elle-meme (meme situation que src/ui/fenetre.py:self.partie
+        // en mode POC) - "Quitter" reste utilisable (revient simplement a la selection du joueur,
+        // cf. quitterCombat()).
         barre.classList.add("cachee");
+        controlesCombat.classList.add("controles-combat-sans-barre");
         return;
     }
     document.getElementById("niveau-barre-laterale").textContent = `Niveau ${partieActive.niveau}`;
     document.getElementById("argent-barre-laterale").textContent = `${partieActive.argent} €`;
     document.getElementById("compteur-deck-barre-laterale").textContent = `${partieActive.deck.length} cartes`;
-    // En Combat, #entete (Electricite/Fin de tour) occupe deja le haut de l'ecran : decale la
-    // barre sous ce bandeau (classe .barre-laterale-combat, style.css) plutot que par-dessus,
-    // meme principe que Y_HAUT_BARRE_COMBAT cote PC (src/ui/fenetre.py).
-    barre.classList.toggle("barre-laterale-combat", enCombat);
     barre.classList.remove("cachee");
     if (enCombat && barreChevaucheVaisseau()) {
         // Contrairement aux autres ecrans du parcours (largeur de grille fixe via clamp()), la
@@ -1714,6 +1730,15 @@ function actualiserBarreLaterale(enCombat = false) {
         // chevauchement sur tous les formats (fenetre large et haute, tablette en paysage...) -
         // verifie donc le chevauchement reel apres affichage plutot que de deviner un seuil.
         barre.classList.add("cachee");
+    }
+    if (enCombat) {
+        // Empile #controles-combat sous la barre laterale quand elle est effectivement visible,
+        // ou a sa place par defaut sinon (chevauchement ci-dessus, ou portrait/ecran etroit via le
+        // media query qui masque #barre-laterale, cf. style.css) - passe par getComputedStyle
+        // plutot que offsetParent, qui vaut toujours null pour un element position:fixed comme
+        // celui-ci, visible ou non.
+        const barreVisible = getComputedStyle(barre).display !== "none";
+        controlesCombat.classList.toggle("controles-combat-sans-barre", !barreVisible);
     }
 }
 
@@ -1788,7 +1813,8 @@ function nouvellePartie() {
     ouvrirChoixModulePartie(partie);
 }
 
-document.getElementById("fin-tour").addEventListener("click", finirTour);
+document.getElementById("tour-suivant").addEventListener("click", finirTour);
+document.getElementById("bouton-quitter-combat").addEventListener("click", quitterCombat);
 document.getElementById("bouton-creer-joueur").addEventListener("click", creerNouveauJoueur);
 document.getElementById("nom-nouveau-joueur").addEventListener("keydown", (evenement) => {
     if (evenement.key === "Enter") creerNouveauJoueur();

@@ -31,21 +31,6 @@
       "effet": { "type": "ATTAQUE", "cible": "LIGNE_ENNEMIE", "valeur": 7 }
     },
     {
-      "id": "CRT_9",
-      "nom": "Bombardement",
-      "image": "assets/cartes/bombe.png",
-      "module_origine": "Module principal",
-      "rarete": "Base",
-      "categorie": "Attaque",
-      "cible_design": "Ennemi Tous",
-      "cout": 2,
-      "x": 3,
-      "y": null,
-      "munition": null,
-      "description": "Inflige X degats a tous les ennemis",
-      "effet": { "type": "ATTAQUE", "cible": "ENNEMIS_MULTIPLES", "valeur": 3 }
-    },
-    {
       "id": "CRT_10",
       "nom": "Bouclier",
       "image": "assets/cartes/bouclier.png",
@@ -126,7 +111,7 @@
       "nom": "Ciel de missiles",
       "image": "assets/cartes/missiles.png",
       "module_origine": "Lanceur de missiles",
-      "rarete": "Commune",
+      "rarete": "Rare",
       "categorie": "Attaque",
       "cible_design": "Ennemi Tous",
       "cout": 1,
@@ -144,8 +129,8 @@
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible_design": "Ennemi Arriere",
-      "cout": 2,
-      "x": 7,
+      "cout": 1,
+      "x": 6,
       "y": null,
       "munition": null,
       "description": "Inflige X degats a tous les ennemis de la ligne arriere",
@@ -200,6 +185,21 @@
       "munition": null,
       "description": "Inflige X degats a tous les ennemis pour les Y prochains tours",
       "_non_jouable": "effet a duree (degats sur plusieurs tours) non supporte par le moteur actuel"
+    },
+    {
+      "id": "CRT_9",
+      "nom": "Bombardement",
+      "image": "assets/cartes/bombe.png",
+      "module_origine": "Lanceur de missiles",
+      "rarete": "Commune",
+      "categorie": "Attaque",
+      "cible_design": "Ennemi Tous",
+      "cout": 1,
+      "x": 3,
+      "y": null,
+      "munition": null,
+      "description": "Inflige X degats a tous les ennemis",
+      "effet": { "type": "ATTAQUE", "cible": "ENNEMIS_MULTIPLES", "valeur": 3 }
     },
 
     {

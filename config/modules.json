@@ -6,7 +6,7 @@
       "image": "assets/modules/principal.png",
       "points_de_vie": 50,
       "description": "Votre vaisseau, plus cabosse que le Faucon Millenium, mais la prunelle de vos yeux.",
-      "cartes": ["CRT_7", "CRT_8", "CRT_9", "CRT_10", "CRT_11", "CRT_12"]
+      "cartes": ["CRT_7", "CRT_8", "CRT_10", "CRT_11"]
     },
     {
       "id": "MOD_2",
@@ -14,7 +14,7 @@
       "image": "assets/modules/missiles.png",
       "points_de_vie": 30,
       "description": "Tout dans la finesse, des bons vieux missiles qui explosent partout (sauf la ou vous etes, on espere).",
-      "cartes": ["CRT_15", "CRT_16", "CRT_18"]
+      "cartes": ["CRT_9", "CRT_15", "CRT_16", "CRT_18"]
     },
     {
       "id": "MOD_3",
