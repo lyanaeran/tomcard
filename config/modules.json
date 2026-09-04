@@ -14,7 +14,7 @@
       "image": "assets/modules/missiles.png",
       "points_de_vie": 30,
       "description": "Tout dans la finesse, des bons vieux missiles qui explosent partout (sauf la ou vous etes, on espere).",
-      "cartes": ["CRT_15", "CRT_16", "CRT_18"]
+      "cartes": ["CRT_9", "CRT_15", "CRT_16", "CRT_18"]
     },
     {
       "id": "MOD_3",

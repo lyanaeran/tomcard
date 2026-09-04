@@ -294,7 +294,7 @@ def test_mode_test_actif_donne_200_pv_aux_modules_et_aux_ennemis(monkeypatch):
 
 
 def test_creer_deck_mode_test_donne_20_degats_aux_cartes_attaque_de_base():
-    """Les cartes ATTAQUE de rarete Base (Laser, Laser percant, Bombardement) tuent un ennemi en
+    """Les cartes ATTAQUE de rarete Base (Laser, Laser percant) tuent un ennemi en
     un coup en mode test (PV_ENNEMI_MODE_TEST), les autres cartes gardent leur valeur normale."""
     cartes = charger_cartes()
     aleatoire = random.Random(3)
@@ -305,7 +305,7 @@ def test_creer_deck_mode_test_donne_20_degats_aux_cartes_attaque_de_base():
     attaques_base = [c for c in toutes if c.rarete == RareteCarte.BASE and c.type == TypeCarte.ATTAQUE]
     autres = [c for c in toutes if c.rarete != RareteCarte.BASE or c.type != TypeCarte.ATTAQUE]
 
-    assert attaques_base  # au moins Laser/Laser percant/Bombardement
+    assert attaques_base  # au moins Laser/Laser percant
     assert all(carte.valeur == VALEUR_ATTAQUE_BASE_MODE_TEST for carte in attaques_base)
     assert VALEUR_ATTAQUE_BASE_MODE_TEST >= PV_ENNEMI_MODE_TEST
     for carte in autres:
