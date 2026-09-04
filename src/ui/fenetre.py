@@ -28,10 +28,7 @@ CIBLES_CAMP_ALLIE = (CibleCarte.ALLIE_UNIQUE, CibleCarte.ALLIES_MULTIPLES, Cible
 # utilisateur : paraissaient petites a cote des modules, y compris apres un premier passage a
 # 120x98 - encore trop timide) : alignees sur le meme empreinte que les modules du vaisseau
 # (250x220 mis a l'echelle, cf. _EMPLACEMENTS_MODULES_IMAGE plus bas, ~135x119) plutot qu'une
-# taille independante. La rangee du haut colle a l'entete d'a peu pres la meme marge que les
-# modules eux-memes (verifie par echantillonnage de pixels : le contour sombre de leur pastille
-# se fond deja dans le bandeau, sans que ce soit visible a l'oeil vu les couleurs tres proches),
-# donc pas de regression a reprendre cette meme empreinte pour les ennemis.
+# taille independante.
 CELLULE_LARGEUR, CELLULE_HAUTEUR = 135, 119
 ESPACEMENT_CELLULE = 17
 HAUTEUR_BANDEAU_CASE = 42
@@ -40,7 +37,7 @@ HAUTEUR_BANDEAU_CASE = 42
 # affiche en grand, et les modules equipes se placent dans les emplacements
 # vides visibles sur cette image (mesures directement sur l'image source).
 # VAISSEAU_LARGEUR/VAISSEAU_Y bornes par la bande verticale disponible entre
-# la main de cartes (CARTE_Y/CARTE_HAUTEUR) et l'en-tete (ENTETE_Y) : l'image
+# la main de cartes (CARTE_Y/CARTE_HAUTEUR) et le haut de la fenetre : l'image
 # fournie par l'utilisateur (quasi carree, contrairement a l'ancienne tres
 # large) impose une hauteur bien plus grande a largeur egale.
 VAISSEAU_X = 150
@@ -103,23 +100,23 @@ CARTE_Y = 40
 CARTE_ESPACEMENT = 120
 HAUTEUR_BANDEAU_CARTE = 46
 
-# En-tete (bandeau du haut) : electricite a gauche, bouton fin de tour a
-# droite, comme #entete sur la version web.
-ENTETE_HAUTEUR = 60
-ENTETE_Y = HAUTEUR_FENETRE - ENTETE_HAUTEUR
-BOUTON_LARGEUR, BOUTON_HAUTEUR = 140, 40
-BOUTON_X = LARGEUR_FENETRE - BOUTON_LARGEUR - 20
-BOUTON_Y = ENTETE_Y + (ENTETE_HAUTEUR - BOUTON_HAUTEUR) / 2
-
-# Sommet de la barre laterale (src/ui/barre_laterale.py) en Combat : sous l'entete existant
-# (Electricite/Fin de tour), plutot que le haut de la fenetre comme sur les autres ecrans du
-# parcours qui n'ont pas ce bandeau - decision utilisateur (la barre reste affichee en Combat).
-Y_HAUT_BARRE_COMBAT = ENTETE_Y - 10
+# Controles de combat (tour suivant / quitter la partie) : icones plutot qu'un bandeau+texte en
+# haut d'ecran (decision utilisateur, remplace l'ancien bandeau Electricite/"Fin de tour" - la
+# barre laterale, elle, revient donc a sa position par defaut, cf. Y_HAUT_PAR_DEFAUT dans
+# src/ui/barre_laterale.py). Empiles sous cette barre (Niveau/Argent/Deck/Vaisseau) quand elle est
+# affichee (self.partie non None), ou au sommet de la fenetre sinon (mode demo POC sans partie
+# reelle - "Quitter" se contente alors de fermer la fenetre, faute d'ecran de selection de joueur
+# a rouvrir, cf. on_mouse_press).
+_ICONE_TOUR_SUIVANT = str(RACINE / "assets" / "interface" / "tour_suivant.png")
+_ICONE_QUITTER = str(RACINE / "assets" / "interface" / "quitter.png")
+TAILLE_BOUTON_COMBAT = 60
+_DECALAGE_ELECTRICITE_COMBAT = 20
+_DECALAGE_HAUT_TOUR_SUIVANT = _DECALAGE_ELECTRICITE_COMBAT + 20
+_DECALAGE_HAUT_QUITTER = _DECALAGE_HAUT_TOUR_SUIVANT + TAILLE_BOUTON_COMBAT + 14
 
 COULEUR_BANDEAU = (10, 10, 12)
 OPACITE_BANDEAU = 190
 COULEUR_CARTE_SURLIGNEE = (210, 180, 40)
-COULEUR_BOUTON = (90, 90, 95)
 COULEUR_SURVOL = (255, 255, 255)
 OPACITE_DETRUIT = 70
 
@@ -446,6 +443,11 @@ class FenetreCombat(pyglet.window.Window):
         self.index_carte_selectionnee: int | None = None
         self.entite_survolee: Module | Ennemi | None = None
         self.survole_barre: str | None = None
+        # True apres un clic sur "Quitter" (specs.md 8.1) : signale a main.py qu'il doit fermer
+        # cette fenetre et revenir a l'ecran de selection du joueur, sans toucher a la partie
+        # sauvegardee (decision utilisateur - ce combat en cours n'est jamais synchronise/
+        # sauvegarde, contrairement a une fin de combat normale, cf. main.py:_ouvrir_combat).
+        self.quitte_demandee: bool = False
         self.popups: list[tuple[AnimationPopup, str, tuple[int, int, int], float, float]] = []
         pyglet.clock.schedule_interval(self.update, 1 / 60.0)
 
@@ -462,19 +464,20 @@ class FenetreCombat(pyglet.window.Window):
         # references gardees le temps du dessin, pyglet ne garde pas de reference forte tout seul
         elements = []
 
+        # Import differe : barre_laterale importe de ce module (HAUTEUR_FENETRE, _sprite_ajuste),
+        # un import en tete de fichier creerait un cycle.
+        from src.ui import barre_laterale
+
         elements.extend(self._dessiner_fond(lot))
         elements.extend(self._dessiner_vaisseau(lot))
         elements.extend(self._dessiner_flotte(lot))
         elements.extend(self._dessiner_popups(lot))
         elements.extend(self._dessiner_main(lot))
-        elements.extend(self._dessiner_entete(lot))
         elements.extend(self._dessiner_survol(lot))
         if self.partie is not None:
-            # Import differe : barre_laterale importe de ce module (HAUTEUR_FENETRE,
-            # _sprite_ajuste), un import en tete de fichier creerait un cycle.
-            from src.ui import barre_laterale
+            elements.extend(barre_laterale.dessiner(self.partie, self.survole_barre, lot))
 
-            elements.extend(barre_laterale.dessiner(self.partie, self.survole_barre, lot, y_haut=Y_HAUT_BARRE_COMBAT))
+        elements.extend(self._dessiner_controles_combat(lot, barre_laterale))
 
         if self.combat.etat != EtatCombat.EN_COURS:
             elements.extend(self._dessiner_message_fin(lot))
@@ -680,38 +683,55 @@ class FenetreCombat(pyglet.window.Window):
         )
         return [ombre, etoile]
 
-    def _dessiner_bouton_fin_tour(self, lot: pyglet.graphics.Batch) -> list:
-        """Dessine le bouton permettant de terminer le tour du joueur, dans l'en-tete."""
-        rectangle = shapes.Rectangle(
-            BOUTON_X, BOUTON_Y, BOUTON_LARGEUR, BOUTON_HAUTEUR, color=COULEUR_BOUTON, batch=lot, group=GROUPE_SUPERPOSITION
-        )
-        texte = pyglet.text.Label(
-            "Fin de tour",
-            x=BOUTON_X + BOUTON_LARGEUR / 2,
-            y=BOUTON_Y + BOUTON_HAUTEUR / 2,
-            anchor_x="center",
-            anchor_y="center",
-            batch=lot,
-            group=GROUPE_SUPERPOSITION,
-        )
-        return [rectangle, texte]
+    def _y_haut_controles_combat(self, barre_laterale) -> float:
+        """Sommet du bloc controles de combat (Electricite/tour suivant/Quitter) : sous la barre
+        laterale si affichee (self.partie non None), sinon au sommet de la fenetre."""
+        if self.partie is None:
+            return barre_laterale.Y_HAUT_PAR_DEFAUT
+        return barre_laterale.Y_HAUT_PAR_DEFAUT - barre_laterale.HAUTEUR_CONTENU - 30
 
-    def _dessiner_entete(self, lot: pyglet.graphics.Batch) -> list:
-        """Bandeau du haut : electricite disponible a gauche, bouton fin de tour a droite
-        (meme composition que #entete sur la version web)."""
-        joueur = self.combat.joueur
-        elements = [_bandeau(0, ENTETE_Y, LARGEUR_FENETRE, ENTETE_HAUTEUR, lot)]
-        texte = pyglet.text.Label(
-            f"Electricite : {joueur.electricite}",
-            x=20,
-            y=ENTETE_Y + ENTETE_HAUTEUR / 2,
-            anchor_x="left",
-            anchor_y="center",
-            batch=lot,
-            group=GROUPE_SUPERPOSITION,
-        )
-        elements.append(texte)
-        elements.extend(self._dessiner_bouton_fin_tour(lot))
+    def _rect_bouton_tour_suivant(self, barre_laterale) -> tuple[float, float, float, float]:
+        y_haut = self._y_haut_controles_combat(barre_laterale)
+        x = (barre_laterale.LARGEUR_BARRE - TAILLE_BOUTON_COMBAT) / 2
+        y = y_haut - _DECALAGE_HAUT_TOUR_SUIVANT
+        return x, y - TAILLE_BOUTON_COMBAT, TAILLE_BOUTON_COMBAT, TAILLE_BOUTON_COMBAT
+
+    def _rect_bouton_quitter(self, barre_laterale) -> tuple[float, float, float, float]:
+        y_haut = self._y_haut_controles_combat(barre_laterale)
+        x = (barre_laterale.LARGEUR_BARRE - TAILLE_BOUTON_COMBAT) / 2
+        y = y_haut - _DECALAGE_HAUT_QUITTER
+        return x, y - TAILLE_BOUTON_COMBAT, TAILLE_BOUTON_COMBAT, TAILLE_BOUTON_COMBAT
+
+    def _bouton_combat_a(self, x: int, y: int, barre_laterale) -> str | None:
+        """Identifiant ("tour_suivant"/"quitter") du bouton de controle de combat sous ce point,
+        None si aucun."""
+        if _point_dans_rectangle(x, y, *self._rect_bouton_tour_suivant(barre_laterale)):
+            return "tour_suivant"
+        if _point_dans_rectangle(x, y, *self._rect_bouton_quitter(barre_laterale)):
+            return "quitter"
+        return None
+
+    def _dessiner_controles_combat(self, lot: pyglet.graphics.Batch, barre_laterale) -> list:
+        """Electricite disponible + boutons icones tour suivant/Quitter (specs.md 8.1) - remplace
+        l'ancien bandeau du haut (Electricite + texte "Fin de tour")."""
+        y_haut = self._y_haut_controles_combat(barre_laterale)
+        x_centre = barre_laterale.LARGEUR_BARRE / 2
+        elements = [
+            pyglet.text.Label(
+                f"Electricite : {self.combat.joueur.electricite}",
+                x=x_centre,
+                y=y_haut - _DECALAGE_ELECTRICITE_COMBAT,
+                anchor_x="center",
+                anchor_y="center",
+                font_size=12,
+                batch=lot,
+                group=GROUPE_SUPERPOSITION,
+            )
+        ]
+        rect_tour_suivant = self._rect_bouton_tour_suivant(barre_laterale)
+        elements.append(_sprite_ajuste(_ICONE_TOUR_SUIVANT, *rect_tour_suivant, lot))
+        rect_quitter = self._rect_bouton_quitter(barre_laterale)
+        elements.append(_sprite_ajuste(_ICONE_QUITTER, *rect_quitter, lot))
         return elements
 
     def _dessiner_survol(self, lot: pyglet.graphics.Batch) -> list:
@@ -798,14 +818,30 @@ class FenetreCombat(pyglet.window.Window):
         return [texte]
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
-        """Gere les clics de souris : selection de carte, ciblage, fin de tour."""
+        """Gere les clics de souris : selection de carte, ciblage, tour suivant, quitter."""
+        # Imports differes, cf. on_draw : cycle avec ce module sinon.
+        from src.ui import barre_laterale
+
+        bouton_combat = self._bouton_combat_a(x, y, barre_laterale)
+        if bouton_combat == "quitter":
+            if self.partie is None:
+                # Mode demo (POC) : aucun ecran de selection de joueur a rouvrir, on se contente
+                # de fermer la fenetre (cf. commentaire de self.quitte_demandee, __init__).
+                self.close()
+            else:
+                self.quitte_demandee = True
+            return
+        if bouton_combat == "tour_suivant" and self.combat.etat == EtatCombat.EN_COURS:
+            attaques = self.combat.finir_tour_joueur()
+            self._afficher_popups_attaques_ennemi(attaques)
+            self.index_carte_selectionnee = None
+            return
+
         if self.partie is not None:
-            # Imports differes, cf. on_draw : cycle avec ce module sinon.
-            from src.ui import barre_laterale
             from src.ui.ecran_deck import EcranDeck
             from src.ui.ecran_vaisseau import EcranVaisseau
 
-            bouton_barre = barre_laterale.bouton_survole(x, y, y_haut=Y_HAUT_BARRE_COMBAT)
+            bouton_barre = barre_laterale.bouton_survole(x, y)
             if bouton_barre == "deck":
                 barre_laterale.ouvrir_survol(EcranDeck(deck_de_la_partie(self.partie)))
                 return
@@ -814,12 +850,6 @@ class FenetreCombat(pyglet.window.Window):
                 return
 
         if self.combat.etat != EtatCombat.EN_COURS:
-            return
-
-        if _point_dans_rectangle(x, y, BOUTON_X, BOUTON_Y, BOUTON_LARGEUR, BOUTON_HAUTEUR):
-            attaques = self.combat.finir_tour_joueur()
-            self._afficher_popups_attaques_ennemi(attaques)
-            self.index_carte_selectionnee = None
             return
 
         index_carte_cliquee = self._trouver_carte_cliquee(x, y)
@@ -841,7 +871,7 @@ class FenetreCombat(pyglet.window.Window):
         if self.partie is not None:
             from src.ui import barre_laterale
 
-            self.survole_barre = barre_laterale.bouton_survole(x, y, y_haut=Y_HAUT_BARRE_COMBAT)
+            self.survole_barre = barre_laterale.bouton_survole(x, y)
 
     def _trouver_carte_cliquee(self, x: int, y: int) -> int | None:
         """Renvoie l'index de la carte de la main cliquee, ou None si aucune."""

@@ -213,20 +213,25 @@ terminé à ce stade).
   `.close()` — aucune modification nécessaire à l'orchestration existante de `main.py`. Largeur de
   90px, choisie pour tenir sous la marge la plus étroite des écrans concernés (grille de modules de
   Station service) sans retoucher leur mise en page. En Combat, `FenetreCombat` reçoit `partie` en
-  plus de `combat` (`None` en mode démo POC, où la barre n'a alors rien à afficher) ; la barre y est
-  décalée sous le bandeau Électricité/Fin de tour existant (`Y_HAUT_BARRE_COMBAT`, sous ce bandeau
-  plutôt que par-dessus) via un paramètre `y_haut` optionnel de `barre_laterale.dessiner()`/
-  `bouton_survole()`, sinon égale au haut de la fenêtre par défaut sur les écrans sans en-tête
-  propre.
+  plus de `combat` (`None` en mode démo POC, où la barre n'a alors rien à afficher) ; la barre y
+  occupe désormais la même position par défaut que sur les autres écrans (plus de bandeau du haut à
+  éviter, cf. §8.1/§8.3) — `FenetreCombat` empile juste en dessous ses propres contrôles
+  (`_dessiner_controles_combat` : Électricité, tour suivant, Quitter), via `barre_laterale.
+  HAUTEUR_CONTENU` (hauteur exportée du contenu de la barre) plutôt qu'au sommet de la fenêtre en
+  mode démo (`self.partie is None`).
 - Web (`web/app.js` : `actualiserBarreLaterale`/`ouvrirSurvolDeck`/`ouvrirSurvolVaisseau`) :
   `#ecran-deck`/`#ecran-vaisseau` passent en `position: fixed` (classe `.ecran-survol`,
   `web/style.css`) pour se superposer à l'écran actuellement affiché sans passer par
   `masquerTousLesEcrans()` (qui le masquerait) — même principe que côté PC, sans fenêtre
-  additionnelle puisque le web n'affiche qu'un seul écran DOM visible à la fois. En Combat, la barre
-  est décalée sous `#entete` (classe `.barre-laterale-combat`). **Simplification web** (écart
-  documenté, cf. CLAUDE.md) : barre étroite (52px, choisie expressément pour inclure l'iPhone
-  12/13 mini — 812px de large en paysage, remonté par l'utilisateur comme resté sans barre avec une
-  première largeur de 60px/seuil 820px) et **masquée sous 760px de large en paysage, et
+  additionnelle puisque le web n'affiche qu'un seul écran DOM visible à la fois. En Combat, un
+  élément séparé `#controles-combat` (Électricité/tour suivant/Quitter) s'empile sous
+  `#barre-laterale` quand elle est visible, ou prend sa place par défaut sinon (mode démonstration
+  sans partie active, portrait, écran trop étroit ou chevauchement, cf. juste en dessous) — élément
+  distinct plutôt que nichée dans la barre elle-même, pour que mettre fin à son tour reste possible
+  même quand la barre (Niveau/Argent/Deck/Vaisseau, moins essentielle) est masquée. **Simplification
+  web** (écart documenté, cf. CLAUDE.md) : barre étroite (52px, choisie expressément pour inclure
+  l'iPhone 12/13 mini — 812px de large en paysage, remonté par l'utilisateur comme resté sans barre
+  avec une première largeur de 60px/seuil 820px) et **masquée sous 760px de large en paysage, et
   systématiquement en portrait** — mesuré empiriquement (Playwright) comme le seuil au delà duquel
   elle ne chevauche jamais la grille de 5 modules (Station service et l'étape "choix_module" des
   Aventures Trois lunes/Astéroïdes) ; seul l'iPhone SE et plus petit (667px) reste sous ce seuil, la
@@ -765,7 +770,9 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────┐
-│  SPACE FIGHT — ÉCRAN DE COMBAT                                  ⚡ Électricité: 3 │
+│  SPACE FIGHT — ÉCRAN DE COMBAT                                                    │
+│ [Niveau/Argent/Deck/Vaisseau]                                                     │
+│ [⚡ 3][►►][X]  ← barre latérale + contrôles de combat, haut gauche (pas de bandeau)│
 │                                                                                    │
 │  VAISSEAU DU JOUEUR                                FLOTTE ENNEMIE (6 emplacements)│
 │  (fond commun aux 5 emplacements)                                                 │
@@ -804,7 +811,10 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
   padding haut/bas égal (contrairement à une version antérieure, plus généreuse en haut pour la
   pastille PV/Bouclier) pour que la rangée du milieu reste centrée sur le bloc vaisseau — les deux
   blocs étant déjà centrés l'un sur l'autre par `#grilles` (`align-items:center`)
-- **Compteur d'électricité** restante affiché en haut de l'écran
+- **Compteur d'électricité** restante affiché en haut à gauche, empilé sous la barre latérale
+  (Niveau/Argent/Deck/Vaisseau, §10.3) plutôt que dans un bandeau dédié en haut d'écran (décision
+  utilisateur, remplace l'ancien bandeau "Électricité : N" + bouton "Fin de tour" en toutes
+  lettres) — voir §8.3 point 4 pour les boutons de contrôle placés juste en dessous
 - **Main de cartes** : alignée en bas de l'écran (pas en éventail, pour la lisibilité)
 - **Pioche, défausse et cartes épuisées** (§3.6) : regroupées ensemble dans un coin de l'écran (compteurs de nombre de cartes), séparées de la main
 
@@ -828,8 +838,25 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
    pas de résolution automatique au seul clic sur la carte, pour éviter qu'un clic accidentel ne la
    joue (validé dans le POC). **Ce flux de clic/tap doit rester identique entre la
    version PC et la version web/iOS** (cf. CLAUDE.md, "Deux façons de jouer")
-4. **Fin de tour** : un bouton cliquable "Fin de tour" permet au joueur de terminer son tour à tout moment, même s'il lui reste de l'électricité ou des cartes jouables
-5. **Retour visuel des effets** : chaque effet résolu (carte jouée ou attaque ennemie) affiche un popup `+N`/`-N` pendant quelques secondes sur la ou les cases touchées, avec le montant **réellement appliqué** (plafonné par les PV+Bouclier restants pour les dégâts, par le PV max pour le soin) plutôt que la valeur nominale de la carte — validé en POC
+4. **Tour suivant** : un bouton icône (chevrons verts, sans texte — décision utilisateur, remplace
+   l'ancien bouton texte "Fin de tour") permet au joueur de terminer son tour à tout moment, même
+   s'il lui reste de l'électricité ou des cartes jouables. Placé en haut à gauche, empilé sous la
+   barre latérale (Niveau/Argent/Deck/Vaisseau) plutôt que dans un bandeau du haut (retiré) — PC
+   (`src/ui/fenetre.py:FenetreCombat._dessiner_controles_combat`) et web (`#controles-combat`,
+   `#tour-suivant`) partagent la même logique de fin de tour (`Combat.finir_tour_joueur`),
+   seul l'affichage change
+5. **Quitter la partie** : un second bouton icône (croix rouge), juste sous "Tour suivant", ferme
+   le combat en cours et ramène à l'écran de sélection du joueur — **sans synchroniser ni
+   sauvegarder** ce combat (décision utilisateur) : la partie sauvegardée reste `EN_COURS` telle
+   qu'elle était avant ce combat (PV du vaisseau, deck), qui repartira intégralement de zéro
+   (nouveau tirage de flotte) au prochain "Continuer" depuis l'accueil du joueur. PC
+   (`main.py:_ouvrir_combat`, `FenetreCombat.quitte_demandee`) rouvre `EcranSelectionJoueur` ; web
+   (`quitterCombat()`) réinitialise `partieActive`/`joueurCourant` et rappelle
+   `afficherSelectionJoueur()`. En mode démonstration (POC sans vraie partie, `partie=None` côté
+   PC / `partieActive` nul côté web), le bouton reste actif : PC ferme simplement la fenêtre
+   (aucun écran de sélection à rouvrir depuis un script autonome), web revient quand même à
+   l'écran de sélection du joueur (ne dépend d'aucun état de partie)
+6. **Retour visuel des effets** : chaque effet résolu (carte jouée ou attaque ennemie) affiche un popup `+N`/`-N` pendant quelques secondes sur la ou les cases touchées, avec le montant **réellement appliqué** (plafonné par les PV+Bouclier restants pour les dégâts, par le PV max pour le soin) plutôt que la valeur nominale de la carte — validé en POC
 
 ---
 

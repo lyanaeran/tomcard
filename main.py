@@ -287,6 +287,15 @@ def _ouvrir_combat(profil: Profil, partie: Partie, combat: Combat | None = None)
     fenetre = FenetreCombat(combat, partie)
 
     def verifier(_dt: float) -> None:
+        if fenetre.quitte_demandee:
+            pyglet.clock.unschedule(verifier)
+            fenetre.close()
+            # Bouton "Quitter" (specs.md 8.1) : ferme le combat en cours sans le synchroniser ni
+            # le sauvegarder (decision utilisateur) - la partie reste EN_COURS telle qu'elle etait
+            # avant ce combat, qui repartira de zero (nouveau tirage de flotte) au prochain
+            # "Continuer" depuis l'accueil du joueur.
+            _ouvrir_selection_joueur()
+            return
         if combat.etat == EtatCombat.EN_COURS:
             return
         pyglet.clock.unschedule(verifier)

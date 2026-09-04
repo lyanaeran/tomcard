@@ -1,9 +1,9 @@
 """
-Barre laterale persistante (specs.md 2.4/10.3) : affichee a gauche des ecrans du parcours hors
-combat - niveau, Argent, et deux boutons qui ouvrent un ecran de consultation en survol (Deck,
-Vaisseau) par-dessus l'ecran appelant, qui reste ouvert et inchange derriere. Pas de barre pendant
-le combat (decision utilisateur) : le niveau y est retire de l'entete existant, mais Argent/deck/
-vaisseau y sont deja visibles autrement (main/pioche, vaisseau du joueur a l'ecran).
+Barre laterale persistante (specs.md 2.4/10.3) : affichee a gauche de tous les ecrans du parcours,
+Combat compris - niveau, Argent, et deux boutons qui ouvrent un ecran de consultation en survol
+(Deck, Vaisseau) par-dessus l'ecran appelant, qui reste ouvert et inchange derriere. En Combat,
+`src/ui/fenetre.py` empile juste en dessous ses propres controles (Electricite, tour suivant,
+Quitter - cf. FenetreCombat._dessiner_controles_combat), qui remplacent l'ancien bandeau du haut.
 
 Ce module ne definit pas d'ecran : seulement des fonctions de dessin/hit-test partagees, a appeler
 depuis le `_dessiner()`/`on_mouse_motion()`/`on_mouse_press()` de chaque ecran qui integre la
@@ -35,9 +35,9 @@ _ICONE_VAISSEAU = str(RACINE / "assets" / "interface" / "vaisseau.png")
 TAILLE_ICONE = 60
 X_ICONE = (LARGEUR_BARRE - TAILLE_ICONE) / 2
 
-# Sommet de la barre par defaut (ecrans sans entete propre). Le Combat (seul ecran a avoir deja
-# un bandeau en haut - Electricite/Fin de tour) passe un y_haut plus bas a dessiner()/
-# bouton_survole() pour faire descendre toute la barre sous ce bandeau plutot que par-dessus.
+# Sommet de la barre par defaut - meme position sur tous les ecrans, Combat compris (plus de
+# bandeau du haut a eviter, cf. module docstring). Un ecran peut passer un y_haut different a
+# dessiner()/bouton_survole() s'il a besoin de decaler la barre pour une raison qui lui est propre.
 Y_HAUT_PAR_DEFAUT = HAUTEUR_FENETRE - 30
 
 # Decalages relatifs au sommet de la barre (y_haut) - independants de l'ecran qui l'affiche.
@@ -45,6 +45,9 @@ _DECALAGE_ARGENT = 24
 _DECALAGE_HAUT_DECK = 70
 _DECALAGE_COMPTEUR_DECK = _DECALAGE_HAUT_DECK + TAILLE_ICONE + 14
 _DECALAGE_HAUT_VAISSEAU = _DECALAGE_COMPTEUR_DECK + 30
+# Hauteur totale du contenu de la barre (du sommet au bas du bouton Vaisseau) - exportee pour les
+# ecrans qui doivent empiler quelque chose juste en dessous (cf. FenetreCombat, src/ui/fenetre.py).
+HAUTEUR_CONTENU = _DECALAGE_HAUT_VAISSEAU + TAILLE_ICONE
 
 
 def _rect_bouton_deck(y_haut: float) -> tuple[float, float, float, float]:

@@ -60,21 +60,21 @@ body {
     background: #0b1020 url("../assets/fond.PNG") center / 100% 100% no-repeat;
 }
 
-/* Barre laterale persistante des ecrans du parcours hors combat (specs.md 2.4/10.3) : Niveau,
-   Argent, et deux boutons qui ouvrent le Deck/Vaisseau en survol (#ecran-deck/#ecran-vaisseau,
-   .ecran-survol ci-dessus) sans quitter l'ecran courant - equivalent de src/ui/barre_laterale.py
-   cote PC. Affichee y compris en Combat (decision utilisateur), decalee sous #entete dans ce cas
-   (classe .barre-laterale-combat ci-dessous, cf. Y_HAUT_BARRE_COMBAT cote PC/src/ui/fenetre.py) -
-   ecrans concernes bascules par actualiserBarreLaterale() dans web/app.js. Simplification web :
-   overlay en coin (largeur fixe et etroite, libelles abreges) plutot qu'une bande qui reserve de
-   la place (pas de reflow des ecrans existants, deja tous centres/fluides) - masquee en portrait
-   (ecran deja tres contraint en largeur, cf. #conseil-rotation) et sous 760px de large en paysage :
-   mesure au Playwright, c'est le seuil (avec une petite marge, le chevauchement reel commence vers
-   745px) qui evite tout chevauchement avec la grille de 5 modules (#modules-station-service et
-   etapes "choix_module" des Aventures Trois lunes/Asteroides, seuls ecrans a s'approcher autant du
-   bord gauche) sur les tailles d'ecran usuelles, iPhone 12/13 mini inclus (812px) - largeur choisie
-   expres etroite (52px) pour ca, seul l'iPhone SE et plus petit (667px) reste sous ce seuil, la
-   barre y est simplement absente. */
+/* Barre laterale persistante de tous les ecrans du parcours, Combat compris (specs.md 2.4/10.3) :
+   Niveau, Argent, et deux boutons qui ouvrent le Deck/Vaisseau en survol (#ecran-deck/
+   #ecran-vaisseau, .ecran-survol ci-dessus) sans quitter l'ecran courant - equivalent de
+   src/ui/barre_laterale.py cote PC. En Combat, #controles-combat (plus bas) empile juste en
+   dessous ses propres controles (Electricite, tour suivant, Quitter), qui remplacent l'ancien
+   bandeau #entete. Ecrans concernes bascules par actualiserBarreLaterale() dans web/app.js.
+   Simplification web : overlay en coin (largeur fixe et etroite, libelles abreges) plutot qu'une
+   bande qui reserve de la place (pas de reflow des ecrans existants, deja tous centres/fluides) -
+   masquee en portrait (ecran deja tres contraint en largeur, cf. #conseil-rotation) et sous 760px
+   de large en paysage : mesure au Playwright, c'est le seuil (avec une petite marge, le
+   chevauchement reel commence vers 745px) qui evite tout chevauchement avec la grille de 5
+   modules (#modules-station-service et etapes "choix_module" des Aventures Trois lunes/
+   Asteroides, seuls ecrans a s'approcher autant du bord gauche) sur les tailles d'ecran usuelles,
+   iPhone 12/13 mini inclus (812px) - largeur choisie expres etroite (52px) pour ca, seul l'iPhone
+   SE et plus petit (667px) reste sous ce seuil, la barre y est simplement absente. */
 #barre-laterale {
     position: fixed;
     top: max(0.6rem, env(safe-area-inset-top));
@@ -91,16 +91,40 @@ body {
     border-radius: 10px;
 }
 
-/* #entete (Electricite/Fin de tour) occupe deja le haut de l'ecran en Combat (~39px mesures au
-   Playwright + marge) : decale la barre en dessous plutot que par-dessus. */
-#barre-laterale.barre-laterale-combat {
-    top: 56px;
-}
-
 @media (orientation: portrait), (max-width: 759px) {
     #barre-laterale {
         display: none !important;
     }
+}
+
+/* Controles de combat (Electricite/tour suivant/Quitter) : remplacent l'ancien bandeau du haut
+   (#entete, Electricite + bouton "Fin de tour" texte) par des icones empilees sous la barre
+   laterale (decision utilisateur). Toujours affiches en Combat, meme quand la barre elle-meme ne
+   l'est pas (mode demonstration sans vraie Partie, portrait, ecran trop etroit ou chevauchement -
+   cf. #barre-laterale ci-dessus et actualiserBarreLaterale() dans web/app.js) : contrairement a
+   Niveau/Argent/Deck/Vaisseau, mettre fin a son tour reste une action essentielle, jamais
+   sacrifiee pour gagner de la place. 184px = bas de la barre laterale mesure au Playwright (~170px)
+   + marge, cf. .controles-combat-sans-barre pour la position de repli (memes coordonnees que
+   #barre-laterale par defaut) quand elle n'est pas visible. */
+#controles-combat {
+    position: fixed;
+    top: 184px;
+    left: max(0.6rem, env(safe-area-inset-left));
+    z-index: 25;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+#controles-combat.controles-combat-sans-barre {
+    top: max(0.6rem, env(safe-area-inset-top));
+}
+
+#electricite {
+    font-weight: bold;
+    font-size: 0.85rem;
+    text-align: center;
 }
 
 .barre-laterale-info {
@@ -164,19 +188,6 @@ body {
     padding-bottom: env(safe-area-inset-bottom);
 }
 
-#entete {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.6rem 1rem;
-    padding-left: max(1rem, env(safe-area-inset-left));
-    padding-right: max(1rem, env(safe-area-inset-right));
-    background: #141b33;
-    position: sticky;
-    top: 0;
-    z-index: 2;
-}
-
 #conseil-rotation {
     display: none;
 }
@@ -191,38 +202,20 @@ body {
     }
 }
 
-#electricite {
-    font-weight: bold;
-    font-size: 1.1rem;
+#tour-suivant:disabled {
+    opacity: 0.5;
+    cursor: default;
 }
 
-#boutons-entete {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-}
-
-#fin-tour,
+/* Utilitaire plein ecran (masque le bandeau Safari), sans rapport avec le combat lui-meme -
+   simple bouton texte, plus discret que les icones tour suivant/Quitter au-dessus. */
 #plein-ecran {
-    padding: 0.6rem 1.2rem;
-    font-size: 1rem;
+    padding: 0.4rem 0.7rem;
+    font-size: 0.7rem;
     border: none;
-    border-radius: 8px;
-    color: white;
-}
-
-#fin-tour {
-    background: #4c6ef5;
-}
-
-#fin-tour:disabled {
-    background: #3a3f5c;
-}
-
-#plein-ecran {
+    border-radius: 6px;
     background: #2e3866;
-    font-size: 0.85rem;
-    padding: 0.5rem 0.9rem;
+    color: white;
 }
 
 #compteurs-deck {
@@ -740,26 +733,11 @@ body {
     color: white;
 }
 
-/* Ecran court en paysage (iPhone) : entete/compteurs plus compacts pour
-   laisser le maximum de hauteur a --taille-case (deja fluide, cf. :root). */
+/* Ecran court en paysage (iPhone) : compteurs plus compacts pour laisser le maximum de hauteur a
+   --taille-case (deja fluide, cf. :root). */
 @media (orientation: landscape) and (max-height: 550px) {
-    #entete {
-        padding-top: 0.35rem;
-        padding-bottom: 0.35rem;
-    }
-
     #electricite {
-        font-size: 0.95rem;
-    }
-
-    #fin-tour {
-        padding: 0.4rem 0.9rem;
-        font-size: 0.85rem;
-    }
-
-    #plein-ecran {
-        padding: 0.4rem 0.7rem;
-        font-size: 0.7rem;
+        font-size: 0.75rem;
     }
 
     #compteurs-deck {

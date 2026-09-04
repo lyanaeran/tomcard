@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
     <title>Space Fight - prototype web</title>
-    <link rel="stylesheet" href="web/style.css?v=57">
+    <link rel="stylesheet" href="web/style.css?v=58">
     <link rel="manifest" href="web/manifest.json?v=52">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -24,6 +24,16 @@
         <button id="bouton-vaisseau-barre-laterale" class="barre-laterale-bouton">
             <img src="assets/interface/vaisseau.png" alt="Vaisseau">
         </button>
+    </div>
+    <div id="controles-combat" class="cachee">
+        <span id="electricite"></span>
+        <button id="tour-suivant" class="barre-laterale-bouton">
+            <img src="assets/interface/tour_suivant.png" alt="Tour suivant">
+        </button>
+        <button id="bouton-quitter-combat" class="barre-laterale-bouton">
+            <img src="assets/interface/quitter.png" alt="Quitter la partie">
+        </button>
+        <button id="plein-ecran"></button>
     </div>
     <div id="ecran-selection-joueur" class="cachee">
         <h1>Choisir un joueur</h1>
@@ -45,13 +55,6 @@
         <button id="bouton-nouvelle-partie" class="cachee">Nouvelle partie</button>
     </div>
     <div id="app" class="cachee">
-        <div id="entete">
-            <span id="electricite"></span>
-            <div id="boutons-entete">
-                <button id="plein-ecran"></button>
-                <button id="fin-tour">Fin de tour</button>
-            </div>
-        </div>
         <div id="conseil-rotation">Tourne ton telephone en mode paysage pour l'affichage complet</div>
         <div id="compteurs-deck"></div>
         <div id="grilles">
@@ -146,6 +149,6 @@
         <div id="info-carte-vaisseau"></div>
     </div>
     <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
-    <script src="web/app.js?v=57"></script>
+    <script src="web/app.js?v=58"></script>
 </body>
 </html>
