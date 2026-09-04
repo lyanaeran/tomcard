@@ -199,6 +199,21 @@ def _sprite_ajuste(
     return sprite
 
 
+def _sprite_ajuste_largeur(
+    chemin: str, x: float, y: float, largeur: float, hauteur: float, lot: pyglet.graphics.Batch
+) -> pyglet.sprite.Sprite:
+    """Cree un sprite pour cette image, mis a l'echelle pour remplir toute la largeur du
+    rectangle (sans deformation), quitte a deborder en hauteur - centre verticalement. Utilise
+    pour un ennemi a plusieurs emplacements (specs.md 3.2, ex. Boss des pirates) : sa case
+    fusionnee est bien plus large que haute, et une image qui ne fait pas ce ratio parait trop
+    petite avec `_sprite_ajuste` (qui cale sur la plus petite dimension)."""
+    sprite = pyglet.sprite.Sprite(_image(chemin), batch=lot)
+    sprite.scale = largeur / sprite.width
+    sprite.x = x
+    sprite.y = y + (hauteur - sprite.height) / 2
+    return sprite
+
+
 def _sprite_etire(
     chemin: str,
     x: float,
@@ -570,7 +585,13 @@ class FenetreCombat(pyglet.window.Window):
         plusieurs fusionnees pour un ennemi a plusieurs emplacements (cf. _rect_fusionne)."""
         x, y, largeur, hauteur = rect
         detruit = ennemi.est_detruit()
-        sprite = _sprite_ajuste(ennemi.image, x, y, largeur, hauteur, lot)
+        # Un ennemi a plusieurs emplacements (specs.md 3.2) a une case bien plus large que
+        # haute : remplir toute la largeur (quitte a deborder un peu en hauteur) plutot que de
+        # caler sur la hauteur comme un ennemi normal, qui le laisserait minuscule.
+        if ennemi.emplacements > 1:
+            sprite = _sprite_ajuste_largeur(ennemi.image, x, y, largeur, hauteur, lot)
+        else:
+            sprite = _sprite_ajuste(ennemi.image, x, y, largeur, hauteur, lot)
         if detruit:
             sprite.opacity = OPACITE_DETRUIT
             return [sprite, *self._texte_detruit(x, y, largeur, hauteur, lot)]
