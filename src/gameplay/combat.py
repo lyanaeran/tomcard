@@ -129,15 +129,22 @@ class Combat:
             _dissiper_bouclier(module)
             module.declencher_buffs_tour()
 
-    def prochaine_action_active(self, ennemi: Ennemi) -> ActionEnnemi | None:
-        """Premiere Action de cet ennemi qui se declenchera a son prochain tour (specs.md 13),
-        pour l'affichage de son intention (survol/tap) - None si aucune de ses actions n'est
-        active a ce tour-la."""
+    def prochaines_actions_actives(self, ennemi: Ennemi) -> list[ActionEnnemi]:
+        """Toutes les Actions de cet ennemi qui se declencheront a son prochain tour (specs.md
+        13), dans l'ordre de sa liste - plusieurs peuvent l'etre le meme tour (ex. le Boss des
+        pirates, qui attaque ET pose un buff au meme tour) : l'affichage de son intention
+        (survol/tap) doit toutes les montrer, pas seulement la premiere. Liste vide si aucune
+        n'est active a ce tour-la."""
         prochain_tour = self.tour_ennemi_actuel + 1
-        for action in ennemi.actions:
-            if action.active_au_tour(prochain_tour):
-                return action
-        return None
+        return [action for action in ennemi.actions if action.active_au_tour(prochain_tour)]
+
+    def prochaine_action_active(self, ennemi: Ennemi) -> ActionEnnemi | None:
+        """Premiere des Actions actives de cet ennemi au prochain tour (specs.md 13,
+        cf. prochaines_actions_actives) - utilisee par previsualiser_cible, qui ne s'interesse
+        qu'a une eventuelle Attaque de proximite ; None si aucune de ses actions n'est active a
+        ce tour-la."""
+        actions = self.prochaines_actions_actives(ennemi)
+        return actions[0] if actions else None
 
     def previsualiser_cible(self, ennemi: Ennemi) -> Module | None:
         """Renvoie le module que cet ennemi attaquerait a son prochain tour si sa prochaine

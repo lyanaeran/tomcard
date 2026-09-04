@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "61";
+const VERSION_CACHE = "62";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -294,20 +294,24 @@ function afficherInfobulle(idCase, typeCase) {
         }
     } else {
         lignes.push(`<div>🔵 ${objet.bouclier}</div>`);
-        if (objet.intention) {
-            // Tir allie actif (specs.md 12.6) : la cible reelle (un autre ennemi) n'est
-            // tiree au hasard qu'a la resolution du tour, jamais ici (cf. bridge.py
-            // _intention_json), pour rester deterministe au tap/redessin. Idem pour une
-            // Action POSE_BUFF (specs.md 13) : pas de cible individuelle a afficher.
-            const intention = objet.intention;
+        // Une ligne par Action active au prochain tour (specs.md 13, bridge.py:_intentions_json) -
+        // plusieurs peuvent l'etre le meme tour (ex. le Boss des pirates, qui attaque ET pose un
+        // buff). Tir allie actif (specs.md 12.6) : la cible reelle (un autre ennemi) n'est tiree
+        // au hasard qu'a la resolution du tour, jamais ici, pour rester deterministe au tap/
+        // redessin. "x{repetitions}" (ex. Le nettoyeur) : l'action se declenche plusieurs fois
+        // dans le meme tour, sans quoi l'infobulle laisserait croire a un seul coup/pose.
+        for (const intention of objet.intentions) {
+            const repetition = intention.repetitions > 1 ? ` x${intention.repetitions}` : "";
             if (intention.type === "POSE_BUFF") {
-                lignes.push(`<div>🛡️ Pose un effet (${intention.valeur})</div>`);
+                const texteBuff = texteTypeBuff(intention.action_buff, intention.valeur);
+                const cibleTexte = intention.soi_meme ? "sur lui-meme" : "sur un allie au hasard";
+                lignes.push(`<div>🛡️ Va poser ${texteBuff} (${cibleTexte})${repetition}</div>`);
             } else if (intention.cible_type === "REDIRECTION") {
-                lignes.push(`<div>🎯 Vise un allie au hasard</div>`);
+                lignes.push(`<div>🎯 Vise un allie au hasard${repetition}</div>`);
             } else if (intention.cible_type === "TOUS") {
-                lignes.push(`<div>🎯 Tous les modules (-${intention.degats})</div>`);
+                lignes.push(`<div>🎯 Tous les modules (-${intention.degats}${repetition})</div>`);
             } else {
-                lignes.push(`<div>🎯 ${intention.module_nom} (-${intention.degats})</div>`);
+                lignes.push(`<div>🎯 ${intention.module_nom} (-${intention.degats}${repetition})</div>`);
             }
         }
         for (const debuff of objet.debuffs) {
@@ -532,12 +536,22 @@ const LIBELLES_ACTION_ACTIF = {
     BOUCLIER_PAR_TOUR: (buff) => `+${buff.valeur} bouclier/tour`,
     BOUCLIER_MIROIR: (buff) => `Bouclier miroir ${buff.valeur}`,
     REDUCTION_DEGATS: (buff) => `Degats reduits -${buff.valeur}`,
+    AUGMENTATION_DEGATS: (buff) => `Degats augmentes +${buff.valeur}`,
     VULNERABILITE: (buff) => `Vulnerabilite +${buff.valeur}%`,
     REDIRECTION_CIBLE: () => `Tir detourne`,
 };
 
+// Texte d'un buff/debuff par son seul type (sans duree), reutilise par libelleEffetActif
+// (buff deja actif) et par l'intention POSE_BUFF d'un ennemi (pas encore active, cf.
+// afficherInfobulle) - repli generique si jamais un type sans libelle dedie apparaissait,
+// pour ne jamais planter (contrairement a un acces direct LIBELLES_ACTION_ACTIF[action](...)).
+function texteTypeBuff(action, valeur) {
+    const fabrique = LIBELLES_ACTION_ACTIF[action];
+    return fabrique ? fabrique({ valeur }) : `Buff +${valeur}`;
+}
+
 function libelleEffetActif(buff) {
-    const texte = LIBELLES_ACTION_ACTIF[buff.action](buff);
+    const texte = texteTypeBuff(buff.action, buff.valeur);
     if (buff.tours_restants === null) return `${texte} (illimite)`;
     const tour = buff.tours_restants === 1 ? "tour" : "tours";
     return `${texte} (${buff.tours_restants} ${tour})`;

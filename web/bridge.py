@@ -119,11 +119,11 @@ def _module_json(module, id_case: str):
     }
 
 
-def _intention_json(ennemi):
-    """Intention de cet ennemi a son prochain tour (specs.md 13, ActionEnnemi), calculee avec
-    les memes fonctions que fenetre.py (prochaine_action_active/previsualiser_cible/
-    degats_attaque_effectifs, aucune logique dupliquee) - None si aucune Action n'est active
-    ce tour-la (ex. Petit Jean, dont le bouclier n'est pose qu'un tour sur 3).
+def _intention_action_json(ennemi, action):
+    """Intention correspondant a une seule Action active de cet ennemi (cf. _intentions_json
+    ci-dessous pour la liste complete), calculee avec les memes fonctions que fenetre.py
+    (previsualiser_cible/degats_attaque_effectifs, aucune logique dupliquee) - None si son
+    Attaque de proximite n'a plus de cible (combat deja termine sur ce point).
 
     type: "ATTAQUE" ou "POSE_BUFF" (cf. TypeActionEnnemi). Pour une ATTAQUE :
     cible_type "TOUS" (attaque de zone, Le puzzle), "REDIRECTION" (Tir allie actif, specs.md
@@ -132,20 +132,24 @@ def _intention_json(ennemi):
     avec module_id/module_nom). Le "degats" est volontairement la valeur "brute" de
     l'ennemi, pas _degats_effectifs de combat.py (qui plafonne selon PV+bouclier de la
     cible et renvoie 0 si un leurre est actif, specs.md 12.6) : l'intention doit montrer la
-    vraie attaque de chaque ennemi. Pour une POSE_BUFF, seule la valeur du buff est fournie
-    (pas de cible a afficher - SOI_MEME ou un module tire au hasard a la resolution)."""
-    if ennemi.est_detruit():
-        return None
-    action = combat.prochaine_action_active(ennemi)
-    if action is None:
-        return None
+    vraie attaque de chaque ennemi. Pour une POSE_BUFF, "action_buff" (cf. carte.py:ActionCarte,
+    pour app.js:LIBELLES_ACTION_ACTIF) et "soi_meme" (True = SOI_MEME, False = un module tire
+    au hasard a la resolution) decrivent l'effet et sa cible. "repetitions" (les deux types)
+    indique que l'action se declenche plusieurs fois dans le meme tour (ex. Le nettoyeur,
+    valeur/effet infliges/poses ce nombre de fois, pas une seule)."""
     if action.type != TypeActionEnnemi.ATTAQUE:
-        return {"type": "POSE_BUFF", "valeur": action.valeur}
+        return {
+            "type": "POSE_BUFF",
+            "valeur": action.valeur,
+            "action_buff": action.action_buff.name if action.action_buff else None,
+            "soi_meme": action.cible == CibleActionEnnemi.SOI_MEME,
+            "repetitions": action.repetitions,
+        }
     degats = ennemi.degats_attaque_effectifs(action.valeur)
     if action.cible == CibleActionEnnemi.TOUS_MODULES_JOUEUR:
-        return {"type": "ATTAQUE", "cible_type": "TOUS", "degats": degats}
+        return {"type": "ATTAQUE", "cible_type": "TOUS", "degats": degats, "repetitions": action.repetitions}
     if any(buff.action == ActionCarte.REDIRECTION_CIBLE for buff in ennemi.buffs_actifs):
-        return {"type": "ATTAQUE", "cible_type": "REDIRECTION"}
+        return {"type": "ATTAQUE", "cible_type": "REDIRECTION", "repetitions": action.repetitions}
     cible = combat.previsualiser_cible(ennemi)
     if cible is None:
         return None
@@ -155,7 +159,19 @@ def _intention_json(ennemi):
         "module_id": _id_module(cible),
         "module_nom": cible.nom,
         "degats": degats,
+        "repetitions": action.repetitions,
     }
+
+
+def _intentions_json(ennemi):
+    """Intentions de cet ennemi a son prochain tour (specs.md 13, ActionEnnemi) : une entree
+    par Action active ce tour-la (cf. Combat.prochaines_actions_actives - plusieurs peuvent
+    l'etre le meme tour, ex. le Boss des pirates qui attaque ET pose un buff), liste vide si
+    aucune (ex. Petit Jean, dont le bouclier n'est pose qu'un tour sur 3)."""
+    if ennemi.est_detruit():
+        return []
+    actions = combat.prochaines_actions_actives(ennemi)
+    return [intention for action in actions if (intention := _intention_action_json(ennemi, action)) is not None]
 
 
 def _debuffs_json(ennemi):
@@ -178,7 +194,7 @@ def _ennemi_json(ennemi, id_case: str, fusionne: bool = False):
         "bouclier": ennemi.bouclier,
         "detruit": ennemi.est_detruit(),
         "image": _chemin_web(ennemi.image),
-        "intention": _intention_json(ennemi),
+        "intentions": _intentions_json(ennemi),
         "debuffs": _debuffs_json(ennemi),
         # Occupe aussi la case Arriere de cette rangee (specs.md 3.2, ex. le Boss des pirates) :
         # app.js n'affiche alors qu'une seule case, sur les 2 colonnes (cf. _ennemis_json).

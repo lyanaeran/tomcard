@@ -632,6 +632,55 @@ def test_previsualiser_cible_masque_le_module_si_redirection_active():
     assert combat.previsualiser_cible(attaquant) is None
 
 
+def test_prochaines_actions_actives_renvoie_toutes_les_actions_du_meme_tour():
+    """Un ennemi comme le Boss des pirates (specs.md 13) attaque a chaque tour ET pose un buff
+    a partir d'un certain tour : les deux doivent apparaitre au meme tour, pas seulement la
+    premiere de la liste (ce que prochaine_action_active, utilisee par previsualiser_cible,
+    renvoie seule - cf. test suivant)."""
+    attaque = ActionEnnemi(type=TypeActionEnnemi.ATTAQUE, cible=CibleActionEnnemi.TOUS_MODULES_JOUEUR, valeur=5)
+    buff = ActionEnnemi(
+        type=TypeActionEnnemi.POSE_BUFF, cible=CibleActionEnnemi.SOI_MEME, valeur=2, frequence=3, tour_depart=2,
+        action_buff=ActionCarte.AUGMENTATION_DEGATS,
+    )
+    boss = Ennemi(pv_max=150, actions=[attaque, buff], nom="Boss")
+    ennemis = {Position(Colonne.AVANT, Rangee.GAUCHE): boss}
+    combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
+
+    assert combat.prochaines_actions_actives(boss) == [attaque]  # tour 1 : le buff n'est pas encore actif
+
+    combat.finir_tour_joueur()  # ecoule le tour ennemi 1
+
+    assert combat.prochaines_actions_actives(boss) == [attaque, buff]  # tour 2 : les deux
+
+
+def test_prochaine_action_active_renvoie_la_premiere_des_actions_actives():
+    attaque = ActionEnnemi(type=TypeActionEnnemi.ATTAQUE, cible=CibleActionEnnemi.TOUS_MODULES_JOUEUR, valeur=5)
+    buff = ActionEnnemi(
+        type=TypeActionEnnemi.POSE_BUFF, cible=CibleActionEnnemi.SOI_MEME, valeur=2, frequence=3, tour_depart=2,
+        action_buff=ActionCarte.AUGMENTATION_DEGATS,
+    )
+    boss = Ennemi(pv_max=150, actions=[attaque, buff], nom="Boss")
+    ennemis = {Position(Colonne.AVANT, Rangee.GAUCHE): boss}
+    combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
+    combat.finir_tour_joueur()
+
+    assert combat.prochaine_action_active(boss) is attaque
+
+
+def test_prochaine_action_active_renvoie_none_sans_action_active():
+    buff = ActionEnnemi(
+        type=TypeActionEnnemi.POSE_BUFF, cible=CibleActionEnnemi.SOI_MEME, valeur=3, frequence=2, tour_depart=1,
+        action_buff=ActionCarte.BOUCLIER_PAR_TOUR,
+    )
+    petit_jean = Ennemi(pv_max=100, actions=[buff], nom="Petit Jean")
+    ennemis = {Position(Colonne.AVANT, Rangee.GAUCHE): petit_jean}
+    combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
+    combat.finir_tour_joueur()  # tour 1 ecoule : buff pose (tour_depart=1)
+
+    assert combat.prochaines_actions_actives(petit_jean) == []  # tour 2 : frequence=2, pas actif
+    assert combat.prochaine_action_active(petit_jean) is None
+
+
 # --- Colonne avant alliee (Blindage, specs.md 12.1) ---
 
 

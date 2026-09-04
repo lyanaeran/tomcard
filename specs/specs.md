@@ -1436,6 +1436,29 @@ composition, pas un attribut de l'`Ennemi` en combat) :
   position (Avant + Arrière de la rangée du milieu) est câblée en dur dans `creer_flotte_boss`
   (§13.4), puisqu'il n'est jamais mélangé avec d'autres ennemis dans une même flotte
 
+**Intention affichée au survol/tap** (décision utilisateur, suite au Boss des pirates qui a révélé
+deux lacunes) — une ligne par Action active au prochain tour, pas seulement la première :
+
+- `Combat.prochaines_actions_actives(ennemi)` renvoie **toutes** les Actions actives au prochain
+  tour (`prochaine_action_active` n'en renvoyait qu'une seule — toujours la première de la liste,
+  ce qui masquait silencieusement toute Action suivante comme un `POSE_BUFF` déclenché le même tour
+  qu'une `ATTAQUE`, ex. le Boss des pirates ; conservée telle quelle, utilisée par
+  `previsualiser_cible` qui ne s'intéresse qu'à une éventuelle Attaque de proximité). PC
+  (`fenetre.py:_dessiner_survol`) et web (`bridge.py:_intentions_json`, une liste — remplace
+  l'ancien champ singulier `intention`) itèrent désormais sur cette liste complète
+- **Répétitions** (`ActionEnnemi.repetitions > 1`, ex. Le nettoyeur) : la ligne d'intention
+  précise "x{repetitions}" (`Vise : Module (7 dégâts x2)`) — auparavant la valeur affichée
+  correspondait à un seul coup sans l'indiquer, laissant croire que l'ennemi n'inflige que cette
+  valeur alors que l'Action se répète plusieurs fois dans le même tour
+- **Type de buff/debuff posé** (`POSE_BUFF`) : la ligne d'intention décrit désormais l'effet par
+  son type (`_texte_type_buff`/`texteTypeBuff`, même mapping que les buffs déjà actifs, §13 point 2
+  ci-dessus — ex. "Va poser Dégâts augmentés +2 (sur lui-même)") plutôt que le générique "Pose un
+  effet (X)" d'origine, qui ne précisait ni le type d'effet ni sa cible (soi-même ou un module tiré
+  au hasard)
+- Corrigé au passage un bug latent côté web : `app.js:LIBELLES_ACTION_ACTIF` n'avait pas d'entrée
+  pour `AUGMENTATION_DEGATS`, ce qui aurait fait planter l'infobulle web au survol/tap d'un ennemi
+  portant ce buff déjà actif (jamais déclenché avant le Boss des pirates, premier à l'utiliser)
+
 ### 13.4 Composition des flottes de combat
 
 - **Combat Intermédiaire** (Prime) : 1 ennemi tiré au sort (parmi les ennemis à 1 emplacement)
