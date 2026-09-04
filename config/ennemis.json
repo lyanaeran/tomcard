@@ -60,9 +60,10 @@
       "points_de_vie": 50,
       "placement": null,
       "actions": [
+        {"type": "ATTAQUE", "cible": "PROXIMITE", "valeur": 2},
         {
           "type": "POSE_BUFF",
-          "cible": "COLONNE_AVANT_SINON_ARRIERE_JOUEUR",
+          "cible": "COLONNE_AVANT_SINON_ARRIERE_ENNEMIE",
           "valeur": 5,
           "action_buff": "BOUCLIER_MIROIR"
         }

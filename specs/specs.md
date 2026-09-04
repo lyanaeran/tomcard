@@ -1384,19 +1384,44 @@ Deux listes distinctes, indépendantes l'une de l'autre (décision utilisateur) 
 - `COLONNE_AVANT_SINON_ARRIERE_JOUEUR` : un module du joueur tiré au hasard dans la colonne avant
   (base incluse, comme en §12.1) s'il y en a un de vivant, sinon dans la colonne arrière — le
   tirage n'a lieu qu'à la résolution réelle du tour, jamais au survol/tap (même principe que Tir
-  allié, §12.6, pour rester déterministe)
+  allié, §12.6, pour rester déterministe). Plus utilisée par aucun ennemi actuel (Miroir, seul
+  utilisateur, cible désormais un ennemi allié - cf. `COLONNE_AVANT_SINON_ARRIERE_ENNEMIE`
+  ci-dessous et §13.2), conservée pour un futur ennemi qui ciblerait le joueur de cette façon
+- `COLONNE_AVANT_SINON_ARRIERE_ENNEMIE` : un ennemi de la flotte tiré au hasard (l'ennemi qui
+  exécute l'Action y compris — ex. Miroir peut se cibler lui-même) dans la colonne avant s'il y en
+  a un de vivant, sinon dans la colonne arrière (ex. Miroir pose un Bouclier miroir sur un allié,
+  §13.2)
 - `SOI_MEME` : l'ennemi qui exécute l'Action (uniquement pertinent pour `POSE_BUFF`)
 
 ### 13.2 Bouclier miroir (`ActionCarte.BOUCLIER_MIROIR`)
 
-Buff posé sur un module du joueur (ennemi Miroir). Tant qu'il est actif, une attaque reçue par ce
-module est en partie **renvoyée à l'attaquant** : jusqu'à la valeur du bouclier miroir, les dégâts
-sont retirés à l'ennemi attaquant plutôt qu'au module protégé ; le reste (si les dégâts dépassent la
-valeur du bouclier miroir) s'applique normalement au module. Se consomme comme un bouclier classique
-(sa valeur diminue à chaque dégât renvoyé, l'instance est retirée à 0) ; plusieurs instances peuvent
-coexister sur un même module, consommées dans l'ordre de pose (`Combat._consommer_bouclier_miroir`).
-Uniquement pris en compte côté résolution du tour ennemi (`Combat._resoudre_attaque`) : le joueur ne
-s'attaque jamais lui-même, cette mécanique n'a de sens que pour une attaque ennemie.
+**Changement de cible (décision utilisateur) :** posé désormais sur un **ennemi allié**
+(`COLONNE_AVANT_SINON_ARRIERE_ENNEMIE`, §13.1 — colonne avant de la flotte si elle compte un
+ennemi vivant, sinon arrière, Miroir peut se cibler lui-même) plutôt que sur un module du joueur
+comme dans la version initiale de cette mécanique. Objectif inversé : protéger un allié ennemi
+contre les attaques **du joueur**, plutôt qu'un module du joueur contre les attaques ennemies.
+
+Tant qu'il est actif, une attaque reçue par l'ennemi protégé est en partie **renvoyée** : jusqu'à
+la valeur du bouclier miroir, les dégâts sont retirés à l'attaquant plutôt qu'à la cible protégée ;
+le reste (si les dégâts dépassent la valeur du bouclier miroir) s'applique normalement à la cible.
+Se consomme comme un bouclier classique (sa valeur diminue à chaque dégât renvoyé, l'instance est
+retirée à 0) ; plusieurs instances peuvent coexister sur une même cible, consommées dans l'ordre de
+pose. Deux mécanismes distincts selon qui attaque, chacun avec sa propre méthode de consommation :
+
+- **Une Action ennemie attaque l'ennemi protégé** (ex. Tir allié détourne un tir vers lui,
+  §12.6) : l'« attaquant » est un `Ennemi` bien identifié — les dégâts lui sont renvoyés
+  directement (`Combat._consommer_bouclier_miroir`/`_resoudre_attaque`), comme dans la version
+  initiale de cette mécanique
+- **Le joueur attaque l'ennemi protégé** (une carte) : il n'y a pas d'« attaquant » identifiable
+  côté joueur (une carte n'est liée à aucun module, l'électricité est une ressource commune) — donc
+  chaque instance de Bouclier miroir renvoie plutôt vers **son propre module du joueur**, tiré au
+  hasard **une bonne fois pour toutes à la pose du buff** (`BuffActif.cible_reflet`,
+  `Combat._executer_pose_buff`/`_consommer_bouclier_miroir_vers_joueur`), jamais à la résolution de
+  l'attaque : contrairement à Tir allié (cible réelle découverte seulement à la résolution, pour
+  rester déterministe au survol/tap), ce choix est **affiché dès la pose** dans l'infobulle de
+  l'ennemi protégé (`Bouclier miroir 5 -> Principal`, PC `_libelle_buff`/web
+  `libelleEffetActif`+`cible_reflet_nom`) : le joueur peut anticiper quel module de son vaisseau
+  est en jeu avant de décider d'attaquer ou non la cible protégée
 
 ### 13.3 Les ennemis (`config/ennemis.json`)
 
@@ -1409,7 +1434,7 @@ Boss des pirates a été ajouté séparément comme boss unique du parcours (§1
 | Le nettoyeur | S | 25 | Attaque 7 dégâts, **2 fois** par tour (`repetitions=2`), cible de proximité |
 | Petit Jean | S | 100 | Attaque 2 dégâts par tour (proximité) ; tous les 2 tours (à partir du tour 1), se pose 3 bouclier pendant 2 tours |
 | Le puzzle | S | 50 | Attaque 5 dégâts **tous les modules du joueur** par tour (zone) |
-| Miroir | S | 50 | Chaque tour, pose un Bouclier miroir de valeur 5 (persistant) sur un module allié tiré au hasard (colonne avant sinon arrière) |
+| Miroir | S | 50 | Attaque 2 dégâts par tour (proximité) ; chaque tour, pose un Bouclier miroir de valeur 5 (persistant) sur un ennemi allié tiré au hasard (lui-même inclus, colonne avant sinon arrière) |
 | Le Boss des pirates | M, 2 emplacements | 150 | Attaque 5 dégâts **tous les modules du joueur** par tour (zone) ; à partir du tour 2, tous les 3 tours, augmente ses dégâts d'attaque de 2 (persistant, cumulatif) ; à partir du tour 3, tous les 3 tours, se pose un bouclier de 5 |
 
 Valeurs de PV/dégâts inventées faute de spec numérique précise (à ajuster à l'équilibrage) — à

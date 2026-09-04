@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "62";
+const VERSION_CACHE = "63";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -551,7 +551,14 @@ function texteTypeBuff(action, valeur) {
 }
 
 function libelleEffetActif(buff) {
-    const texte = texteTypeBuff(buff.action, buff.valeur);
+    // Bouclier miroir (specs.md 13, ennemi Miroir) : precise le module du joueur qui recevra
+    // les degats renvoyes (cible_reflet_nom, tire une bonne fois pour toutes a la pose du
+    // buff, cf. bridge.py:_debuffs_json) - le joueur doit pouvoir l'anticiper avant d'attaquer
+    // l'ennemi protege.
+    let texte = texteTypeBuff(buff.action, buff.valeur);
+    if (buff.action === "BOUCLIER_MIROIR" && buff.cible_reflet_nom) {
+        texte += ` -> ${buff.cible_reflet_nom}`;
+    }
     if (buff.tours_restants === null) return `${texte} (illimite)`;
     const tour = buff.tours_restants === 1 ? "tour" : "tours";
     return `${texte} (${buff.tours_restants} ${tour})`;

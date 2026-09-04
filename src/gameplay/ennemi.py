@@ -25,12 +25,16 @@ class CibleActionEnnemi(Enum):
     COLONNE_AVANT_SINON_ARRIERE_JOUEUR : un module du joueur tire au hasard dans la colonne
     avant (base incluse) si elle compte au moins un module vivant, sinon dans la colonne
     arriere.
+    COLONNE_AVANT_SINON_ARRIERE_ENNEMIE : un ennemi de la flotte tire au hasard (l'ennemi qui
+    execute l'action y compris, specs.md 13 - ex. Miroir peut se cibler lui-meme) dans la
+    colonne avant si elle compte au moins un ennemi vivant, sinon dans la colonne arriere.
     SOI_MEME : l'ennemi qui execute l'action.
     """
 
     PROXIMITE = auto()
     TOUS_MODULES_JOUEUR = auto()
     COLONNE_AVANT_SINON_ARRIERE_JOUEUR = auto()
+    COLONNE_AVANT_SINON_ARRIERE_ENNEMIE = auto()
     SOI_MEME = auto()
 
 
@@ -98,14 +102,18 @@ class Ennemi:
         """Ajoute du bouclier a l'ennemi."""
         self.bouclier += valeur
 
-    def appliquer_buff(self, action: ActionCarte, valeur: int, tours: int | None) -> None:
+    def appliquer_buff(
+        self, action: ActionCarte, valeur: int, tours: int | None, cible_reflet=None
+    ) -> None:
         """Ajoute un nouveau buff/debuff actif (specs.md 13 - meme liste pour les deux, la
         distinction n'est que semantique) et declenche son effet immediat si BOUCLIER_PAR_TOUR
         (ajoute du bouclier). Contrairement a Module, aucun redeclenchement automatique a
         chaque tour ennemi : c'est la frequence de l'Action qui pose ce buff qui decide quand
         il est repose (cf. ActionEnnemi.active_au_tour). Independant des buffs deja actifs :
-        n'ecrase ni ne fusionne rien, meme un buff du meme type deja present."""
-        buff = BuffActif(action=action, valeur=valeur, tours_restants=tours)
+        n'ecrase ni ne fusionne rien, meme un buff du meme type deja present. cible_reflet
+        (uniquement pour BOUCLIER_MIROIR, cf. carte.py:BuffActif) : module du joueur qui
+        recevra les degats renvoyes quand le joueur attaquera cet ennemi."""
+        buff = BuffActif(action=action, valeur=valeur, tours_restants=tours, cible_reflet=cible_reflet)
         self.buffs_actifs.append(buff)
         if action == ActionCarte.BOUCLIER_PAR_TOUR:
             self.ajouter_bouclier(valeur)

@@ -176,9 +176,17 @@ def _intentions_json(ennemi):
 
 def _debuffs_json(ennemi):
     """Buffs/debuffs actifs de cet ennemi (specs.md 12.1/12.4/13), chacun independant des
-    autres (aucune fusion : la magnitude affichee est celle de cette instance, pas la somme)."""
+    autres (aucune fusion : la magnitude affichee est celle de cette instance, pas la somme).
+    "cible_reflet_nom" (uniquement pour BOUCLIER_MIROIR, ennemi Miroir) : nom du module du
+    joueur qui recevra les degats renvoyes - le joueur doit pouvoir l'anticiper avant
+    d'attaquer cet ennemi, cf. app.js:libelleEffetActif."""
     return [
-        {"action": buff.action.name, "valeur": buff.valeur, "tours_restants": buff.tours_restants}
+        {
+            "action": buff.action.name,
+            "valeur": buff.valeur,
+            "tours_restants": buff.tours_restants,
+            "cible_reflet_nom": buff.cible_reflet.nom if buff.cible_reflet is not None else None,
+        }
         for buff in ennemi.buffs_actifs
     ]
 

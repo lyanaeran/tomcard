@@ -446,8 +446,14 @@ def _texte_type_buff(action: ActionCarte, valeur: int) -> str:
 
 def _libelle_buff(buff: BuffActif) -> str:
     """Texte d'une ligne d'infobulle pour un buff/debuff actif, sur un module ou un ennemi
-    (specs.md 12.1/12.3/12.4/12.5/13 - meme modele des deux cotes, cf. carte.py:BuffActif)."""
+    (specs.md 12.1/12.3/12.4/12.5/13 - meme modele des deux cotes, cf. carte.py:BuffActif).
+
+    Pour un Bouclier miroir (specs.md 13, ennemi Miroir), precise le module du joueur qui
+    recevra les degats renvoyes (BuffActif.cible_reflet, tire une bonne fois pour toutes a la
+    pose du buff) - le joueur doit pouvoir l'anticiper avant d'attaquer l'ennemi protege."""
     texte = _texte_type_buff(buff.action, buff.valeur)
+    if buff.action == ActionCarte.BOUCLIER_MIROIR and buff.cible_reflet is not None:
+        texte += f" -> {buff.cible_reflet.nom}"
     if buff.tours_restants is None:
         duree = "illimite"
     else:
