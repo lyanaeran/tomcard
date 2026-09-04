@@ -38,6 +38,17 @@ def _degats_effectifs(cible: Module | Ennemi, degats: int) -> int:
 SEUIL_DISSIPATION_BOUCLIER = 5
 
 
+def _dedupe_ennemis(ennemis) -> list[Ennemi]:
+    """Deduplique une sequence d'ennemis par identite, en conservant l'ordre (specs.md 3.2) :
+    un ennemi a plusieurs emplacements (ex. Boss des pirates) ne doit jamais etre touche deux
+    fois par un meme effet de zone/colonne/rangee qui recoupe ses cases."""
+    resultat: list[Ennemi] = []
+    for ennemi in ennemis:
+        if not any(existant is ennemi for existant in resultat):
+            resultat.append(ennemi)
+    return resultat
+
+
 def _dissiper_bouclier(entite: Module | Ennemi) -> None:
     """Dissipation naturelle du bouclier a chaque tour (specs.md 3.5, meme regle pour un module
     et un ennemi) : si sa valeur actuelle ne depasse pas SEUIL_DISSIPATION_BOUCLIER, il disparait
@@ -168,9 +179,9 @@ class Combat:
         if carte.cible == CibleCarte.LIGNE_ENNEMIE:
             return isinstance(cible, Ennemi) and cible in self.flotte.ennemis_vivants()
         if carte.cible == CibleCarte.COLONNE_AVANT_ENNEMIE:
-            return isinstance(cible, Ennemi) and cible in self.flotte.ennemis_vivants() and self._position_de_ennemi(cible).colonne == Colonne.AVANT
+            return isinstance(cible, Ennemi) and cible in self.flotte.ennemis_vivants() and self._ennemi_occupe_colonne(cible, Colonne.AVANT)
         if carte.cible == CibleCarte.COLONNE_ARRIERE_ENNEMIE:
-            return isinstance(cible, Ennemi) and cible in self.flotte.ennemis_vivants() and self._position_de_ennemi(cible).colonne == Colonne.ARRIERE
+            return isinstance(cible, Ennemi) and cible in self.flotte.ennemis_vivants() and self._ennemi_occupe_colonne(cible, Colonne.ARRIERE)
         if carte.cible == CibleCarte.COLONNE_AVANT_ALLIEE:
             if not (isinstance(cible, Module) and cible in self._modules_vivants()):
                 return False
@@ -199,11 +210,13 @@ class Combat:
         elif carte.cible == CibleCarte.LIGNE_ENNEMIE:
             position = self._position_de_ennemi(cible)
             occupants = (self.flotte.ennemi_en(colonne, position.rangee) for colonne in (Colonne.AVANT, Colonne.ARRIERE))
-            cibles = [occupant for occupant in occupants if occupant is not None]
+            # Deduplique (specs.md 3.2) : un ennemi a 2 emplacements sur cette rangee (Avant et
+            # Arriere) apparaitrait sinon deux fois dans occupants.
+            cibles = _dedupe_ennemis(occupant for occupant in occupants if occupant is not None)
         elif carte.cible in (CibleCarte.COLONNE_AVANT_ENNEMIE, CibleCarte.COLONNE_ARRIERE_ENNEMIE):
             colonne = Colonne.AVANT if carte.cible == CibleCarte.COLONNE_AVANT_ENNEMIE else Colonne.ARRIERE
             occupants = (self.flotte.ennemi_en(colonne, rangee) for rangee in (Rangee.GAUCHE, Rangee.MID, Rangee.DROITE))
-            cibles = [occupant for occupant in occupants if occupant is not None]
+            cibles = _dedupe_ennemis(occupant for occupant in occupants if occupant is not None)
         elif carte.cible == CibleCarte.COLONNE_AVANT_ALLIEE:
             # Rangee.MID (la base) est incluse : elle occupe la rangee mid, a la fois avant
             # et arriere (specs.md 12.1), contrairement aux colonnes ennemies ou la base n'a
@@ -273,18 +286,18 @@ class Combat:
         """Chaque ennemi vivant execute ses Actions eligibles ce tour (specs.md 13 : frequence/
         tour_depart/repetitions, cf. ActionEnnemi.active_au_tour), dans l'ordre de la grille -
         la colonne Avant de haut en bas (Gauche, Mid, Droite), puis la colonne Arriere de haut
-        en bas, ordre garanti par Flotte.positions() (dict construit dans cet ordre par
-        creer_flotte(), cf. config_poc.POSITIONS_ENNEMIES) - puis dans l'ordre de sa propre
-        liste d'actions. Cet ordre determine notamment quelle attaque est annulee quand un
-        Leurre (specs.md 12.6) protege une cible visee par plusieurs actions dans le meme
-        tour : seule la premiere resolue sur cette cible est annulee."""
+        en bas, ordre garanti par Flotte.ennemis_vivants() (dict construit dans cet ordre par
+        creer_flotte(), cf. config_poc.POSITIONS_ENNEMIES ; un ennemi a plusieurs emplacements,
+        specs.md 3.2, n'y apparait qu'une fois) - puis dans l'ordre de sa propre liste
+        d'actions. Cet ordre determine notamment quelle attaque est annulee quand un Leurre
+        (specs.md 12.6) protege une cible visee par plusieurs actions dans le meme tour : seule
+        la premiere resolue sur cette cible est annulee."""
         self.tour_ennemi_actuel += 1
         for ennemi in self.flotte.ennemis_vivants():
             _dissiper_bouclier(ennemi)
         evenements = []
-        for position, ennemi in self.flotte.positions().items():
-            if ennemi.est_detruit():
-                continue
+        for ennemi in self.flotte.ennemis_vivants():
+            position = self._position_de_ennemi(ennemi)
             for action in ennemi.actions:
                 if not action.active_au_tour(self.tour_ennemi_actuel):
                     continue
@@ -424,11 +437,19 @@ class Combat:
         return self.aleatoire.choice(autres)
 
     def _position_de_ennemi(self, ennemi: Ennemi) -> Position | None:
-        """Retrouve la position d'un ennemi dans la flotte, ou None s'il n'y est pas."""
-        for position, occupant in self.flotte.positions().items():
-            if occupant is ennemi:
-                return position
-        return None
+        """Retrouve la position "principale" d'un ennemi dans la flotte (la case Avant en
+        priorite s'il occupe aussi l'Arriere de la meme rangee, specs.md 3.2 - ex. le Boss des
+        pirates), ou None s'il n'y est pas."""
+        positions = self.flotte.positions_de(ennemi)
+        if not positions:
+            return None
+        avant = [position for position in positions if position.colonne == Colonne.AVANT]
+        return avant[0] if avant else positions[0]
+
+    def _ennemi_occupe_colonne(self, ennemi: Ennemi, colonne: Colonne) -> bool:
+        """Indique si cet ennemi occupe au moins une case de cette colonne (specs.md 3.2 : un
+        ennemi a 2 emplacements occupe l'Avant ET l'Arriere de sa rangee, donc les deux)."""
+        return any(position.colonne == colonne for position in self.flotte.positions_de(ennemi))
 
     def _verifier_fin_de_combat(self) -> None:
         """Met a jour l'etat du combat si la flotte ou le module de base est detruit."""

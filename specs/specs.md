@@ -506,7 +506,18 @@ et les fonctions de clic associées)
 - Le joueur connaît la composition annoncée avant le combat (ex : "2 S + 1 M") mais pas le détail exact des ennemis
 - **S** : 1 emplacement, PV faibles, souvent en groupe
 - **M** : 1 emplacement, PV/dégâts intermédiaires
-- **L** : prend 2 emplacements, gros PV, attaque de zone ou pattern en plusieurs temps
+- **L** : gros PV, attaque de zone ou pattern en plusieurs temps
+- **Nombre d'emplacements occupés** (`SpecEnnemi.emplacements`, `ennemi.py:Ennemi.emplacements`) :
+  champ indépendant de la taille (contrairement à la version initiale de cette règle) — 1 par défaut
+  pour tous les ennemis existants, sauf le Boss des pirates (§13.3, taille M mais 2 emplacements :
+  une case Avant + une case Arrière de la même rangée). Une taille L ne prend donc pas forcément 2
+  emplacements, ni une taille M forcément 1 seul — c'est ce champ, jamais la taille, qui pilote
+  l'occupation réelle dans `Flotte`. Décision utilisateur, à confirmer côté design (le Boss des
+  pirates a été donné comme taille M avec 2 emplacements, ce qui contredisait la règle précédente
+  M=1/L=2 — plutôt que de le reclasser en L, la règle a été assouplie).
+- Un ennemi à plusieurs emplacements est le même objet `Ennemi` rangé à plusieurs `Position` dans
+  `Flotte` (§13.4) : réservé aux flottes scriptées (`creer_flotte_boss`), jamais tiré au hasard dans
+  un combat Prime/démonstration/Astéroïdes (`config_poc._pool_ennemis_standard` l'exclut du pool)
 
 ### 3.3 Ressource et main de cartes
 - **Électricité** = ressource commune à tout le vaisseau (pas un pool par module)
@@ -884,7 +895,7 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
 - Cartes de base fournies avec un nouveau module choisi après un Boss : deck de départ fixe par module, à définir une fois le système de cartes approfondi (voir §7)
 - Plafond exact de slots équipables (proposition actuelle : 5, base incluse) — voir aussi §2.3 pour les points encore ouverts sur la structure par niveaux (répétition du motif 5/9/10 par décennie, progression du nombre d'ennemis, pondération des doublons hors Niveau 1)
 - Formule exacte de pondération des doublons de modules au tirage (§2.3, §5) : plus un exemplaire supplémentaire compte-t-il, linéaire ou autre ?
-- Représentation visuelle d'un ennemi L occupant 2 emplacements (§3.2, §8.1) : rectangle fusionné sur les 2 cases, ou deux images liées logiquement ?
+- ~~Représentation visuelle d'un ennemi occupant 2 emplacements (§3.2, §8.1) : rectangle fusionné sur les 2 cases, ou deux images liées logiquement ?~~ **Tranché** (Boss des pirates, §13.3) : rectangle fusionné sur les 2 cases (un seul sprite, une seule pastille PV/Bouclier), pas deux images dupliquées - `src/ui/fenetre.py:_rect_fusionne`/`_dessiner_flotte` côté PC, `web/bridge.py:_ennemis_json` (une seule case publiée, `fusionne=true`) + `web/app.js:rendreGrilleEnnemis` (`grid-column: span 2`) côté web
 - Compléter le jeu de cartes de chaque module : les archétypes de §4.3 (Bouclier énergétique, Radar, Propulseur, IA de combat, Générateur, Sabotage, Soute/Fret) n'ont pas encore de decks détaillés comme ceux de §4.1-4.2 ; les cartes déjà écrites en §4.1-4.2 n'ont pas encore de type/cible/rareté assignés (§7)
 - Munitions (§3.6/§7.4) : cas limite si la pioche et la défausse sont toutes les deux vides en cours de combat alors qu'il reste des cartes épuisées (qui ne sont jamais remélangées) — le joueur peut alors se retrouver sans carte à piocher ; à surveiller en playtest une fois des cartes à munitions limitées réellement jouables (voir §12.10 pour l'état d'implémentation actuel)
 - Munitions (§7.4) : pas de règle systématique reliant rareté et munitions pour l'instant (une carte de n'importe quel palier peut avoir des munitions limitées ou non) — à revisiter si un pattern se dégage en concevant plus de cartes
@@ -1376,20 +1387,32 @@ coexister sur un même module, consommées dans l'ordre de pose (`Combat._consom
 Uniquement pris en compte côté résolution du tour ennemi (`Combat._resoudre_attaque`) : le joueur ne
 s'attaque jamais lui-même, cette mécanique n'a de sens que pour une attaque ennemie.
 
-### 13.3 Les 5 ennemis (`config/ennemis.json`)
+### 13.3 Les ennemis (`config/ennemis.json`)
 
-Remplacent entièrement les 3 ennemis placeholder du POC (ENM_1/2/3, retirés) :
+Les 5 premiers remplacent entièrement les 3 ennemis placeholder du POC (ENM_1/2/3, retirés) ; le
+Boss des pirates a été ajouté séparément comme boss unique du parcours (§13.4) :
 
-| Ennemi | PV | Comportement |
-| --- | --- | --- |
-| Pat le Pirate | 50 | Attaque 5 dégâts par tour, cible de proximité |
-| Le nettoyeur | 25 | Attaque 7 dégâts, **2 fois** par tour (`repetitions=2`), cible de proximité |
-| Petit Jean | 100 | Attaque 2 dégâts par tour (proximité) ; tous les 2 tours (à partir du tour 1), se pose 3 bouclier pendant 2 tours |
-| Le puzzle | 50 | Attaque 5 dégâts **tous les modules du joueur** par tour (zone) |
-| Miroir | 50 | Chaque tour, pose un Bouclier miroir de valeur 5 (persistant) sur un module allié tiré au hasard (colonne avant sinon arrière) |
+| Ennemi | Taille | PV | Comportement |
+| --- | --- | --- | --- |
+| Pat le Pirate | S | 50 | Attaque 5 dégâts par tour, cible de proximité |
+| Le nettoyeur | S | 25 | Attaque 7 dégâts, **2 fois** par tour (`repetitions=2`), cible de proximité |
+| Petit Jean | S | 100 | Attaque 2 dégâts par tour (proximité) ; tous les 2 tours (à partir du tour 1), se pose 3 bouclier pendant 2 tours |
+| Le puzzle | S | 50 | Attaque 5 dégâts **tous les modules du joueur** par tour (zone) |
+| Miroir | S | 50 | Chaque tour, pose un Bouclier miroir de valeur 5 (persistant) sur un module allié tiré au hasard (colonne avant sinon arrière) |
+| Le Boss des pirates | M, 2 emplacements | 150 | Attaque 5 dégâts **tous les modules du joueur** par tour (zone) ; à partir du tour 2, tous les 3 tours, augmente ses dégâts d'attaque de 2 (persistant, cumulatif) ; à partir du tour 3, tous les 3 tours, se pose un bouclier de 5 |
 
 Valeurs de PV/dégâts inventées faute de spec numérique précise (à ajuster à l'équilibrage) — à
-signaler comme telles, cf. règle du fichier `CLAUDE.md`.
+signaler comme telles, cf. règle du fichier `CLAUDE.md`. Pour le Boss des pirates, seules ces
+valeurs sont inventées : le reste (PV 150, dégâts 5, +2 dégâts et bouclier 5 tous les 3 tours à
+partir du tour 2/3 respectivement) a été donné explicitement par l'utilisateur.
+
+**Augmentation de dégâts** (`ActionCarte.AUGMENTATION_DEGATS`, Boss des pirates) : buff posé sur
+l'ennemi lui-même (`SOI_MEME`), symétrique de `REDUCTION_DEGATS` — augmente au lieu de diminuer les
+dégâts de ses futures Actions ATTAQUE (`Ennemi.degats_attaque_effectifs`). Comme tout buff posé par
+une Action ennemie (point 2 ci-dessus), ne se redéclenche jamais automatiquement : c'est la
+`frequence`/`tour_depart` de l'Action qui le pose (persistante, `duree_buff=null`) qui décide de son
+rythme — chaque déclenchement ajoute une nouvelle instance indépendante, l'effet est donc cumulatif
+et permanent (+2 au tour 2, +4 au tour 5, +6 au tour 8...). Pas encore utilisée par une carte joueur.
 
 **Préférence de placement en flotte** (`SpecEnnemi.placement`, purement une préférence de
 composition, pas un attribut de l'`Ennemi` en combat) :
@@ -1398,14 +1421,21 @@ composition, pas un attribut de l'`Ennemi` en combat) :
 - Petit Jean (`PROTECTEUR_AVANT`) : placé de préférence en colonne avant, pour protéger les autres
 - Les 3 autres (Pat le Pirate, Le puzzle, Miroir) : aucune préférence — placés dans les emplacements
   restants, colonne avant en priorité puis arrière (choix par défaut, pas de spec précise)
+- Le Boss des pirates n'a pas de préférence de placement au sens de `SpecEnnemi.placement` : sa
+  position (Avant + Arrière de la rangée du milieu) est câblée en dur dans `creer_flotte_boss`
+  (§13.4), puisqu'il n'est jamais mélangé avec d'autres ennemis dans une même flotte
 
 ### 13.4 Composition des flottes de combat
 
-- **Combat Intermédiaire** (Prime) : 1 ennemi tiré au sort (parmi les 5) jusqu'au niveau 5 inclus,
-  puis 2 ennemis tirés au sort à partir du niveau 6 (`config_poc.creer_flotte_prime`)
-- **Combat de Boss** : composition fixe (pas de tirage) — 2x Petit Jean en colonne avant (gauche et
-  droite), Le nettoyeur et Le puzzle en colonne arrière (gauche et droite) ; les deux emplacements
-  du milieu restent vides (`config_poc.creer_flotte_boss`)
+- **Combat Intermédiaire** (Prime) : 1 ennemi tiré au sort (parmi les ennemis à 1 emplacement)
+  jusqu'au niveau 5 inclus, puis 2 ennemis tirés au sort à partir du niveau 6
+  (`config_poc.creer_flotte_prime`) — le Boss des pirates (2 emplacements) est exclu de ce tirage
+  (`_pool_ennemis_standard`, §3.2)
+- **Combat de Boss** : composition fixe (pas de tirage) — le Boss des pirates seul, occupant à la
+  fois la case Avant et la case Arrière de la rangée du milieu (`config_poc.creer_flotte_boss`).
+  Remplace l'ancienne composition (2x Petit Jean en colonne avant, Le nettoyeur et Le puzzle en
+  colonne arrière) — un seul boss pour l'instant, utilisé à tous les niveaux Boss (multiples de 10) ;
+  l'utilisateur prévoit plusieurs boss avec un tirage au sort entre eux à terme, pas encore implémenté
 
 ### 13.5 Points de vie des modules (fin du mode test)
 

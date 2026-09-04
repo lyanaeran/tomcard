@@ -57,6 +57,36 @@ def test_reduction_degats_ne_descend_jamais_sous_zero():
     assert ennemi.degats_attaque_effectifs(7) == 0
 
 
+def test_augmentation_degats_majore_les_degats_infliges():
+    ennemi = Ennemi(pv_max=15)
+
+    ennemi.appliquer_buff(ActionCarte.AUGMENTATION_DEGATS, 2, tours=None)
+
+    assert ennemi.degats_attaque_effectifs(5) == 7
+
+
+def test_augmentation_et_reduction_degats_se_cumulent():
+    ennemi = Ennemi(pv_max=15)
+
+    ennemi.appliquer_buff(ActionCarte.AUGMENTATION_DEGATS, 2, tours=None)
+    ennemi.appliquer_buff(ActionCarte.AUGMENTATION_DEGATS, 2, tours=None)
+    ennemi.appliquer_buff(ActionCarte.REDUCTION_DEGATS, 3, tours=1)
+
+    assert ennemi.degats_attaque_effectifs(5) == 6  # 5 + 2 + 2 - 3
+
+
+def test_ennemi_a_un_seul_emplacement_par_defaut():
+    ennemi = Ennemi(pv_max=15)
+
+    assert ennemi.emplacements == 1
+
+
+def test_ennemi_peut_occuper_deux_emplacements():
+    ennemi = Ennemi(pv_max=150, emplacements=2)
+
+    assert ennemi.emplacements == 2
+
+
 def test_vulnerabilite_majore_les_degats_subis():
     ennemi = Ennemi(pv_max=15)
 

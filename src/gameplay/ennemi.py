@@ -67,6 +67,7 @@ class Ennemi:
         nom: str = "Ennemi",
         image: str | None = None,
         taille: str = "S",
+        emplacements: int = 1,
     ):
         self.pv_max = pv_max
         self.pv = pv_max
@@ -74,6 +75,11 @@ class Ennemi:
         self.nom = nom
         self.image = image
         self.taille = taille
+        # Nombre de cases de la grille ennemie occupees par cet ennemi (specs.md 3.2) : 1 dans
+        # tous les cas actuels sauf le Boss des pirates (2, une case Avant + une Arriere de la
+        # meme rangee) - independant de `taille`, purement informatif (cf. donnees.py). C'est
+        # Flotte qui materialise cette occupation (le meme objet Ennemi range a 2 Positions).
+        self.emplacements = emplacements
         self.actions = actions or []
         self.buffs_actifs: list[BuffActif] = []
 
@@ -109,8 +115,11 @@ class Ennemi:
 
     def degats_attaque_effectifs(self, valeur_brute: int) -> int:
         """Degats reellement infliges par une Action ATTAQUE de cet ennemi (valeur_brute =
-        ActionEnnemi.valeur), la somme des reductions actives soustraite."""
-        return max(0, valeur_brute - self._somme_buffs(ActionCarte.REDUCTION_DEGATS))
+        ActionEnnemi.valeur) : la somme des augmentations actives (specs.md 13, Boss des
+        pirates) est ajoutee, celle des reductions actives est soustraite."""
+        augmentation = self._somme_buffs(ActionCarte.AUGMENTATION_DEGATS)
+        reduction = self._somme_buffs(ActionCarte.REDUCTION_DEGATS)
+        return max(0, valeur_brute + augmentation - reduction)
 
     def degats_subis(self, degats: int) -> int:
         """Degats bruts d'une carte, majores par la somme des vulnerabilites actives de cet ennemi."""

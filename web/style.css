@@ -336,6 +336,22 @@ body {
     height: 100%;
 }
 
+/* .case-fusionnee (ennemi a plusieurs emplacements, specs.md 3.2, ex. le Boss des pirates) :
+   une seule case sur les 2 colonnes Avant/Arriere d'une rangee (grid-row/grid-column poses en
+   ligne par app.js:rendreGrilleEnnemis, cf. _PAIRES_CASES_ENNEMIES cote bridge.py). Sa largeur
+   vient automatiquement des 2 pistes de grille fusionnees, bien plus large que haute - une image
+   qui ne fait pas ce ratio paraitrait minuscule avec object-fit:contain (herite de .case img) :
+   height:auto + centrage vertical par position absolue remplit toute la largeur quitte a deborder
+   un peu en hauteur (meme choix que _sprite_ajuste_largeur cote pc, src/ui/fenetre.py). */
+.case.ennemi.case-fusionnee img {
+    height: auto;
+    aspect-ratio: auto;
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+}
+
 .case.detruit {
     opacity: 0.4;
 }

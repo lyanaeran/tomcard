@@ -40,14 +40,25 @@ def test_charger_modules_renvoie_10_modules_avec_images_existantes_et_cartes_con
         assert module.description
 
 
-def test_charger_ennemis_renvoie_5_ennemis_avec_images_existantes():
+def test_charger_ennemis_renvoie_6_ennemis_avec_images_existantes():
     ennemis = charger_ennemis()
 
-    assert len(ennemis) == 5
+    assert len(ennemis) == 6
     for ennemi in ennemis:
         assert Path(ennemi.image).is_file()
         assert len(ennemi.actions) > 0
         assert ennemi.points_de_vie > 0
+
+
+def test_charger_ennemis_le_boss_des_pirates_occupe_2_emplacements():
+    """specs.md 3.2 : le Boss des pirates est le seul ennemi a occuper 2 emplacements pour
+    l'instant (une case Avant + une Arriere de la meme rangee, cf. config_poc.creer_flotte_boss).
+    Les autres ennemis restent a 1 emplacement (valeur par defaut, absente de leur config)."""
+    ennemis = charger_ennemis()
+    par_id = {spec.id: spec for spec in ennemis}
+
+    assert par_id["ENM_BOSS_PIRATES"].emplacements == 2
+    assert par_id["ENM_PAT_LE_PIRATE"].emplacements == 1
 
 
 def test_image_case_module_recadre_le_module_principal():

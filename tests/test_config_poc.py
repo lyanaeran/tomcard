@@ -33,7 +33,7 @@ from src.gameplay.config_poc import (
     tirer_cartes,
 )
 from src.gameplay.donnees import charger_cartes, charger_ennemis, charger_modules
-from src.gameplay.position import Colonne
+from src.gameplay.position import Colonne, Rangee
 
 
 def test_charger_modules_contient_le_module_principal():
@@ -55,12 +55,31 @@ def test_charger_modules_secondaires_ont_30_pv():
     assert all(spec.points_de_vie == 30 for spec in secondaires)
 
 
-def test_charger_ennemis_contient_les_5_ennemis():
+def test_charger_ennemis_contient_les_6_ennemis():
     specs = charger_ennemis()
 
     noms = {spec.nom for spec in specs}
 
-    assert noms == {"Pat le Pirate", "Le nettoyeur", "Petit Jean", "Le puzzle", "Miroir"}
+    assert noms == {"Pat le Pirate", "Le nettoyeur", "Petit Jean", "Le puzzle", "Miroir", "Le Boss des pirates"}
+
+
+def test_creer_flotte_prime_ne_tire_jamais_le_boss():
+    """Le Boss des pirates (2 emplacements, specs.md 3.2) est reserve a creer_flotte_boss - un
+    combat Prime standard ne sait pas placer un ennemi sur 2 cases, il doit etre exclu du tirage
+    au hasard (_pool_ennemis_standard)."""
+    specs = charger_ennemis()
+
+    for graine in range(30):
+        flotte = creer_flotte_prime(specs, NIVEAU_PRIME_DEUX_ENNEMIS, random.Random(graine))
+        assert all(ennemi.nom != "Le Boss des pirates" for ennemi in flotte.ennemis_vivants())
+
+
+def test_creer_flotte_ne_tire_jamais_le_boss():
+    specs = charger_ennemis()
+
+    for graine in range(30):
+        flotte = creer_flotte(specs, random.Random(graine))
+        assert all(ennemi.nom != "Le Boss des pirates" for ennemi in flotte.ennemis_vivants())
 
 
 def test_creer_vaisseau_place_le_principal_et_4_modules_differents():
@@ -177,13 +196,16 @@ def test_creer_flotte_boss_composition_fixe():
 
     flotte = creer_flotte_boss(specs)
 
-    noms = sorted(ennemi.nom for ennemi in flotte.ennemis_vivants())
-    assert noms == sorted(["Petit Jean", "Petit Jean", "Le nettoyeur", "Le puzzle"])
-    for position, ennemi in flotte.positions().items():
-        if ennemi.nom == "Petit Jean":
-            assert position.colonne == Colonne.AVANT
-        else:
-            assert position.colonne == Colonne.ARRIERE
+    vivants = flotte.ennemis_vivants()
+    assert [ennemi.nom for ennemi in vivants] == ["Le Boss des pirates"]
+    boss = vivants[0]
+    assert boss.pv_max == 150
+    assert boss.emplacements == 2
+    # Occupe a la fois l'Avant et l'Arriere de la rangee du milieu (specs.md 3.2) : meme objet
+    # aux deux Positions.
+    positions = flotte.positions_de(boss)
+    assert {position.colonne for position in positions} == {Colonne.AVANT, Colonne.ARRIERE}
+    assert all(position.rangee == Rangee.MID for position in positions)
 
 
 def test_tirer_cartes_pioche_la_bonne_quantite_dans_la_pool():
