@@ -1295,7 +1295,8 @@ body {
 
 /* Seul moyen de fermer ces ecrans et de revenir a l'ecran appelant, cf. web/app.js. */
 #bouton-retour-deck,
-#bouton-retour-vaisseau {
+#bouton-retour-vaisseau,
+#bouton-retour-journal-combat {
     position: absolute;
     top: 2rem;
     right: 1rem;
@@ -1323,6 +1324,61 @@ body {
     flex-wrap: wrap;
     justify-content: center;
     gap: 1rem;
+}
+
+/* Journal de combat (specs.md 8.1) : historique accumule pendant le combat en cours (cartes
+   jouees, actions ennemies, marqueurs de tour), ouvert en survol depuis #controles-combat -
+   meme principe que #ecran-vaisseau ci-dessus, simple liste de lignes plutot qu'une grille. */
+#ecran-journal-combat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+#ecran-journal-combat h1 {
+    margin: 0 0 1.5rem;
+    font-size: 1.8rem;
+    font-weight: normal;
+}
+
+#liste-journal-combat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    width: 100%;
+    max-width: 640px;
+    text-align: left;
+    font-size: 0.9rem;
+}
+
+.ligne-journal {
+    padding: 0.15rem 0;
+}
+
+/* Couleurs du journal (specs.md 8.1, decision utilisateur) : carte en jaune, module allie en
+   vert, ennemi en rouge, reste du texte en bleu, marqueur de tour en blanc - memes couleurs que
+   src/ui/journal_combat.py cote PC (COULEUR_CARTE/MODULE/ENNEMI/TEXTE/TOUR). */
+.journal-carte {
+    color: #ebc83c;
+}
+
+.journal-module {
+    color: #64d264;
+}
+
+.journal-ennemi {
+    color: #e15050;
+}
+
+.journal-texte {
+    color: #78b4eb;
+}
+
+.journal-tour {
+    color: #ffffff;
+    font-weight: bold;
 }
 
 #grille-deck {

@@ -868,6 +868,25 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
    (aucun écran de sélection à rouvrir depuis un script autonome), web revient quand même à
    l'écran de sélection du joueur (ne dépend d'aucun état de partie)
 6. **Retour visuel des effets** : chaque effet résolu (carte jouée ou attaque ennemie) affiche un popup `+N`/`-N` pendant quelques secondes sur la ou les cases touchées, avec le montant **réellement appliqué** (plafonné par les PV+Bouclier restants pour les dégâts, par le PV max pour le soin) plutôt que la valeur nominale de la carte — validé en POC
+7. **Journal de combat** : un troisième bouton icône (rouleau/parchemin), juste sous "Quitter la
+   partie", ouvre un écran de consultation listant l'historique complet du combat en cours — une
+   ligne par carte jouée, par action ennemie résolue (attaque ou pose de buff/bouclier), et un
+   marqueur `--- Tour N ---` à chaque début de tour (y compris le tour 1). Chaque ligne colore ses
+   éléments : nom de la carte en **jaune**, nom d'un module allié touché en **vert**, nom d'un
+   ennemi (acteur ou cible) en **rouge**, reste du texte en **bleu**, marqueur de tour en blanc —
+   décision utilisateur. Une carte jouée est journalisée sous la forme invariante
+   `"Carte {nom} jouée sur {cible}."` plutôt qu'un accord de genre sur le nom de la carte
+   (`"Bouclier joué"` vs `"Attaque perçante jouée"`) : simplification pour éviter toute erreur
+   d'accord, `config/cartes.json` ne portant aucune métadonnée de genre. PC
+   (`src/ui/journal_combat.py`, `src/ui/ecran_journal.py:EcranJournal`, ouvert en survol comme
+   Deck/Vaisseau) et web (`#ecran-journal-combat`, `#bouton-journal-combat`, fonctions
+   `construireLigne*`/`journalCombat` dans `app.js`) dupliquent chacun la construction des lignes à
+   partir des mêmes données brutes renvoyées par `Combat.jouer_carte`/`finir_tour_joueur`
+   (`web/bridge.py` les transmet telles quelles dans les champs `"journal"`/`"tour_suivant"` de
+   `jouer_carte()`/`finir_tour()`) — aucune règle de jeu dupliquée, seulement la mise en forme,
+   même précédent que `texte_effet_carte`/`texteEffetCarte`. Journal réinitialisé (avec le marqueur
+   du tour 1) à chaque nouveau combat, jamais persisté au-delà (comme le combat lui-même, cf. point
+   5 ci-dessus)
 
 ---
 

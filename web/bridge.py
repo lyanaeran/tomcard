@@ -791,6 +791,17 @@ def _resoudre_cible(carte, id_cible):
     return combat.flotte.positions().get(position) if position else None
 
 
+def _journal_carte_jouee(carte, cible) -> dict:
+    """Donnees brutes (specs.md 8.1) pour la ligne de journal d'une carte jouee - app.js compose
+    la phrase et les couleurs (meme logique que src/ui/journal_combat.py:ligne_carte_jouee cote
+    PC, dupliquee ici faute de code partage entre les deux plateformes d'affichage)."""
+    if cible is None:
+        return {"carte_nom": carte.nom, "cible_camp": None, "cible_nom": None, "carte_cible": carte.cible.name}
+    if isinstance(cible, Module):
+        return {"carte_nom": carte.nom, "cible_camp": "allie", "cible_nom": cible.nom, "carte_cible": None}
+    return {"carte_nom": carte.nom, "cible_camp": "ennemi", "cible_nom": cible.nom, "carte_cible": None}
+
+
 def jouer_carte(index_carte: int, id_cible) -> str:
     """Joue la carte en main a cet index sur la cible designee par son id (ou None)."""
     carte = combat.joueur.deck.main[index_carte]
@@ -798,17 +809,24 @@ def jouer_carte(index_carte: int, id_cible) -> str:
     resultats = combat.jouer_carte(carte, cible)
     action = carte.action.name if carte.action else None
     popups = [popup for cible_touchee, valeur in resultats if (popup := _popup(cible_touchee, carte.type.name, valeur, action))]
-    return json.dumps({"etat": _etat_dict(), "popups": popups})
+    journal = _journal_carte_jouee(carte, cible) if resultats else None
+    return json.dumps({"etat": _etat_dict(), "popups": popups, "journal": journal})
 
 
 def finir_tour() -> str:
     """Termine le tour du joueur ; renvoie aussi un popup par evenement ennemi resolu
     (specs.md 13) : -N (degats) sur un module, sur un autre ennemi si Tir allie est actif
     sur l'attaquant (specs.md 12.6), ou sur l'attaquant lui-meme en cas de renvoi par un
-    Bouclier miroir ; +N (bouclier) sur la cible d'une Action POSE_BUFF."""
+    Bouclier miroir ; +N (bouclier) sur la cible d'une Action POSE_BUFF.
+
+    Renvoie aussi une ligne de journal (specs.md 8.1) par evenement - donnees brutes, app.js
+    compose la phrase et les couleurs (meme logique que
+    src/ui/journal_combat.py:ligne_evenement_ennemi cote PC, dupliquee ici faute de code partage
+    entre les deux plateformes d'affichage)."""
     evenements = combat.finir_tour_joueur()
     popups = []
-    for _position, _ennemi, cible, valeur, type_evenement in evenements:
+    journal = []
+    for _position, ennemi, cible, valeur, type_evenement in evenements:
         if isinstance(cible, Module):
             id_case, camp = _id_module(cible), "allie"
         else:
@@ -819,4 +837,13 @@ def finir_tour() -> str:
             popups.append({"id": id_case, "camp": camp, "texte": f"+{valeur}", "couleur": "bouclier"})
         else:
             popups.append({"id": id_case, "camp": camp, "texte": f"-{valeur}", "couleur": "degats"})
-    return json.dumps({"etat": _etat_dict(), "popups": popups})
+        journal.append({
+            "ennemi_nom": ennemi.nom,
+            "cible_camp": camp,
+            "cible_nom": cible.nom,
+            "cible_est_soi": cible is ennemi,
+            "valeur": valeur,
+            "type_evenement": type_evenement,
+        })
+    tour_suivant = combat.tour_ennemi_actuel + 1 if combat.etat.name == "EN_COURS" else None
+    return json.dumps({"etat": _etat_dict(), "popups": popups, "journal": journal, "tour_suivant": tour_suivant})
