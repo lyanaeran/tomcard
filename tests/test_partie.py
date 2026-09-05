@@ -34,7 +34,9 @@ from src.gameplay.partie import (
     combat_depuis_partie,
     creer_profil,
     deck_de_la_partie,
+    demarrer_aventure_police,
     deplacer_module,
+    detourner_aventure_police,
     equiper_module,
     gagner_argent_combat,
     id_de_carte,
@@ -54,6 +56,7 @@ from src.gameplay.partie import (
     reparer_vaisseau,
     retirer_carte,
     sauvegarder_partie,
+    second_choc_asteroides,
     specs_utilisees_partie,
     subir_degats_module,
     supprimer_profil,
@@ -493,6 +496,62 @@ def test_payer_mise_aux_normes_refuse_si_argent_insuffisant():
 
     assert succes is False
     assert partie.argent == COUT_METTRE_AUX_NORMES - 1
+
+
+def test_second_choc_asteroides_inflige_les_degats():
+    partie = _partie_exemple()  # avant_gauche pv=10
+
+    second_choc_asteroides(partie, "avant_gauche", charger_cartes(), random.Random(1))
+
+    assert partie.vaisseau["avant_gauche"].pv == 10 - DEGATS_ASTEROIDES
+
+
+def test_second_choc_asteroides_offre_une_carte_si_le_pool_n_est_pas_vide():
+    partie = _partie_exemple()
+
+    carte = second_choc_asteroides(partie, "avant_gauche", charger_cartes(), random.Random(1))
+
+    assert carte is not None
+
+
+def test_second_choc_asteroides_n_offre_aucune_carte_si_le_pool_est_vide():
+    partie = _partie_exemple()
+
+    carte = second_choc_asteroides(partie, "avant_gauche", {}, random.Random(1))
+
+    assert carte is None
+
+
+def test_demarrer_aventure_police_tire_une_carte_du_deck_et_active_detourner():
+    partie = _partie_exemple()  # deck=["CRT_7", "CRT_7", "CRT_10"]
+
+    etat = demarrer_aventure_police(partie, random.Random(1))
+
+    assert etat.id_carte_actuelle in partie.deck
+    assert etat.detourner_disponible is True
+
+
+def test_detourner_aventure_police_tire_une_nouvelle_carte_puis_se_desactive():
+    partie = _partie_exemple()
+    etat = demarrer_aventure_police(partie, random.Random(1))
+
+    succes = detourner_aventure_police(etat, partie, random.Random(2))
+
+    assert succes is True
+    assert etat.detourner_disponible is False
+    assert etat.id_carte_actuelle in partie.deck
+
+
+def test_detourner_aventure_police_refuse_si_deja_utilise():
+    partie = _partie_exemple()
+    etat = demarrer_aventure_police(partie, random.Random(1))
+    detourner_aventure_police(etat, partie, random.Random(2))
+    id_apres_premier_detournement = etat.id_carte_actuelle
+
+    succes = detourner_aventure_police(etat, partie, random.Random(3))
+
+    assert succes is False
+    assert etat.id_carte_actuelle == id_apres_premier_detournement
 
 
 @pytest.fixture

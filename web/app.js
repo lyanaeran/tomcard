@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "65";
+const VERSION_CACHE = "66";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -866,27 +866,34 @@ function rendreStationService() {
 }
 
 function cliquerModuleStation(position, estVide) {
+    let popupEchec = null;
     if (modeDeplacementStation) {
         if (position === positionSelectionneeStation) {
             modeDeplacementStation = false;
         } else if (POSITIONS_DEPLACABLES_STATION.includes(position)) {
-            // succes toujours vrai ici : l'Argent est deja verifie a l'armement de Deplacer
-            // (cliquerActionStation), rien ne peut le faire baisser entre-temps.
-            const resultat = appelerBridge(
-                "deplacer_module_web",
-                JSON.stringify(partieActive),
-                positionSelectionneeStation,
-                position
-            );
-            partieActive = resultat.partie;
-            sauvegarderPartieLocale(joueurCourant.id, partieActive);
+            const positionSource = positionSelectionneeStation;
+            // deplacer_module_web (bridge.py) verifie et deduit l'Argent elle-meme - son champ
+            // "succes" est la seule source de verite, jamais reverifie ici (cf. CLAUDE.md,
+            // gameplay commun aux deux interfaces).
+            const resultat = appelerBridge("deplacer_module_web", JSON.stringify(partieActive), positionSource, position);
             modeDeplacementStation = false;
             positionSelectionneeStation = null;
+            if (resultat.succes) {
+                partieActive = resultat.partie;
+                sauvegarderPartieLocale(joueurCourant.id, partieActive);
+            } else {
+                popupEchec = positionSource;
+            }
         }
     } else if (!estVide) {
         positionSelectionneeStation = position;
     }
+    // Le popup doit etre ajoute apres rendreStationService() (rendu via innerHTML, cf.
+    // rendreStationService plus bas), sans quoi le re-rendu l'effacerait aussitot.
     rendreStationService();
+    if (popupEchec !== null) {
+        afficherPopupStation(popupEchec, "Argent insuffisant !", "popup-degats");
+    }
 }
 
 // Popup de confirmation sur la carte du module apres Reparer/Ameliorer/Mettre a jour (demande
@@ -906,13 +913,6 @@ function afficherPopupStation(position, texte, classeCouleur) {
 
 function cliquerActionStation(action) {
     if (positionSelectionneeStation === null) return;
-    // Argent insuffisant (specs.md 2.1/2.2) : bloque l'action, meme pour l'armement de Deplacer
-    // (son cout n'est preleve qu'a la destination, cliquerModuleStation, mais rien ne doit pouvoir
-    // s'armer sans avoir de quoi payer).
-    if (partieActive.argent < coutActionStationService) {
-        afficherPopupStation(positionSelectionneeStation, "Argent insuffisant !", "popup-degats");
-        return;
-    }
     if (action === "deplacer") {
         if (POSITIONS_DEPLACABLES_STATION.includes(positionSelectionneeStation)) {
             modeDeplacementStation = true;
@@ -922,12 +922,20 @@ function cliquerActionStation(action) {
     }
     const position = positionSelectionneeStation;
     const { pv: pvAvant, pv_max: pvMaxAvant } = partieActive.vaisseau[position];
+    // reparer_module_web/ameliorer_module_web/mettre_a_jour_module_web (bridge.py) verifient et
+    // deduisent l'Argent elles-memes - leur champ "succes" est la seule source de verite, jamais
+    // reverifie ici (cf. CLAUDE.md, gameplay commun aux deux interfaces).
     const resultat = appelerBridge(FONCTIONS_ACTION_STATION_SERVICE[action], JSON.stringify(partieActive), position);
+    // Deselectionne dans tous les cas (demande utilisateur) : le popup ci-dessous suffit a
+    // confirmer l'effet ou l'echec, pas besoin de garder le module arme pour reessayer.
+    positionSelectionneeStation = null;
+    if (!resultat.succes) {
+        rendreStationService();
+        afficherPopupStation(position, "Argent insuffisant !", "popup-degats");
+        return;
+    }
     partieActive = resultat.partie;
     sauvegarderPartieLocale(joueurCourant.id, partieActive);
-    // Deselectionne une fois l'action appliquee (demande utilisateur) : le popup ci-dessous
-    // suffit a confirmer l'effet, pas besoin de garder le module arme pour une autre action.
-    positionSelectionneeStation = null;
     rendreStationService();
     const etat = partieActive.vaisseau[position];
     if (action === "reparer") {
@@ -1241,8 +1249,12 @@ function cliquerModuleAsteroides(position) {
 function continuerSequence2Asteroides() {
     const { degats_asteroides } = constantesAventureAsteroides;
     const nom = appelerBridge("infos_vaisseau_web", JSON.stringify(partieActive))[positionCibleeAsteroides].nom;
-    partieActive = appelerBridge("subir_degats_module_asteroides_web", JSON.stringify(partieActive), positionCibleeAsteroides);
-    carteOfferteAsteroides = appelerBridge("carte_offerte_asteroides_web");
+    // Degats et tirage de la carte offerte (ou non) decides en un seul appel gameplay
+    // (second_choc_asteroides_web/src/gameplay/partie.py:second_choc_asteroides) - jamais
+    // recalcule ici (cf. CLAUDE.md, gameplay commun aux deux interfaces).
+    const resultat = appelerBridge("second_choc_asteroides_web", JSON.stringify(partieActive), positionCibleeAsteroides);
+    partieActive = resultat.partie;
+    carteOfferteAsteroides = resultat.carte;
     if (carteOfferteAsteroides === null) {
         etapeAventureAsteroides = "resolu";
         messageAsteroides =
@@ -1300,7 +1312,10 @@ const ICONE_CONFISCATION = "assets/aventure/confiscation.png";
 const ICONE_DETOURNER = "assets/aventure/detourner.png";
 
 let constantesAventurePolice = null;
-// "choix" (2 ou 3 choix selon detournerDisponiblePolice) -> "resolu".
+// "choix" (2 ou 3 choix selon detournerDisponiblePolice) -> "resolu". carteActuellePolice et
+// detournerDisponiblePolice ne sont jamais decides ici : ils refletent toujours la derniere
+// reponse du gameplay (src/gameplay/partie.py:EtatAventurePolice, via bridge.py) - jamais suivis
+// independamment cote JS (cf. CLAUDE.md, gameplay commun aux deux interfaces).
 let etapeAventurePolice = "choix";
 let carteActuellePolice = null;
 let detournerDisponiblePolice = true;
@@ -1310,12 +1325,13 @@ let messageResoluPolice = "";
 function ouvrirAventurePolicePartie(partie) {
     partieActive = partie;
     etapeAventurePolice = "choix";
-    detournerDisponiblePolice = true;
     messageErreurPolice = "";
     if (constantesAventurePolice === null) {
         constantesAventurePolice = appelerBridge("constantes_aventure_police_web");
     }
-    carteActuellePolice = appelerBridge("tirer_carte_police_web", JSON.stringify(partieActive));
+    const etat = appelerBridge("demarrer_aventure_police_web", JSON.stringify(partieActive));
+    carteActuellePolice = etat.carte;
+    detournerDisponiblePolice = etat.detourner_disponible;
     masquerTousLesEcrans();
     document.getElementById("ecran-aventure-police").classList.remove("cachee");
     rendreAventurePolice();
@@ -1373,7 +1389,7 @@ function rendreAventurePolice() {
 function cliquerChoixPolice(identifiant) {
     if (identifiant === "confiscation") {
         const carte = carteActuellePolice;
-        partieActive = appelerBridge("confiscation_police_web", JSON.stringify(partieActive), carte.id_carte);
+        partieActive = appelerBridge("confiscation_police_web", JSON.stringify(partieActive));
         messageResoluPolice = `Carte confisquee : ${carte.nom}.`;
         etapeAventurePolice = "resolu";
     } else if (identifiant === "mettre_aux_normes") {
@@ -1386,9 +1402,12 @@ function cliquerChoixPolice(identifiant) {
             messageErreurPolice = "Argent insuffisant pour mettre cette carte aux normes.";
         }
     } else if (identifiant === "detourner") {
-        carteActuellePolice = appelerBridge("tirer_carte_police_web", JSON.stringify(partieActive));
-        detournerDisponiblePolice = false;
-        messageErreurPolice = "";
+        const resultat = appelerBridge("detourner_police_web", JSON.stringify(partieActive));
+        if (resultat.succes) {
+            carteActuellePolice = resultat.carte;
+            detournerDisponiblePolice = resultat.detourner_disponible;
+            messageErreurPolice = "";
+        }
     }
     rendreAventurePolice();
 }

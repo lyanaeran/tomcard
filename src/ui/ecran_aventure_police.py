@@ -13,11 +13,12 @@ from pyglet import shapes
 
 from src.gameplay.carte import Carte
 from src.gameplay.donnees import RACINE, charger_cartes
-from src.gameplay.parcours import tirer_carte_deck
 from src.gameplay.partie import (
     COUT_METTRE_AUX_NORMES,
     Partie,
     deck_de_la_partie,
+    demarrer_aventure_police,
+    detourner_aventure_police,
     payer_mise_aux_normes,
     retirer_carte,
 )
@@ -102,17 +103,19 @@ class EcranAventurePolice(pyglet.window.Window):
     """Aventure "Police" (specs.md 2.5). `self.termine` signale a l'appelant qu'il peut
     sauvegarder la partie et enchainer sur le choix du prochain niveau."""
 
-    def __init__(self, partie: Partie):
+    def __init__(self, partie: Partie, aleatoire: random.Random | None = None):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.partie = partie
         # Un seul chargement, reutilise pour chaque tirage (charger_cartes() reconstruit de
         # nouvelles instances a chaque appel, ce qui casserait toute comparaison par identite).
         self.cartes = charger_cartes()
-        self.aleatoire = random.Random()
-        self.id_carte_actuelle = tirer_carte_deck(partie.deck, self.aleatoire)
-        # "Detourner" ne peut etre choisi qu'une fois par Aventure (pas par run) : etat purement
-        # local a cet ecran, jamais persiste sur Partie.
-        self.detourner_disponible = True
+        # Instance explicite (jamais le module random global directement, cf. CLAUDE.md
+        # "Determinisme du tirage aleatoire"), injectable pour un test reproductible.
+        self.aleatoire = aleatoire or random.Random()
+        # Etat de resolution de l'Aventure (carte tiree, disponibilite de "Detourner l'attention")
+        # possede par le gameplay (src/gameplay/partie.py:EtatAventurePolice), pas par cet ecran -
+        # gameplay commun aux deux interfaces (CLAUDE.md), web garde la meme donnee cote bridge.py.
+        self.etat_police = demarrer_aventure_police(partie, self.aleatoire)
         self.etape: str = "choix"
         self.message_resolu: str = ""
         # Message d'echec affiche sous les choix (etape "choix" uniquement, ex. Argent
@@ -124,10 +127,10 @@ class EcranAventurePolice(pyglet.window.Window):
         self.termine: bool = False
 
     def _carte_actuelle(self) -> Carte:
-        return self.cartes[self.id_carte_actuelle]
+        return self.cartes[self.etat_police.id_carte_actuelle]
 
     def _choix_visibles(self) -> tuple:
-        if self.detourner_disponible:
+        if self.etat_police.detourner_disponible:
             return CHOIX
         return tuple(choix for choix in CHOIX if choix[0] != "detourner")
 
@@ -303,7 +306,7 @@ class EcranAventurePolice(pyglet.window.Window):
         identifiant = choix_visibles[index][0]
         if identifiant == "confiscation":
             carte = self._carte_actuelle()
-            retirer_carte(self.partie, self.id_carte_actuelle)
+            retirer_carte(self.partie, self.etat_police.id_carte_actuelle)
             self.message_resolu = f"Carte confisquee : {carte.nom}."
             self.etape = "resolu"
         elif identifiant == "mettre_aux_normes":
@@ -313,8 +316,7 @@ class EcranAventurePolice(pyglet.window.Window):
             else:
                 self.message_erreur = "Argent insuffisant pour mettre cette carte aux normes."
         elif identifiant == "detourner":
-            self.id_carte_actuelle = tirer_carte_deck(self.partie.deck, self.aleatoire)
-            self.detourner_disponible = False
+            detourner_aventure_police(self.etat_police, self.partie, self.aleatoire)
             self.message_erreur = ""
             self.index_survole = None
 

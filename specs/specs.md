@@ -67,12 +67,18 @@ inventée faute de spec précise, à ajuster en playtest si besoin), déduits de
 l'armement). Si l'Argent est insuffisant, l'action est refusée sans rien modifier — les 4 fonctions
 (`reparer_module`/`ameliorer_module`/`mettre_a_jour_module`/`deplacer_module`) renvoient un booléen
 de succès plutôt que la `Partie` (rétro-incompatibilité assumée, aucun appelant n'utilisait la valeur
-de retour). Écran Station service (PC et web) : prix affiché sous chaque action, icône grisée et
-popup rouge "Argent insuffisant !" au clic si `partie.argent < COUT_ACTION_STATION_SERVICE` (armement
-de Déplacer bloqué dans ce cas, pas seulement son exécution) ; Argent total affiché dans le titre de
-l'écran ("... - Niveau N - X €"). Côté web, `COUT_ACTION_STATION_SERVICE` est exposé par
-`web/bridge.py:cout_action_station_service_web()` plutôt que dupliqué en dur dans `web/app.js`
-(CLAUDE.md).
+de retour). Écran Station service (PC et web) : prix affiché sous chaque action, icône grisée
+(condition d'affichage seulement, `partie.argent < COUT_ACTION_STATION_SERVICE`) et popup rouge
+"Argent insuffisant !" **si l'appel de l'action correspondante renvoie `False`** — PC et web
+n'effectuent plus leur propre pré-vérification du seuil avant d'appeler l'action (le popup dépend
+uniquement du booléen déjà calculé par le gameplay, jamais d'une condition dupliquée dans
+`src/ui`/`web/app.js`, cf. CLAUDE.md, corrigé après relecture) ; Déplacer s'arme donc
+inconditionnellement au clic sur son icône, et c'est l'appel de `deplacer_module` au clic de
+destination qui peut échouer et afficher le popup, plutôt qu'un blocage supposé à l'armement. Argent
+total affiché dans le titre de l'écran ("... - Niveau N - X €"). Côté web,
+`COUT_ACTION_STATION_SERVICE` est exposé par `web/bridge.py:cout_action_station_service_web()`
+plutôt que dupliqué en dur dans `web/app.js` (CLAUDE.md, valeur de seuil partagée — seule la
+condition de gating a été dédupliquée).
 
 - Réparer/Améliorer/Mettre à jour s'appliquent au **module principal** comme aux modules équipés.
   Déplacer ne s'applique pas au principal (toujours en position Mid, pas d'emplacement équivalent à
@@ -404,14 +410,19 @@ pirates de l'espace, vous n'avez plus le choix : vaincre ou périr ! À moins qu
 - Choix 1, *Traverser le champ d'astéroïdes* : séquence en 3 temps sur le même écran, chaque étape
   validée par un bouton "Continuer" :
   1. Le joueur clique un module (`_dessiner_choix_module`/`choix_module`) : -`DEGATS_ASTEROIDES` (5)
-     PV appliqués immédiatement (`subir_degats_module`, nouveau côté moteur : dégâts hors combat,
-     plafonnés à 0, opération inverse de `reparer_module`/`reparer_vaisseau`), puis affichage d'un
-     message de confirmation + bouton "Continuer" (étape `sequence_2`)
-  2. Au clic sur "Continuer" : -`DEGATS_ASTEROIDES` PV supplémentaires (même module)
-  3. Une carte est tirée au hasard dans le pool complet (`pool_toutes_cartes`/`tirer_carte_recompense`,
-     §6) et proposée gratuitement (boutons "Prendre"/"Passer", étape `sequence_3`) — gratuite et
-     hors du flux de récompense standard de fin de combat. Si le pool est vide (`carte` = `None`),
-     l'étape `sequence_3` est sautée directement vers `resolu`
+     PV appliqués immédiatement (`subir_degats_module`, dégâts hors combat, plafonnés à 0,
+     opération inverse de `reparer_module`/`reparer_vaisseau`), puis affichage d'un message de
+     confirmation + bouton "Continuer" (étape `sequence_2`)
+  2. Au clic sur "Continuer" : **`second_choc_asteroides`** (`src/gameplay/partie.py`) inflige
+     -`DEGATS_ASTEROIDES` PV supplémentaires (même module) **et** tire, en un seul appel, une carte
+     dans le pool complet (`pool_toutes_cartes`/`tirer_carte_recompense`, §6) proposée gratuitement
+     — c'est cette fonction gameplay qui décide seule si une carte est offerte, ni PC ni web ne
+     retirent cette décision eux-mêmes (cf. CLAUDE.md, gameplay commun aux deux interfaces ;
+     décision initialement dupliquée indépendamment côté PC et web, corrigée après relecture)
+  3. Si une carte a été offerte, elle est présentée (boutons "Prendre"/"Passer", étape
+     `sequence_3`) — gratuite et hors du flux de récompense standard de fin de combat. Si le pool
+     était vide (`second_choc_asteroides` renvoie `None`), l'étape `sequence_3` est sautée
+     directement vers `resolu`
 - Choix 2, *Affronter les pirates* : lance un combat scripté contre `NOMBRE_ENNEMIS_ASTEROIDES` (3)
   ennemis (`combat_aventure_asteroides`/`creer_flotte_asteroides`) — approximation décidée en
   attendant la taille S/M/L par ennemi (absente de `config/ennemis.json`, cf. §3.2/§9.1/§10.3) :
@@ -425,15 +436,18 @@ pirates de l'espace, vous n'avez plus le choix : vaincre ou périr ! À moins qu
 - Pas de 3ᵉ choix (binaire assumé)
 
 `src/gameplay/config_poc.py` (`NOMBRE_ENNEMIS_ASTEROIDES`, `creer_flotte_asteroides`) ;
-`src/gameplay/partie.py` (`DEGATS_ASTEROIDES`, `subir_degats_module`, `combat_aventure_asteroides`,
-`_joueur_depuis_partie` factorisée avec `combat_depuis_partie`) ; `src/ui/ecran_aventure_asteroides.py`
-(PC) + `main.py:_ouvrir_aventure_asteroides` ; côté web `web/bridge.py`
-(`constantes_aventure_asteroides_web` expose `DEGATS_ASTEROIDES` pour le texte des choix avant de
-les jouer, plutôt que dupliqué en dur dans `web/app.js`, cf. CLAUDE.md ;
-`subir_degats_module_asteroides_web` ; `carte_offerte_asteroides_web` — tirage et résolution de
-l'id de la carte dans le même appel, sur le même `charger_cartes()`, pour éviter tout problème
-d'identité entre deux chargements distincts, cf. `id_de_carte` — piège réel rencontré côté PC en
-construisant cet écran ; `prendre_carte_offerte_asteroides_web` ; `combat_aventure_asteroides_web` ;
+`src/gameplay/partie.py` (`DEGATS_ASTEROIDES`, `subir_degats_module`, **`second_choc_asteroides`**
+— 2e choc + tirage de la carte offerte en un seul appel, `cartes` reçu en paramètre plutôt que
+rechargé en interne pour rester le même dict que celui que l'appelant réutilisera ensuite (cf.
+`id_de_carte`, identité d'objet) —, `combat_aventure_asteroides`, `_joueur_depuis_partie`
+factorisée avec `combat_depuis_partie`) ; `src/ui/ecran_aventure_asteroides.py` (PC, garde une
+instance `random.Random` explicite en attribut — jamais recréée à chaque appel, cf. CLAUDE.md
+"Déterminisme du tirage aléatoire") + `main.py:_ouvrir_aventure_asteroides` ; côté web
+`web/bridge.py` (`constantes_aventure_asteroides_web` expose `DEGATS_ASTEROIDES` pour le texte des
+choix avant de les jouer, plutôt que dupliqué en dur dans `web/app.js`, cf. CLAUDE.md ;
+`subir_degats_module_asteroides_web` pour le 1er choc ; **`second_choc_asteroides_web`** pour le
+2e — sérialise le résultat de `second_choc_asteroides`, ne recalcule jamais si une carte est
+offerte ; `prendre_carte_offerte_asteroides_web` ; `combat_aventure_asteroides_web` ;
 `terminer_aventure_asteroides_web`) + `web/app.js` (`ouvrirAventureAsteroidesPartie` et fonctions
 associées)
 
@@ -475,19 +489,32 @@ pour ne pas donner l'impression que c'est elle-même une option :
   suffisant (`payer_mise_aux_normes`), sinon reste sur l'écran avec un message d'erreur
 - *Détourner l'attention* : tire une **seconde** carte au hasard qui remplace la première affichée,
   puis revient au même écran avec seulement les 2 choix restants (Confiscation/Mettre aux normes —
-  "Détourner" ne peut être choisi qu'une fois **par Aventure**, pas par run : état purement local à
-  l'écran, rien de persisté sur `Partie`)
+  "Détourner" ne peut être choisi qu'une fois **par Aventure**, pas par run)
+
+L'état de résolution (carte actuellement affichée, disponibilité de "Détourner") est possédé par
+le gameplay — **`EtatAventurePolice`** (`src/gameplay/partie.py`, dataclass
+`id_carte_actuelle`/`detourner_disponible`), jamais par l'écran PC ni par des variables JS
+indépendantes : `demarrer_aventure_police` l'initialise (1er tirage), `detourner_aventure_police`
+le fait évoluer (renvoie `False` sans rien faire si "Détourner" a déjà été utilisé). PC
+(`EcranAventurePolice.etat_police`) et web (`web/bridge.py:etat_aventure_police`, variable globale
+— même principe que `combat`) gardent chacun une référence à cet état plutôt que de suivre
+`detourner_disponible` séparément (cf. CLAUDE.md, gameplay commun aux deux interfaces — décision
+initialement dupliquée indépendamment côté PC et web, corrigée après relecture).
 
 `src/gameplay/parcours.py` (`tirer_carte_deck`) ; `src/gameplay/partie.py`
-(`COUT_METTRE_AUX_NORMES`, `payer_mise_aux_normes`) ; `src/ui/ecran_aventure_police.py` (PC, écran à
-état interne `etape` : "choix" -> "resolu") + `main.py:_ouvrir_aventure_police` ; côté web
-`web/bridge.py` (`constantes_aventure_police_web` expose `COUT_METTRE_AUX_NORMES` pour le texte du
-choix avant de le jouer, plutôt que dupliqué en dur dans `web/app.js`, cf. CLAUDE.md ;
-`tirer_carte_police_web` — appelée à l'ouverture de l'écran et de nouveau au choix "Détourner
-l'attention" ; `confiscation_police_web` ; `mettre_aux_normes_police_web` renvoie
-`{"partie": ..., "succes": bool}`, même convention que les actions payantes qui peuvent échouer ;
-`terminer_aventure_police_web`) + `web/app.js` (`ouvrirAventurePolicePartie`/`rendreAventurePolice`
-et les fonctions de clic associées)
+(`COUT_METTRE_AUX_NORMES`, `payer_mise_aux_normes`, `EtatAventurePolice`,
+`demarrer_aventure_police`, `detourner_aventure_police`) ; `src/ui/ecran_aventure_police.py` (PC,
+écran à état interne `etape` : "choix" -> "resolu", garde une instance `random.Random` explicite en
+attribut) + `main.py:_ouvrir_aventure_police` ; côté web `web/bridge.py`
+(`constantes_aventure_police_web` expose `COUT_METTRE_AUX_NORMES` pour le texte du choix avant de
+le jouer, plutôt que dupliqué en dur dans `web/app.js`, cf. CLAUDE.md ;
+`demarrer_aventure_police_web` — appelée à l'ouverture de l'écran ; `detourner_police_web` — renvoie
+aussi `succes`/`detourner_disponible`, JS ne décide jamais lui-même si "Détourner" reste possible ;
+`confiscation_police_web` — retire `etat_aventure_police.id_carte_actuelle`, plus besoin de le
+transmettre depuis JS ; `mettre_aux_normes_police_web` renvoie `{"partie": ..., "succes": bool}`,
+même convention que les actions payantes qui peuvent échouer ; `terminer_aventure_police_web`) +
+`web/app.js` (`ouvrirAventurePolicePartie`/`rendreAventurePolice` et les fonctions de clic
+associées, qui ne font plus que refléter la dernière réponse du gameplay)
 
 ---
 

@@ -90,8 +90,24 @@ Séparation stricte, cf. `specs/specs.md` §10 :
   d'`assets/`. Chargé par `src/gameplay/donnees.py` (PC) et fetché directement par `web/app.js` (web)
 - `assets/{cartes,modules,ennemis}/` — images uniquement pour l'instant
 - `tests/` — un fichier de test par module de `src/gameplay/` (et `test_animation.py` pour la
-  minuterie de `src/ui/`). Les fonctions de `src/ui/fenetre.py` autres que les minuteries, et tout
-  `web/`, ne sont pas couverts par pytest (voir "Tester les deux versions" ci-dessous)
+  minuterie de `src/ui/`, `test_architecture.py` pour les règles ci-dessous). Les fonctions de
+  `src/ui/fenetre.py` autres que les minuteries, et tout `web/`, ne sont pas couverts par pytest
+  (voir "Tester les deux versions" ci-dessous)
+
+**`src/ui` et `web/` ne doivent jamais posséder de règle de jeu ni d'état de session** (uniquement
+la présentation d'un état déjà décidé par `src/gameplay`) — précédent concret : le journal de
+combat (`Combat.journal`) et la résolution des Aventures Astéroïdes/Police
+(`src/gameplay/partie.py:second_choc_asteroides`/`EtatAventurePolice`) vivent entièrement dans
+`src/gameplay`, PC et web ne font que lire/afficher ce qu'ils renvoient. Avant de considérer
+terminée une tâche qui ajoute du code à `src/ui` ou `web/`, vérifier qu'aucun nouveau fichier/état
+touché n'y contient : un tirage aléatoire non injecté (cf. "Déterminisme du tirage aléatoire"
+ci-dessous, vérifié par `tests/test_architecture.py`), une machine à états qui décide d'une
+branche métier (ex. "une carte est-elle offerte ?") plutôt que de l'afficher, une ressource à usage
+limité (ex. "disponible une seule fois") suivie localement sans exister côté `src/gameplay`, ou une
+condition métier (ex. un seuil d'Argent) re-vérifiée en plus de la valeur de retour déjà fiable
+d'une fonction gameplay. `tests/test_architecture.py` vérifie mécaniquement une partie de ces
+points ; le reste reste une vérification manuelle à faire systématiquement, pas seulement quand
+elle est demandée.
 
 ## Conventions de code
 
@@ -149,7 +165,16 @@ combiner :
 
 Tout ce qui est tiré au sort (vaisseau, flotte, deck) passe par un `random.Random` explicite
 injecté dans `creer_combat_poc(generateur_aleatoire=...)` — jamais le module `random` global
-directement — pour que les tests et les captures d'écran restent reproductibles.
+directement — pour que les tests et les captures d'écran restent reproductibles. Cette règle
+**s'étend à tout tirage du parcours**, pas seulement au combat (Aventures comprises : carte offerte
+d'Astéroïdes, tirage de carte de Police...) — un écran PC (`src/ui/ecran_aventure_*.py`) ou
+`web/bridge.py` peut construire son propre `random.Random()` (non seedé si la reproductibilité
+n'est pas exigée pour cet écran), mais **jamais un tirage direct sur le module `random`**
+(`random.choice(...)`, `random.random()`...) et jamais une instance jetable recréée à chaque appel
+là où une instance unique, injectable, devrait être conservée d'un bout à l'autre d'un écran/d'une
+session (cf. `Combat.aleatoire`, `EcranAventureAsteroides.aleatoire`) — voir
+`tests/test_architecture.py`, qui vérifie mécaniquement l'absence d'appel direct au module
+`random` global dans tout `src/` et `web/`.
 
 ## Pièges pyglet connus
 
