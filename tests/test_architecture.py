@@ -6,6 +6,7 @@ passer par le module random global directement).
 """
 
 import ast
+import re
 from pathlib import Path
 
 RACINE = Path(__file__).resolve().parent.parent
@@ -58,3 +59,25 @@ def test_aucun_tirage_aleatoire_direct_sur_le_module_random_global():
                 ):
                     fautifs.append((fichier, noeud.lineno))
     assert not fautifs, f"Appel direct a random.<methode>() (module global) trouve : {fautifs}"
+
+
+def test_tous_les_fichiers_src_gameplay_sont_montes_par_web_app_js():
+    """web/app.js monte src/gameplay/ dans le systeme de fichiers virtuel de Pyodide en listant
+    chaque fichier explicitement (FICHIERS_A_MONTER) - contrairement a bridge.py cote PC, il n'y a
+    pas de decouverte automatique. Oublier un fichier ici (ex. un nouveau module gameplay) casse le
+    chargement web au demarrage avec un ModuleNotFoundError, invisible tant qu'on ne teste pas
+    reellement dans un navigateur/Pyodide (bug reel constate : src/gameplay/journal.py manquant,
+    cf. CLAUDE.md "Tester les deux versions" - l'appel direct a bridge.py en Python ne passe pas
+    par ce montage et ne l'aurait jamais detecte)."""
+    app_js = (RACINE / "web" / "app.js").read_text()
+    bloc = re.search(r"FICHIERS_A_MONTER\s*=\s*\[(.*?)\];", app_js, re.S)
+    assert bloc is not None, "FICHIERS_A_MONTER introuvable dans web/app.js"
+    fichiers_montes = set(re.findall(r'"([^"]+)"', bloc.group(1)))
+
+    fichiers_reels = {
+        f"src/gameplay/{fichier.name}"
+        for fichier in SRC_GAMEPLAY.glob("*.py")
+        if not fichier.name.startswith("__pycache__")
+    }
+    manquants = fichiers_reels - fichiers_montes
+    assert not manquants, f"Fichiers de src/gameplay absents de FICHIERS_A_MONTER (web/app.js) : {manquants}"
