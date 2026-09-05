@@ -418,9 +418,11 @@ class EcranStationService(pyglet.window.Window):
                 self.mode_deplacement = False
                 return
             if position in POSITIONS_DEPLACABLES:
-                # succes toujours vrai ici : l'Argent est deja verifie a l'armement de Deplacer
-                # (_cliquer_action), rien ne peut le faire baisser entre-temps.
-                deplacer_module(self.partie, self.position_selectionnee, position)
+                index = next(i for i, (p, _libelle) in enumerate(POSITIONS_AFFICHEES) if p == self.position_selectionnee)
+                # deplacer_module (src/gameplay/partie.py) verifie et deduit l'Argent elle-meme -
+                # son bool de retour est la seule source de verite, jamais reverifie ici.
+                if not deplacer_module(self.partie, self.position_selectionnee, position):
+                    self._ajouter_popup_argent_insuffisant(index)
                 self.mode_deplacement = False
                 self.position_selectionnee = None
             return
@@ -430,17 +432,19 @@ class EcranStationService(pyglet.window.Window):
     def _cliquer_action(self, identifiant: str) -> None:
         if self.position_selectionnee is None:
             return
-        index = next(i for i, (position, _libelle) in enumerate(POSITIONS_AFFICHEES) if position == self.position_selectionnee)
-        if self.partie.argent < COUT_ACTION_STATION_SERVICE:
-            self._ajouter_popup_argent_insuffisant(index)
-            return
         if identifiant == "deplacer":
             if self.position_selectionnee in POSITIONS_DEPLACABLES:
                 self.mode_deplacement = True
             return
+        index = next(i for i, (position, _libelle) in enumerate(POSITIONS_AFFICHEES) if position == self.position_selectionnee)
         etat = self.partie.vaisseau[self.position_selectionnee]
         pv_avant = etat.pv
-        APPLICATEURS_ACTION[identifiant](self.partie, self.position_selectionnee)
+        # reparer_module/ameliorer_module/mettre_a_jour_module (src/gameplay/partie.py) verifient
+        # et deduisent l'Argent elles-memes - leur bool de retour est la seule source de verite,
+        # jamais reverifie ici (cf. CLAUDE.md, gameplay commun aux deux interfaces).
+        if not APPLICATEURS_ACTION[identifiant](self.partie, self.position_selectionnee):
+            self._ajouter_popup_argent_insuffisant(index)
+            return
         self._ajouter_popup_action(index, identifiant, etat, pv_avant)
         # Deselectionne une fois l'action appliquee (demande utilisateur) : le popup ci-dessus
         # suffit a confirmer l'effet, pas besoin de garder le module arme pour une autre action.

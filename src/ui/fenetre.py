@@ -109,10 +109,12 @@ HAUTEUR_BANDEAU_CARTE = 46
 # a rouvrir, cf. on_mouse_press).
 _ICONE_TOUR_SUIVANT = str(RACINE / "assets" / "interface" / "tour_suivant.png")
 _ICONE_QUITTER = str(RACINE / "assets" / "interface" / "quitter.png")
+_ICONE_JOURNAL = str(RACINE / "assets" / "interface" / "journal.png")
 TAILLE_BOUTON_COMBAT = 60
 _DECALAGE_ELECTRICITE_COMBAT = 20
 _DECALAGE_HAUT_TOUR_SUIVANT = _DECALAGE_ELECTRICITE_COMBAT + 20
 _DECALAGE_HAUT_QUITTER = _DECALAGE_HAUT_TOUR_SUIVANT + TAILLE_BOUTON_COMBAT + 14
+_DECALAGE_HAUT_JOURNAL = _DECALAGE_HAUT_QUITTER + TAILLE_BOUTON_COMBAT + 14
 
 COULEUR_BANDEAU = (10, 10, 12)
 OPACITE_BANDEAU = 190
@@ -759,18 +761,26 @@ class FenetreCombat(pyglet.window.Window):
         y = y_haut - _DECALAGE_HAUT_QUITTER
         return x, y - TAILLE_BOUTON_COMBAT, TAILLE_BOUTON_COMBAT, TAILLE_BOUTON_COMBAT
 
+    def _rect_bouton_journal(self, barre_laterale) -> tuple[float, float, float, float]:
+        y_haut = self._y_haut_controles_combat(barre_laterale)
+        x = (barre_laterale.LARGEUR_BARRE - TAILLE_BOUTON_COMBAT) / 2
+        y = y_haut - _DECALAGE_HAUT_JOURNAL
+        return x, y - TAILLE_BOUTON_COMBAT, TAILLE_BOUTON_COMBAT, TAILLE_BOUTON_COMBAT
+
     def _bouton_combat_a(self, x: int, y: int, barre_laterale) -> str | None:
-        """Identifiant ("tour_suivant"/"quitter") du bouton de controle de combat sous ce point,
-        None si aucun."""
+        """Identifiant ("tour_suivant"/"quitter"/"journal") du bouton de controle de combat sous
+        ce point, None si aucun."""
         if _point_dans_rectangle(x, y, *self._rect_bouton_tour_suivant(barre_laterale)):
             return "tour_suivant"
         if _point_dans_rectangle(x, y, *self._rect_bouton_quitter(barre_laterale)):
             return "quitter"
+        if _point_dans_rectangle(x, y, *self._rect_bouton_journal(barre_laterale)):
+            return "journal"
         return None
 
     def _dessiner_controles_combat(self, lot: pyglet.graphics.Batch, barre_laterale) -> list:
-        """Electricite disponible + boutons icones tour suivant/Quitter (specs.md 8.1) - remplace
-        l'ancien bandeau du haut (Electricite + texte "Fin de tour")."""
+        """Electricite disponible + boutons icones tour suivant/Quitter/Journal (specs.md 8.1) -
+        remplace l'ancien bandeau du haut (Electricite + texte "Fin de tour")."""
         y_haut = self._y_haut_controles_combat(barre_laterale)
         x_centre = barre_laterale.LARGEUR_BARRE / 2
         elements = [
@@ -789,6 +799,8 @@ class FenetreCombat(pyglet.window.Window):
         elements.append(_sprite_ajuste(_ICONE_TOUR_SUIVANT, *rect_tour_suivant, lot))
         rect_quitter = self._rect_bouton_quitter(barre_laterale)
         elements.append(_sprite_ajuste(_ICONE_QUITTER, *rect_quitter, lot))
+        rect_journal = self._rect_bouton_journal(barre_laterale)
+        elements.append(_sprite_ajuste(_ICONE_JOURNAL, *rect_journal, lot))
         return elements
 
     def _dessiner_survol(self, lot: pyglet.graphics.Batch) -> list:
@@ -905,6 +917,11 @@ class FenetreCombat(pyglet.window.Window):
             attaques = self.combat.finir_tour_joueur()
             self._afficher_popups_attaques_ennemi(attaques)
             self.index_carte_selectionnee = None
+            return
+        if bouton_combat == "journal":
+            from src.ui.ecran_journal import EcranJournal
+
+            barre_laterale.ouvrir_survol(EcranJournal(list(self.combat.journal)))
             return
 
         if self.partie is not None:

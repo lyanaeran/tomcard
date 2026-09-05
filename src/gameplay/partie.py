@@ -32,7 +32,7 @@ from src.gameplay.deck import Deck
 from src.gameplay.donnees import SpecModule, charger_cartes, charger_ennemis, charger_modules
 from src.gameplay.joueur import Joueur
 from src.gameplay.module import Module
-from src.gameplay.parcours import est_niveau_boss
+from src.gameplay.parcours import est_niveau_boss, pool_toutes_cartes, tirer_carte_deck, tirer_carte_recompense
 from src.gameplay.position import Colonne, Position, Rangee
 from src.gameplay.vaisseau import Vaisseau
 
@@ -492,6 +492,19 @@ def subir_degats_module(partie: Partie, position: str, degats: int) -> Partie:
     return partie
 
 
+def second_choc_asteroides(partie: Partie, position: str, cartes: dict[str, Carte], aleatoire: random.Random) -> Carte | None:
+    """2e choc du choix "Traverser" de l'Aventure "Asteroides" (specs.md 2.5) : inflige un second
+    DEGATS_ASTEROIDES au meme module puis tire une carte gratuite du pool complet de cartes
+    jouables (tirer_carte_recompense) - None si le pool est vide, auquel cas aucune recompense
+    n'est offerte. Decide seule si une carte est offerte (gameplay commun aux deux interfaces,
+    CLAUDE.md) : PC et web n'ont plus qu'a afficher le resultat, jamais a retirer cette decision
+    eux-memes. `cartes` doit venir du meme chargement que celui que l'appelant reutilisera ensuite
+    (ex. id_de_carte, qui compare par identite - cf. sa docstring) : jamais un charger_cartes()
+    interne a cette fonction, qui produirait des instances differentes. Modifie `partie`."""
+    subir_degats_module(partie, position, DEGATS_ASTEROIDES)
+    return tirer_carte_recompense(pool_toutes_cartes(cartes), aleatoire)
+
+
 COUT_METTRE_AUX_NORMES = 10
 
 
@@ -504,6 +517,35 @@ def payer_mise_aux_normes(partie: Partie) -> bool:
     if partie.argent < COUT_METTRE_AUX_NORMES:
         return False
     partie.argent -= COUT_METTRE_AUX_NORMES
+    return True
+
+
+@dataclass
+class EtatAventurePolice:
+    """Etat de resolution en cours de l'Aventure "Police" (specs.md 2.5) - local a une Aventure,
+    jamais persiste sur Partie (specs.md 2.5 : le choix "Detourner l'attention" n'est disponible
+    qu'une seule fois par Aventure, pas par run). PC et web gardent chacun une reference a cet
+    objet (comme Combat cote combat) plutot que de suivre `detourner_disponible` dans leur propre
+    etat d'ecran - gameplay commun aux deux interfaces (CLAUDE.md)."""
+
+    id_carte_actuelle: str
+    detourner_disponible: bool = True
+
+
+def demarrer_aventure_police(partie: Partie, aleatoire: random.Random) -> EtatAventurePolice:
+    """Tire la premiere carte du deck reel de la partie (specs.md 2.5) et initialise l'etat de
+    resolution de l'Aventure "Police"."""
+    return EtatAventurePolice(id_carte_actuelle=tirer_carte_deck(partie.deck, aleatoire))
+
+
+def detourner_aventure_police(etat: EtatAventurePolice, partie: Partie, aleatoire: random.Random) -> bool:
+    """Choix "Detourner l'attention" (specs.md 2.5) : tire une nouvelle carte du deck reel de la
+    partie. Disponible une seule fois par Aventure - ne fait rien et renvoie False si deja
+    utilise, sinon modifie `etat` (nouvelle carte, plus jamais disponible) et renvoie True."""
+    if not etat.detourner_disponible:
+        return False
+    etat.id_carte_actuelle = tirer_carte_deck(partie.deck, aleatoire)
+    etat.detourner_disponible = False
     return True
 
 

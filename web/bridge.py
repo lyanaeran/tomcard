@@ -20,17 +20,15 @@ from src.gameplay.carte import CIBLES_SANS_CLIC, ActionCarte, CibleCarte, regrou
 from src.gameplay.config_poc import creer_combat_poc, creer_deck, creer_vaisseau
 from src.gameplay.donnees import charger_cartes, charger_modules, image_case_module
 from src.gameplay.ennemi import CibleActionEnnemi, TypeActionEnnemi
+from src.gameplay.journal import EvenementCarteJouee, EvenementTour
 from src.gameplay.module import Module
 from src.gameplay.parcours import (
     TypeEtape,
     aleatoire_pour_niveau,
     est_niveau_boss,
     modules_equipables,
-    pool_toutes_cartes,
     tirer_candidats_module,
     tirer_candidats_recompense,
-    tirer_carte_deck,
-    tirer_carte_recompense,
     tirer_propositions_niveau,
     tirer_type_aventure,
 )
@@ -47,7 +45,9 @@ from src.gameplay.partie import (
     combat_aventure_asteroides,
     combat_depuis_partie,
     deck_de_la_partie,
+    demarrer_aventure_police,
     deplacer_module,
+    detourner_aventure_police,
     equiper_module,
     gagner_argent_combat,
     id_de_carte,
@@ -62,6 +62,7 @@ from src.gameplay.partie import (
     reparer_module,
     reparer_vaisseau,
     retirer_carte,
+    second_choc_asteroides,
     specs_utilisees_partie,
     subir_degats_module,
     synchroniser_vaisseau_depuis_combat,
@@ -86,6 +87,10 @@ IDS_ENNEMIS = {
 }
 
 combat = None
+# Etat de resolution de l'Aventure "Police" en cours (specs.md 2.5, src/gameplay/partie.py:
+# EtatAventurePolice) - meme principe que `combat` ci-dessus : possede par le gameplay, pas
+# reconstruit cote JS (cf. CLAUDE.md, gameplay commun aux deux interfaces).
+etat_aventure_police = None
 
 
 def _chemin_web(chemin_fs: str) -> str:
@@ -268,6 +273,38 @@ def _etat_dict() -> dict:
         "main": main_json,
         "pioche": len(combat.joueur.deck.pioche),
         "defausse": len(combat.joueur.deck.defausse),
+        "journal": [_evenement_json(evenement) for evenement in combat.journal],
+    }
+
+
+def _evenement_json(evenement) -> dict:
+    """Serialise un evenement de Combat.journal (specs.md 8.1) en JSON - simple traduction
+    mecanique des champs deja decides par src/gameplay/journal.py/combat.py (quel evenement,
+    quand l'enregistrer) : app.js n'a plus qu'a le mettre en forme (phrase/couleurs), jamais a
+    decider quoi journaliser."""
+    if isinstance(evenement, EvenementTour):
+        return {"type": "tour", "numero": evenement.numero}
+    if isinstance(evenement, EvenementCarteJouee):
+        cible = evenement.cible
+        if cible is None:
+            return {
+                "type": "carte",
+                "carte_nom": evenement.carte.nom,
+                "cible_camp": None,
+                "cible_nom": None,
+                "carte_cible": evenement.carte.cible.name,
+            }
+        camp = "allie" if isinstance(cible, Module) else "ennemi"
+        return {"type": "carte", "carte_nom": evenement.carte.nom, "cible_camp": camp, "cible_nom": cible.nom, "carte_cible": None}
+    camp = "allie" if isinstance(evenement.cible, Module) else "ennemi"
+    return {
+        "type": "action_ennemi",
+        "ennemi_nom": evenement.ennemi.nom,
+        "cible_camp": camp,
+        "cible_nom": evenement.cible.nom,
+        "cible_est_soi": evenement.cible is evenement.ennemi,
+        "valeur": evenement.valeur,
+        "type_evenement": evenement.type_evenement,
     }
 
 
@@ -700,15 +737,17 @@ def _carte_avec_id_json(carte, cartes: dict) -> dict:
     }
 
 
-def carte_offerte_asteroides_web() -> str:
-    """Tire une carte gratuite pour le choix "Traverser" (specs.md 2.5), meme pool que le module
-    principal (pool_toutes_cartes) - independant de tout combat/partie. None si le pool est vide
-    (cf. tirer_carte_recompense)."""
+def second_choc_asteroides_web(partie_json, position) -> str:
+    """2e choc du choix "Traverser" (specs.md 2.5) : degats et tirage de la carte offerte (ou
+    non) decides en une seule fois par second_choc_asteroides (src/gameplay/partie.py) - jamais
+    recalcule ici, seulement serialise (cf. CLAUDE.md, gameplay commun aux deux interfaces)."""
+    partie = partie_depuis_json(partie_json)
     cartes = charger_cartes()
-    carte = tirer_carte_recompense(pool_toutes_cartes(cartes), random.Random())
-    if carte is None:
-        return json.dumps(None)
-    return json.dumps(_carte_avec_id_json(carte, cartes))
+    carte = second_choc_asteroides(partie, position, cartes, random.Random())
+    return json.dumps({
+        "partie": json.loads(partie_vers_json(partie)),
+        "carte": _carte_avec_id_json(carte, cartes) if carte is not None else None,
+    })
 
 
 def prendre_carte_offerte_asteroides_web(partie_json, id_carte) -> str:
@@ -738,9 +777,11 @@ def terminer_aventure_asteroides_web(partie_json) -> str:
 
 
 # --- Aventure "Police" (specs.md 2.5) : une carte est tiree au hasard du deck reel du joueur et
-# affichee avant les choix - Confiscation / Mettre aux normes / Detourner l'attention (une seule
-# fois par Aventure, geree cote JS - pas d'etat a persister sur Partie). Memes fonctions pures que
-# src/ui/ecran_aventure_police.py cote PC (src/gameplay/partie.py). ---
+# affichee avant les choix - Confiscation / Mettre aux normes / Detourner l'attention. L'etat de
+# resolution (carte actuelle, disponibilite de "Detourner", specs.md 2.5 : une seule fois par
+# Aventure) est possede par le gameplay (src/gameplay/partie.py:EtatAventurePolice, variable
+# globale etat_aventure_police ci-dessus - meme principe que `combat`), jamais recalcule ou
+# retrouve cote JS (cf. CLAUDE.md, gameplay commun aux deux interfaces). ---
 
 
 def constantes_aventure_police_web() -> str:
@@ -749,18 +790,39 @@ def constantes_aventure_police_web() -> str:
     return json.dumps({"cout_mettre_aux_normes": COUT_METTRE_AUX_NORMES})
 
 
-def tirer_carte_police_web(partie_json) -> str:
-    """Tire au hasard une carte du deck reel de la partie (tirer_carte_deck, specs.md 2.5) -
-    appelee a l'ouverture de l'ecran, et de nouveau au choix "Detourner l'attention"."""
-    partie = partie_depuis_json(partie_json)
+def _etat_aventure_police_json() -> dict:
     cartes = charger_cartes()
-    id_carte = tirer_carte_deck(partie.deck, random.Random())
-    return json.dumps(_carte_avec_id_json(cartes[id_carte], cartes))
+    return {
+        "carte": _carte_avec_id_json(cartes[etat_aventure_police.id_carte_actuelle], cartes),
+        "detourner_disponible": etat_aventure_police.detourner_disponible,
+    }
 
 
-def confiscation_police_web(partie_json, id_carte) -> str:
+def demarrer_aventure_police_web(partie_json) -> str:
+    """Tire la premiere carte et initialise l'etat de resolution de l'Aventure "Police" (specs.md
+    2.5, demarrer_aventure_police) - appelee a l'ouverture de l'ecran."""
+    global etat_aventure_police
     partie = partie_depuis_json(partie_json)
-    retirer_carte(partie, id_carte)
+    etat_aventure_police = demarrer_aventure_police(partie, random.Random())
+    return json.dumps(_etat_aventure_police_json())
+
+
+def detourner_police_web(partie_json) -> str:
+    """Choix "Detourner l'attention" (specs.md 2.5, detourner_aventure_police) : `succes` est
+    False si deja utilise pour cette Aventure - le bouton correspondant est deja masque cote JS
+    dans ce cas (`detourner_disponible`), ce champ n'est qu'une securite supplementaire."""
+    partie = partie_depuis_json(partie_json)
+    succes = detourner_aventure_police(etat_aventure_police, partie, random.Random())
+    resultat = _etat_aventure_police_json()
+    resultat["succes"] = succes
+    return json.dumps(resultat)
+
+
+def confiscation_police_web(partie_json) -> str:
+    """Retire la carte actuellement tiree (etat_aventure_police.id_carte_actuelle) - plus besoin
+    de la transmettre depuis JS, le gameplay la connait deja."""
+    partie = partie_depuis_json(partie_json)
+    retirer_carte(partie, etat_aventure_police.id_carte_actuelle)
     return partie_vers_json(partie)
 
 

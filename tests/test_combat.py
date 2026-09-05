@@ -10,6 +10,7 @@ from src.gameplay.deck import Deck
 from src.gameplay.ennemi import ActionEnnemi, CibleActionEnnemi, Ennemi, TypeActionEnnemi
 from src.gameplay.flotte import Flotte
 from src.gameplay.joueur import Joueur
+from src.gameplay.journal import EvenementActionEnnemi, EvenementCarteJouee, EvenementTour
 from src.gameplay.module import Module
 from src.gameplay.position import Colonne, Position, Rangee
 from src.gameplay.vaisseau import Vaisseau
@@ -1097,3 +1098,60 @@ def test_bouclier_miroir_plusieurs_instances_renvoient_chacune_vers_son_propre_m
     assert module_a.pv == 20 - 3
     assert module_b.pv == 20 - 3
     assert miroir.pv == 50 - 2  # 8 - 3 - 3 = 2 restant
+
+
+def test_journal_commence_par_le_marqueur_du_tour_1():
+    combat, _vaisseau, _flotte = _nouveau_combat()
+
+    assert combat.journal == [EvenementTour(1)]
+
+
+def test_jouer_carte_avec_effet_ajoute_un_evenement_carte_jouee_au_journal():
+    combat, _vaisseau, flotte = _nouveau_combat()
+    ennemi = flotte.ennemis_vivants()[0]
+    combat.joueur.deck.main = [CARTE_ATTAQUE]
+
+    combat.jouer_carte(CARTE_ATTAQUE, ennemi)
+
+    assert combat.journal == [EvenementTour(1), EvenementCarteJouee(CARTE_ATTAQUE, ennemi)]
+
+
+def test_jouer_carte_sans_effet_n_ajoute_rien_au_journal():
+    combat, vaisseau, _flotte = _nouveau_combat()
+    combat.joueur.deck.main = [CARTE_ATTAQUE]
+
+    # Cible du mauvais camp (un module pour une carte ciblant ENNEMI_UNIQUE) : refusee par
+    # _cible_valide, jouer_carte renvoie [] avant tout effet - rien a journaliser.
+    resultat = combat.jouer_carte(CARTE_ATTAQUE, vaisseau.base)
+
+    assert resultat == []
+    assert combat.journal == [EvenementTour(1)]
+
+
+def test_finir_tour_joueur_ajoute_un_evenement_par_action_ennemie_puis_le_marqueur_du_tour_suivant():
+    combat, vaisseau, flotte = _nouveau_combat(degats_ennemi=4)
+    ennemi = flotte.ennemis_vivants()[0]
+
+    evenements = combat.finir_tour_joueur()
+
+    assert len(evenements) == 1
+    _position, _ennemi, cible, valeur, type_evenement = evenements[0]
+    assert combat.journal == [
+        EvenementTour(1),
+        EvenementActionEnnemi(ennemi, cible, valeur, type_evenement),
+        EvenementTour(2),
+    ]
+    assert cible is vaisseau.base
+    assert valeur == 4
+
+
+def test_finir_tour_joueur_n_ajoute_pas_de_marqueur_de_tour_si_le_combat_se_termine():
+    combat, _vaisseau, _flotte = _nouveau_combat(pv_base=5)
+
+    combat.finir_tour_joueur()
+
+    assert combat.etat == EtatCombat.DEFAITE
+    # L'action ennemie qui a mis fin au combat est bien journalisee, mais aucun marqueur de
+    # tour suivant : il n'y en aura pas, le combat est termine.
+    assert combat.journal[-1] != EvenementTour(2)
+    assert any(isinstance(evenement, EvenementActionEnnemi) for evenement in combat.journal)

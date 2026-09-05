@@ -13,13 +13,13 @@ from pyglet import shapes
 
 from src.gameplay.carte import Carte
 from src.gameplay.donnees import RACINE, charger_cartes, charger_modules, image_case_module
-from src.gameplay.parcours import pool_toutes_cartes, tirer_carte_recompense
 from src.gameplay.partie import (
     DEGATS_ASTEROIDES,
     Partie,
     ajouter_carte,
     deck_de_la_partie,
     id_de_carte,
+    second_choc_asteroides,
     subir_degats_module,
 )
 from src.ui import barre_laterale
@@ -136,14 +136,18 @@ class EcranAventureAsteroides(pyglet.window.Window):
     le combat scripte (choix "Affronter") ; `self.termine` signale qu'il peut sauvegarder la
     partie et enchainer sur le choix du prochain niveau (choix "Traverser" resolu)."""
 
-    def __init__(self, partie: Partie):
+    def __init__(self, partie: Partie, aleatoire: random.Random | None = None):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.partie = partie
         self.specs_par_id = {spec.id: spec for spec in charger_modules()}
-        # Un seul chargement, reutilise pour le tirage (_resoudre_sequence_2) et pour retrouver
-        # l'id de la carte offerte (_prendre_carte_offerte) : charger_cartes() reconstruit de
-        # nouvelles instances a chaque appel, id_de_carte compare par identite (cf. sa docstring).
+        # Un seul chargement, reutilise pour retrouver l'id de la carte offerte
+        # (_prendre_carte_offerte) : charger_cartes() reconstruit de nouvelles instances a chaque
+        # appel, id_de_carte compare par identite (cf. sa docstring).
         self.cartes = charger_cartes()
+        # Instance explicite (jamais le module random global directement, cf. CLAUDE.md
+        # "Determinisme du tirage aleatoire") pour le tirage de la carte offerte au 2e choc
+        # (_resoudre_sequence_2, second_choc_asteroides) - injectable pour un test reproductible.
+        self.aleatoire = aleatoire or random.Random()
         # "choix" (2 choix) -> "choix_module" (module cible des degats) -> "sequence_2" (2e coup,
         # apres le 1er deja applique au clic du module) -> "sequence_3" (carte offerte, si trouvee)
         # -> "resolu".
@@ -432,9 +436,8 @@ class EcranAventureAsteroides(pyglet.window.Window):
         return self.specs_par_id[self.partie.vaisseau[self.position_ciblee].module_id].nom
 
     def _resoudre_sequence_2(self) -> None:
-        subir_degats_module(self.partie, self.position_ciblee, DEGATS_ASTEROIDES)
+        self.carte_offerte = second_choc_asteroides(self.partie, self.position_ciblee, self.cartes, self.aleatoire)
         nom = self._nom_module_cible()
-        self.carte_offerte = tirer_carte_recompense(pool_toutes_cartes(self.cartes), random.Random())
         if self.carte_offerte is None:
             self.etape = "resolu"
             self.message_resolu = (
