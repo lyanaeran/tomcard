@@ -10,8 +10,9 @@ parcours, cf. ecran_deck.py/ecran_vaisseau.py).
 import pyglet
 from pyglet import shapes
 
+from src.gameplay.journal import Evenement
+from src.ui import journal_combat
 from src.ui.fenetre import FOND_IMAGE, HAUTEUR_FENETRE, LARGEUR_FENETRE, _sprite_etire
-from src.ui.journal_combat import Segment
 
 COULEUR_TEXTE = (255, 255, 255)
 COULEUR_BOUTON = (60, 90, 160)
@@ -41,7 +42,7 @@ class EcranJournal(pyglet.window.Window):
     """Historique du combat en cours (specs.md 8.1) : instantane du journal au moment de
     l'ouverture (comme EcranDeck/EcranVaisseau, l'ecran appelant reste inchange derriere)."""
 
-    def __init__(self, journal: list[list[Segment]]):
+    def __init__(self, journal: list[Evenement]):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Journal de combat")
         self.journal = journal
         self.termine = False
@@ -80,9 +81,9 @@ class EcranJournal(pyglet.window.Window):
         fin = len(self.journal) - self.defilement
         debut = max(0, fin - lignes_visibles)
         y = MARGE_BAS + (fin - debut - 1) * HAUTEUR_LIGNE + HAUTEUR_LIGNE / 2
-        for segments in self.journal[debut:fin]:
+        for evenement in self.journal[debut:fin]:
             cx = X_TEXTE
-            for texte, couleur in segments:
+            for texte, couleur in journal_combat.ligne_evenement(evenement):
                 label = pyglet.text.Label(
                     texte, x=cx, y=y, anchor_x="left", anchor_y="center",
                     font_size=TAILLE_POLICE, color=(*couleur, 255), batch=lot,

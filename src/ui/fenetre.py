@@ -14,7 +14,6 @@ from src.gameplay.ennemi import CibleActionEnnemi, Ennemi, TypeActionEnnemi
 from src.gameplay.module import BuffActif, Module
 from src.gameplay.partie import Partie, deck_de_la_partie
 from src.gameplay.position import Colonne, Position, Rangee
-from src.ui import journal_combat
 from src.ui.animation import AnimationPopup
 
 LARGEUR_FENETRE = 1280
@@ -495,9 +494,6 @@ class FenetreCombat(pyglet.window.Window):
         # sauvegarde, contrairement a une fin de combat normale, cf. main.py:_ouvrir_combat).
         self.quitte_demandee: bool = False
         self.popups: list[tuple[AnimationPopup, str, tuple[int, int, int], float, float]] = []
-        # Journal de combat (specs.md 8.1) : cartes jouees, actions ennemies, marqueurs de tour -
-        # affiche par src/ui/ecran_journal.py, jamais vide (demarre avec le marqueur du tour 1).
-        self.journal: list[list[journal_combat.Segment]] = [journal_combat.ligne_tour(1)]
         pyglet.clock.schedule_interval(self.update, 1 / 60.0)
 
     def update(self, dt: float) -> None:
@@ -919,17 +915,13 @@ class FenetreCombat(pyglet.window.Window):
             return
         if bouton_combat == "tour_suivant" and self.combat.etat == EtatCombat.EN_COURS:
             attaques = self.combat.finir_tour_joueur()
-            for _position, ennemi, cible, valeur, type_evenement in attaques:
-                self.journal.append(journal_combat.ligne_evenement_ennemi(ennemi, cible, valeur, type_evenement))
-            if self.combat.etat == EtatCombat.EN_COURS:
-                self.journal.append(journal_combat.ligne_tour(self.combat.tour_ennemi_actuel + 1))
             self._afficher_popups_attaques_ennemi(attaques)
             self.index_carte_selectionnee = None
             return
         if bouton_combat == "journal":
             from src.ui.ecran_journal import EcranJournal
 
-            barre_laterale.ouvrir_survol(EcranJournal(list(self.journal)))
+            barre_laterale.ouvrir_survol(EcranJournal(list(self.combat.journal)))
             return
 
         if self.partie is not None:
@@ -1007,8 +999,6 @@ class FenetreCombat(pyglet.window.Window):
                 return
 
         cibles_touchees = self.combat.jouer_carte(carte, cible)
-        if cibles_touchees:
-            self.journal.append(journal_combat.ligne_carte_jouee(carte, cible))
         self._afficher_popups_carte(carte, cibles_touchees)
         self.index_carte_selectionnee = None
 

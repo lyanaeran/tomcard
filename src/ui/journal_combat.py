@@ -10,6 +10,7 @@ supplementaire - chaque texte doit donc deja porter les espaces necessaires auto
 
 from src.gameplay.carte import Carte, CibleCarte
 from src.gameplay.ennemi import Ennemi
+from src.gameplay.journal import Evenement, EvenementActionEnnemi, EvenementCarteJouee, EvenementTour
 from src.gameplay.module import Module
 
 Segment = tuple[str, tuple[int, int, int]]
@@ -85,3 +86,16 @@ def ligne_evenement_ennemi(ennemi: Ennemi, cible, valeur: int, type_evenement: s
 def ligne_tour(numero: int) -> list[Segment]:
     """Marqueur de tour (specs.md 8.1), ex. 'Tour 1'."""
     return [(f"--- Tour {numero} ---", COULEUR_TOUR)]
+
+
+def ligne_evenement(evenement: Evenement) -> list[Segment]:
+    """Met en forme un evenement du journal de combat (Combat.journal, specs.md 8.1) - seul point
+    d'entree a utiliser depuis src/ui/ecran_journal.py : ne fait que choisir la fonction de mise
+    en forme adaptee au type d'evenement, jamais de decision sur ce qui s'est produit (deja
+    tranche par Combat)."""
+    if isinstance(evenement, EvenementTour):
+        return ligne_tour(evenement.numero)
+    if isinstance(evenement, EvenementCarteJouee):
+        return ligne_carte_jouee(evenement.carte, evenement.cible)
+    assert isinstance(evenement, EvenementActionEnnemi)
+    return ligne_evenement_ennemi(evenement.ennemi, evenement.cible, evenement.valeur, evenement.type_evenement)

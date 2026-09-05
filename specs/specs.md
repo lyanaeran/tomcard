@@ -877,16 +877,21 @@ détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
    décision utilisateur. Une carte jouée est journalisée sous la forme invariante
    `"Carte {nom} jouée sur {cible}."` plutôt qu'un accord de genre sur le nom de la carte
    (`"Bouclier joué"` vs `"Attaque perçante jouée"`) : simplification pour éviter toute erreur
-   d'accord, `config/cartes.json` ne portant aucune métadonnée de genre. PC
-   (`src/ui/journal_combat.py`, `src/ui/ecran_journal.py:EcranJournal`, ouvert en survol comme
-   Deck/Vaisseau) et web (`#ecran-journal-combat`, `#bouton-journal-combat`, fonctions
-   `construireLigne*`/`journalCombat` dans `app.js`) dupliquent chacun la construction des lignes à
-   partir des mêmes données brutes renvoyées par `Combat.jouer_carte`/`finir_tour_joueur`
-   (`web/bridge.py` les transmet telles quelles dans les champs `"journal"`/`"tour_suivant"` de
-   `jouer_carte()`/`finir_tour()`) — aucune règle de jeu dupliquée, seulement la mise en forme,
-   même précédent que `texte_effet_carte`/`texteEffetCarte`. Journal réinitialisé (avec le marqueur
-   du tour 1) à chaque nouveau combat, jamais persisté au-delà (comme le combat lui-même, cf. point
-   5 ci-dessus)
+   d'accord, `config/cartes.json` ne portant aucune métadonnée de genre.
+   **L'historique lui-même est une donnée de `Combat`, pas un artefact d'affichage** (cf. CLAUDE.md,
+   gameplay commun aux deux interfaces) : `Combat.journal` (`src/gameplay/journal.py` —
+   `EvenementCarteJouee`/`EvenementActionEnnemi`/`EvenementTour`) est alimenté uniquement par
+   `Combat.jouer_carte`/`finir_tour_joueur`, qui décident seuls quoi enregistrer et quand (une
+   carte n'est journalisée que si elle a eu un effet ; le marqueur de tour suivant n'est ajouté que
+   si le combat continue). PC (`src/ui/journal_combat.py:ligne_evenement`,
+   `src/ui/ecran_journal.py:EcranJournal`, ouvert en survol comme Deck/Vaisseau, lit directement
+   `combat.journal`) et web (`#ecran-journal-combat`, `#bouton-journal-combat`,
+   `construireLigneJournal`/`construireLigne*` dans `app.js`, qui lisent `etatCourant.journal` —
+   `web/bridge.py:_evenement_json` ne fait que sérialiser `Combat.journal` en JSON dans
+   `_etat_dict()`) ne dupliquent que la mise en forme (phrases/couleurs), jamais le calcul de ce
+   qui s'est produit — même précédent que `texte_effet_carte`/`texteEffetCarte`. Journal
+   réinitialisé (avec le marqueur du tour 1) à chaque nouveau combat via `Combat.__init__`, jamais
+   persisté au-delà (comme le combat lui-même, cf. point 5 ci-dessus)
 
 ---
 

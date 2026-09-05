@@ -10,6 +10,7 @@ from src.gameplay.ciblage import module_cible_par_ennemi
 from src.gameplay.ennemi import ActionEnnemi, CibleActionEnnemi, Ennemi, TypeActionEnnemi
 from src.gameplay.flotte import Flotte
 from src.gameplay.joueur import Joueur
+from src.gameplay.journal import EvenementActionEnnemi, EvenementCarteJouee, EvenementTour
 from src.gameplay.module import Module
 from src.gameplay.position import Colonne, Position, Rangee
 
@@ -77,6 +78,10 @@ class Combat:
         # de chaque _tour_ennemi() - determine quelles Actions ennemies se declenchent ce tour
         # (specs.md 13, ActionEnnemi.active_au_tour).
         self.tour_ennemi_actuel = 0
+        # Historique du combat (specs.md 8.1, journal.py) : cartes jouees, actions ennemies
+        # resolues, marqueurs de tour - alimente uniquement ici et dans jouer_carte/
+        # finir_tour_joueur, jamais par l'UI (PC ou web), qui n'en fait que la mise en forme.
+        self.journal: list[EvenementCarteJouee | EvenementActionEnnemi | EvenementTour] = [EvenementTour(1)]
         self.joueur.debut_de_tour()
         self._declencher_buffs_debut_de_tour()
 
@@ -99,6 +104,8 @@ class Combat:
         self.joueur.depenser_electricite(carte.cout)
         self.joueur.deck.jouer(carte)
         cibles_touchees = self._appliquer_effet(carte, cible)
+        if cibles_touchees:
+            self.journal.append(EvenementCarteJouee(carte, cible))
         self._verifier_fin_de_combat()
         return cibles_touchees
 
@@ -114,9 +121,12 @@ class Combat:
             return []
         self.joueur.deck.defausser_main()
         evenements = self._tour_ennemi()
+        for _position, ennemi, cible, valeur, type_evenement in evenements:
+            self.journal.append(EvenementActionEnnemi(ennemi, cible, valeur, type_evenement))
         if self.etat == EtatCombat.EN_COURS:
             self.joueur.debut_de_tour()
             self._declencher_buffs_debut_de_tour()
+            self.journal.append(EvenementTour(self.tour_ennemi_actuel + 1))
         return evenements
 
     def _declencher_buffs_debut_de_tour(self) -> None:

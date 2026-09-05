@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "64";
+const VERSION_CACHE = "65";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -60,13 +60,6 @@ const FICHIERS_A_MONTER = [
 let pyodide = null;
 let etatCourant = null;
 let indexCarteSelectionnee = null;
-
-// Journal de combat (specs.md 8.1) : lignes HTML pre-construites (une par carte jouee, action
-// ennemie resolue, ou marqueur de tour), affichees par ouvrirJournalCombat() - reinitialise avec
-// le marqueur "Tour 1" a chaque debut de combat (nouvelleGraine, choisirEtape). Cote PC, meme role
-// que FenetreCombat.journal/src/ui/journal_combat.py, duplique ici faute de code partage entre les
-// deux plateformes d'affichage (cf. CLAUDE.md).
-let journalCombat = [];
 
 // Partie reelle en cours d'orchestration (specs.md 2.4), ou null si les ecrans de parcours sont
 // ouverts en mode demonstration (window.nouveauChoixModule/choixNiveau/nouvelleVictoire/
@@ -206,10 +199,12 @@ function appliquerResultat(resultat) {
     afficherPopups(resultat.popups);
 }
 
-// Construction des lignes du journal de combat (specs.md 8.1) : cartes jouees (carte_nom en
-// jaune, cible en vert/module ou rouge/ennemi), actions ennemies resolues (ennemi en rouge,
-// cible en vert/rouge selon son camp), marqueurs de tour - meme phrasing et couleurs que
-// src/ui/journal_combat.py cote PC. Phrase invariante "Carte {nom} jouee..." (plutot que
+// Mise en forme du journal de combat (specs.md 8.1) : etatCourant.journal (rempli par
+// Combat.journal cote gameplay, cf. src/gameplay/journal.py/combat.py - seul endroit qui decide
+// quoi journaliser et quand) est une liste d'evenements bruts ; les fonctions ci-dessous ne font
+// que choisir la phrase et les couleurs, jamais le calcul de ce qui s'est produit - meme role que
+// src/ui/journal_combat.py cote PC, duplique ici faute de code partage entre les deux plateformes
+// d'affichage (cf. CLAUDE.md). Phrase invariante "Carte {nom} jouee..." (plutot que
 // "{nom} joue(e)") pour eviter tout probleme d'accord de genre avec le nom de la carte, absent de
 // config/cartes.json.
 const LIBELLES_CIBLE_GENERIQUE_JOURNAL = {
@@ -222,26 +217,26 @@ function segmentJournal(texte, classe) {
     return `<span class="${classe}">${texte}</span>`;
 }
 
-function construireLigneCarteJouee(info) {
-    let ligne = segmentJournal("Carte ", "journal-texte") + segmentJournal(info.carte_nom, "journal-carte");
-    if (info.cible_camp === null) {
-        const libelle = LIBELLES_CIBLE_GENERIQUE_JOURNAL[info.carte_cible];
+function construireLigneCarteJouee(evenement) {
+    let ligne = segmentJournal("Carte ", "journal-texte") + segmentJournal(evenement.carte_nom, "journal-carte");
+    if (evenement.cible_camp === null) {
+        const libelle = LIBELLES_CIBLE_GENERIQUE_JOURNAL[evenement.carte_cible];
         ligne += segmentJournal(libelle ? ` jouee sur ${libelle}.` : " jouee.", "journal-texte");
-    } else if (info.cible_camp === "allie") {
+    } else if (evenement.cible_camp === "allie") {
         ligne +=
             segmentJournal(" jouee sur le module ", "journal-texte") +
-            segmentJournal(info.cible_nom, "journal-module") +
+            segmentJournal(evenement.cible_nom, "journal-module") +
             segmentJournal(".", "journal-texte");
     } else {
         ligne +=
             segmentJournal(" jouee sur ", "journal-texte") +
-            segmentJournal(info.cible_nom, "journal-ennemi") +
+            segmentJournal(evenement.cible_nom, "journal-ennemi") +
             segmentJournal(".", "journal-texte");
     }
     return ligne;
 }
 
-function construireLigneEvenementEnnemi(evenement) {
+function construireLigneActionEnnemi(evenement) {
     const classeCible = evenement.cible_camp === "allie" ? "journal-module" : "journal-ennemi";
     let ligne = segmentJournal(evenement.ennemi_nom, "journal-ennemi");
     if (evenement.type_evenement === "degats") {
@@ -260,40 +255,41 @@ function construireLigneEvenementEnnemi(evenement) {
     return ligne;
 }
 
-function construireLigneTour(numero) {
-    return segmentJournal(`--- Tour ${numero} ---`, "journal-tour");
+function construireLigneTour(evenement) {
+    return segmentJournal(`--- Tour ${evenement.numero} ---`, "journal-tour");
+}
+
+// Un seul point d'entree (specs.md 8.1) : bascule sur le type d'evenement renvoye par
+// bridge.py:_evenement_json, jamais de decision sur ce qui s'est produit (deja tranche par
+// Combat).
+function construireLigneJournal(evenement) {
+    if (evenement.type === "tour") return construireLigneTour(evenement);
+    if (evenement.type === "carte") return construireLigneCarteJouee(evenement);
+    return construireLigneActionEnnemi(evenement);
 }
 
 function nouvelleGraine() {
-    journalCombat = [construireLigneTour(1)];
     appliquerResultat(appelerBridge("nouveau_combat", null));
 }
 
 function jouerCarte(index, idCible) {
-    const resultat = appelerBridge("jouer_carte", index, idCible);
-    appliquerResultat(resultat);
-    if (resultat.journal) {
-        journalCombat.push(construireLigneCarteJouee(resultat.journal));
-    }
+    appliquerResultat(appelerBridge("jouer_carte", index, idCible));
 }
 
 function finirTour() {
-    const resultat = appelerBridge("finir_tour");
-    appliquerResultat(resultat);
-    for (const evenement of resultat.journal) {
-        journalCombat.push(construireLigneEvenementEnnemi(evenement));
-    }
-    if (resultat.tour_suivant !== null) {
-        journalCombat.push(construireLigneTour(resultat.tour_suivant));
-    }
+    appliquerResultat(appelerBridge("finir_tour"));
 }
 
 // Ouvert "en survol" par-dessus le Combat en cours (specs.md 8.1), meme principe que
 // ouvrirSurvolDeck/ouvrirSurvolVaisseau ci-dessous : l'ecran de Combat reste ouvert et inchange
-// derriere (.ecran-survol, position:fixed).
+// derriere (.ecran-survol, position:fixed). Lit etatCourant.journal a l'ouverture (instantane du
+// combat en cours, comme EcranJournal cote PC) plutot que d'accumuler sa propre copie au fil des
+// actions : le gameplay est la seule source de verite pour l'historique.
 function ouvrirJournalCombat() {
     const conteneur = document.getElementById("liste-journal-combat");
-    conteneur.innerHTML = journalCombat.map((ligne) => `<div class="ligne-journal">${ligne}</div>`).join("");
+    conteneur.innerHTML = etatCourant.journal
+        .map((evenement) => `<div class="ligne-journal">${construireLigneJournal(evenement)}</div>`)
+        .join("");
     document.getElementById("ecran-journal-combat").classList.remove("cachee");
     conteneur.scrollTop = conteneur.scrollHeight;
 }
@@ -1471,7 +1467,6 @@ function choisirEtape(type) {
     if (TYPES_COMBAT.has(type)) {
         masquerTousLesEcrans();
         document.getElementById("app").classList.remove("cachee");
-        journalCombat = [construireLigneTour(1)];
         appliquerResultat(appelerBridge("continuer_partie_web", JSON.stringify(partieActive)));
     } else if (type === "STATION_SERVICE") {
         ouvrirStationServicePartie(partieActive);
