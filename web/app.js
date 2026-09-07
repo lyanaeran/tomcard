@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "67";
+const VERSION_CACHE = "68";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -111,6 +111,7 @@ const IDS_ECRANS = [
     "ecran-selection-joueur",
     "ecran-accueil-joueur",
     "ecran-choix-module",
+    "ecran-choix-carte-module",
     "ecran-choix-niveau",
     "ecran-station-service",
     "ecran-aventure-trois-lunes",
@@ -750,6 +751,60 @@ function choisirModule(candidat) {
         return;
     }
     const partie = appelerBridge("choisir_module_partie_web", JSON.stringify(partieActive), candidat.id);
+    partieActive = partie;
+    sauvegarderPartieLocale(joueurCourant.id, partie);
+    ouvrirChoixCarteModule(partie, candidat.id);
+}
+
+// Ecran de choix d'une carte du module fraichement equipe (parcours, specs.md 2.3, point 6
+// utilisateur) : jusqu'a 3 cartes candidates tirees dans le pool jouable non-Base de ce module
+// (bridge.py:candidats_carte_module_web), le joueur en choisit une a ajouter a son deck, ou
+// passe - meme logique que main.py:_ouvrir_choix_carte_module cote PC.
+function ouvrirChoixCarteModule(partie, moduleId) {
+    const resultat = appelerBridge("candidats_carte_module_web", JSON.stringify(partie), moduleId);
+    if (resultat.candidats.length === 0) {
+        // Pool vide pour ce module : ecran saute directement, meme comportement que main.py.
+        resoudreCarteModule(null);
+        return;
+    }
+    afficherChoixCarteModule(resultat.module_nom, resultat.candidats);
+}
+
+function afficherChoixCarteModule(nomModule, candidats) {
+    document.getElementById("titre-choix-carte-module").textContent = `Nouvelle carte pour ${nomModule}`;
+    document.getElementById("candidats-carte-module").innerHTML = candidats
+        .map(
+            (candidat, index) => `
+        <div class="candidat-recompense" data-index="${index}">
+            <span class="etoile-${candidat.rarete.toLowerCase()}">★</span>
+            <img src="${candidat.image}" alt="${candidat.nom}">
+            <div class="candidat-recompense-nom">${candidat.nom}</div>
+            <div class="candidat-recompense-cout">⚡ ${candidat.cout}</div>
+            <div class="candidat-recompense-description">${texteEffetCarte(candidat)}</div>
+        </div>`
+        )
+        .join("");
+    document.querySelectorAll("#candidats-carte-module .candidat-recompense").forEach((element) => {
+        element.addEventListener("click", () => choisirCarteModule(candidats[Number(element.dataset.index)]));
+    });
+    masquerTousLesEcrans();
+    document.getElementById("ecran-choix-carte-module").classList.remove("cachee");
+    actualiserBarreLaterale();
+}
+
+function choisirCarteModule(candidat) {
+    resoudreCarteModule(candidat.id_carte);
+}
+
+// Bouton "Passer" de l'ecran de choix de carte de module (specs.md 8.3, point 7 utilisateur).
+function passerCarteModule() {
+    resoudreCarteModule(null);
+}
+
+// Ajoute la carte choisie (ou aucune, bouton Passer) au deck puis avance au niveau suivant -
+// meme logique que main.py:_ouvrir_choix_carte_module cote PC.
+function resoudreCarteModule(idCarte) {
+    const partie = appelerBridge("resoudre_carte_module_web", JSON.stringify(partieActive), idCarte);
     partieActive = partie;
     sauvegarderPartieLocale(joueurCourant.id, partie);
     ouvrirChoixNiveauPartie(partie);
@@ -1527,8 +1582,10 @@ function afficherFinCombat(victoire, candidats) {
     document.getElementById("instruction-fin-combat").classList.toggle("cachee", !victoire);
     // Rien a choisir en cas de defaite, ou de victoire sans aucun candidat (pool vide pour tous
     // les modules utilises) : un bouton "Continuer" suffit, meme situation que
-    // src/ui/ecran_fin_combat.py cote PC.
+    // src/ui/ecran_fin_combat.py cote PC. Sinon (victoire avec au moins un candidat), bouton
+    // "Passer" a la place (specs.md 8.3, point 7 utilisateur) : rien n'oblige a choisir une carte.
     document.getElementById("bouton-continuer-fin-combat").classList.toggle("cachee", victoire && candidats.length > 0);
+    document.getElementById("bouton-passer-fin-combat").classList.toggle("cachee", !(victoire && candidats.length > 0));
 
     if (victoire) {
         document.getElementById("candidats-recompense").innerHTML = candidats
@@ -1614,6 +1671,13 @@ function continuerApresFinCombat() {
     } else {
         finaliserVictoirePartie(null);
     }
+}
+
+// Bouton "Passer" de l'ecran de fin de combat victorieux (specs.md 8.3, point 7 utilisateur) :
+// n'apparait que s'il y avait au moins un candidat a choisir (sinon "Continuer" suffit deja).
+function passerFinCombat() {
+    if (!partieActive) return;
+    finaliserVictoirePartie(null);
 }
 
 // Ecran de victoire finale (specs.md 2.4, etape 11) : felicite le joueur a la victoire du Boss (le
@@ -2009,6 +2073,8 @@ document.getElementById("bouton-abandonner").addEventListener("click", abandonne
 document.getElementById("bouton-voir-deck-partie").addEventListener("click", voirDeckPartie);
 document.getElementById("bouton-nouvelle-partie").addEventListener("click", nouvellePartie);
 document.getElementById("bouton-continuer-fin-combat").addEventListener("click", continuerApresFinCombat);
+document.getElementById("bouton-passer-fin-combat").addEventListener("click", passerFinCombat);
+document.getElementById("bouton-passer-carte-module").addEventListener("click", passerCarteModule);
 document.getElementById("bouton-termine-station-service").addEventListener("click", terminerStationServicePartie);
 document.getElementById("bouton-continuer-aventure-trois-lunes").addEventListener("click", terminerAventureTroisLunes);
 document.getElementById("bouton-continuer-aventure-asteroides").addEventListener("click", cliquerContinuerAsteroides);

@@ -24,13 +24,14 @@ import random
 import pyglet
 
 from src.gameplay.combat import Combat, EtatCombat
-from src.gameplay.donnees import charger_cartes, charger_modules
+from src.gameplay.donnees import SpecModule, charger_cartes, charger_modules
 from src.gameplay.parcours import (
     TypeAventure,
     TypeEtape,
     aleatoire_pour_niveau,
     est_niveau_boss,
     modules_equipables,
+    tirer_candidats_carte_module,
     tirer_candidats_module,
     tirer_candidats_recompense,
     tirer_propositions_niveau,
@@ -59,6 +60,7 @@ from src.ui.ecran_accueil_joueur import EcranAccueilJoueur
 from src.ui.ecran_aventure_asteroides import EcranAventureAsteroides
 from src.ui.ecran_aventure_police import EcranAventurePolice
 from src.ui.ecran_aventure_trois_lunes import EcranAventureTroisLunes
+from src.ui.ecran_choix_carte_module import EcranChoixCarteModule
 from src.ui.ecran_choix_module import EcranChoixModule
 from src.ui.ecran_choix_niveau import EcranChoixNiveau
 from src.ui.ecran_deck import EcranDeck
@@ -157,6 +159,32 @@ def _ouvrir_choix_module(profil: Profil, partie: Partie) -> None:
         spec = fenetre.module_choisi
         fenetre.close()
         equiper_module(partie, spec)
+        _ouvrir_choix_carte_module(profil, partie, spec)
+
+    pyglet.clock.schedule_interval(verifier, INTERVALLE_VERIFICATION)
+
+
+def _ouvrir_choix_carte_module(profil: Profil, partie: Partie, spec: SpecModule) -> None:
+    """Tirage de 3 cartes du module qui vient d'etre equipe (specs.md 2.3, point 6 utilisateur) :
+    le joueur en choisit une a ajouter a son deck, ou passe. Ecran saute directement (sans passer
+    par le clic du joueur) si le pool jouable non-Base de ce module est vide (rien a proposer,
+    cf. tirer_candidats_carte_module)."""
+    cartes = charger_cartes()
+    candidats = tirer_candidats_carte_module(spec, cartes, random.Random())
+    if not candidats:
+        avancer_niveau(partie)
+        sauvegarder_partie(profil.id, partie)
+        _ouvrir_choix_niveau(profil, partie)
+        return
+    fenetre = EcranChoixCarteModule(spec.nom, candidats, partie)
+
+    def verifier(_dt: float) -> None:
+        if not fenetre.termine:
+            return
+        pyglet.clock.unschedule(verifier)
+        fenetre.close()
+        if fenetre.carte_choisie is not None:
+            ajouter_carte(partie, id_de_carte(fenetre.carte_choisie, cartes))
         avancer_niveau(partie)
         sauvegarder_partie(profil.id, partie)
         _ouvrir_choix_niveau(profil, partie)

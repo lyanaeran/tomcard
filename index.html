@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
     <title>Space Fight - prototype web</title>
-    <link rel="stylesheet" href="web/style.css?v=62">
+    <link rel="stylesheet" href="web/style.css?v=63">
     <link rel="manifest" href="web/manifest.json?v=52">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -74,6 +74,12 @@
         <div id="candidats-module"></div>
         <p class="instruction">Choisissez un nouveau module pour votre vaisseau.</p>
     </div>
+    <div id="ecran-choix-carte-module" class="cachee">
+        <h1 id="titre-choix-carte-module">Nouvelle carte</h1>
+        <div id="candidats-carte-module"></div>
+        <p class="instruction">Choisissez une carte a ajouter a votre deck, ou passez.</p>
+        <button id="bouton-passer-carte-module">Passer</button>
+    </div>
     <div id="ecran-choix-niveau" class="cachee">
         <h1 id="titre-choix-niveau"></h1>
         <div id="candidats-niveau"></div>
@@ -129,8 +135,9 @@
         <h1 id="titre-fin-combat"></h1>
         <p id="message-defaite" class="cachee">Pas d'inquietude : vos restes seront recycles, rien ne se perd dans l'espace.</p>
         <div id="candidats-recompense" class="cachee"></div>
-        <p id="instruction-fin-combat" class="instruction cachee">Choisissez une carte a ajouter a votre deck.</p>
+        <p id="instruction-fin-combat" class="instruction cachee">Choisissez une carte a ajouter a votre deck, ou passez.</p>
         <button id="bouton-continuer-fin-combat" class="cachee">Continuer</button>
+        <button id="bouton-passer-fin-combat" class="cachee">Passer</button>
     </div>
     <div id="ecran-victoire-finale" class="cachee">
         <h1>Victoire finale</h1>
@@ -157,6 +164,6 @@
         <div id="liste-journal-combat"></div>
     </div>
     <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
-    <script src="web/app.js?v=67"></script>
+    <script src="web/app.js?v=68"></script>
 </body>
 </html>

@@ -78,19 +78,35 @@ def pool_toutes_cartes(cartes: dict[str, Carte]) -> list[Carte]:
     return [carte for carte in cartes.values() if carte.rarete != RareteCarte.BASE]
 
 
+def tirer_candidats_carte_module(
+    spec: SpecModule, cartes: dict[str, Carte], aleatoire: random.Random, quantite: int = 3
+) -> list[Carte]:
+    """Tire jusqu'a `quantite` cartes candidates DISTINCTES dans le pool jouable non-Base de ce
+    module (specs.md 2.3, apres le choix de module en debut de partie - le joueur en choisit une
+    a ajouter a son deck, ou passe). Meme tirage pondere par rarete que tirer_carte_recompense a
+    chaque tirage, sur un pool qui retrecit a mesure (jamais deux fois la meme carte parmi les
+    candidats) - moins de `quantite` si le pool du module en compte moins."""
+    pool_restant = list(pool_module(spec, cartes))
+    candidats: list[Carte] = []
+    for _ in range(quantite):
+        carte = tirer_carte_recompense(pool_restant, aleatoire)
+        if carte is None:
+            break
+        candidats.append(carte)
+        pool_restant.remove(carte)
+    return candidats
+
+
 def tirer_candidats_recompense(
     specs_utilisees: list[SpecModule], cartes: dict[str, Carte], aleatoire: random.Random
 ) -> list[tuple[SpecModule, Carte | None]]:
     """Un candidat de recompense par module utilise dans ce combat (specs.md 2.1/6), au maximum
-    5 (base + 4 equipes, cf. specs.md 5) : le module principal (le premier de la liste, meme
-    ordre que creer_vaisseau) pioche dans le pool entier de cartes jouables non-Base, chaque
-    module equipe pioche dans son propre pool. Candidat a None si le pool de ce module est vide
-    (aucune carte jouable non-Base actuellement associee)."""
-    spec_principal, *specs_equipes = specs_utilisees
-    resultats = [(spec_principal, tirer_carte_recompense(pool_toutes_cartes(cartes), aleatoire))]
-    for spec in specs_equipes:
-        resultats.append((spec, tirer_carte_recompense(pool_module(spec, cartes), aleatoire)))
-    return resultats
+    5 (base + 4 equipes, cf. specs.md 5) : chaque module, module principal inclus, pioche dans
+    son propre pool de cartes jouables non-Base (pool_module) - jamais dans le pool entier du
+    jeu (bug corrige : le module principal piochait auparavant parmi toutes les cartes du jeu au
+    lieu des siennes, cf. CLAUDE.md). Candidat a None si le pool de ce module est vide (aucune
+    carte jouable non-Base actuellement associee)."""
+    return [(spec, tirer_carte_recompense(pool_module(spec, cartes), aleatoire)) for spec in specs_utilisees]
 
 
 # Choix du prochain niveau (specs.md 2.3/2.4), pour tous les niveaux sauf le 1 (choix de module,

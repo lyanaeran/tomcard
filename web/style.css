@@ -1210,11 +1210,37 @@ body {
     font-size: 1.1rem;
 }
 
-#candidats-recompense {
+#candidats-recompense,
+#candidats-carte-module {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     gap: 1.2rem;
+}
+
+/* Ecran de choix d'une carte du module fraichement equipe (parcours, specs.md 2.3, point 6
+   utilisateur) : apres le choix de module en debut de partie. Meme structure generale que
+   #ecran-choix-module/#ecran-fin-combat (titre, contenu, instruction, bouton). */
+#ecran-choix-carte-module {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+#ecran-choix-carte-module h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: normal;
+}
+
+#ecran-choix-carte-module .instruction {
+    margin: 0;
+    font-size: 1.1rem;
 }
 
 .candidat-recompense {
@@ -1551,6 +1577,7 @@ body {
 #ecran-selection-joueur button,
 #ecran-accueil-joueur button,
 #ecran-fin-combat button,
+#ecran-choix-carte-module button,
 #bouton-termine-station-service,
 #bouton-continuer-victoire-finale,
 #bouton-termine-etape-placeholder,

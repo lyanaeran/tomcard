@@ -16,6 +16,7 @@ from src.gameplay.parcours import (
     modules_equipables,
     pool_module,
     pool_toutes_cartes,
+    tirer_candidats_carte_module,
     tirer_candidats_module,
     tirer_candidats_recompense,
     tirer_carte_deck,
@@ -142,7 +143,9 @@ def test_pool_toutes_cartes_exclut_les_cartes_base():
     assert set(pool) == {CARTE_COMMUNE, CARTE_RARE}
 
 
-def test_tirer_candidats_recompense_un_par_module_principal_pioche_dans_tout_le_pool():
+def test_tirer_candidats_recompense_un_par_module_chacun_pioche_dans_son_propre_pool():
+    """Le module principal pioche desormais dans son propre pool (pool_module), comme chaque
+    module equipe - jamais dans le pool entier du jeu (bug corrige, cf. CLAUDE.md)."""
     specs_modules = charger_modules()
     cartes = charger_cartes()
     _vaisseau, specs_utilisees = creer_vaisseau(specs_modules, random.Random(5))
@@ -154,8 +157,68 @@ def test_tirer_candidats_recompense_un_par_module_principal_pioche_dans_tout_le_
     for spec, carte in candidats:
         assert carte is not None
         assert carte.rarete != RareteCarte.BASE
-        if spec.id != ID_MODULE_PRINCIPAL:
-            assert carte in pool_module(spec, cartes)
+        assert carte in pool_module(spec, cartes)
+
+
+def test_tirer_candidats_recompense_module_principal_ne_pioche_jamais_une_carte_d_un_autre_module():
+    """Regression : le module principal piochait auparavant dans pool_toutes_cartes (toutes les
+    cartes du jeu), pouvant proposer une carte d'un autre module - corrige pour piocher
+    uniquement dans son propre pool_module, meme si celui-ci est plus restreint."""
+    specs_modules = charger_modules()
+    cartes = charger_cartes()
+    spec_principal = next(spec for spec in specs_modules if spec.id == ID_MODULE_PRINCIPAL)
+    pool_principal = pool_module(spec_principal, cartes)
+
+    for graine in range(20):
+        _, carte = tirer_candidats_recompense([spec_principal], cartes, random.Random(graine))[0]
+        assert carte is None or carte in pool_principal
+
+
+# --- Choix de carte du module fraichement equipe (specs.md 2.3, point 6) ---
+
+
+def test_tirer_candidats_carte_module_renvoie_3_cartes_distinctes_du_pool_module():
+    specs_modules = charger_modules()
+    cartes = charger_cartes()
+    spec = next(s for s in modules_equipables(specs_modules) if len(pool_module(s, cartes)) >= 3)
+
+    candidats = tirer_candidats_carte_module(spec, cartes, random.Random(1))
+
+    assert len(candidats) == 3
+    assert len(set(carte.nom for carte in candidats)) == 3
+    for carte in candidats:
+        assert carte in pool_module(spec, cartes)
+
+
+def test_tirer_candidats_carte_module_respecte_la_quantite_demandee():
+    specs_modules = charger_modules()
+    cartes = charger_cartes()
+    spec = next(s for s in modules_equipables(specs_modules) if len(pool_module(s, cartes)) >= 2)
+
+    candidats = tirer_candidats_carte_module(spec, cartes, random.Random(1), quantite=2)
+
+    assert len(candidats) == 2
+
+
+def test_tirer_candidats_carte_module_moins_de_candidats_si_pool_plus_petit():
+    """Un module au pool plus restreint que `quantite` ne renvoie que ce qu'il a (jamais de
+    doublon pour completer)."""
+    cartes = {"CRT_C": CARTE_COMMUNE, "CRT_R": CARTE_RARE}
+    spec = next(s for s in charger_modules() if s.id != ID_MODULE_PRINCIPAL)
+    spec_test = dataclasses.replace(spec, cartes=("CRT_C", "CRT_R"))
+
+    candidats = tirer_candidats_carte_module(spec_test, cartes, random.Random(1), quantite=5)
+
+    assert len(candidats) == 2
+    assert set(candidats) == {CARTE_COMMUNE, CARTE_RARE}
+
+
+def test_tirer_candidats_carte_module_pool_vide_renvoie_liste_vide():
+    cartes = {"CRT_C": CARTE_COMMUNE}
+    spec = next(s for s in charger_modules() if s.id != ID_MODULE_PRINCIPAL)
+    spec_test = dataclasses.replace(spec, cartes=())
+
+    assert tirer_candidats_carte_module(spec_test, cartes, random.Random(1)) == []
 
 
 # --- Choix du prochain niveau (specs.md 2.3/2.4) ---

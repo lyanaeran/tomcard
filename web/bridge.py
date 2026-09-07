@@ -27,6 +27,7 @@ from src.gameplay.parcours import (
     aleatoire_pour_niveau,
     est_niveau_boss,
     modules_equipables,
+    tirer_candidats_carte_module,
     tirer_candidats_module,
     tirer_candidats_recompense,
     tirer_propositions_niveau,
@@ -506,12 +507,39 @@ def choix_module_partie_web(partie_json) -> str:
 
 
 def choisir_module_partie_web(partie_json, module_id) -> str:
-    """Equipe le module choisi (Niveau 1, specs.md 2.3/2.4) et avance au niveau suivant ; renvoie
-    la partie mise a jour (web/app.js la re-sauvegarde dans localStorage puis enchaine sur le
-    choix du niveau) - meme logique que main.py:_ouvrir_choix_module cote PC."""
+    """Equipe le module choisi (Niveau 1, specs.md 2.3/2.4) ; renvoie la partie mise a jour, AVANT
+    d'avancer de niveau (web/app.js enchaine sur le tirage de carte du module fraichement equipe,
+    cf. candidats_carte_module_web/resoudre_carte_module_web plus bas, point 6 utilisateur) - meme
+    logique que main.py:_ouvrir_choix_module cote PC (equiper_module, avant l'appel a
+    _ouvrir_choix_carte_module)."""
     partie = partie_depuis_json(partie_json)
     specs_par_id = {spec.id: spec for spec in charger_modules()}
     equiper_module(partie, specs_par_id[module_id])
+    return partie_vers_json(partie)
+
+
+def candidats_carte_module_web(partie_json, module_id) -> str:
+    """Tire jusqu'a 3 cartes candidates du module qui vient d'etre equipe (specs.md 2.3, point 6
+    utilisateur) dans son propre pool jouable non-Base (tirer_candidats_carte_module) - meme
+    logique que main.py:_ouvrir_choix_carte_module cote PC. `candidats` vide si ce pool est vide :
+    web/app.js doit alors appeler resoudre_carte_module_web(None) directement, sans afficher
+    l'ecran (meme comportement que main.py, qui saute directement cette etape dans ce cas)."""
+    partie = partie_depuis_json(partie_json)
+    specs_par_id = {spec.id: spec for spec in charger_modules()}
+    spec = specs_par_id[module_id]
+    cartes = charger_cartes()
+    candidats = tirer_candidats_carte_module(spec, cartes, random.Random())
+    return json.dumps({"module_nom": spec.nom, "candidats": [_carte_avec_id_json(carte, cartes) for carte in candidats]})
+
+
+def resoudre_carte_module_web(partie_json, id_carte) -> str:
+    """Ajoute la carte choisie (id_carte, ou None si le joueur a appuye sur "Passer") au deck de
+    la partie, puis avance au niveau suivant - meme logique que
+    main.py:_ouvrir_choix_carte_module cote PC. Renvoie la partie mise a jour (web/app.js la
+    re-sauvegarde dans localStorage puis enchaine sur le choix du niveau)."""
+    partie = partie_depuis_json(partie_json)
+    if id_carte is not None:
+        ajouter_carte(partie, id_carte)
     avancer_niveau(partie)
     return partie_vers_json(partie)
 
