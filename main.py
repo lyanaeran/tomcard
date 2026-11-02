@@ -49,7 +49,6 @@ from src.gameplay.partie import (
     deck_de_la_partie,
     equiper_module,
     gagner_argent_combat,
-    id_de_carte,
     marquer_terminee,
     nouvelle_partie,
     partie_en_cours,
@@ -201,7 +200,7 @@ def _ouvrir_choix_carte_module(profil: Profil, partie: Partie, spec: SpecModule)
         pyglet.clock.unschedule(verifier)
         fenetre.close()
         if fenetre.carte_choisie is not None:
-            ajouter_carte(partie, id_de_carte(fenetre.carte_choisie, cartes))
+            ajouter_carte(partie, fenetre.carte_choisie.id)
         avancer_niveau(partie)
         sauvegarder_partie(profil.id, partie)
         _ouvrir_choix_niveau(profil, partie)
@@ -374,7 +373,7 @@ def _ouvrir_fin_combat(profil: Profil, partie: Partie, combat: Combat) -> None:
             _ouvrir_accueil(profil)
             return
         if fenetre.carte_choisie is not None:
-            ajouter_carte(partie, id_de_carte(fenetre.carte_choisie, cartes))
+            ajouter_carte(partie, fenetre.carte_choisie.id)
         if est_niveau_boss(partie.niveau):
             # Le run s'arrete reellement au Niveau 10 dans l'etat actuel (decision utilisateur,
             # specs.md 2).

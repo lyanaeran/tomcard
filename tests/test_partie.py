@@ -39,7 +39,6 @@ from src.gameplay.partie import (
     detourner_aventure_police,
     equiper_module,
     gagner_argent_combat,
-    id_de_carte,
     lister_profils,
     mettre_a_jour_module,
     nouvelle_partie,
@@ -282,13 +281,6 @@ def test_avancer_niveau_incremente():
     avancer_niveau(partie)
 
     assert partie.niveau == 2
-
-
-def test_id_de_carte_retrouve_l_id_par_identite():
-    cartes = charger_cartes()
-    id_attendu, carte = next(iter(cartes.items()))
-
-    assert id_de_carte(carte, cartes) == id_attendu
 
 
 def test_ajouter_carte_etend_le_deck():

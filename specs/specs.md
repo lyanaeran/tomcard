@@ -447,8 +447,8 @@ pirates de l'espace, vous n'avez plus le choix : vaincre ou périr ! À moins qu
 `src/gameplay/config_poc.py` (`NOMBRE_ENNEMIS_ASTEROIDES`, `creer_flotte_asteroides`) ;
 `src/gameplay/partie.py` (`DEGATS_ASTEROIDES`, `subir_degats_module`, **`second_choc_asteroides`**
 — 2e choc + tirage de la carte offerte en un seul appel, `cartes` reçu en paramètre plutôt que
-rechargé en interne pour rester le même dict que celui que l'appelant réutilisera ensuite (cf.
-`id_de_carte`, identité d'objet) —, `combat_aventure_asteroides`, `_joueur_depuis_partie`
+rechargé en interne ; l'id de la carte offerte est lu directement sur `Carte.id` (§6) —,
+`combat_aventure_asteroides`, `_joueur_depuis_partie`
 factorisée avec `combat_depuis_partie`) ; `src/ui/ecran_aventure_asteroides.py` (PC, garde une
 instance `random.Random` explicite en attribut — jamais recréée à chaque appel, cf. CLAUDE.md
 "Déterminisme du tirage aléatoire") + `main.py:_ouvrir_aventure_asteroides` ; côté web
@@ -470,8 +470,9 @@ immédiatement (pas de séquence), retour direct au Choix du prochain niveau (bo
   (`ameliorer_module_aventure`, aucun coût en Argent contrairement à la Station service — l'effet
   commun aux deux est factorisé dans `_effet_ameliorer_module`), sur le module cliqué par le joueur
 - *Bricoler* : retire une carte choisie par le joueur de son deck réel (`retirer_carte`, nouveau
-  côté moteur : opération inverse de `ajouter_carte`, §2.4 étape 6). Cartes regroupées par id (pas
-  par nom comme `regrouper_cartes`/l'écran "deck en entier", §6) pour retirer un exemplaire précis
+  côté moteur : opération inverse de `ajouter_carte`, §2.4 étape 6). Cartes regroupées par id via
+  `regrouper_cartes` (même regroupement que l'écran "deck en entier", §6), l'id de la carte cliquée
+  (`Carte.id`) étant passé à `retirer_carte`
 
 `src/gameplay/partie.py` (`PV_REPARATION_VAISSEAU`, `reparer_vaisseau`, `ameliorer_module_aventure`,
 `retirer_carte`) ; `src/ui/ecran_aventure_trois_lunes.py` (PC, écran à état interne `etape` : "choix"
@@ -743,7 +744,12 @@ restent le plan cible pour les 4 nouveaux modules, à concevoir dans une passe d
   exemplaire individuel
   - `Deck.toutes_cartes()` (`src/gameplay/deck.py`) réunit pioche + main + défausse + cartes
     épuisées ; `regrouper_cartes()` (`src/gameplay/carte.py`) transforme une liste de cartes en
-    `(carte, quantité)` par modèle — fonctions gameplay partagées par les deux plateformes
+    `(carte, quantité)` par modèle — fonctions gameplay partagées par les deux plateformes. Le
+    modèle est identifié par **l'id de la carte** (`Carte.id`, son id dans `config/cartes.json`,
+    renseigné par `charger_cartes` et conservé par `copie()`), pas par son nom : deux cartes
+    différentes qui porteraient le même nom restent deux entrées distinctes. `Carte.id` sert aussi
+    partout où une carte doit être rattachée au deck d'une partie (`ajouter_carte`/`retirer_carte`),
+    en remplacement de l'ancienne recherche par identité d'objet (`id_de_carte`, supprimée)
   - **Implémenté** en écran autonome (même situation que les deux écrans précédents, pas encore
     relié à un vrai bouton dans l'UI) : `src/ui/ecran_deck.py` (PC, grille figée de 8 colonnes,
     survol d'une carte → panneau de description fixe en bas d'écran plutôt qu'une infobulle

@@ -107,9 +107,9 @@ def test_tirer_rarete_recompense_respecte_les_bornes():
     assert tirer_rarete_recompense(_AleatoireFixe(0.999)) == RareteCarte.COMMUNE
 
 
-CARTE_COMMUNE = Carte(nom="C", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMI_UNIQUE, cout=1, valeur=1, rarete=RareteCarte.COMMUNE)
-CARTE_RARE = Carte(nom="R", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMI_UNIQUE, cout=1, valeur=1, rarete=RareteCarte.RARE)
-CARTE_BASE = Carte(nom="B", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMI_UNIQUE, cout=1, valeur=1, rarete=RareteCarte.BASE)
+CARTE_COMMUNE = Carte(id="TEST_C", nom="C", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMI_UNIQUE, cout=1, valeur=1, rarete=RareteCarte.COMMUNE)
+CARTE_RARE = Carte(id="TEST_R", nom="R", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMI_UNIQUE, cout=1, valeur=1, rarete=RareteCarte.RARE)
+CARTE_BASE = Carte(id="TEST_B", nom="B", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMI_UNIQUE, cout=1, valeur=1, rarete=RareteCarte.BASE)
 
 
 def test_tirer_carte_recompense_retombe_sur_le_palier_inferieur_si_vide():

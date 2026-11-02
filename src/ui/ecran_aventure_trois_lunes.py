@@ -6,13 +6,11 @@ independante comme les autres ecrans du parcours, mute directement `partie.vaiss
 (src/gameplay/partie.py) - c'est a l'appelant de sauvegarder la partie une fois l'ecran ferme.
 """
 
-from collections import Counter
-
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.carte import Carte
-from src.gameplay.donnees import RACINE, charger_cartes, charger_modules, image_case_module
+from src.gameplay.carte import Carte, regrouper_cartes
+from src.gameplay.donnees import RACINE, charger_modules, image_case_module
 from src.gameplay.partie import (
     PV_AMELIORATION,
     PV_REPARATION_VAISSEAU,
@@ -121,14 +119,6 @@ def _rect_carte_deck(index: int, total: int) -> tuple[float, float, float, float
     return x, Y_HAUT_DECK - HAUTEUR_CARTE_DECK, LARGEUR_CARTE_DECK, HAUTEUR_CARTE_DECK
 
 
-def _grouper_deck_par_id(deck: list[str], cartes: dict[str, Carte]) -> list[tuple[str, Carte, int]]:
-    """Regroupe le deck (liste d'ids, doublons possibles) par id de carte - contrairement a
-    regrouper_cartes (src/gameplay/carte.py) qui regroupe des objets Carte par nom, ici on garde
-    l'id pour pouvoir le passer a retirer_carte."""
-    compteur = Counter(deck)
-    return [(id_carte, cartes[id_carte], quantite) for id_carte, quantite in compteur.items()]
-
-
 class EcranAventureTroisLunes(pyglet.window.Window):
     """Aventure "Trois lunes" (specs.md 2.5) : choix unique parmi Reparer/Ameliorer/Bricoler,
     resolu immediatement. `self.termine` signale a l'appelant qu'il peut sauvegarder la partie et
@@ -138,7 +128,8 @@ class EcranAventureTroisLunes(pyglet.window.Window):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.partie = partie
         self.specs_par_id = {spec.id: spec for spec in charger_modules()}
-        self.groupes_deck = _grouper_deck_par_id(partie.deck, charger_cartes())
+        # Regroupe par id (carte.id), qui est aussi ce que retirer_carte attend (choix Bricoler).
+        self.groupes_deck = regrouper_cartes(deck_de_la_partie(partie))
         # "choix" (3 choix initiaux) -> "choix_module" (Ameliorer) ou "choix_carte" (Bricoler),
         # ou directement "resolu" (Reparer, effet immediat sans cible a choisir) -> "resolu".
         self.etape: str = "choix"
@@ -295,7 +286,7 @@ class EcranAventureTroisLunes(pyglet.window.Window):
     def _dessiner_choix_carte(self, lot: pyglet.graphics.Batch) -> list:
         elements = [self._dessiner_instruction("Choisissez une carte a retirer de votre deck.", lot)]
         total = len(self.groupes_deck)
-        for index, (_id_carte, carte, quantite) in enumerate(self.groupes_deck):
+        for index, (carte, quantite) in enumerate(self.groupes_deck):
             elements.extend(self._dessiner_carte_deck(index, total, carte, quantite, lot))
         return elements
 
@@ -411,8 +402,8 @@ class EcranAventureTroisLunes(pyglet.window.Window):
         index = self._index_a(x, y, total, lambda i: _rect_carte_deck(i, total))
         if index is None:
             return
-        id_carte, carte, _quantite = self.groupes_deck[index]
-        retirer_carte(self.partie, id_carte)
+        carte, _quantite = self.groupes_deck[index]
+        retirer_carte(self.partie, carte.id)
         self.etape = "resolu"
         self.message_resolu = f"Carte retiree : {carte.nom}."
 

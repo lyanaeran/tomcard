@@ -18,6 +18,14 @@ def test_charger_cartes_renvoie_les_cartes_jouables_avec_images_existantes():
         assert Path(carte.image).is_file()
 
 
+def test_charger_cartes_renseigne_l_id_de_chaque_carte():
+    cartes = charger_cartes()
+
+    for id_carte, carte in cartes.items():
+        assert carte.id == id_carte
+        assert carte.copie().id == id_carte
+
+
 def test_charger_cartes_ignore_les_cartes_sans_bloc_effet():
     """Cartes de design pas encore jouables (mecanique non supportee, cf. specs.md 9.1)."""
     cartes = charger_cartes()
