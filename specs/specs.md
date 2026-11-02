@@ -1159,7 +1159,12 @@ fond dédié.
 - `main.py` : ouvre `EcranSelectionJoueur`, puis `EcranAccueilJoueur`, puis l'écran suivant selon
   l'action choisie — chaque écran étant une fenêtre pyglet indépendante, les transitions ferment la
   fenêtre courante et ouvrent la suivante, détectées via `pyglet.clock.schedule_interval` (pas
-  d'événement dédié "l'utilisateur a fait un choix" sur ces fenêtres)
+  d'événement dédié "l'utilisateur a fait un choix" sur ces fenêtres). Le comportement par défaut
+  de pyglet (quitter l'application dès que la dernière fenêtre se ferme) est remplacé
+  (`main.py:_on_window_close`) : la vérification "plus aucune fenêtre ouverte" est reportée au tick
+  suivant, une fois l'écran suivant ouvert — sans quoi le jeu s'arrêtait juste après la sélection
+  du joueur (bug constaté sur macOS). Fermer la dernière fenêtre (bouton de fermeture natif) quitte
+  toujours le jeu
 
 #### Limites connues (à lever plus tard)
 

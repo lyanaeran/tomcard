@@ -9,7 +9,8 @@ du prochain niveau, ou victoire finale (Boss vaincu) -> fin de partie.
 Chaque ecran est une fenetre pyglet independante ; les transitions se font en fermant la fenetre
 courante et en ouvrant la suivante, verifiees a intervalle regulier via pyglet.clock (pas
 d'evenement dedie pour "l'utilisateur a fait un choix" dans ces ecrans, cf. leurs attributs
-`profil_choisi`/`action`/`module_choisi`/`type_choisi`/`termine`).
+`profil_choisi`/`action`/`module_choisi`/`type_choisi`/`termine`). Le jeu ne quitte que si aucune
+fenetre n'est ouverte au tick suivant une fermeture (cf. _on_window_close).
 
 Limites connues (specs.md 2.4) : Planete commerciale n'a pas encore de contenu propre (specs.md
 9.1) - l'ecran generique (EcranEtapePlaceholder) la represente, sans autre effet que d'avancer au
@@ -80,8 +81,24 @@ TYPES_COMBAT = (TypeEtape.PRIME, TypeEtape.BOSS)
 
 
 def main() -> None:
+    pyglet.app.event_loop.push_handlers(on_window_close=_on_window_close)
     _ouvrir_selection_joueur()
     pyglet.app.run()
+
+
+def _on_window_close(_fenetre: pyglet.window.Window) -> bool:
+    """Remplace la sortie immediate de pyglet quand plus aucune fenetre n'est ouverte."""
+    # Par defaut, pyglet quitte des que la derniere fenetre se ferme : or chaque transition ferme
+    # l'ecran courant AVANT d'ouvrir le suivant, ce qui arretait le jeu apres la selection du
+    # joueur (constate sur macOS). On reporte donc la verification au tick suivant, une fois le
+    # nouvel ecran ouvert ; fermer la derniere fenetre (bouton rouge) quitte toujours le jeu.
+    pyglet.clock.schedule_once(_quitter_si_plus_aucune_fenetre, 0)
+    return pyglet.event.EVENT_HANDLED
+
+
+def _quitter_si_plus_aucune_fenetre(_dt: float) -> None:
+    if not pyglet.app.windows:
+        pyglet.app.exit()
 
 
 def _ouvrir_selection_joueur() -> None:
