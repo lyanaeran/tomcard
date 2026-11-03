@@ -1170,7 +1170,9 @@ fond dédié.
   (`main.py:_on_window_close`) : la vérification "plus aucune fenêtre ouverte" est reportée au tick
   suivant, une fois l'écran suivant ouvert — sans quoi le jeu s'arrêtait juste après la sélection
   du joueur (bug constaté sur macOS). Fermer la dernière fenêtre (bouton de fermeture natif) quitte
-  toujours le jeu
+  toujours le jeu. Sur écran HiDPI (Retina), `main.py` règle `pyglet.options.dpi_scaling = "stretch"` :
+  toutes les fenêtres restent en coordonnées logiques 1280x800, étirées sur tout le framebuffer
+  (avec le mode par défaut, le jeu n'occupait que le quart en bas à gauche de la fenêtre sur Mac)
 
 #### Limites connues (à lever plus tard)
 

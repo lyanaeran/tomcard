@@ -24,6 +24,12 @@ import random
 
 import pyglet
 
+# Ecrans HiDPI (Retina) : le mode par defaut "platform" double la taille logique de la fenetre sur
+# macOS alors que tout le dessin est en coordonnees 1280x800, d'ou un jeu cantonne au quart en bas
+# a gauche. "stretch" garde 1280x800 comme taille logique et l'etire sur tout le framebuffer.
+# Doit etre regle avant la creation de la premiere fenetre.
+pyglet.options.dpi_scaling = "stretch"
+
 from src.gameplay.combat import Combat, EtatCombat
 from src.gameplay.donnees import SpecModule, charger_cartes, charger_modules
 from src.gameplay.parcours import (
