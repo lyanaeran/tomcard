@@ -7,9 +7,9 @@ import random
 from src.gameplay.carte import Carte, CibleCarte, TypeCarte
 from src.gameplay.deck import Deck
 
-CARTE_ATTAQUE = Carte(nom="Attaque", image="test.png", type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMI_UNIQUE, cout=1, valeur=7)
-CARTE_BOUCLIER = Carte(nom="Bouclier", image="test.png", type=TypeCarte.DEFENSE, cible=CibleCarte.ALLIE_UNIQUE, cout=1, valeur=5)
-CARTE_REPARATION = Carte(nom="Soin", image="test.png", type=TypeCarte.REPARATION, cible=CibleCarte.ALLIE_UNIQUE, cout=1, valeur=4)
+CARTE_ATTAQUE = Carte(id="TEST_ATTAQUE", nom="Attaque", image="test.png", type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMI_UNIQUE, cout=1, valeur=7)
+CARTE_BOUCLIER = Carte(id="TEST_BOUCLIER", nom="Bouclier", image="test.png", type=TypeCarte.DEFENSE, cible=CibleCarte.ALLIE_UNIQUE, cout=1, valeur=5)
+CARTE_REPARATION = Carte(id="TEST_SOIN", nom="Soin", image="test.png", type=TypeCarte.REPARATION, cible=CibleCarte.ALLIE_UNIQUE, cout=1, valeur=4)
 
 
 def _deck_poc() -> Deck:

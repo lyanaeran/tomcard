@@ -9,7 +9,8 @@ du prochain niveau, ou victoire finale (Boss vaincu) -> fin de partie.
 Chaque ecran est une fenetre pyglet independante ; les transitions se font en fermant la fenetre
 courante et en ouvrant la suivante, verifiees a intervalle regulier via pyglet.clock (pas
 d'evenement dedie pour "l'utilisateur a fait un choix" dans ces ecrans, cf. leurs attributs
-`profil_choisi`/`action`/`module_choisi`/`type_choisi`/`termine`).
+`profil_choisi`/`action`/`module_choisi`/`type_choisi`/`termine`). Le jeu ne quitte que si aucune
+fenetre n'est ouverte au tick suivant une fermeture (cf. _on_window_close).
 
 Limites connues (specs.md 2.4) : Planete commerciale n'a pas encore de contenu propre (specs.md
 9.1) - l'ecran generique (EcranEtapePlaceholder) la represente, sans autre effet que d'avancer au
@@ -23,14 +24,21 @@ import random
 
 import pyglet
 
+# Ecrans HiDPI (Retina) : le mode par defaut "platform" double la taille logique de la fenetre sur
+# macOS alors que tout le dessin est en coordonnees 1280x800, d'ou un jeu cantonne au quart en bas
+# a gauche. "stretch" garde 1280x800 comme taille logique et l'etire sur tout le framebuffer.
+# Doit etre regle avant la creation de la premiere fenetre.
+pyglet.options.dpi_scaling = "stretch"
+
 from src.gameplay.combat import Combat, EtatCombat
-from src.gameplay.donnees import charger_cartes, charger_modules
+from src.gameplay.donnees import SpecModule, charger_cartes, charger_modules
 from src.gameplay.parcours import (
     TypeAventure,
     TypeEtape,
     aleatoire_pour_niveau,
     est_niveau_boss,
     modules_equipables,
+    tirer_candidats_carte_module,
     tirer_candidats_module,
     tirer_candidats_recompense,
     tirer_propositions_niveau,
@@ -47,7 +55,6 @@ from src.gameplay.partie import (
     deck_de_la_partie,
     equiper_module,
     gagner_argent_combat,
-    id_de_carte,
     marquer_terminee,
     nouvelle_partie,
     partie_en_cours,
@@ -59,6 +66,7 @@ from src.ui.ecran_accueil_joueur import EcranAccueilJoueur
 from src.ui.ecran_aventure_asteroides import EcranAventureAsteroides
 from src.ui.ecran_aventure_police import EcranAventurePolice
 from src.ui.ecran_aventure_trois_lunes import EcranAventureTroisLunes
+from src.ui.ecran_choix_carte_module import EcranChoixCarteModule
 from src.ui.ecran_choix_module import EcranChoixModule
 from src.ui.ecran_choix_niveau import EcranChoixNiveau
 from src.ui.ecran_deck import EcranDeck
@@ -78,8 +86,24 @@ TYPES_COMBAT = (TypeEtape.PRIME, TypeEtape.BOSS)
 
 
 def main() -> None:
+    pyglet.app.event_loop.push_handlers(on_window_close=_on_window_close)
     _ouvrir_selection_joueur()
     pyglet.app.run()
+
+
+def _on_window_close(_fenetre: pyglet.window.Window) -> bool:
+    """Remplace la sortie immediate de pyglet quand plus aucune fenetre n'est ouverte."""
+    # Par defaut, pyglet quitte des que la derniere fenetre se ferme : or chaque transition ferme
+    # l'ecran courant AVANT d'ouvrir le suivant, ce qui arretait le jeu apres la selection du
+    # joueur (constate sur macOS). On reporte donc la verification au tick suivant, une fois le
+    # nouvel ecran ouvert ; fermer la derniere fenetre (bouton rouge) quitte toujours le jeu.
+    pyglet.clock.schedule_once(_quitter_si_plus_aucune_fenetre, 0)
+    return pyglet.event.EVENT_HANDLED
+
+
+def _quitter_si_plus_aucune_fenetre(_dt: float) -> None:
+    if not pyglet.app.windows:
+        pyglet.app.exit()
 
 
 def _ouvrir_selection_joueur() -> None:
@@ -157,6 +181,32 @@ def _ouvrir_choix_module(profil: Profil, partie: Partie) -> None:
         spec = fenetre.module_choisi
         fenetre.close()
         equiper_module(partie, spec)
+        _ouvrir_choix_carte_module(profil, partie, spec)
+
+    pyglet.clock.schedule_interval(verifier, INTERVALLE_VERIFICATION)
+
+
+def _ouvrir_choix_carte_module(profil: Profil, partie: Partie, spec: SpecModule) -> None:
+    """Tirage de 3 cartes du module qui vient d'etre equipe (specs.md 2.3, point 6 utilisateur) :
+    le joueur en choisit une a ajouter a son deck, ou passe. Ecran saute directement (sans passer
+    par le clic du joueur) si le pool jouable non-Base de ce module est vide (rien a proposer,
+    cf. tirer_candidats_carte_module)."""
+    cartes = charger_cartes()
+    candidats = tirer_candidats_carte_module(spec, cartes, random.Random())
+    if not candidats:
+        avancer_niveau(partie)
+        sauvegarder_partie(profil.id, partie)
+        _ouvrir_choix_niveau(profil, partie)
+        return
+    fenetre = EcranChoixCarteModule(spec.nom, candidats, partie)
+
+    def verifier(_dt: float) -> None:
+        if not fenetre.termine:
+            return
+        pyglet.clock.unschedule(verifier)
+        fenetre.close()
+        if fenetre.carte_choisie is not None:
+            ajouter_carte(partie, fenetre.carte_choisie.id)
         avancer_niveau(partie)
         sauvegarder_partie(profil.id, partie)
         _ouvrir_choix_niveau(profil, partie)
@@ -329,7 +379,7 @@ def _ouvrir_fin_combat(profil: Profil, partie: Partie, combat: Combat) -> None:
             _ouvrir_accueil(profil)
             return
         if fenetre.carte_choisie is not None:
-            ajouter_carte(partie, id_de_carte(fenetre.carte_choisie, cartes))
+            ajouter_carte(partie, fenetre.carte_choisie.id)
         if est_niveau_boss(partie.niveau):
             # Le run s'arrete reellement au Niveau 10 dans l'etat actuel (decision utilisateur,
             # specs.md 2).

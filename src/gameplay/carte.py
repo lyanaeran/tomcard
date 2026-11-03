@@ -131,8 +131,12 @@ class Carte:
     depuis l'ajout des munitions (paragraphe 3.6) : deux exemplaires du meme modele de
     carte dans un deck peuvent avoir un compte de munitions_restantes different, donc ne
     doivent jamais etre confondus par Deck.jouer()/main.remove() malgre des champs egaux.
+
+    `id` : identifiant de la carte dans config/cartes.json (ex. "CRT_7"), conserve par copie() -
+    c'est lui qui designe le modele de la carte (regroupement, ajout/retrait du deck d'une partie).
     """
 
+    id: str
     nom: str
     image: str
     type: TypeCarte
@@ -157,10 +161,10 @@ class Carte:
 
 
 def regrouper_cartes(cartes: list[Carte]) -> list[tuple[Carte, int]]:
-    """Regroupe une liste de cartes par modele (meme nom = meme modele) en (carte, quantite),
+    """Regroupe une liste de cartes par modele (meme id = meme modele) en (carte, quantite),
     premiere occurrence conservee comme representant - pour les ecrans affichant "le deck en
     entier" sans repeter chaque exemplaire individuel (ex. 5 Attaque de base -> une entree x5)."""
     groupes: dict[str, list[Carte]] = {}
     for carte in cartes:
-        groupes.setdefault(carte.nom, []).append(carte)
+        groupes.setdefault(carte.id, []).append(carte)
     return [(exemplaires[0], len(exemplaires)) for exemplaires in groupes.values()]

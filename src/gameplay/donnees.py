@@ -104,6 +104,7 @@ def charger_cartes() -> dict[str, Carte]:
         rarete = RareteCarte[entree["rarete"].upper()] if "rarete" in entree else RareteCarte.BASE
         action = ActionCarte[effet["action"]] if "action" in effet else None
         cartes[entree["id"]] = Carte(
+            id=entree["id"],
             nom=entree["nom"],
             image=_chemin_image(entree["image"]),
             type=TypeCarte[effet["type"]],

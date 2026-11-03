@@ -343,13 +343,6 @@ def avancer_niveau(partie: Partie) -> Partie:
     return partie
 
 
-def id_de_carte(carte: Carte, cartes: dict[str, Carte]) -> str:
-    """Retrouve l'id d'une Carte dans le dict cartes.json, par identite d'objet : pool_module/
-    pool_toutes_cartes (src/gameplay/parcours.py) renvoient des references directes vers ce dict,
-    jamais des copies, donc `is` est fiable ici."""
-    return next(id_carte for id_carte, c in cartes.items() if c is carte)
-
-
 def ajouter_carte(partie: Partie, id_carte: str) -> Partie:
     """Ajoute une carte au deck possede de la partie (recompense de fin de combat, specs.md 6).
     Modifie et renvoie `partie`."""
@@ -498,9 +491,8 @@ def second_choc_asteroides(partie: Partie, position: str, cartes: dict[str, Cart
     jouables (tirer_carte_recompense) - None si le pool est vide, auquel cas aucune recompense
     n'est offerte. Decide seule si une carte est offerte (gameplay commun aux deux interfaces,
     CLAUDE.md) : PC et web n'ont plus qu'a afficher le resultat, jamais a retirer cette decision
-    eux-memes. `cartes` doit venir du meme chargement que celui que l'appelant reutilisera ensuite
-    (ex. id_de_carte, qui compare par identite - cf. sa docstring) : jamais un charger_cartes()
-    interne a cette fonction, qui produirait des instances differentes. Modifie `partie`."""
+    eux-memes. `cartes` (charger_cartes()) est recu en parametre plutot que recharge ici, pour
+    rester injectable dans les tests. Modifie `partie`."""
     subir_degats_module(partie, position, DEGATS_ASTEROIDES)
     return tirer_carte_recompense(pool_toutes_cartes(cartes), aleatoire)
 

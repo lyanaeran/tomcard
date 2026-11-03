@@ -32,16 +32,23 @@ COULEUR_NOM_MODULE = (180, 200, 230)
 COULEUR_FOND_CARTE = (20, 24, 34)
 COULEUR_CONTOUR_CARTE = (90, 110, 150)
 COULEUR_CONTOUR_CARTE_SURVOLEE = (255, 255, 255)
+COULEUR_BOUTON_PASSER = (60, 66, 82)
+COULEUR_CONTOUR_BOUTON_PASSER = (140, 150, 170)
 OPACITE_FOND_CARTE = 190
 
 MESSAGE_DEFAITE = "Pas d'inquietude : vos restes seront recycles, rien ne se perd dans l'espace."
-INSTRUCTION_VICTOIRE = "Choisissez une carte a ajouter a votre deck."
+INSTRUCTION_VICTOIRE = "Choisissez une carte a ajouter a votre deck, ou passez."
 
 LARGEUR_CARTE_RECOMPENSE = 180
 HAUTEUR_IMAGE_RECOMPENSE = 100
 ESPACEMENT_RECOMPENSE = 30
 Y_CARTE_RECOMPENSE = 240
 HAUTEUR_CARTE_RECOMPENSE = 340
+
+LARGEUR_BOUTON_PASSER = 140
+HAUTEUR_BOUTON_PASSER = 44
+X_BOUTON_PASSER = LARGEUR_FENETRE - LARGEUR_BOUTON_PASSER - 40
+Y_BOUTON_PASSER = 40
 
 
 def _rect_candidat(index: int, total: int) -> tuple[float, float, float, float]:
@@ -51,6 +58,10 @@ def _rect_candidat(index: int, total: int) -> tuple[float, float, float, float]:
     x_depart = (LARGEUR_FENETRE - largeur_totale) / 2
     x = x_depart + index * (LARGEUR_CARTE_RECOMPENSE + ESPACEMENT_RECOMPENSE)
     return x, Y_CARTE_RECOMPENSE, LARGEUR_CARTE_RECOMPENSE, HAUTEUR_CARTE_RECOMPENSE
+
+
+def _rect_bouton_passer() -> tuple[float, float, float, float]:
+    return X_BOUTON_PASSER, Y_BOUTON_PASSER, LARGEUR_BOUTON_PASSER, HAUTEUR_BOUTON_PASSER
 
 
 def _point_dans_rectangle(px: float, py: float, x: float, y: float, largeur: float, hauteur: float) -> bool:
@@ -71,6 +82,7 @@ class EcranFinCombat(pyglet.window.Window):
         # un pool vide - aucune carte jouable non-Base pour ce module - n'a rien a proposer).
         self.candidats = [(spec, carte) for spec, carte in (candidats or []) if carte is not None]
         self.index_survole: int | None = None
+        self.survole_passer = False
         self.survole_barre: str | None = None
         self.carte_choisie: Carte | None = None
         # True une fois que l'ecran peut etre ferme : defaite (clic n'importe ou), ou victoire
@@ -145,7 +157,7 @@ class EcranFinCombat(pyglet.window.Window):
             elements.extend(self._dessiner_candidat(index, total, spec, carte, lot))
         elements.append(
             pyglet.text.Label(
-                INSTRUCTION_VICTOIRE,
+                INSTRUCTION_VICTOIRE if self.candidats else "Cliquez pour continuer.",
                 x=LARGEUR_FENETRE / 2,
                 y=100,
                 anchor_x="center",
@@ -155,7 +167,35 @@ class EcranFinCombat(pyglet.window.Window):
                 batch=lot,
             )
         )
+        if self.candidats:
+            # Bouton Passer (specs.md 8.3) : rien a choisir n'est pas obligatoire, seulement
+            # propose - absent quand il n'y a de toute facon aucun candidat (un clic suffit deja).
+            elements.extend(self._dessiner_bouton_passer(lot))
         return elements
+
+    def _dessiner_bouton_passer(self, lot: pyglet.graphics.Batch) -> list:
+        x, y, largeur, hauteur = _rect_bouton_passer()
+        cadre = shapes.BorderedRectangle(
+            x,
+            y,
+            largeur,
+            hauteur,
+            border=2,
+            color=COULEUR_BOUTON_PASSER,
+            border_color=COULEUR_CONTOUR_CARTE_SURVOLEE if self.survole_passer else COULEUR_CONTOUR_BOUTON_PASSER,
+            batch=lot,
+        )
+        texte = pyglet.text.Label(
+            "Passer",
+            x=x + largeur / 2,
+            y=y + hauteur / 2,
+            anchor_x="center",
+            anchor_y="center",
+            font_size=15,
+            color=(*COULEUR_TEXTE, 255),
+            batch=lot,
+        )
+        return [cadre, texte]
 
     def _dessiner_candidat(
         self, index: int, total: int, spec: SpecModule, carte: Carte, lot: pyglet.graphics.Batch
@@ -237,6 +277,7 @@ class EcranFinCombat(pyglet.window.Window):
 
     def on_mouse_motion(self, x: int, y: int, dx: int, dy: int) -> None:
         self.index_survole = self._index_a(x, y)
+        self.survole_passer = self.victoire and bool(self.candidats) and _point_dans_rectangle(x, y, *_rect_bouton_passer())
         self.survole_barre = barre_laterale.bouton_survole(x, y)
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
@@ -250,6 +291,9 @@ class EcranFinCombat(pyglet.window.Window):
         if not self.victoire or not self.candidats:
             # Defaite, ou victoire sans aucun candidat (pool vide pour tous les modules utilises) :
             # un clic n'importe ou suffit a continuer, il n'y a rien a choisir.
+            self.termine = True
+            return
+        if _point_dans_rectangle(x, y, *_rect_bouton_passer()):
             self.termine = True
             return
         index = self._index_a(x, y)

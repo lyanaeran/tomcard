@@ -296,8 +296,17 @@ terminé à ce stade).
    page initiale, abandonnée une fois les icônes fournies sans texte) ; `web/bridge.py`
    (`choix_niveau_web`), `web/app.js` (`afficherChoixNiveau`/`choisirEtape`)
 4. **Choix de module, Niveau 1** (implémenté en écran autonome, §2.3, **relié à la partie**) : une
-   fois un module choisi, met à jour la partie (2ᵉ emplacement du vaisseau) et son niveau (1 → 2),
-   puis → Choix du prochain niveau (étape 3)
+   fois un module choisi, met à jour la partie (2ᵉ emplacement du vaisseau), puis → **Choix d'une
+   carte du module** (décision utilisateur, **implémenté**) : jusqu'à 3 cartes candidates tirées
+   dans le pool jouable non-Base de ce module tout juste équipé (`parcours.
+   tirer_candidats_carte_module`, même tirage pondéré par rareté que la récompense de fin de combat,
+   §6, sans doublon parmi les candidats), le joueur en choisit une à ajouter à son deck ou passe
+   (bouton **Passer**, décision utilisateur — voir aussi §6) ; écran sauté directement (candidats vide, pool de ce module encore
+   vide) sans action du joueur. Le niveau n'avance (1 → 2) qu'une fois ce choix résolu, puis →
+   Choix du prochain niveau (étape 3). `src/ui/ecran_choix_carte_module.py` (PC),
+   `main.py:_ouvrir_choix_carte_module` ; côté web `web/bridge.py`
+   (`candidats_carte_module_web`/`resoudre_carte_module_web`) + `web/app.js`
+   (`ouvrirChoixCarteModule`/`afficherChoixCarteModule`/`choisirCarteModule`/`passerCarteModule`)
 5. **Combat** (implémenté en écran indépendant, `FenetreCombat`/`#app`, **relié à l'enchaînement**) :
    une fois le combat terminé (victoire ou défaite) → Fin de combat (étape 6)
 6. **Fin de combat** (implémenté en écran autonome, §6, **relié à l'enchaînement**) :
@@ -438,8 +447,8 @@ pirates de l'espace, vous n'avez plus le choix : vaincre ou périr ! À moins qu
 `src/gameplay/config_poc.py` (`NOMBRE_ENNEMIS_ASTEROIDES`, `creer_flotte_asteroides`) ;
 `src/gameplay/partie.py` (`DEGATS_ASTEROIDES`, `subir_degats_module`, **`second_choc_asteroides`**
 — 2e choc + tirage de la carte offerte en un seul appel, `cartes` reçu en paramètre plutôt que
-rechargé en interne pour rester le même dict que celui que l'appelant réutilisera ensuite (cf.
-`id_de_carte`, identité d'objet) —, `combat_aventure_asteroides`, `_joueur_depuis_partie`
+rechargé en interne ; l'id de la carte offerte est lu directement sur `Carte.id` (§6) —,
+`combat_aventure_asteroides`, `_joueur_depuis_partie`
 factorisée avec `combat_depuis_partie`) ; `src/ui/ecran_aventure_asteroides.py` (PC, garde une
 instance `random.Random` explicite en attribut — jamais recréée à chaque appel, cf. CLAUDE.md
 "Déterminisme du tirage aléatoire") + `main.py:_ouvrir_aventure_asteroides` ; côté web
@@ -461,8 +470,9 @@ immédiatement (pas de séquence), retour direct au Choix du prochain niveau (bo
   (`ameliorer_module_aventure`, aucun coût en Argent contrairement à la Station service — l'effet
   commun aux deux est factorisé dans `_effet_ameliorer_module`), sur le module cliqué par le joueur
 - *Bricoler* : retire une carte choisie par le joueur de son deck réel (`retirer_carte`, nouveau
-  côté moteur : opération inverse de `ajouter_carte`, §2.4 étape 6). Cartes regroupées par id (pas
-  par nom comme `regrouper_cartes`/l'écran "deck en entier", §6) pour retirer un exemplaire précis
+  côté moteur : opération inverse de `ajouter_carte`, §2.4 étape 6). Cartes regroupées par id via
+  `regrouper_cartes` (même regroupement que l'écran "deck en entier", §6), l'id de la carte cliquée
+  (`Carte.id`) étant passé à `retirer_carte`
 
 `src/gameplay/partie.py` (`PV_REPARATION_VAISSEAU`, `reparer_vaisseau`, `ameliorer_module_aventure`,
 `retirer_carte`) ; `src/ui/ecran_aventure_trois_lunes.py` (PC, écran à état interne `etape` : "choix"
@@ -689,13 +699,27 @@ restent le plan cible pour les 4 nouveaux modules, à concevoir dans une passe d
   candidate par module équipé** (base incluse, au maximum 5 — §5), tirée dans le pool de cartes
   propre à ce module — le joueur choisit parmi ces N candidates, ce qui attribue implicitement la
   carte au module correspondant
-  - Pour le **module principal** (module de base), sa candidate est tirée dans le **pool entier** de cartes (tous modules confondus)
+  - Le **module principal** pioche sa candidate dans son **propre pool** de cartes jouables non-Base
+    (`config/modules.json:MOD_1.cartes`), exactement comme un module secondaire — **jamais** dans le
+    pool entier du jeu. Corrige un bug (décision utilisateur) où le module principal piochait
+    auparavant dans `pool_toutes_cartes` (toutes les cartes du jeu, tous modules confondus), ce qui
+    pouvait lui proposer en récompense une carte d'un autre module (`parcours.
+    tirer_candidats_recompense`, régression couverte par un test dédié)
   - Pour un **module secondaire**, sa candidate est tirée dans la **liste de cartes propre à ce module**
   - La rareté (voir 7.3) pondère chaque tirage individuel : **5% Légendaire, 20% Rare, sinon (75%)
     Commune** — décision utilisateur. **Les cartes Base ne sont jamais proposées en récompense**
     (deck de départ uniquement). Si le pool d'un module n'a aucune carte au palier tiré, on
     redescend au palier inférieur (Légendaire → Rare → Commune) plutôt que de ne rien proposer
   - Remplace l'ancien mécanisme "1 carte parmi 3 propositions pondérées par rareté, avec choix du module destinataire" : le choix du module destinataire se fait maintenant implicitement en choisissant la candidate
+  - **Bouton Passer** (décision utilisateur) : le joueur n'est jamais obligé de choisir une
+    carte, y compris ici — visible dès qu'il y a au moins un candidat (rien à passer sinon, un clic
+    suffit déjà à continuer). Convention étendue à tous les écrans de choix de carte tranchés à ce
+    jour : ce même écran de fin de combat et le Choix d'une carte de module (§2.4 étape 4) l'ont
+    tous les deux ; la carte offerte d'Astéroïdes (§2.5) avait déjà "Prendre"/"Passer" avant cette
+    décision. **Hors périmètre pour l'instant** (décision utilisateur, faute de temps) : "Bricoler"
+    de l'Aventure Trois lunes et les choix Confiscation/Mettre aux normes de l'Aventure Police
+    (§2.5), qui ne sont pas des écrans de choix de carte à proprement parler (un choix parmi
+    plusieurs actions, pas une carte candidate à accepter ou refuser)
   - **Implémenté** en écran de fin de combat autonome (Victoire/Défaite), **relié à l'orchestration
     du parcours** (§2.4) pour une vraie partie : `src/gameplay/parcours.py`
     (`tirer_candidats_recompense` et les fonctions de tirage par palier), `src/ui/ecran_fin_combat.py`
@@ -720,7 +744,12 @@ restent le plan cible pour les 4 nouveaux modules, à concevoir dans une passe d
   exemplaire individuel
   - `Deck.toutes_cartes()` (`src/gameplay/deck.py`) réunit pioche + main + défausse + cartes
     épuisées ; `regrouper_cartes()` (`src/gameplay/carte.py`) transforme une liste de cartes en
-    `(carte, quantité)` par modèle — fonctions gameplay partagées par les deux plateformes
+    `(carte, quantité)` par modèle — fonctions gameplay partagées par les deux plateformes. Le
+    modèle est identifié par **l'id de la carte** (`Carte.id`, son id dans `config/cartes.json`,
+    renseigné par `charger_cartes` et conservé par `copie()`), pas par son nom : deux cartes
+    différentes qui porteraient le même nom restent deux entrées distinctes. `Carte.id` sert aussi
+    partout où une carte doit être rattachée au deck d'une partie (`ajouter_carte`/`retirer_carte`),
+    en remplacement de l'ancienne recherche par identité d'objet (`id_de_carte`, supprimée)
   - **Implémenté** en écran autonome (même situation que les deux écrans précédents, pas encore
     relié à un vrai bouton dans l'UI) : `src/ui/ecran_deck.py` (PC, grille figée de 8 colonnes,
     survol d'une carte → panneau de description fixe en bas d'écran plutôt qu'une infobulle
@@ -1136,7 +1165,14 @@ fond dédié.
 - `main.py` : ouvre `EcranSelectionJoueur`, puis `EcranAccueilJoueur`, puis l'écran suivant selon
   l'action choisie — chaque écran étant une fenêtre pyglet indépendante, les transitions ferment la
   fenêtre courante et ouvrent la suivante, détectées via `pyglet.clock.schedule_interval` (pas
-  d'événement dédié "l'utilisateur a fait un choix" sur ces fenêtres)
+  d'événement dédié "l'utilisateur a fait un choix" sur ces fenêtres). Le comportement par défaut
+  de pyglet (quitter l'application dès que la dernière fenêtre se ferme) est remplacé
+  (`main.py:_on_window_close`) : la vérification "plus aucune fenêtre ouverte" est reportée au tick
+  suivant, une fois l'écran suivant ouvert — sans quoi le jeu s'arrêtait juste après la sélection
+  du joueur (bug constaté sur macOS). Fermer la dernière fenêtre (bouton de fermeture natif) quitte
+  toujours le jeu. Sur écran HiDPI (Retina), `main.py` règle `pyglet.options.dpi_scaling = "stretch"` :
+  toutes les fenêtres restent en coordonnées logiques 1280x800, étirées sur tout le framebuffer
+  (avec le mode par défaut, le jeu n'occupait que le quart en bas à gauche de la fenêtre sur Mac)
 
 #### Limites connues (à lever plus tard)
 
@@ -1211,15 +1247,21 @@ sous-sections ci-dessous, ce résumé ne liste que ce qui manque encore) :
 
 - Effets à deux valeurs X/Y sur une même carte : cible cliquée + splash différencié (*Missiles*),
   deux zones différentes en une carte (*Torpille*) — §12.2
-- Effets à durée : dégâts répétés pendant Y tours (*Embrasement, Guerre nucléaire*), pioche bonus
-  pendant Y tours (*Multi fonction*) — §12.3
-- Transfert des dégâts subis vers un autre module désigné (*Transfert*) ; renvoi des dégâts subis à
-  l'attaquant (*Renvoie*) — mécanique proche du Bouclier miroir ennemi (§13.2), mais pas encore
-  disponible comme carte jouable par le joueur — §12.6
+- Effets à durée : dégâts répétés pendant Y tours (*Embrasement, Guerre nucléaire, Tir
+  incendiaire* — Module principal, carte ajoutée depuis, nom inventé), pioche bonus pendant Y tours
+  (*Multi fonction*) — §12.3
+- Transfert des dégâts subis vers un autre module désigné (*Transfert*) — §12.6. Le renvoi des
+  dégâts subis à l'attaquant (*Renvoie*) est désormais **implémenté**, la carte a été repensée
+  (décision utilisateur) pour utiliser directement le Bouclier miroir déjà existant côté ennemi
+  (§13.2) plutôt qu'un renvoi de dégâts brut inédit — renommée *Renvoi*, jouable, cf. §12.6
 - Méta-effets : changer le coût en électricité de toutes les cartes d'une catégorie (*Optimisation
-  des boucliers, Attaques performantes*), dupliquer l'effet de toutes les cartes d'une catégorie
-  (*Double défense, Circuit parallèle*) — bloque aussi certaines cartes à munitions limitées
-  (§12.10) qui en dépendent — §12.7
+  des boucliers, Attaques performantes*), dupliquer l'effet de toutes les cartes d'une catégorie ou
+  d'une carte précise (*Double défense, Circuit parallèle, Salve laser, Protocole d'urgence* — ces
+  deux dernières ajoutées depuis pour le Module principal, noms inventés) — bloque aussi certaines
+  cartes à munitions limitées (§12.10) qui en dépendent — §12.7
+- Bloquer la dissipation naturelle du Bouclier en début de tour (§3.5) : *Bouclier stabilisé*
+  (Module principal, carte ajoutée depuis, nom inventé) — mécanique inédite, aucune carte existante
+  n'en avait besoin jusqu'ici — §12.5
 - Gain d'électricité en échange d'une défausse (*Manque de jus, Cannibalisme*) — §12.8
 - Manipulation de pioche/main/défausse : piocher puis défausser (*Changement d'outil*), tout
   défausser puis repiocher (*Grand remplacement*), défausser une quantité choisie entre X et Y
@@ -1305,10 +1347,15 @@ Déjà nommés en §7.1. État d'implémentation dans `combat.py` :
   Ligne avant, Boucliers endommagés, Boucliers hors service, Tir allié* jouables — les 6 cartes du
   module Sabotage sont maintenant toutes jouables
 - **Buff** — **implémenté** (`TypeCarte.BUFF`, une action : `BOUCLIER_PAR_TOUR`, cf. §12.3) :
-  *Bouclier perpétuel, Blindage maximal* jouables. *Optimisation des boucliers, Attaques
-  performantes* (modification du coût d'une catégorie de cartes) et *Double défense, Circuit
-  parallèle* (duplication d'effet) restent non jouables, ce sont des méta-effets distincts (§12.7),
-  pas de simples buffs sur un module
+  *Bouclier perpétuel, Blindage maximal, Blindage cible* (Module principal, carte ajoutée depuis,
+  nom inventé — même mécanique que *Blindage maximal*, cible Module Unique au lieu de Module
+  Principal) jouables. *Optimisation des boucliers, Attaques performantes* (modification du coût
+  d'une catégorie de cartes), *Double défense, Circuit parallèle, Salve laser, Protocole d'urgence*
+  (duplication d'effet, cf. §12.7) et *Bouclier stabilisé* (blocage de la dissipation naturelle du
+  Bouclier, Module principal, carte ajoutée depuis, nom inventé — aucune mécanique existante à
+  réutiliser, `combat._dissiper_bouclier`/§3.5 s'applique inconditionnellement pour l'instant)
+  restent non jouables, ce sont des méta-effets ou des mécaniques inédites, pas de simples buffs sur
+  un module
 - **Outils** — **implémenté** (`TypeCarte.OUTILS`, cf. §12.9) pour trois actions (`GAIN_ELECTRICITE`,
   `GAIN_ELECTRICITE_PAR_MODULE`, `PIOCHE_SUPPLEMENTAIRE`) : *Surcharge temporaire, Fonds de tiroir,
   Boost* jouables. Le reste demande encore une logique dédiée (*Changement d'outil, Manque de jus,
@@ -1319,7 +1366,11 @@ Déjà nommés en §7.1. État d'implémentation dans `combat.py` :
 ### 12.6 Altération / redirection des dégâts
 
 - Transfert des dégâts subis vers un autre module désigné (*Transfert*)
-- Renvoi des dégâts subis à l'attaquant (*Renvoie*)
+- Renvoi des dégâts subis à l'attaquant — **implémenté** (décision utilisateur : la carte, renommée
+  *Renvoi* (ex-*Renvoie*), pose un Bouclier miroir sur le module cible plutôt qu'un renvoi de
+  dégâts brut inédit, en réutilisant directement `ActionCarte.BOUCLIER_MIROIR`/
+  `Combat._consommer_bouclier_miroir` déjà écrits pour l'ennemi Miroir (§13.2) — ces fonctions
+  étaient déjà génériques `Module | Ennemi`, aucun changement moteur nécessaire) : *Renvoi* jouable
 - Annulation totale de la prochaine attaque sur une cible, différent d'un bouclier classique
   (*Leurre*) — **implémenté** (`ActionCarte.ANNULATION_PROCHAINE_ATTAQUE`, sur une carte Defense) :
   *Leurre* jouable. Un flag `Module.leurre_actif` (pas un buff : pas de redéclenchement
@@ -1350,7 +1401,11 @@ Déjà nommés en §7.1. État d'implémentation dans `combat.py` :
 - Changer le coût en électricité de toutes les cartes d'une catégorie pour le reste du combat
   (*Optimisation des boucliers, Attaques performantes*)
 - Dupliquer l'effet de toutes les cartes d'une catégorie X fois (*Double défense, Circuit
-  parallèle*)
+  parallèle*), d'une carte précise nommément (*Salve laser* — Module principal, carte ajoutée
+  depuis, nom inventé, cible *Laser*) ou de toute une rareté (*Protocole d'urgence* — Module
+  principal, carte ajoutée depuis, nom inventé, cible les cartes Base) — même famille de mécanique
+  non implémentée, sous des granularités différentes (une catégorie entière, une carte nommée, une
+  rareté entière)
 
 ### 12.8 Gain d'électricité via une carte
 

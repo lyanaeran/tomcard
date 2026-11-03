@@ -18,7 +18,6 @@ from src.gameplay.partie import (
     Partie,
     ajouter_carte,
     deck_de_la_partie,
-    id_de_carte,
     second_choc_asteroides,
     subir_degats_module,
 )
@@ -140,9 +139,7 @@ class EcranAventureAsteroides(pyglet.window.Window):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.partie = partie
         self.specs_par_id = {spec.id: spec for spec in charger_modules()}
-        # Un seul chargement, reutilise pour retrouver l'id de la carte offerte
-        # (_prendre_carte_offerte) : charger_cartes() reconstruit de nouvelles instances a chaque
-        # appel, id_de_carte compare par identite (cf. sa docstring).
+        # Pool de tirage de la carte offerte au 2e choc (second_choc_asteroides).
         self.cartes = charger_cartes()
         # Instance explicite (jamais le module random global directement, cf. CLAUDE.md
         # "Determinisme du tirage aleatoire") pour le tirage de la carte offerte au 2e choc
@@ -452,7 +449,7 @@ class EcranAventureAsteroides(pyglet.window.Window):
             )
 
     def _prendre_carte_offerte(self) -> None:
-        ajouter_carte(self.partie, id_de_carte(self.carte_offerte, self.cartes))
+        ajouter_carte(self.partie, self.carte_offerte.id)
         self.message_resolu = f"Vous recuperez : {self.carte_offerte.nom}."
         self.etape = "resolu"
 

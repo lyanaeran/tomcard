@@ -12,7 +12,6 @@ ciblage/degats.
 import json
 import random
 import sys
-from collections import Counter
 
 sys.path.insert(0, "/repo")
 
@@ -27,6 +26,7 @@ from src.gameplay.parcours import (
     aleatoire_pour_niveau,
     est_niveau_boss,
     modules_equipables,
+    tirer_candidats_carte_module,
     tirer_candidats_module,
     tirer_candidats_recompense,
     tirer_propositions_niveau,
@@ -50,7 +50,6 @@ from src.gameplay.partie import (
     detourner_aventure_police,
     equiper_module,
     gagner_argent_combat,
-    id_de_carte,
     marquer_terminee,
     mettre_a_jour_module,
     nouveau_profil,
@@ -379,11 +378,11 @@ def nouveau_choix_module(graine) -> str:
     )
 
 
-def _candidat_recompense_json(spec, carte, cartes: dict) -> dict:
+def _candidat_recompense_json(spec, carte) -> dict:
     return {
         "module_nom": spec.nom,
         "carte_nom": carte.nom,
-        "carte_id": id_de_carte(carte, cartes),
+        "carte_id": carte.id,
         "image": _chemin_web(carte.image),
         "cout": carte.cout,
         "rarete": carte.rarete.name,
@@ -404,12 +403,13 @@ def fin_combat_victoire(graine) -> str:
     cartes = charger_cartes()
     candidats = tirer_candidats_recompense(specs_utilisees, cartes, aleatoire)
     return json.dumps(
-        [_candidat_recompense_json(spec, carte, cartes) for spec, carte in candidats if carte is not None]
+        [_candidat_recompense_json(spec, carte) for spec, carte in candidats if carte is not None]
     )
 
 
 def _carte_regroupee_json(carte, quantite: int) -> dict:
     return {
+        "id_carte": carte.id,
         "nom": carte.nom,
         "image": _chemin_web(carte.image),
         "cout": carte.cout,
@@ -506,12 +506,39 @@ def choix_module_partie_web(partie_json) -> str:
 
 
 def choisir_module_partie_web(partie_json, module_id) -> str:
-    """Equipe le module choisi (Niveau 1, specs.md 2.3/2.4) et avance au niveau suivant ; renvoie
-    la partie mise a jour (web/app.js la re-sauvegarde dans localStorage puis enchaine sur le
-    choix du niveau) - meme logique que main.py:_ouvrir_choix_module cote PC."""
+    """Equipe le module choisi (Niveau 1, specs.md 2.3/2.4) ; renvoie la partie mise a jour, AVANT
+    d'avancer de niveau (web/app.js enchaine sur le tirage de carte du module fraichement equipe,
+    cf. candidats_carte_module_web/resoudre_carte_module_web plus bas, point 6 utilisateur) - meme
+    logique que main.py:_ouvrir_choix_module cote PC (equiper_module, avant l'appel a
+    _ouvrir_choix_carte_module)."""
     partie = partie_depuis_json(partie_json)
     specs_par_id = {spec.id: spec for spec in charger_modules()}
     equiper_module(partie, specs_par_id[module_id])
+    return partie_vers_json(partie)
+
+
+def candidats_carte_module_web(partie_json, module_id) -> str:
+    """Tire jusqu'a 3 cartes candidates du module qui vient d'etre equipe (specs.md 2.3, point 6
+    utilisateur) dans son propre pool jouable non-Base (tirer_candidats_carte_module) - meme
+    logique que main.py:_ouvrir_choix_carte_module cote PC. `candidats` vide si ce pool est vide :
+    web/app.js doit alors appeler resoudre_carte_module_web(None) directement, sans afficher
+    l'ecran (meme comportement que main.py, qui saute directement cette etape dans ce cas)."""
+    partie = partie_depuis_json(partie_json)
+    specs_par_id = {spec.id: spec for spec in charger_modules()}
+    spec = specs_par_id[module_id]
+    cartes = charger_cartes()
+    candidats = tirer_candidats_carte_module(spec, cartes, random.Random())
+    return json.dumps({"module_nom": spec.nom, "candidats": [_carte_avec_id_json(carte) for carte in candidats]})
+
+
+def resoudre_carte_module_web(partie_json, id_carte) -> str:
+    """Ajoute la carte choisie (id_carte, ou None si le joueur a appuye sur "Passer") au deck de
+    la partie, puis avance au niveau suivant - meme logique que
+    main.py:_ouvrir_choix_carte_module cote PC. Renvoie la partie mise a jour (web/app.js la
+    re-sauvegarde dans localStorage puis enchaine sur le choix du niveau)."""
+    partie = partie_depuis_json(partie_json)
+    if id_carte is not None:
+        ajouter_carte(partie, id_carte)
     avancer_niveau(partie)
     return partie_vers_json(partie)
 
@@ -554,7 +581,7 @@ def candidats_recompense_partie_web(partie_json) -> str:
     cartes = charger_cartes()
     candidats = tirer_candidats_recompense(specs_utilisees_partie(partie, specs_par_id), cartes, random.Random())
     return json.dumps(
-        [_candidat_recompense_json(spec, carte, cartes) for spec, carte in candidats if carte is not None]
+        [_candidat_recompense_json(spec, carte) for spec, carte in candidats if carte is not None]
     )
 
 
@@ -659,18 +686,9 @@ def constantes_aventure_trois_lunes_web() -> str:
 
 
 def deck_groupe_par_id_partie_web(partie_json) -> str:
-    """Deck reel d'une partie, regroupe par id de carte plutot que par nom (contrairement a
-    deck_partie_web/regrouper_cartes, src/gameplay/carte.py) : necessaire pour retirer un
-    exemplaire precis (choix "Bricoler", retirer_carte prend un id, pas un nom)."""
-    partie = partie_depuis_json(partie_json)
-    cartes = charger_cartes()
-    compteur = Counter(partie.deck)
-    resultat = []
-    for id_carte, quantite in compteur.items():
-        entree = _carte_regroupee_json(cartes[id_carte], quantite)
-        entree["id_carte"] = id_carte
-        resultat.append(entree)
-    return json.dumps(resultat)
+    """Deck reel d'une partie pour le choix "Bricoler" (retirer_carte prend un id) : meme
+    regroupement par id que deck_partie_web, conserve sous ce nom pour web/app.js."""
+    return deck_partie_web(partie_json)
 
 
 def reparer_vaisseau_aventure_web(partie_json) -> str:
@@ -718,13 +736,11 @@ def subir_degats_module_asteroides_web(partie_json, position) -> str:
     return partie_vers_json(partie)
 
 
-def _carte_avec_id_json(carte, cartes: dict) -> dict:
+def _carte_avec_id_json(carte) -> dict:
     """Meme forme que _candidat_recompense_json, sans le module associe (non pertinent pour une
-    carte offerte/tiree hors combat, specs.md 2.5) - id resolu sur le meme charger_cartes() que
-    l'appelant, pour eviter tout probleme d'identite entre deux chargements distincts (cf. la
-    docstring de id_de_carte) - piege reel rencontre cote PC en construisant ces ecrans."""
+    carte offerte/tiree hors combat, specs.md 2.5)."""
     return {
-        "id_carte": id_de_carte(carte, cartes),
+        "id_carte": carte.id,
         "nom": carte.nom,
         "image": _chemin_web(carte.image),
         "cout": carte.cout,
@@ -746,7 +762,7 @@ def second_choc_asteroides_web(partie_json, position) -> str:
     carte = second_choc_asteroides(partie, position, cartes, random.Random())
     return json.dumps({
         "partie": json.loads(partie_vers_json(partie)),
-        "carte": _carte_avec_id_json(carte, cartes) if carte is not None else None,
+        "carte": _carte_avec_id_json(carte) if carte is not None else None,
     })
 
 
@@ -793,7 +809,7 @@ def constantes_aventure_police_web() -> str:
 def _etat_aventure_police_json() -> dict:
     cartes = charger_cartes()
     return {
-        "carte": _carte_avec_id_json(cartes[etat_aventure_police.id_carte_actuelle], cartes),
+        "carte": _carte_avec_id_json(cartes[etat_aventure_police.id_carte_actuelle]),
         "detourner_disponible": etat_aventure_police.detourner_disponible,
     }
 

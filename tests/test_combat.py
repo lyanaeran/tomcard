@@ -16,50 +16,50 @@ from src.gameplay.position import Colonne, Position, Rangee
 from src.gameplay.vaisseau import Vaisseau
 
 IMG = "test.png"
-CARTE_ATTAQUE = Carte(nom="Attaque", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMI_UNIQUE, cout=1, valeur=7)
-CARTE_BOUCLIER = Carte(nom="Bouclier", image=IMG, type=TypeCarte.DEFENSE, cible=CibleCarte.ALLIE_UNIQUE, cout=1, valeur=5)
-CARTE_REPARATION = Carte(nom="Soin", image=IMG, type=TypeCarte.REPARATION, cible=CibleCarte.ALLIE_UNIQUE, cout=1, valeur=4)
-CARTE_PERCER = Carte(nom="Percer", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.LIGNE_ENNEMIE, cout=2, valeur=5)
-CARTE_PROTEGER = Carte(nom="Proteger", image=IMG, type=TypeCarte.DEFENSE, cible=CibleCarte.ALLIES_MULTIPLES, cout=2, valeur=4)
-CARTE_MITRAILLER = Carte(nom="Mitrailler", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMIS_MULTIPLES, cout=2, valeur=3)
+CARTE_ATTAQUE = Carte(id="TEST_ATTAQUE", nom="Attaque", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMI_UNIQUE, cout=1, valeur=7)
+CARTE_BOUCLIER = Carte(id="TEST_BOUCLIER", nom="Bouclier", image=IMG, type=TypeCarte.DEFENSE, cible=CibleCarte.ALLIE_UNIQUE, cout=1, valeur=5)
+CARTE_REPARATION = Carte(id="TEST_SOIN", nom="Soin", image=IMG, type=TypeCarte.REPARATION, cible=CibleCarte.ALLIE_UNIQUE, cout=1, valeur=4)
+CARTE_PERCER = Carte(id="TEST_PERCER", nom="Percer", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.LIGNE_ENNEMIE, cout=2, valeur=5)
+CARTE_PROTEGER = Carte(id="TEST_PROTEGER", nom="Proteger", image=IMG, type=TypeCarte.DEFENSE, cible=CibleCarte.ALLIES_MULTIPLES, cout=2, valeur=4)
+CARTE_MITRAILLER = Carte(id="TEST_MITRAILLER", nom="Mitrailler", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMIS_MULTIPLES, cout=2, valeur=3)
 CARTE_REDUCTION_DEGATS = Carte(
-    nom="Tordre le canon", image=IMG, type=TypeCarte.DEBUFF, cible=CibleCarte.ENNEMI_UNIQUE,
+    id="TEST_TORDRE_LE_CANON", nom="Tordre le canon", image=IMG, type=TypeCarte.DEBUFF, cible=CibleCarte.ENNEMI_UNIQUE,
     cout=1, valeur=5, action=ActionCarte.REDUCTION_DEGATS, duree=1,
 )
 CARTE_VULNERABILITE = Carte(
-    nom="Breche", image=IMG, type=TypeCarte.DEBUFF, cible=CibleCarte.ENNEMI_UNIQUE,
+    id="TEST_BRECHE", nom="Breche", image=IMG, type=TypeCarte.DEBUFF, cible=CibleCarte.ENNEMI_UNIQUE,
     cout=2, valeur=100, action=ActionCarte.VULNERABILITE, duree=1,
 )
 CARTE_COLONNE_AVANT = Carte(
-    nom="Ligne avant", image=IMG, type=TypeCarte.DEBUFF, cible=CibleCarte.COLONNE_AVANT_ENNEMIE,
+    id="TEST_LIGNE_AVANT", nom="Ligne avant", image=IMG, type=TypeCarte.DEBUFF, cible=CibleCarte.COLONNE_AVANT_ENNEMIE,
     cout=1, valeur=100, action=ActionCarte.VULNERABILITE, duree=1,
 )
 CARTE_BOUCLIER_PERPETUEL = Carte(
-    nom="Bouclier perpetuel", image=IMG, type=TypeCarte.BUFF, cible=CibleCarte.MODULE_PRINCIPAL,
+    id="TEST_BOUCLIER_PERPETUEL", nom="Bouclier perpetuel", image=IMG, type=TypeCarte.BUFF, cible=CibleCarte.MODULE_PRINCIPAL,
     cout=5, valeur=10, action=ActionCarte.BOUCLIER_PAR_TOUR, duree=None,
 )
 CARTE_TIR_ALLIE = Carte(
-    nom="Tir allie", image=IMG, type=TypeCarte.DEBUFF, cible=CibleCarte.ENNEMI_UNIQUE,
+    id="TEST_TIR_ALLIE", nom="Tir allie", image=IMG, type=TypeCarte.DEBUFF, cible=CibleCarte.ENNEMI_UNIQUE,
     cout=3, valeur=0, action=ActionCarte.REDIRECTION_CIBLE, duree=1,
 )
 CARTE_COLONNE_AVANT_ALLIEE = Carte(
-    nom="Proteger l'avant poste", image=IMG, type=TypeCarte.DEFENSE, cible=CibleCarte.COLONNE_AVANT_ALLIEE,
+    id="TEST_PROTEGER_L_AVANT_POSTE", nom="Proteger l'avant poste", image=IMG, type=TypeCarte.DEFENSE, cible=CibleCarte.COLONNE_AVANT_ALLIEE,
     cout=2, valeur=10,
 )
 CARTE_BLINDAGE_MAXIMAL = Carte(
-    nom="Blindage maximal", image=IMG, type=TypeCarte.BUFF, cible=CibleCarte.MODULE_PRINCIPAL,
+    id="TEST_BLINDAGE_MAXIMAL", nom="Blindage maximal", image=IMG, type=TypeCarte.BUFF, cible=CibleCarte.MODULE_PRINCIPAL,
     cout=2, valeur=8, action=ActionCarte.BOUCLIER_PAR_TOUR, duree=3,
 )
 CARTE_BOUCLIER_ADAPTATIF = Carte(
-    nom="Bouclier adaptatif", image=IMG, type=TypeCarte.DEFENSE, cible=CibleCarte.ALLIE_UNIQUE,
+    id="TEST_BOUCLIER_ADAPTATIF", nom="Bouclier adaptatif", image=IMG, type=TypeCarte.DEFENSE, cible=CibleCarte.ALLIE_UNIQUE,
     cout=1, valeur=80, action=ActionCarte.BOUCLIER_POURCENTAGE_PV,
 )
 CARTE_FONDS_DE_TIROIR = Carte(
-    nom="Fonds de tiroir", image=IMG, type=TypeCarte.OUTILS, cible=CibleCarte.ALLIES_MULTIPLES,
+    id="TEST_FONDS_DE_TIROIR", nom="Fonds de tiroir", image=IMG, type=TypeCarte.OUTILS, cible=CibleCarte.ALLIES_MULTIPLES,
     cout=1, valeur=1, action=ActionCarte.GAIN_ELECTRICITE_PAR_MODULE,
 )
 CARTE_LEURRE = Carte(
-    nom="Leurre", image=IMG, type=TypeCarte.DEFENSE, cible=CibleCarte.ALLIE_UNIQUE,
+    id="TEST_LEURRE", nom="Leurre", image=IMG, type=TypeCarte.DEFENSE, cible=CibleCarte.ALLIE_UNIQUE,
     cout=3, valeur=0, action=ActionCarte.ANNULATION_PROCHAINE_ATTAQUE,
 )
 
@@ -910,7 +910,7 @@ def test_leurre_annule_totalement_la_prochaine_attaque_puis_se_consomme():
 # --- Ennemi a plusieurs emplacements (specs.md 3.2, ex. Boss des pirates) ---
 
 CARTE_COLONNE_ARRIERE = Carte(
-    nom="Ligne arriere", image=IMG, type=TypeCarte.DEBUFF, cible=CibleCarte.COLONNE_ARRIERE_ENNEMIE,
+    id="TEST_LIGNE_ARRIERE", nom="Ligne arriere", image=IMG, type=TypeCarte.DEBUFF, cible=CibleCarte.COLONNE_ARRIERE_ENNEMIE,
     cout=1, valeur=100, action=ActionCarte.VULNERABILITE, duree=1,
 )
 
@@ -1089,7 +1089,7 @@ def test_bouclier_miroir_plusieurs_instances_renvoient_chacune_vers_son_propre_m
     miroir.appliquer_buff(ActionCarte.BOUCLIER_MIROIR, 3, tours=None, cible_reflet=module_b)
     ennemis = {Position(Colonne.AVANT, Rangee.GAUCHE): miroir}
     combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
-    carte = Carte(nom="Gros coup", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMI_UNIQUE, cout=1, valeur=8)
+    carte = Carte(id="TEST_GROS_COUP", nom="Gros coup", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMI_UNIQUE, cout=1, valeur=8)
     combat.joueur.deck.main = [carte]
     combat.joueur.electricite = 3
 
