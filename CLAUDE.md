@@ -1,8 +1,8 @@
 # Space Fight
 
 Deckbuilder roguelike (thème vaisseaux spatiaux) inspiré de Slay the Spire. Le combat est jouable
-et le **parcours** (boucle de run) est orchestré par `main.py` (PC) écran par écran, jusqu'au Boss
-du niveau 10 (specs.md §2.4).
+et le **parcours** (boucle de run) s'enchaîne écran par écran jusqu'au Boss du niveau 10
+(specs.md §2.4), sur les deux versions : `main.py` côté PC, `web/app.js` côté web.
 
 ## Langue
 
@@ -34,10 +34,11 @@ cache-busting, méthode de test web). **Les lire avant de toucher ces dossiers o
 
 ## Deux façons de jouer (PC et web/iOS) — les deux doivent rester fonctionnelles
 
-Même logique (`src/gameplay/`), deux couches d'affichage (lancement : `README.md`) :
+Même logique (`src/gameplay/`), deux couches d'affichage (lancement : `README.md`). « PC » et
+« web » désignent la **version**, pas la machine :
 
-- **PC (pyglet)** : `python main.py`, affichage `src/ui/`. Version de référence, la plus fidèle à
-  `specs/`.
+- **PC (pyglet)** : application de bureau, `python main.py`, affichage `src/ui/` — tourne sur
+  Windows comme sur macOS. Version de référence, la plus fidèle à `specs/`.
 - **Web (navigateur / iPhone)** : `index.html` + `web/`, exécute `src/gameplay/` via Pyodide.
 
 Règles :
