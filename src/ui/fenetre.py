@@ -250,6 +250,41 @@ def _bandeau(x: float, y: float, largeur: float, hauteur: float, lot: pyglet.gra
     return rectangle
 
 
+def _infobulle_au_curseur(
+    texte: str,
+    curseur: tuple[float, float],
+    lot: pyglet.graphics.Batch,
+    largeur: float = LARGEUR_INFOBULLE,
+    couleur_texte: tuple = COULEUR_SURVOL,
+) -> list:
+    """Infobulle (fond + texte) au-dessus du curseur, ou dessous faute de place, dans la fenetre."""
+    label = pyglet.text.Label(
+        texte,
+        anchor_x="center",
+        anchor_y="bottom",
+        multiline=True,
+        width=largeur - 2 * MARGE_INFOBULLE,
+        align="center",
+        font_size=TAILLE_POLICE_INFOBULLE,
+        color=(*couleur_texte, 255),
+        batch=lot,
+        group=GROUPE_INFOBULLE_TEXTE,
+    )
+    # Hauteur mesuree apres mise en page : une ligne longue peut passer sur deux lignes
+    hauteur = label.content_height + 2 * MARGE_INFOBULLE
+    curseur_x, curseur_y = curseur
+    bx = min(max(curseur_x - largeur / 2, 0), LARGEUR_FENETRE - largeur)
+    by = curseur_y + DECALAGE_INFOBULLE_CURSEUR
+    if by + hauteur > HAUTEUR_FENETRE:
+        # Pas la place au-dessus (haut de l'ecran) : sous le curseur
+        by = curseur_y - DECALAGE_INFOBULLE_CURSEUR - hauteur
+    label.x = bx + largeur / 2
+    label.y = by + MARGE_INFOBULLE
+    fond = shapes.Rectangle(bx, by, largeur, hauteur, color=COULEUR_BANDEAU, batch=lot, group=GROUPE_INFOBULLE)
+    fond.opacity = OPACITE_BANDEAU
+    return [fond, label]
+
+
 def _pastille(x_centre: float, y_centre: float, couleur: tuple, valeur: int, lot: pyglet.graphics.Batch) -> list:
     """Petit cercle colore avec une valeur numerique au centre (PV ou Bouclier).
 
@@ -872,35 +907,7 @@ class FenetreCombat(pyglet.window.Window):
             if entite.leurre_actif:
                 lignes.append("Leurre actif (annule la prochaine attaque)")
 
-        return self._infobulle(lignes, lot)
-
-    def _infobulle(self, lignes: list, lot: pyglet.graphics.Batch) -> list:
-        """Dessine une infobulle (fond + texte) au-dessus du curseur, maintenue dans la fenetre."""
-        texte = pyglet.text.Label(
-            "\n".join(lignes),
-            anchor_x="center",
-            anchor_y="bottom",
-            multiline=True,
-            width=LARGEUR_INFOBULLE - 2 * MARGE_INFOBULLE,
-            align="center",
-            font_size=TAILLE_POLICE_INFOBULLE,
-            color=(*COULEUR_SURVOL, 255),
-            batch=lot,
-            group=GROUPE_INFOBULLE_TEXTE,
-        )
-        # Hauteur mesuree apres mise en page : une ligne longue peut passer sur deux lignes
-        hauteur = texte.content_height + 2 * MARGE_INFOBULLE
-        souris_x, souris_y = self.position_souris
-        bx = min(max(souris_x - LARGEUR_INFOBULLE / 2, 0), LARGEUR_FENETRE - LARGEUR_INFOBULLE)
-        by = souris_y + DECALAGE_INFOBULLE_CURSEUR
-        if by + hauteur > HAUTEUR_FENETRE:
-            # Pas la place au-dessus (haut de l'ecran) : sous le curseur
-            by = souris_y - DECALAGE_INFOBULLE_CURSEUR - hauteur
-        texte.x = bx + LARGEUR_INFOBULLE / 2
-        texte.y = by + MARGE_INFOBULLE
-        fond = shapes.Rectangle(bx, by, LARGEUR_INFOBULLE, hauteur, color=COULEUR_BANDEAU, batch=lot, group=GROUPE_INFOBULLE)
-        fond.opacity = OPACITE_BANDEAU
-        return [fond, texte]
+        return _infobulle_au_curseur("\n".join(lignes), self.position_souris, lot)
 
     def _dessiner_message_fin(self, lot: pyglet.graphics.Batch) -> list:
         """Affiche le message de fin de combat (victoire ou defaite)."""

@@ -243,7 +243,8 @@ terminé à ce stade).
   (comparaison des rectangles DOM) et masquent la barre au lieu de deviner un second seuil.
 - **`EcranVaisseau`** : cliquer/taper un module équipé (non vide) affiche son nom et sa
   `description` (§4) dans une infobulle temporaire (4 secondes), superposée au-dessus de la case
-  cliquée. PC (`src/ui/ecran_vaisseau.py`) : réutilise le minuteur `AnimationPopup` existant
+  cliquée. PC (`src/ui/ecran_vaisseau.py`) : affichée au-dessus du **point cliqué** (même
+  infobulle que le survol en combat, `fenetre.py:_infobulle_au_curseur`, §8.2) ; réutilise le minuteur `AnimationPopup` existant
   (`src/ui/animation.py`), avec une durée dédiée `DUREE_INFOBULLE_MODULE` plus longue que celle
   des popups de combat (le temps de lire la phrase) ; nécessite une boucle
   `pyglet.clock.schedule_interval` que cet écran n'avait pas jusqu'ici. Web (`web/app.js`) : réutilise
