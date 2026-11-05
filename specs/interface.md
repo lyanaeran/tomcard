@@ -65,6 +65,12 @@ sections : [specs.md](specs.md).*
 - **Module de base** : exception, forme différente (plus grande, fond dédié qui englobe les 5 emplacements)
 - **Cartes** : format **rectangulaire**
 - **PV / Bouclier** : affichés par de petites pastilles rondes (rouge pour les PV, bleue pour le Bouclier) flottant juste au-dessus de chaque case, jamais superposées à l'image (validé en POC)
+- **Infobulle au survol** d'un module ou d'un ennemi (PV, Bouclier, buffs, intention §13) : PC,
+  affichée **au-dessus du curseur** (ou dessous s'il n'y a pas la place en haut de l'écran), en
+  police 13 sur 300 px de large, maintenue dans la fenêtre (décision utilisateur, l'ancienne
+  version en police 9 au-dessus de la case était illisible). Web : infobulle au tap, inchangée
+- **Carte armée** (§8.3) : PC, cadre jaune de 4 px *autour* de la carte, jamais un rectangle plein
+  dessous (pouvait masquer l'image, l'ordre forme/sprite n'étant pas garanti par pyglet)
 - **Munitions restantes** (§3.6) : affichées sur la carte comme le coût en électricité, dans une pastille ronde **verte** — uniquement pour les cartes à munitions limitées (rien affiché pour les munitions illimitées, comportement par défaut)
 
 ### 8.3 Interaction de jeu d'une carte

@@ -136,7 +136,6 @@ MARGE_PASTILLE_HAUT = 4  # espace vertical entre le haut de la case et la pastil
 COULEUR_PASTILLE_PV = (190, 40, 40)
 COULEUR_PASTILLE_BOUCLIER = (50, 110, 200)
 _RAYON_TOTAL_PASTILLE = RAYON_PASTILLE + EPAISSEUR_CONTOUR_PASTILLE
-HAUTEUR_ZONE_PASTILLES = MARGE_PASTILLE_HAUT + 2 * _RAYON_TOTAL_PASTILLE
 
 # Indicateur de rarete (etoile en haut a gauche de la carte) et pastille de munitions
 # restantes (en haut a droite, meme style que les pastilles PV/Bouclier), cf. specs.md 8.2
@@ -167,14 +166,21 @@ COULEUR_POPUP_BUFF = COULEUR_PASTILLE_BUFFS
 COULEUR_OMBRE_POPUP = (0, 0, 0)
 DECALAGE_OMBRE_POPUP = 2
 
-# Infobulle au survol
-LARGEUR_INFOBULLE = 190
-HAUTEUR_INFOBULLE_LIGNE = 18
+# Infobulle au survol, affichee au-dessus du curseur
+LARGEUR_INFOBULLE = 300
+TAILLE_POLICE_INFOBULLE = 13
+MARGE_INFOBULLE = 8
+# Ecart vertical entre la pointe du curseur et le bas de l'infobulle
+DECALAGE_INFOBULLE_CURSEUR = 16
 
 # Groupe de rendu pour tout ce qui doit rester visible par-dessus les sprites
 # (pastilles, bandeaux, textes, rayons...) : l'ordre entre sprites et formes
 # n'est pas garanti par pyglet sans groupe explicite.
 GROUPE_SUPERPOSITION = pyglet.graphics.Group(order=1)
+# Infobulle au survol : au-dessus de tout (pastilles et textes compris), son texte au-dessus
+# de son propre fond.
+GROUPE_INFOBULLE = pyglet.graphics.Group(order=2)
+GROUPE_INFOBULLE_TEXTE = pyglet.graphics.Group(order=3)
 # Groupe de rendu pour l'image de fond, garanti derriere tout le reste (ordre
 # negatif < ordre par defaut des sprites vaisseau/flotte/cartes).
 GROUPE_FOND = pyglet.graphics.Group(order=-1)
@@ -487,6 +493,8 @@ class FenetreCombat(pyglet.window.Window):
         self.partie = partie
         self.index_carte_selectionnee: int | None = None
         self.entite_survolee: Module | Ennemi | None = None
+        # Derniere position connue de la souris, pour placer l'infobulle au-dessus du curseur
+        self.position_souris: tuple[int, int] = (0, 0)
         self.survole_barre: str | None = None
         # True apres un clic sur "Quitter" (specs.md 8.1) : signale a main.py qu'il doit fermer
         # cette fenetre et revenir a l'ecran de selection du joueur, sans toucher a la partie
@@ -683,8 +691,16 @@ class FenetreCombat(pyglet.window.Window):
         for index, carte in enumerate(main):
             x = x_depart + index * CARTE_ESPACEMENT
             if index == self.index_carte_selectionnee:
-                bordure = shapes.Rectangle(
-                    x - 4, CARTE_Y - 4, CARTE_LARGEUR + 8, CARTE_HAUTEUR + 8, color=COULEUR_CARTE_SURLIGNEE, batch=lot
+                # Cadre creux autour de la carte (pas un rectangle plein dessous) : l'ordre de
+                # dessin forme/sprite n'etant pas garanti, un rectangle plein pouvait masquer l'image.
+                bordure = shapes.Box(
+                    x - 4,
+                    CARTE_Y - 4,
+                    CARTE_LARGEUR + 8,
+                    CARTE_HAUTEUR + 8,
+                    thickness=4,
+                    color=COULEUR_CARTE_SURLIGNEE,
+                    batch=lot,
                 )
                 elements.append(bordure)
             elements.append(_sprite_ajuste(carte.image, x, CARTE_Y, CARTE_LARGEUR, CARTE_HAUTEUR, lot))
@@ -819,8 +835,7 @@ class FenetreCombat(pyglet.window.Window):
             return []
 
         if isinstance(entite, Ennemi):
-            rect = self._rect_ennemi_affiche(entite)
-            if rect is None:
+            if self._rect_ennemi_affiche(entite) is None:
                 return []
             lignes = [entite.nom, f"PV {entite.pv}/{entite.pv_max}", f"Bouclier {entite.bouclier}"]
             # Toutes les Actions actives au prochain tour (specs.md 13), pas seulement la
@@ -852,37 +867,40 @@ class FenetreCombat(pyglet.window.Window):
                     lignes.append(f"Va poser {texte_buff} ({cible_texte}){repetition}")
             lignes.extend(_libelle_buff(buff) for buff in entite.buffs_actifs)
         else:
-            rect = self._rect_du_module(entite)
             lignes = [entite.nom, f"PV {entite.pv}/{entite.pv_max}", f"Bouclier {entite.bouclier}"]
             lignes.extend(_lignes_buffs(entite))
             if entite.leurre_actif:
                 lignes.append("Leurre actif (annule la prochaine attaque)")
 
-        return self._infobulle(rect, lignes, lot)
+        return self._infobulle(lignes, lot)
 
-    def _infobulle(self, rect: tuple, lignes: list, lot: pyglet.graphics.Batch) -> list:
-        """Dessine une infobulle (fond + texte) au-dessus du rectangle donne."""
-        x, y, largeur, hauteur = rect
-        hauteur_infobulle = HAUTEUR_INFOBULLE_LIGNE * len(lignes) + 8
-        bx = x + largeur / 2 - LARGEUR_INFOBULLE / 2
-        by = y + hauteur + HAUTEUR_ZONE_PASTILLES + 8
-        elements = [_bandeau(bx, by, LARGEUR_INFOBULLE, hauteur_infobulle, lot)]
+    def _infobulle(self, lignes: list, lot: pyglet.graphics.Batch) -> list:
+        """Dessine une infobulle (fond + texte) au-dessus du curseur, maintenue dans la fenetre."""
         texte = pyglet.text.Label(
             "\n".join(lignes),
-            x=x + largeur / 2,
-            y=by + hauteur_infobulle / 2,
             anchor_x="center",
-            anchor_y="center",
+            anchor_y="bottom",
             multiline=True,
-            width=LARGEUR_INFOBULLE - 8,
+            width=LARGEUR_INFOBULLE - 2 * MARGE_INFOBULLE,
             align="center",
-            font_size=9,
+            font_size=TAILLE_POLICE_INFOBULLE,
             color=(*COULEUR_SURVOL, 255),
             batch=lot,
-            group=GROUPE_SUPERPOSITION,
+            group=GROUPE_INFOBULLE_TEXTE,
         )
-        elements.append(texte)
-        return elements
+        # Hauteur mesuree apres mise en page : une ligne longue peut passer sur deux lignes
+        hauteur = texte.content_height + 2 * MARGE_INFOBULLE
+        souris_x, souris_y = self.position_souris
+        bx = min(max(souris_x - LARGEUR_INFOBULLE / 2, 0), LARGEUR_FENETRE - LARGEUR_INFOBULLE)
+        by = souris_y + DECALAGE_INFOBULLE_CURSEUR
+        if by + hauteur > HAUTEUR_FENETRE:
+            # Pas la place au-dessus (haut de l'ecran) : sous le curseur
+            by = souris_y - DECALAGE_INFOBULLE_CURSEUR - hauteur
+        texte.x = bx + LARGEUR_INFOBULLE / 2
+        texte.y = by + MARGE_INFOBULLE
+        fond = shapes.Rectangle(bx, by, LARGEUR_INFOBULLE, hauteur, color=COULEUR_BANDEAU, batch=lot, group=GROUPE_INFOBULLE)
+        fond.opacity = OPACITE_BANDEAU
+        return [fond, texte]
 
     def _dessiner_message_fin(self, lot: pyglet.graphics.Batch) -> list:
         """Affiche le message de fin de combat (victoire ou defaite)."""
@@ -954,6 +972,7 @@ class FenetreCombat(pyglet.window.Window):
 
     def on_mouse_motion(self, x: int, y: int, dx: int, dy: int) -> None:
         """Met a jour le module/ennemi actuellement survole par la souris, pour l'infobulle."""
+        self.position_souris = (x, y)
         self.entite_survolee = self._ennemi_a(x, y) or self._module_a(x, y)
         if self.partie is not None:
             from src.ui import barre_laterale
