@@ -16,9 +16,9 @@ from src.gameplay.partie import EtatModule, Partie
 from src.ui.animation import AnimationPopup
 from src.ui.fenetre import (
     FOND_IMAGE,
-    GROUPE_SUPERPOSITION,
     HAUTEUR_FENETRE,
     LARGEUR_FENETRE,
+    _infobulle_au_curseur,
     _sprite_ajuste,
     _sprite_etire,
 )
@@ -26,8 +26,7 @@ from src.ui.fenetre import (
 # Duree d'affichage de la description d'un module clique (specs.md 5) - plus longue qu'un popup
 # +/-N (AnimationPopup.DUREE) pour laisser le temps de lire la phrase.
 DUREE_INFOBULLE_MODULE = 4.0
-LARGEUR_INFOBULLE_MODULE = 340
-HAUTEUR_INFOBULLE_MODULE = 70
+LARGEUR_INFOBULLE_MODULE = 380
 
 COULEUR_TEXTE = (255, 255, 255)
 COULEUR_SOUS_TITRE = (200, 200, 205)
@@ -90,6 +89,8 @@ class EcranVaisseau(pyglet.window.Window):
         # Description affichee quelques secondes au clic sur un module (specs.md 5) - index dans
         # POSITIONS_AFFICHEES du module concerne, None si aucune description n'est affichee.
         self.index_description: int | None = None
+        # Point du clic qui a ouvert la description : l'infobulle s'affiche au-dessus de lui
+        self.position_clic: tuple[int, int] = (0, 0)
         self.animation_description = AnimationPopup()
         pyglet.clock.schedule_interval(self.update, 1 / 30.0)
 
@@ -126,34 +127,14 @@ class EcranVaisseau(pyglet.window.Window):
 
     def _dessiner_description(self, index: int, lot: pyglet.graphics.Batch) -> list:
         """Infobulle (specs.md 5) : accroche narrative du module clique, affichee quelques
-        secondes au-dessus de sa case (DUREE_INFOBULLE_MODULE)."""
+        secondes au-dessus du point clique (DUREE_INFOBULLE_MODULE)."""
         etat = self.partie.vaisseau[POSITIONS_AFFICHEES[index][0]]
         if etat is None:
             return []
         spec = self.specs_par_id[etat.module_id]
-        x, y, largeur, hauteur = _rect_module(index)
-        bx = x + largeur / 2 - LARGEUR_INFOBULLE_MODULE / 2
-        by = y + hauteur + 10
-        bandeau = shapes.Rectangle(
-            bx, by, LARGEUR_INFOBULLE_MODULE, HAUTEUR_INFOBULLE_MODULE,
-            color=(0, 0, 0), batch=lot, group=GROUPE_SUPERPOSITION,
+        return _infobulle_au_curseur(
+            spec.description, self.position_clic, lot, largeur=LARGEUR_INFOBULLE_MODULE, couleur_texte=COULEUR_TEXTE
         )
-        bandeau.opacity = 210
-        texte = pyglet.text.Label(
-            spec.description,
-            x=bx + LARGEUR_INFOBULLE_MODULE / 2,
-            y=by + HAUTEUR_INFOBULLE_MODULE / 2,
-            anchor_x="center",
-            anchor_y="center",
-            multiline=True,
-            width=LARGEUR_INFOBULLE_MODULE - 20,
-            align="center",
-            font_size=11,
-            color=(*COULEUR_TEXTE, 255),
-            batch=lot,
-            group=GROUPE_SUPERPOSITION,
-        )
-        return [bandeau, texte]
 
     def _dessiner_module(
         self, index: int, libelle: str, etat: EtatModule | None, lot: pyglet.graphics.Batch
@@ -221,6 +202,7 @@ class EcranVaisseau(pyglet.window.Window):
         index = self._index_module_a(x, y)
         if index is not None:
             self.index_description = index
+            self.position_clic = (x, y)
             self.animation_description.demarrer()
             self.animation_description.temps_restant = DUREE_INFOBULLE_MODULE
 
