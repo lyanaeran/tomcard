@@ -67,3 +67,8 @@ cartes (§7) et la boucle de récompenses (§2.1, §6) stabilisés.
   conception** (discussion utilisateur, étendue à tous les buffs/debuffs/bouclier, pas seulement
   Vulnérabilité) : voir [refonte-buffs-debuffs.md](refonte-buffs-debuffs.md), brouillon pas encore
   décidé ni implémenté
+- **Modules secondaires sacrifiables** (discussion utilisateur) : seuls les PV du module principal
+  persistent entre les combats, les secondaires repartent à leur PV max à chaque combat, ce qui
+  ouvre des effets à la mort (façon « Râle d'agonie ») et de la résurrection. **En cours de
+  conception** : voir [refonte-modules.md](refonte-modules.md), brouillon pas encore décidé ni
+  implémenté
