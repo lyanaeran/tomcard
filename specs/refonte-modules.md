@@ -65,26 +65,79 @@ fichier sera supprimé. Pointeur depuis [a-trancher.md](a-trancher.md) §11.*
   dans les combats longs** : les deux refontes se renforcent (la course contre la montée des dégâts
   se joue en sacrifiant des modules).
 
-### 3.3 Question centrale : que deviennent les cartes d'un module mort ?
+### 3.3 Les cartes d'un module mort deviennent injouables (décision utilisateur)
 
-C'est ce qui décide si la mort a un **coût**. Trois options :
+C'est ce qui donne un **coût** à la mort. Options examinées :
 
-| Option | Effet | Avis |
+| Option | Effet | Statut |
 |---|---|---|
-| **A. Rien (comme aujourd'hui)** | Les cartes restent jouables | La mort ne coûte presque rien (juste un absorbeur de coups en moins) : « sacrifiable » devient « gratuit », et protéger un module n'a plus d'intérêt |
-| **B. Cartes inutilisables jusqu'à la fin du combat** | Les cartes du module mort en main sont grisées ou défaussées ; celles piochées ensuite aussi | **Recommandé** : la mort a un vrai coût, le joueur arbitre entre protéger et sacrifier. Une résurrection rend les cartes à nouveau jouables, ce qui lui donne de la valeur |
-| **C. Cartes transformées** | Les cartes du module mort deviennent une carte « Épave » (ex. 0⚡, +1 électricité ou pioche 1) | Intéressant mais plus lourd ; peut venir plus tard en variante de B |
+| A. Rien (comme aujourd'hui) | Les cartes restent jouables | Écartée : la mort ne coûte presque rien, « sacrifiable » deviendrait « gratuit » et protéger un module n'aurait plus d'intérêt |
+| **B. Cartes injouables tant que le module est mort** | Les cartes partent dans une pile dédiée (§3.4) | **Retenue (décision utilisateur)** : le joueur arbitre entre protéger et sacrifier ; une résurrection rend les cartes, ce qui lui donne de la valeur |
+| C. Cartes transformées en « Épave » | Ex. 0⚡, +1 électricité ou pioche 1 | Écartée pour l'instant, variante possible plus tard |
 
-**Implication technique de B et C** : il faut lier chaque carte du deck à **l'exemplaire de module**
-qui l'a apportée (et pas seulement au type : deux exemplaires du même module sont possibles, §5).
-Concrètement, le deck de la partie passerait d'une liste d'ids à une liste de couples (id de
-carte, emplacement du module), ou chaque `Carte` de combat porterait une référence à son `Module`.
-C'est le plus gros chantier moteur de cette refonte.
+Exception : les cartes portant le mot-clé **Persistante** restent jouables (§3.5). Les cartes du
+**module principal** ne sont jamais concernées, puisque sa mort termine la run.
 
-Cas particuliers à trancher avec B :
-- Les cartes du **module principal** ne sont jamais concernées (sa mort termine la run).
-- Une carte qui **cible** un module allié (ex. *Bouclier* sur module unique) peut-elle viser un
-  module mort ? Non (comme aujourd'hui).
+**Implication technique** : il faut lier chaque carte du deck à **l'exemplaire de module** qui l'a
+apportée, et pas seulement au type : deux exemplaires du même module sont possibles (§5). Le deck de
+la partie passerait d'une liste d'ids à une liste de couples (id de carte, emplacement du module),
+ou chaque `Carte` de combat porterait une référence à son `Module`. C'est le plus gros chantier
+moteur de cette refonte (deck, sauvegarde, `web/bridge.py`). À préciser : une carte obtenue
+autrement que par un module (Aventure, Planète commerciale) est rattachée à quel module ? Proposition
+: au module principal, donc jamais concernée.
+
+### 3.4 Pile « Hors service » (décision utilisateur : une défausse particulière)
+
+Une **quatrième pile** de combat, à côté de la pioche, de la défausse et des cartes épuisées
+(§3.6). Nom provisoire : **Hors service** (autres pistes : *Casse*, *Épave*).
+
+**Différence avec les cartes épuisées** : une carte épuisée (munitions à 0) est sortie du combat
+**définitivement** ; une carte hors service n'est sortie **que tant que son module est mort**, et
+revient s'il ressuscite.
+
+Règles proposées (à valider) :
+
+1. **À la mort du module**, **toutes** ses cartes non persistantes partent immédiatement en pile
+   Hors service, **où qu'elles soient** : pioche, défausse et main. La main est défaussée à chaque
+   fin de tour (comme dans Slay the Spire), donc un module qui meurt pendant le tour ennemi trouve
+   une main vide ; le cas « en main » ne se présente que si le module meurt pendant le tour du
+   joueur (sacrifice volontaire §6, *Renvoi*, effets à la mort en chaîne).
+   - *Alternative écartée* : laisser les cartes dans la pioche et ne les envoyer en pile Hors
+     service qu'au moment où elles sont piochées. Plus punitif (pioches perdues), mais crée des
+     tours creux frustrants et une règle moins lisible.
+   - *Conséquence assumée* : la pioche s'amincit, le joueur tourne plus vite sur les cartes des
+     modules survivants. C'est un léger avantage qui atténue la perte.
+2. **Pas de remélange** : la pile Hors service n'est jamais remélangée dans la pioche quand
+   celle-ci est vide (comme les cartes épuisées).
+3. **À la résurrection du module**, ses cartes reviennent **dans la défausse** : elles réapparaissent
+   au prochain remélange, sans arriver d'un coup en main. Une carte de résurrection plus rare
+   pourrait les renvoyer directement dans la pioche (mélangées), voire en main.
+4. **Munitions** : une carte hors service garde son compteur de munitions ; elle le retrouve tel
+   quel si elle revient.
+5. **Fin du combat** : la pile est vidée, toutes les cartes reviennent au deck de la partie (le
+   deck sauvegardé n'est jamais modifié par une mort de module, qui ne dure qu'un combat).
+6. **Affichage** : un compteur à côté de la pioche, de la défausse et des épuisées (interface.md
+   §8.1), consultable comme elles. Sur PC et web.
+
+### 3.5 Mot-clé « Persistante » (proposition utilisateur)
+
+Une carte **Persistante** reste jouable même si son module est mort : elle ne part pas en pile Hors
+service et continue son cycle normal (pioche, main, défausse).
+
+- **Rare par construction** : réservée à quelques cartes Rares ou Légendaires, sinon le coût de la
+  mort (§3.3) disparaît. Proposition : 0 ou 1 carte Persistante par module.
+- **Affichage** : le mot-clé apparaît sur la carte (bandeau ou icône), comme les munitions.
+- **Données** : un champ booléen dans `config/cartes.json` (ex. `"persistante": true`), et la
+  colonne correspondante dans `specs/cartes.xlsx`.
+- **Candidates naturelles** : des cartes dont le thème survit au module, par exemple *Leurre*
+  (un leurre déjà largué), ou des cartes de résurrection (§5), qui doivent pouvoir ressusciter leur
+  propre module. Sans Persistante, une carte de résurrection d'un module mort serait elle-même hors
+  service : à proscrire.
+- **Conflit de vocabulaire** : « persistant » désigne déjà les **buffs sans durée**
+  (`tours_restants = None`, modules-cartes.md §12.3, combat.md §13). Les deux usages ne se
+  croisent pas (l'un qualifie une carte, l'autre un buff), mais le lecteur peut confondre. Garder
+  « Persistante » pour les cartes et renommer les buffs en « permanents » lors de la refonte des
+  buffs, ou choisir un autre mot-clé (*Autonome*, *Indépendante*, *Câblage de secours*).
 
 ---
 
@@ -178,8 +231,9 @@ seulement subie.
 
 ## 8. Valeurs et points à trancher
 
-1. **Cartes d'un module mort** : option A, B ou C (§3.3) — décision structurante, à prendre en
-   premier (B recommandé).
+1. ~~**Cartes d'un module mort**~~ : **tranché**, injouables tant que le module est mort, pile
+   Hors service, mot-clé Persistante (§3.3 à §3.5). Restent à valider : les 6 règles de la pile
+   (§3.4), le rattachement des cartes obtenues hors module (§3.3), le nom du mot-clé (§3.5).
 2. **PV max des secondaires** : proposition 15 à 20 (inventé), à caler sur les dégâts ennemis et la
    durée moyenne d'un combat.
 3. **PV du principal** : 50 actuels, peut-être 60 à 70 (inventé).
@@ -192,9 +246,10 @@ seulement subie.
 
 ## 9. Prochaines étapes
 
-1. Trancher les points 1 à 3 de la §8 (règle de base).
-2. Si option B : spécifier le lien carte ↔ exemplaire de module (deck de la partie, `Carte` de
-   combat, sauvegarde, `web/bridge.py`).
+1. Valider les règles de la pile Hors service et du mot-clé Persistante (§8 point 1), puis
+   trancher les points 2 et 3 de la §8 (PV).
+2. Spécifier le lien carte ↔ exemplaire de module (deck de la partie, `Carte` de combat,
+   sauvegarde, `web/bridge.py`) et choisir les premières cartes Persistantes.
 3. Choisir les effets à la mort par module et leur format dans `config/modules.json`.
 4. Concevoir les premières cartes de résurrection et de sacrifice.
 5. Une fois stabilisé : migrer dans `combat.md` (§3.4), `parcours.md` (§2.2), `modules-cartes.md`
