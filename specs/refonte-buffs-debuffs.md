@@ -330,6 +330,9 @@ contenir l'accumulation — à vérifier une fois la montée implémentée.
    global (inutile avec le modèle à deux familles, §7.3).
 7. Redessiner ou retirer *Blindage maximal*, *Blindage cible*, *Bouclier perpétuel* (§2.3, §5) —
    `BOUCLIER_PAR_TOUR` est abandonné.
-8. Une fois stabilisé : migrer ce contenu dans `combat.md` (§3.5, §13) et `modules-cartes.md`
+8. Renommer les buffs « persistants » (sans durée, `tours_restants = None`) en **« permanents »**
+   dans le code et les specs : « Persistante » devient un mot-clé de carte (décision prise dans
+   [refonte-modules.md](refonte-modules.md) §3.5).
+9. Une fois stabilisé : migrer ce contenu dans `combat.md` (§3.5, §13) et `modules-cartes.md`
    (§12.3-§12.5), supprimer ce fichier, mettre à jour la table d'index de `specs.md` si une
    nouvelle section est nécessaire.
