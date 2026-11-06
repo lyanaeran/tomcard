@@ -45,15 +45,23 @@ qu'à `BOUCLIER_PAR_TOUR`, un buff de dégâts posé sur son propre module ne fe
 `ActionCarte` concernés : `VULNERABILITE` (%, dégâts subis), `REDUCTION_DEGATS`/
 `AUGMENTATION_DEGATS` (points, dégâts infligés par un ennemi), `BOUCLIER_POURCENTAGE_PV` (% des PV
 max, converti en bouclier **une fois** à la pose, puis redevient un bouclier brut classique — cf.
-2.1), `REDIRECTION_CIBLE`, `ANNULATION_PROCHAINE_ATTAQUE` (flags sans magnitude, cf. §5.3).
+2.1), `REDIRECTION_CIBLE`, `ANNULATION_PROCHAINE_ATTAQUE` (flags sans magnitude, cf. tableau §5).
 
-### 2.3 Buffs récurrents (`BOUCLIER_PAR_TOUR`)
+### 2.3 Buffs récurrents (`BOUCLIER_PAR_TOUR`) — **retiré par décision utilisateur**
 
 Un buff qui **repose du bouclier frais à chaque tour** tant qu'il reste actif
 (`Module.declencher_buffs_tour`/`Ennemi` via la `frequence` de son Action), en plus de son premier
 déclenchement à la pose. Peut être à durée limitée (*Blindage maximal*, *Blindage cible* : `duree`
-finie) ou persistant (*Bouclier perpétuel* : `tours_restants=None`, ne décompte jamais). C'est un
-troisième mécanisme, orthogonal aux deux précédents — important pour la §4.1 ci-dessous.
+finie) ou persistant (*Bouclier perpétuel* : `tours_restants=None`, ne décompte jamais).
+
+**Décision (discussion utilisateur) : ce mécanisme et les 3 cartes qui l'utilisent sont retirés**,
+plutôt que réconciliés avec le modèle de la §3 — la croissance sans limite qu'il produirait sous
+une décroissance -1/tour fixe (cf. §5) n'est pas rattrapable proprement. Un simple bouclier posé
+plusieurs fois (§2.1) couvre déjà le même besoin sous le nouveau modèle : poser deux fois une carte
+Bouclier classique additionne sa valeur, exactement ce que *BOUCLIER_PAR_TOUR* cherchait à obtenir
+automatiquement. `ActionCarte.BOUCLIER_PAR_TOUR` est donc à supprimer du moteur une fois la refonte
+implémentée, et *Blindage maximal*, *Blindage cible*, *Bouclier perpétuel* à retirer ou redessiner
+en cartes Bouclier classiques (§7, étape à ajouter).
 
 ---
 
@@ -102,9 +110,9 @@ différent selon l'effet, le reste du mécanisme est unique :
   actuelle par **durée** : aujourd'hui *Brèche*/*Ligne avant* durent 2 tours et *Boucliers hors
   service* 5 tours, pour la même magnitude (100%) — à rebalancer sur la **magnitude** posée plutôt
   que sur la durée si le taux devient global (cf. tableau §5, avertissements).
-- **Les buffs récurrents (`BOUCLIER_PAR_TOUR`, §2.3) restent-ils un mécanisme à part, ou
-  fusionnent-ils avec ce modèle ?** Voir §4.1 : les fusionner naïvement casse l'équilibrage
-  (croissance sans limite).
+- ~~Les buffs récurrents (`BOUCLIER_PAR_TOUR`, §2.3) restent-ils un mécanisme à part, ou
+  fusionnent-ils avec ce modèle ?~~ **Tranché : retirés** (§2.3) — un bouclier classique reposé
+  plusieurs fois couvre déjà le même besoin sous le modèle unifié.
 - **Bouclier miroir** (*Renvoi*) : aujourd'hui ne dissipe jamais, seulement consommé par un
   dégât renvoyé (specs.md §13.2). Doit-il désormais décroître de -1/tour comme un bouclier
   classique, en plus d'être consommé par les dégâts ?
@@ -133,12 +141,17 @@ l'effet s'affaiblisse avec le temps, c'est donc Y qui doit **augmenter** — sen
 reste du modèle (qui décroît toujours vers 0/neutre). Trois façons de résoudre ça :
 
 1. **Stocker l'inverse de Y, pas Y lui-même (recommandé)** — ne pas stocker le plafond directement :
-   stocker une « protection » `P` qui décroît de 1/tour **exactement comme tout le reste du
-   modèle**, et calculer le plafond effectif à l'usage : `Y_effectif = Y_PLANCHER + P` (`Y_PLANCHER`
-   = plafond le plus bas/protecteur possible, une constante de la carte). `P` à 0 → `Y_effectif =
-   Y_PLANCHER`, le plafond le plus fort n'a alors plus de marge au-delà. Aucune exception dans le
-   moteur : tout le code de décroissance reste « une valeur qui tend vers 0 », seule la **formule
-   d'application** du plafond change (elle lit `Y_PLANCHER + P` au lieu de `P` directement).
+   stocker une « force de protection » `C`, un compteur cumulatif **en tout point identique** aux
+   autres de ce document (pose = `+valeur` de la carte, décroissance -1/tour, buff supprimé à 0
+   comme n'importe quel autre). Le plafond effectif ne se lit **qu'à l'application**, par une
+   formule propre à cet effet : `Y_effectif = max(Y_PLANCHER, Y_PLANCHER + valeur_carte - C)`, où
+   `Y_PLANCHER` (constante de la carte) est le plafond le plus protecteur possible et `valeur_carte`
+   sa valeur posée (le champ `valeur` habituel). À la pose, `C = valeur_carte` donc `Y_effectif =
+   Y_PLANCHER` (protection maximale) ; `C` décroît ensuite normalement et `Y_effectif` s'éloigne de
+   `Y_PLANCHER` (s'affaiblit) à mesure que `C` baisse, jusqu'à disparaître **complètement** (plus
+   aucun plafond, pas juste « revenir à `Y_PLANCHER` ») quand `C` atteint 0. Exemple chiffré en
+   §4.2. Aucune exception dans le moteur : `C` suit la même règle de décroissance que tout le
+   reste (toujours vers 0), seule la **formule d'application** du plafond change.
 2. **Stocker Y directement et le faire croître** — ajoute une direction de décroissance différente
    selon l'effet (un `sens: +1 | -1` sur chaque `ActionCarte`) : fonctionne, mais introduit une
    vraie asymétrie dans le moteur que l'option 1 évite complètement pour un coût de formule
@@ -153,6 +166,26 @@ reste du modèle (qui décroît toujours vers 0/neutre). Trois façons de résou
 **Recommandation** : option 1 — elle garde le moteur à une seule règle de décroissance (toujours
 vers 0), au prix d'une formule légèrement indirecte pour ce seul effet.
 
+### 4.2 Exemple chiffré — bouclier à plafond
+
+Carte fictive « Bouclier capacitif » : `Y_PLANCHER = 3` (constante de la carte, le plafond le plus
+protecteur atteignable), `valeur_carte = 12` (ce qu'elle ajoute à `C` à chaque pose). Formule :
+`Y_effectif = max(3, 3 + 12 - C) = max(3, 15 - C)`.
+
+| Moment | `C` | `Y_effectif` | Un coup de 20 dégâts... |
+|---|---|---|---|
+| Pose de la carte (`C = 12`) | 12 | max(3, 15-12) = **3** | ...plafonné à 3 (protection maximale) |
+| Décroissance -1/tour | 11 | max(3, 15-11) = **4** | ...plafonné à 4 |
+| Décroissance -1/tour | 10 | max(3, 15-10) = **5** | ...plafonné à 5 |
+| ... (décroît ainsi, 1 point de plus par tour) | ... | ... | ... |
+| Décroissance -1/tour | 1 | max(3, 15-1) = **14** | ...plafonné à 14 (protection presque nulle) |
+| Décroissance -1/tour | 0 | buff **supprimé** | ...aucun plafond, dégâts complets (20) |
+
+Si le joueur **repose** la carte avant que `C` tombe à 0 (ex. à `C = 5`, `Y_effectif = 10`),
+`C` redevient `5 + 12 = 17` (cumulatif, comme tout le reste du modèle, §3) et
+`Y_effectif = max(3, 15-17) = 3` : retour immédiat à la protection maximale, cohérent avec
+« reposer un bouclier classique le renforce ».
+
 ---
 
 ## 5. Tableau des cartes Bouclier / Buff / Debuff
@@ -164,7 +197,7 @@ tel quel sous le nouveau modèle sans décision/ajustement supplémentaire.
 |---|---|---|---|
 | Bouclier, Protéger le vaisseau, Mode défensif, Protéger l'avant poste (Principal/Blindage) | Bouclier brut, dissipe par moitié/tour (seuil 5) | Bouclier brut, dissipe de -1/tour | Aucun — déjà additif, seule la dissipation change |
 | Bouclier adaptatif (Blindage) | Bouclier = X% des PV **max**, calculé une fois à la pose puis bouclier brut classique | Identique : le % ne sert qu'au calcul initial, le résultat suit ensuite la règle bouclier brut (-1/tour) | Aucun |
-| **Blindage maximal, Blindage cible, Bouclier perpétuel** (Principal/Blindage) — `BOUCLIER_PAR_TOUR` | Repose du bouclier chaque tour ; dissipation par moitié crée un point d'équilibre (ex. valeur 10 → stabilise à 20, specs.md §3.5) | — | **⚠️ Casse l'équilibrage tel quel** : avec une dissipation à -1/tour fixe, reposer une valeur V > 1 chaque tour fait **croître le bouclier sans limite** (+V-1 net par tour, jamais de point d'équilibre). Décision à prendre en §3.3 avant d'y toucher — ces 3 cartes doivent peut-être garder l'ancienne dissipation par moitié, ou plafonner le bouclier brut, ou autre chose |
+| **Blindage maximal, Blindage cible, Bouclier perpétuel** (Principal/Blindage) — `BOUCLIER_PAR_TOUR` | Repose du bouclier chaque tour ; dissipation par moitié crée un point d'équilibre (ex. valeur 10 → stabilise à 20, specs.md §3.5) | **Retirées** (décision, cf. §2.3) | Carte à redessiner en Bouclier classique ou à retirer purement — sous une dissipation -1/tour fixe, reposer une valeur V chaque tour ferait croître le bouclier sans limite (+V-1 net par tour), non rattrapable proprement |
 | Tordre le canon (Sabotage) | `REDUCTION_DEGATS` 5 points, 1 tour, instance indépendante | Compteur cumulatif, -1 point/tour | Mineur : 5 points à -1/tour prennent 5 tours à s'éteindre au lieu de 1 — magnitude à revoir si on veut garder le même ressenti (carte courte et forte) |
 | **Brèche, Ligne avant, Boucliers endommagés, Boucliers hors service** (Sabotage) | `VULNERABILITE` 100%, instances indépendantes à 2/2/2/5 tours | Compteur cumulatif, -10%/tour (ou le taux choisi) | **⚠️ Perd la différenciation par durée** : les 4 cartes partagent aujourd'hui la même magnitude (100%) et ne se distinguent que par leur durée (2 ou 5 tours) — avec un taux de décroissance global, elles deviennent identiques. Il faudra les différencier par **magnitude** (ex. Boucliers hors service à 150% plutôt que 100%) plutôt que par durée |
 | Renvoi (Blindage) — `BOUCLIER_MIROIR` | Ne dissipe jamais, consommé uniquement par un dégât renvoyé | — | Point ouvert (§3.3) : doit-il décroître de -1/tour en plus, ou rester une exception comme aujourd'hui ? À trancher, pas de proposition par défaut |
@@ -196,11 +229,13 @@ lieu d'un `duree` fixe à suivre séparément.
 
 ## 7. Prochaines étapes
 
-1. Trancher les points ouverts de la §3.3 (taux de décroissance %, sort des buffs récurrents,
-   bouclier miroir).
-2. Choisir une résolution pour le bouclier à plafond (§4.1 — recommandation : option 1).
+1. Trancher les points ouverts restants de la §3.3 (taux de décroissance %, bouclier miroir).
+2. Choisir une résolution pour le bouclier à plafond (§4.1 — recommandation : option 1, exemple
+   chiffré en §4.2).
 3. Rebalancer la magnitude des 4 cartes Vulnérabilité (§5) si le taux de décroissance devient
    global.
-4. Une fois stabilisé : migrer ce contenu dans `combat.md` (§3.5, §13) et `modules-cartes.md`
+4. Redessiner ou retirer *Blindage maximal*, *Blindage cible*, *Bouclier perpétuel* (§2.3, §5) —
+   `BOUCLIER_PAR_TOUR` est abandonné.
+5. Une fois stabilisé : migrer ce contenu dans `combat.md` (§3.5, §13) et `modules-cartes.md`
    (§12.3-§12.5), supprimer ce fichier, mettre à jour la table d'index de `specs.md` si une
    nouvelle section est nécessaire.
