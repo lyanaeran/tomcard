@@ -130,61 +130,50 @@ module l'effet plutôt que d'absorber des points comme le bouclier classique :
 - **Bouclier à plafond** : plafonne chaque dégât reçu à **Y au maximum** (`dégâts_subis =
   min(dégâts, Y)`). Protège contre les gros coups ponctuels, inutile contre du grignotage sous Y.
 
-### 4.1 Pourquoi le seuil (X) fonctionne nativement, et pas le plafond (Y)
+### 4.1 Le plafond est une exception assumée au reste du modèle
 
 **Seuil** : X qui **décroît** de 1/tour affaiblit naturellement l'effet (de moins en moins de
 coups sont assez petits pour passer sous X) — cohérent avec le modèle unifié de la §3, aucun
 problème.
 
-**Plafond** : plus Y est **grand**, moins le plafond protège (plus de dégâts passent). Pour que
-l'effet s'affaiblisse avec le temps, c'est donc Y qui doit **augmenter** — sens inverse de tout le
-reste du modèle (qui décroît toujours vers 0/neutre). Trois façons de résoudre ça :
+**Plafond** : plus Max est **grand**, moins il protège (plus de dégâts passent au-delà). Pour
+qu'il s'affaiblisse avec le temps, **Max doit augmenter** — l'inverse de toutes les autres valeurs
+de ce document, qui décroissent toujours vers 0/neutre.
 
-1. **Stocker l'inverse de Y, pas Y lui-même (recommandé)** — ne pas stocker le plafond directement :
-   stocker une « force de protection » `C`, un compteur cumulatif **en tout point identique** aux
-   autres de ce document (pose = `+valeur` de la carte, décroissance -1/tour, buff supprimé à 0
-   comme n'importe quel autre). Le plafond effectif ne se lit **qu'à l'application**, par une
-   formule propre à cet effet : `Y_effectif = max(Y_PLANCHER, Y_PLANCHER + valeur_carte - C)`, où
-   `Y_PLANCHER` (constante de la carte) est le plafond le plus protecteur possible et `valeur_carte`
-   sa valeur posée (le champ `valeur` habituel). À la pose, `C = valeur_carte` donc `Y_effectif =
-   Y_PLANCHER` (protection maximale) ; `C` décroît ensuite normalement et `Y_effectif` s'éloigne de
-   `Y_PLANCHER` (s'affaiblit) à mesure que `C` baisse, jusqu'à disparaître **complètement** (plus
-   aucun plafond, pas juste « revenir à `Y_PLANCHER` ») quand `C` atteint 0. Exemple chiffré en
-   §4.2. Aucune exception dans le moteur : `C` suit la même règle de décroissance que tout le
-   reste (toujours vers 0), seule la **formule d'application** du plafond change.
-2. **Stocker Y directement et le faire croître** — ajoute une direction de décroissance différente
-   selon l'effet (un `sens: +1 | -1` sur chaque `ActionCarte`) : fonctionne, mais introduit une
-   vraie asymétrie dans le moteur que l'option 1 évite complètement pour un coût de formule
-   négligeable à l'usage (une addition au lieu d'une lecture directe).
-3. **Changer la sémantique de la carte** — remplacer « plafonne à Y » par « réduit chaque coup de
-   Z points » (`dégâts_subis = max(0, dégâts - Z)`) : mathématiquement différent (un plafond laisse
-   passer le dégât en dessous de Y inchangé ; une réduction retranche Z même aux petits dégâts),
-   mais Z décroît nativement comme tout le reste (c'est la même mécanique que `REDUCTION_DEGATS`,
-   déjà implémentée côté ennemi, §2.2). À envisager si la nuance plafond/réduction n'est pas
-   essentielle au ressenti recherché.
+Ma première proposition essayait d'éviter cette exception en stockant l'inverse de Max (une
+« protection » qui décroît, le plafond recalculé à l'envers à chaque lecture) — trop indirect pour
+être lisible. **Plus simple : accepter l'exception.** Max est stocké **directement**, et
+**augmente** d'un pas fixe à chaque tour tant que l'effet est actif, jusqu'à disparaître
+complètement après un nombre de tours fixe (une durée classique, comme n'importe quelle carte à
+`duree` aujourd'hui — rien de nouveau à inventer pour ça).
 
-**Recommandation** : option 1 — elle garde le moteur à une seule règle de décroissance (toujours
-vers 0), au prix d'une formule légèrement indirecte pour ce seul effet.
+### 4.2 Fonctionnement (exemple repris de la discussion)
 
-### 4.2 Exemple chiffré — bouclier à plafond
+Carte fictive « Bouclier capacitif » : absorbe tout dégât au-delà de Max sur un coup
+(`dégâts_subis = min(dégâts, Max)`), Max de départ = 10, pas = +5/tour, dure 3 tours :
 
-Carte fictive « Bouclier capacitif » : `Y_PLANCHER = 3` (constante de la carte, le plafond le plus
-protecteur atteignable), `valeur_carte = 12` (ce qu'elle ajoute à `C` à chaque pose). Formule :
-`Y_effectif = max(3, 3 + 12 - C) = max(3, 15 - C)`.
+| Tour | Max | Un coup de 30 dégâts... |
+|---|---|---|
+| 1 (pose) | 10 | ...réduit à 10 (grosse protection) |
+| 2 | 15 | ...réduit à 15 |
+| 3 | 20 | ...réduit à 20 (protection faible) |
+| 4 | **plus de Max** | ...passe en entier (30), effet disparu |
 
-| Moment | `C` | `Y_effectif` | Un coup de 20 dégâts... |
-|---|---|---|---|
-| Pose de la carte (`C = 12`) | 12 | max(3, 15-12) = **3** | ...plafonné à 3 (protection maximale) |
-| Décroissance -1/tour | 11 | max(3, 15-11) = **4** | ...plafonné à 4 |
-| Décroissance -1/tour | 10 | max(3, 15-10) = **5** | ...plafonné à 5 |
-| ... (décroît ainsi, 1 point de plus par tour) | ... | ... | ... |
-| Décroissance -1/tour | 1 | max(3, 15-1) = **14** | ...plafonné à 14 (protection presque nulle) |
-| Décroissance -1/tour | 0 | buff **supprimé** | ...aucun plafond, dégâts complets (20) |
+Se stocke comme une carte à durée classique d'aujourd'hui (`tours_restants`, decompté normalement
+jusqu'à 0, suppression à ce moment-là), plus le pas d'augmentation (`valeur` de la carte) : `Max
+courant = Max_initial + pas × (tours écoulés depuis la pose)`. Aucun nouveau champ par rapport à
+`BuffActif` existant, juste une formule de lecture différente (Max **augmente** avec les tours
+écoulés plutôt que la valeur stockée ne **décroît**).
 
-Si le joueur **repose** la carte avant que `C` tombe à 0 (ex. à `C = 5`, `Y_effectif = 10`),
-`C` redevient `5 + 12 = 17` (cumulatif, comme tout le reste du modèle, §3) et
-`Y_effectif = max(3, 15-17) = 3` : retour immédiat à la protection maximale, cohérent avec
-« reposer un bouclier classique le renforce ».
+### 4.3 Repose pendant que l'effet est actif — point ouvert
+
+Si le joueur rejoue la carte alors que Max a déjà grandi (ex. Max=15 au tour 2), deux pistes :
+
+- **Rafraîchir** (recommandé) : Max revient à sa valeur de départ (10) et le décompte repart de
+  zéro — cohérent avec l'intuition « reposer le bouclier le renforce », et le plus simple à coder.
+- **Garder le plus protecteur** entre les instances (le Max le plus bas des deux si elles
+  coexistent) — plus fidèle au modèle actuel en liste d'instances (§2.2), mais réintroduit la
+  complexité que la refonte cherche justement à éliminer.
 
 ---
 
@@ -230,8 +219,8 @@ lieu d'un `duree` fixe à suivre séparément.
 ## 7. Prochaines étapes
 
 1. Trancher les points ouverts restants de la §3.3 (taux de décroissance %, bouclier miroir).
-2. Choisir une résolution pour le bouclier à plafond (§4.1 — recommandation : option 1, exemple
-   chiffré en §4.2).
+2. Trancher la repose du bouclier à plafond pendant qu'il est actif (§4.3 — recommandation :
+   rafraîchir).
 3. Rebalancer la magnitude des 4 cartes Vulnérabilité (§5) si le taux de décroissance devient
    global.
 4. Redessiner ou retirer *Blindage maximal*, *Blindage cible*, *Bouclier perpétuel* (§2.3, §5) —
