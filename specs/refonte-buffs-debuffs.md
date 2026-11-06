@@ -130,50 +130,52 @@ module l'effet plutôt que d'absorber des points comme le bouclier classique :
 - **Bouclier à plafond** : plafonne chaque dégât reçu à **Y au maximum** (`dégâts_subis =
   min(dégâts, Y)`). Protège contre les gros coups ponctuels, inutile contre du grignotage sous Y.
 
-### 4.1 Le plafond est une exception assumée au reste du modèle
+### 4.1 Oui, ça se ramène au cas général
 
 **Seuil** : X qui **décroît** de 1/tour affaiblit naturellement l'effet (de moins en moins de
 coups sont assez petits pour passer sous X) — cohérent avec le modèle unifié de la §3, aucun
-problème.
+problème, Max **est** directement le compteur décroissant.
 
-**Plafond** : plus Max est **grand**, moins il protège (plus de dégâts passent au-delà). Pour
-qu'il s'affaiblisse avec le temps, **Max doit augmenter** — l'inverse de toutes les autres valeurs
-de ce document, qui décroissent toujours vers 0/neutre.
+**Plafond** : Max n'a pas besoin d'être stocké directement, ni de croître. On garde **exactement**
+le même compteur décroissant que le reste du modèle — ici, le compteur de durée `tours_restants`,
+déjà utilisé par toute carte à durée aujourd'hui — et Max se **lit** à partir de lui par une
+formule, au lieu d'être lu directement comme pour le bouclier ou la vulnérabilité :
 
-Ma première proposition essayait d'éviter cette exception en stockant l'inverse de Max (une
-« protection » qui décroît, le plafond recalculé à l'envers à chaque lecture) — trop indirect pour
-être lisible. **Plus simple : accepter l'exception.** Max est stocké **directement**, et
-**augmente** d'un pas fixe à chaque tour tant que l'effet est actif, jusqu'à disparaître
-complètement après un nombre de tours fixe (une durée classique, comme n'importe quelle carte à
-`duree` aujourd'hui — rien de nouveau à inventer pour ça).
+```
+Max_courant = Max_initial + pas × (duree_totale - tours_restants)
+```
 
-### 4.2 Fonctionnement (exemple repris de la discussion)
+`tours_restants` décroît de 1/tour comme toujours, jusqu'à 0 (buff supprimé, plus de plafond du
+tout). `duree_totale` et `pas` sont deux constantes de la carte (sa durée à la pose, et de combien
+Max augmente par tour écoulé). `(duree_totale - tours_restants)` est simplement « le nombre de
+tours déjà écoulés depuis la pose » : c'est **cette** quantité qui croît avec le temps, pas le
+compteur stocké lui-même, qui continue de décroître vers 0 exactement comme toutes les autres
+cartes à durée — rien de neuf dans le moteur, seule la formule de lecture de Max change.
 
-Carte fictive « Bouclier capacitif » : absorbe tout dégât au-delà de Max sur un coup
-(`dégâts_subis = min(dégâts, Max)`), Max de départ = 10, pas = +5/tour, dure 3 tours :
+### 4.2 Exemple chiffré (reprend l'exemple de la discussion)
 
-| Tour | Max | Un coup de 30 dégâts... |
-|---|---|---|
-| 1 (pose) | 10 | ...réduit à 10 (grosse protection) |
-| 2 | 15 | ...réduit à 15 |
-| 3 | 20 | ...réduit à 20 (protection faible) |
-| 4 | **plus de Max** | ...passe en entier (30), effet disparu |
+Carte fictive « Bouclier capacitif » : `Max_initial = 10`, `pas = 5`, `duree_totale = 3` tours.
+`Max_courant = 10 + 5 × (3 - tours_restants)`.
 
-Se stocke comme une carte à durée classique d'aujourd'hui (`tours_restants`, decompté normalement
-jusqu'à 0, suppression à ce moment-là), plus le pas d'augmentation (`valeur` de la carte) : `Max
-courant = Max_initial + pas × (tours écoulés depuis la pose)`. Aucun nouveau champ par rapport à
-`BuffActif` existant, juste une formule de lecture différente (Max **augmente** avec les tours
-écoulés plutôt que la valeur stockée ne **décroît**).
+| Tour | `tours_restants` | Max_courant | Un coup de 30 dégâts... |
+|---|---|---|---|
+| 1 (pose) | 3 | 10 + 5×(3-3) = **10** | ...réduit à 10 (grosse protection) |
+| 2 (décroissance -1) | 2 | 10 + 5×(3-2) = **15** | ...réduit à 15 |
+| 3 (décroissance -1) | 1 | 10 + 5×(3-1) = **20** | ...réduit à 20 (protection faible) |
+| 4 (décroissance -1) | 0 → buff **supprimé** | — | ...passe en entier (30), effet disparu |
 
-### 4.3 Repose pendant que l'effet est actif — point ouvert
+`tours_restants` est le seul état stocké, et il décroît de 1/tour comme n'importe quelle carte à
+durée — exactement le cas général de la §3, avec une formule de lecture différente de celle du
+bouclier/de la vulnérabilité (qui lisent leur compteur directement plutôt qu'au travers d'une
+transformation).
 
-Si le joueur rejoue la carte alors que Max a déjà grandi (ex. Max=15 au tour 2), deux pistes :
+### 4.3 Repose pendant que l'effet est actif
 
-- **Rafraîchir** (recommandé) : Max revient à sa valeur de départ (10) et le décompte repart de
-  zéro — cohérent avec l'intuition « reposer le bouclier le renforce », et le plus simple à coder.
-- **Garder le plus protecteur** entre les instances (le Max le plus bas des deux si elles
-  coexistent) — plus fidèle au modèle actuel en liste d'instances (§2.2), mais réintroduit la
-  complexité que la refonte cherche justement à éliminer.
+Sous cette formulation, reposer la carte **réinitialise `tours_restants` à `duree_totale`** (3)
+plutôt que de l'additionner — contrairement à la magnitude des autres effets (§3), qui s'additionne
+à la repose. Additionner les `tours_restants` ferait dépasser `duree_totale`, donc retomber Max
+**en dessous** de `Max_initial` (sur-protection non prévue par la carte) : rafraîchir est donc la
+seule option cohérente ici, pas un choix arbitraire parmi d'autres.
 
 ---
 
@@ -219,8 +221,8 @@ lieu d'un `duree` fixe à suivre séparément.
 ## 7. Prochaines étapes
 
 1. Trancher les points ouverts restants de la §3.3 (taux de décroissance %, bouclier miroir).
-2. Trancher la repose du bouclier à plafond pendant qu'il est actif (§4.3 — recommandation :
-   rafraîchir).
+2. Confirmer `Max_initial`/`pas`/`duree_totale` comme champs de carte pour le bouclier à plafond
+   (§4) — mécanique prête à spécifier une fois une première carte de ce type conçue.
 3. Rebalancer la magnitude des 4 cartes Vulnérabilité (§5) si le taux de décroissance devient
    global.
 4. Redessiner ou retirer *Blindage maximal*, *Blindage cible*, *Bouclier perpétuel* (§2.3, §5) —
