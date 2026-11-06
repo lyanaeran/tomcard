@@ -61,7 +61,7 @@ plusieurs fois (§2.1) couvre déjà le même besoin sous le nouveau modèle : p
 Bouclier classique additionne sa valeur, exactement ce que *BOUCLIER_PAR_TOUR* cherchait à obtenir
 automatiquement. `ActionCarte.BOUCLIER_PAR_TOUR` est donc à supprimer du moteur une fois la refonte
 implémentée, et *Blindage maximal*, *Blindage cible*, *Bouclier perpétuel* à retirer ou redessiner
-en cartes Bouclier classiques (§7, étape à ajouter).
+en cartes Bouclier classiques (§8, étape 7).
 
 ---
 
@@ -134,7 +134,7 @@ module l'effet plutôt que d'absorber des points comme le bouclier classique :
 
 **Seuil** : X qui **décroît** de 1/tour affaiblit naturellement l'effet (de moins en moins de
 coups sont assez petits pour passer sous X) — cohérent avec le modèle unifié de la §3, aucun
-problème, Max **est** directement le compteur décroissant.
+problème, X **est** directement le compteur décroissant.
 
 **Plafond** : Max n'a pas besoin d'être stocké directement, ni de croître. On garde **exactement**
 le même compteur décroissant que le reste du modèle — ici, le compteur de durée `tours_restants`,
@@ -218,15 +218,118 @@ lieu d'un `duree` fixe à suivre séparément.
 
 ---
 
-## 7. Prochaines étapes
+## 7. Analyse du modèle et contre-proposition (discussion du 2026-11-06)
 
-1. Trancher les points ouverts restants de la §3.3 (taux de décroissance %, bouclier miroir).
-2. Confirmer `Max_initial`/`pas`/`duree_totale` comme champs de carte pour le bouclier à plafond
-   (§4) — mécanique prête à spécifier une fois une première carte de ce type conçue.
-3. Rebalancer la magnitude des 4 cartes Vulnérabilité (§5) si le taux de décroissance devient
-   global.
-4. Redessiner ou retirer *Blindage maximal*, *Blindage cible*, *Bouclier perpétuel* (§2.3, §5) —
+### 7.1 Limite du « -1/tour pour tout » : le bouclier s'accumule
+
+Le retrait de `BOUCLIER_PAR_TOUR` (§2.3) est motivé par une croissance sans limite sous une
+décroissance -1/tour. Mais **le même problème touche les cartes Bouclier classiques** : dès que le
+bouclier posé par tour dépasse (dégâts reçus + 1), il grossit à chaque tour. Avec le deck de
+départ (3 électricité/tour, 5 cartes piochées, 4 *Bouclier* à 5 pour 1), deux cartes Bouclier par
+tour donnent +10 - 1 = **+9 net/tour**, face à des ennemis qui frappent de 2 à 5 (Petit Jean, Pat
+le Pirate, Le puzzle) : le module visé devient invulnérable en 2 ou 3 tours. C'est pour cette
+raison que Slay the Spire remet le Block à zéro chaque tour ; la division par deux actuelle (§3.5)
+jouait le même rôle de frein.
+
+**Baisser la valeur des cartes ne suffit pas pour le bouclier** (proposition examinée : Bouclier 3
+au lieu de 5) : un bouclier absorbe au plus sa valeur, une seule fois, la décroissance ne fait que
+le grignoter — il ne « rapporte » pas 3+2+1 = 6. Baisser la valeur recule le seuil d'accumulation
+sans le supprimer, et affaiblit le premier tour du combat.
+
+À l'inverse, **pour les effets qui agissent à chaque tour** (réduction de dégâts, vulnérabilité,
+dégâts répétés), ajuster la valeur de départ est bien le bon levier : une valeur V à -1/tour agit
+V + (V-1) + ... + 1 = V(V+1)/2 au total (1, 3, 6, 10, 15... — granularité grossière). Conséquences
+à intégrer au rééquilibrage :
+
+- *Tordre le canon* (5 points) : 5+4+3+2+1 = **-15 dégâts au total, contre -5 aujourd'hui (x3)** —
+  pas un écart « mineur » comme indiqué en §5.
+- *Brèche* à -10 %/tour : 100+90+...+10 = **550 % cumulés, contre 200 % aujourd'hui (x2,75)**.
+- Poser deux fois le même effet rapporte plus que le double (2 x 3 → 4+3+2+1 = 10) : bonus au
+  cumul, peut-être voulu.
+
+### 7.2 Montée des dégâts ennemis : caractéristique propre à chaque ennemi
+
+Proposition utilisateur : les ennemis démarrent avec des dégâts faibles (ex. 3), qui **montent de
++1 ou +2 par tour**, la valeur de montée étant **une caractéristique de chaque ennemi** (un
+ennemi agressif à +2, un ennemi costaud à +1, 0 pour un ennemi déjà dangereux). Règle les deux
+problèmes à la fois : un premier tour jouable avec peu de bouclier, et une accumulation de
+bouclier bornée dans le temps — le bouclier sert à **gagner des tours**, le combat devient une
+course qui pousse à attaquer.
+
+Simulation (un module attaqué, dégâts de départ 3, bouclier -1/tour ; chaque case = dégâts reçus →
+bouclier restant / PV perdus cumulés, sur 8 tours) :
+
+| Bouclier posé/tour | Montée | Résultat |
+|---|---|---|
+| 8 (2 cartes) | +0 | 3→5 · 3→9 · 3→13 · ... · 3→33 : **bouclier infini** |
+| 8 | **+1** | 3→5 · 4→8 · 5→10 · 6→11 · 7→11 · 8→10 · 9→8 · 10→5 : plafonne puis cède vers le tour 9 |
+| 8 | **+2** | 3→5 · 5→7 · 7→7 · 9→5 · 11→1 · 13→0/5 · 15→0/12 · 17→0/21 : tient 5 tours |
+| 4 (1 carte) | +1 | 3→1 · 4→0 · 5→0/1 · 6→0/3 · ... · 10→0/21 : insuffisant dès le tour 3 |
+
+**Forme proposée : un champ dédié dans `config/ennemis.json`** (ex. `"montee_degats": 1`), ajouté
+par le moteur aux dégâts de l'ennemi à chaque tour ennemi, plutôt qu'une Action `POSE_BUFF`
+`AUGMENTATION_DEGATS` répétée chaque tour (possible sans code moteur, mais encombre l'intention
+affichée d'une ligne « Va poser +1 dégâts » à chaque tour et empile une instance par tour).
+Affichage dans l'infobulle comme une caractéristique (ex. « Rage +3 »). `AUGMENTATION_DEGATS` reste
+disponible pour des effets ponctuels (Boss des pirates).
+
+Points d'équilibrage à surveiller :
+
+- **Plusieurs ennemis** : 3 ennemis à +2 = +6 dégâts/tour au total — d'où une valeur par ennemi
+  plutôt qu'une règle globale.
+- **Attaques multiples** (*Le nettoyeur*, 7 x 2) : décider si la montée s'applique à chaque coup.
+- **Ennemis à beaucoup de PV** (Boss 150, Petit Jean 100) : les combats durent 10 tours ou plus
+  avec les dégâts actuels du joueur ; +2/tour les rendrait impossibles → +1, ou un plafond.
+- **Bouclier des ennemis** : soumis à la même décroissance -1/tour, à équilibrer en même temps.
+
+### 7.3 Contre-proposition : deux familles d'effets plutôt qu'une
+
+Un seul mécanisme de compteur dans le moteur, mais chaque effet déclare ce que son compteur
+représente :
+
+1. **Cumul en durée, intensité fixe** (le Vulnérable de Slay the Spire) : « Vulnérabilité 3 » =
+   +X % pendant 3 tours ; reposer l'effet **ajoute des tours**, le compteur perd 1 par tour. Règle
+   le cas de départ (deux buffs de 3 tours = 6 tours lisibles) et **conserve la différenciation
+   par durée** (*Brèche* 2 tours vs *Boucliers hors service* 5 tours) — l'avertissement ⚠️ de la §5
+   disparaît. *Tordre le canon*, *Tir allié* y entrent naturellement.
+2. **Cumul en intensité** : qui décroît (Poison : *Embrasement*, *Guerre nucléaire*, *Tir
+   incendiaire*), ou **permanente** (Force : `AUGMENTATION_DEGATS` du Boss, montée de dégâts §7.2).
+
+Le **bouclier** garde une décroissance **proportionnelle** (moitié comme aujourd'hui, ou un quart
+avec un minimum de 1) ou un plafond, si la montée des dégâts ennemis (§7.2) ne suffit pas à
+contenir l'accumulation — à vérifier une fois la montée implémentée.
+
+### 7.4 Oublis du brouillon
+
+- **Les ennemis utilisent `BOUCLIER_PAR_TOUR`** : Petit Jean (3 tous les 2 tours, durée 2) et le
+  Boss des pirates (5 tous les 3 tours). Le §2.3 ne retire que les 3 cartes joueur : supprimer
+  l'action du moteur casserait ces deux ennemis, à redessiner aussi.
+- **`AUGMENTATION_DEGATS` du Boss** (persistante, cumulative : +2, +4, +6...) est absente du tableau
+  §5 : sous -1/tour, elle s'effacerait d'elle-même et changerait le Boss. Relève de la famille
+  « intensité permanente » (§7.3).
+- **Bouclier miroir** (§3.3, point ouvert) : proposition de le faire décroître comme un bouclier,
+  par cohérence, plutôt qu'une réserve de renvoi éternelle.
+- **Régénération** (§6) : même risque de croissance sans limite que `BOUCLIER_PAR_TOUR` si elle se
+  cumule en intensité → famille « durée ».
+- **Bouclier à plafond** (§4) : trois champs (`Max_initial`, `pas`, `duree_totale`) pour des cartes
+  qui n'ont aujourd'hui que X et Y ; proposition : X = plafond initial, Y = durée, pas global ou
+  dérivé de X.
+
+---
+
+## 8. Prochaines étapes
+
+1. Trancher le modèle : « -1/tour pour tout » (§3) ou deux familles (§7.3), et la décroissance du
+   bouclier (fixe + montée des dégâts ennemis, ou proportionnelle).
+2. Fixer la montée de dégâts de chaque ennemi (§7.2) et ajouter le champ à `config/ennemis.json`.
+3. Redessiner Petit Jean et le Boss des pirates (§7.4) si `BOUCLIER_PAR_TOUR` est retiré.
+4. Trancher les points ouverts restants de la §3.3 (taux de décroissance %, bouclier miroir).
+5. Confirmer `Max_initial`/`pas`/`duree_totale` comme champs de carte pour le bouclier à plafond
+   (§4, cf. §7.4) — mécanique prête à spécifier une fois une première carte de ce type conçue.
+6. Rebalancer la magnitude des 4 cartes Vulnérabilité (§5) si le taux de décroissance devient
+   global (inutile avec le modèle à deux familles, §7.3).
+7. Redessiner ou retirer *Blindage maximal*, *Blindage cible*, *Bouclier perpétuel* (§2.3, §5) —
    `BOUCLIER_PAR_TOUR` est abandonné.
-5. Une fois stabilisé : migrer ce contenu dans `combat.md` (§3.5, §13) et `modules-cartes.md`
+8. Une fois stabilisé : migrer ce contenu dans `combat.md` (§3.5, §13) et `modules-cartes.md`
    (§12.3-§12.5), supprimer ce fichier, mettre à jour la table d'index de `specs.md` si une
    nouvelle section est nécessaire.
