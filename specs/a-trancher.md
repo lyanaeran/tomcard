@@ -63,6 +63,12 @@ cartes (§7) et la boucle de récompenses (§2.1, §6) stabilisés.
   dégâts actuels, §7.1/§12.1, où chaque application reste une instance indépendante avec sa propre
   durée — plusieurs instances coexistent et leurs magnitudes s'additionnent tant qu'elles sont
   actives, mais rien ne fusionne en un seul compteur) et qui inflige un effet croissant avec le
-  nombre de stacks (ex : dégâts égaux au compteur, qui décroît de 1 chaque tour). Mécanique distincte
-  à concevoir pour de futures cartes, pas une règle à appliquer aux cartes de vulnérabilité
-  existantes
+  nombre de stacks (ex : dégâts égaux au compteur, qui décroît de 1 chaque tour). **En cours de
+  conception** (discussion utilisateur, étendue à tous les buffs/debuffs/bouclier, pas seulement
+  Vulnérabilité) : voir [refonte-buffs-debuffs.md](refonte-buffs-debuffs.md), brouillon pas encore
+  décidé ni implémenté
+- **Modules secondaires sacrifiables** (discussion utilisateur) : seuls les PV du module principal
+  persistent entre les combats, les secondaires repartent à leur PV max à chaque combat, ce qui
+  ouvre des effets à la mort (façon « Râle d'agonie ») et de la résurrection. **En cours de
+  conception** : voir [refonte-modules.md](refonte-modules.md), brouillon pas encore décidé ni
+  implémenté

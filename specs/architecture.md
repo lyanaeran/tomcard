@@ -159,8 +159,9 @@ fond dédié.
   connues"). `combat_depuis_partie()` dans `src/gameplay/partie.py`
 - **Abandonner la partie** : marque la partie `TERMINEE` (`marquer_terminee()`) et revient à
   l'écran d'accueil, qui affiche alors le bouton "Nouvelle partie"
-- **Enchaînement complet d'une vraie partie** (§2.4, étapes 2 à 6) : `main.py` (PC, une fonction
-  `_ouvrir_xxx` par écran, transitions détectées via `pyglet.clock.schedule_interval`) ; côté web,
+- **Enchaînement complet d'une vraie partie** (§2.4, étapes 2 à 6) : décidé par
+  `src/gameplay/deroulement.py` (cf. §2.4), affiché par `main.py` (PC, une fonction `_ouvrir_xxx`
+  par écran, transitions détectées via `pyglet.clock.schedule_interval`) ; côté web,
   `web/app.js` garde une variable `partieActive` (la `Partie` en cours d'orchestration, ou `null`
   en mode démonstration) que `choisirModule`/`choisirEtape`/`choisirRecompense` consultent pour
   choisir entre persistance réelle et comportement de démonstration (`console.log`) inchangé
@@ -180,8 +181,8 @@ fond dédié.
   persistante entre rechargements de page) — elles ne font que (dé)sérialiser et appliquer la
   logique pure de `partie.py` ; la lecture/écriture `localStorage` est entièrement gérée côté
   `web/app.js`
-- `main.py` : ouvre `EcranSelectionJoueur`, puis `EcranAccueilJoueur`, puis l'écran suivant selon
-  l'action choisie — chaque écran étant une fenêtre pyglet indépendante, les transitions ferment la
+- `main.py` : ouvre `EcranSelectionJoueur`, puis `EcranAccueilJoueur`, puis l'écran suivant
+  décidé par `src/gameplay/deroulement.py` (§2.4) — chaque écran étant une fenêtre pyglet indépendante, les transitions ferment la
   fenêtre courante et ouvrent la suivante, détectées via `pyglet.clock.schedule_interval` (pas
   d'événement dédié "l'utilisateur a fait un choix" sur ces fenêtres). Le comportement par défaut
   de pyglet (quitter l'application dès que la dernière fenêtre se ferme) est remplacé
