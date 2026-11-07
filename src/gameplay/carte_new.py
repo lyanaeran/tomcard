@@ -74,7 +74,8 @@ class Cumul(Enum):
 
     # Applique une fois, rien ne reste actif (degats, reparation, gain d'electricite...)
     INSTANTANE = auto()
-    # L'intensite s'additionne et decroit de 1 a chaque tour (incendie, poison de Slay the Spire)
+    # L'intensite s'additionne et decroit de 1 a chaque tour (incendie, poison de Slay the Spire ;
+    # bouclier, decision utilisateur)
     INTENSITE_DECROISSANTE = auto()
     # L'intensite s'additionne et ne decroit jamais jusqu'a la fin du combat (Force de Slay the
     # Spire) : Salve laser et ses semblables
@@ -83,8 +84,6 @@ class Cumul(Enum):
     DUREE = auto()
     # Etat consomme par un evenement, pas par le temps (Leurre, Bouclier miroir)
     JUSQU_A_CONSOMMATION = auto()
-    # Bouclier brut : compteur avec sa propre regle de dissipation (specs.md 3.5, en refonte)
-    BOUCLIER = auto()
 
 
 class NatureEffet(Enum):
@@ -92,8 +91,8 @@ class NatureEffet(Enum):
 
     # Retire `valeur` PV (apres le bouclier) a chaque ennemi touche (Laser, Missiles, Bombardement)
     DEGATS = auto()
-    # Ajoute `valeur` de bouclier a chaque module touche, absorbe avant les PV ; pendant `duree`
-    # tours si elle est precisee (Bouclier, Proteger le vaisseau, Blindage cible)
+    # Ajoute `valeur` de bouclier a chaque module touche, absorbe avant les PV ; le bouclier baisse
+    # de 1 a chaque tour, sans autre notion de duree (Bouclier, Proteger le vaisseau, Blindage cible)
     BOUCLIER = auto()
     # Rend `valeur` PV au module touche, sans depasser ses PV max (Reparation)
     REPARATION = auto()
@@ -119,7 +118,8 @@ class NatureEffet(Enum):
     REPETITION = auto()
 
 
-# INCENDIE : decision utilisateur (registre des cartes, note de Tir incendiaire). REPETITION : dure
+# INCENDIE : decision utilisateur (registre des cartes, note de Tir incendiaire). BOUCLIER : baisse
+# de 1 par tour et c'est tout, sans duree (decision utilisateur). REPETITION : dure
 # tout le combat et se cumule (decision utilisateur). VULNERABILITE, REDUCTION_DEGATS,
 # BOUCLIER_MIROIR : proposition du brouillon de refonte des buffs (refonte-buffs-debuffs.md
 # 7.3/7.4), a valider. Seulement les effets des cartes du joueur : les mecaniques propres aux
@@ -127,7 +127,7 @@ class NatureEffet(Enum):
 # utilisateur).
 CUMUL_PAR_NATURE = {
     NatureEffet.DEGATS: Cumul.INSTANTANE,
-    NatureEffet.BOUCLIER: Cumul.BOUCLIER,
+    NatureEffet.BOUCLIER: Cumul.INTENSITE_DECROISSANTE,
     NatureEffet.REPARATION: Cumul.INSTANTANE,
     NatureEffet.INCENDIE: Cumul.INTENSITE_DECROISSANTE,
     NatureEffet.VULNERABILITE: Cumul.DUREE,
@@ -177,8 +177,8 @@ class FiltreCartes:
 
 @dataclass(frozen=True)
 class Effet:
-    """Un effet d'une carte. `duree` : nombre de tours pour un effet a duree (Cumul.DUREE ou un
-    bouclier "pendant Y tours"), None sinon. `filtre` : obligatoire pour REPETITION, interdit
+    """Un effet d'une carte. `duree` : nombre de tours, seulement pour un effet a duree
+    (Cumul.DUREE, ex. vulnerabilite), None sinon. `filtre` : obligatoire pour REPETITION, interdit
     sinon."""
 
     nature: NatureEffet
@@ -192,6 +192,8 @@ class Effet:
             raise ValueError(f"Valeur d'effet negative : {self.valeur}")
         if self.duree is not None and self.duree < 1:
             raise ValueError(f"Duree d'effet invalide : {self.duree}")
+        if self.duree is not None and self.cumul != Cumul.DUREE:
+            raise ValueError(f"{self.nature.name} n'a pas de duree")
         if (self.nature == NatureEffet.REPETITION) != (self.filtre is not None):
             raise ValueError("Un filtre de cartes est requis pour REPETITION, et seulement pour elle")
 

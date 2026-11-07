@@ -322,8 +322,11 @@ contenir l'accumulation — à vérifier une fois la montée implémentée.
 
 ## 8. Prochaines étapes
 
-1. Trancher le modèle : « -1/tour pour tout » (§3) ou deux familles (§7.3), et la décroissance du
-   bouclier (fixe + montée des dégâts ennemis, ou proportionnelle).
+1. Trancher le modèle : « -1/tour pour tout » (§3) ou deux familles (§7.3). **Bouclier tranché
+   (décision utilisateur, 2026-11-07)** : il baisse de 1 par tour et c'est tout, sans notion de
+   durée ; l'accumulation (§7.1) est contenue par la montée des dégâts propre à chaque ennemi
+   (§7.2). Conséquence : *Blindage ciblé* devient un bouclier simple de 6 (plus de « pendant Y
+   tours »), et `CarteNew` refuse une durée sur un bouclier.
 2. Fixer la montée de dégâts de chaque ennemi (§7.2) et ajouter le champ à `config/ennemis.json`.
 3. Redessiner Petit Jean et le Boss des pirates (§7.4) si `BOUCLIER_PAR_TOUR` est retiré.
 4. Trancher les points ouverts restants de la §3.3 (taux de décroissance %, bouclier miroir).

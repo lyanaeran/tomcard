@@ -44,8 +44,7 @@ REGISTRE_REFONTE = [
     _carte("CRT_45", "Tir incendiaire", "Commune", "Attaque", "Ennemi Unique", 2, [{"nature": "INCENDIE", "valeur": 4}],
            "Ajoute X points d’incendie sur la cible", munition=3),
     _carte("CRT_46", "Blindage cible", "Commune", "Defense", "Module Unique", 2,
-           [{"nature": "BOUCLIER", "valeur": 6, "duree": 3}], "Bouclier de X sur un module unique pendant Y tours.",
-           munition=3),
+           [{"nature": "BOUCLIER", "valeur": 6}], "Bouclier de X sur un module unique", munition=3),
     _carte("CRT_47", "Laser lourd", "Commune", "Attaque", "Ennemi Unique", 1, [{"nature": "DEGATS", "valeur": 12}],
            "Inflige X degats a un ennemi unique"),
     _carte("CRT_48", "Bouclier stabilise", "Rare", "Buff", "Module Principal", 3,
@@ -108,7 +107,7 @@ def test_description_affichee_remplace_x_et_y():
 
     assert cartes["Missiles"].description_affichee() == "Inflige 15 degats a un ennemi et 6 a tous les autres"
     assert cartes["Torpille"].description_affichee() == "Inflige 10 degats a la ligne avant et 8 a la ligne arriere"
-    assert cartes["Blindage cible"].description_affichee() == "Bouclier de 6 sur un module unique pendant 3 tours."
+    assert cartes["Blindage cible"].description_affichee() == "Bouclier de 6 sur un module unique"
     assert cartes["Laser"].description_affichee() == "Inflige 6 degats a un ennemi unique"
     assert cartes["Tir incendiaire"].description_affichee() == "Ajoute 4 points d’incendie sur la cible"
 
@@ -117,7 +116,7 @@ def test_x_et_y_suivent_les_colonnes_du_registre():
     cartes = _cartes()
 
     assert (cartes["Missiles"].x, cartes["Missiles"].y) == (15, 6)
-    assert (cartes["Blindage cible"].x, cartes["Blindage cible"].y) == (6, 3)
+    assert (cartes["Blindage cible"].x, cartes["Blindage cible"].y) == (6, None)
     assert (cartes["Laser lourd"].x, cartes["Laser lourd"].y) == (12, None)
 
 
@@ -135,11 +134,18 @@ def test_l_incendie_s_additionne_et_decroit_de_un_par_tour():
     assert _cartes()["Embrasement"].effets[0].cumul == Cumul.INTENSITE_DECROISSANTE
 
 
-def test_les_degats_sont_instantanes_et_le_bouclier_suit_sa_propre_regle():
+def test_les_degats_sont_instantanes_et_le_bouclier_baisse_de_un_par_tour():
+    """Decision utilisateur : apres la refonte, le bouclier baisse de 1 par tour, sans duree."""
     cartes = _cartes()
 
     assert cartes["Laser"].effets[0].cumul == Cumul.INSTANTANE
-    assert cartes["Bouclier"].effets[0].cumul == Cumul.BOUCLIER
+    assert cartes["Bouclier"].effets[0].cumul == Cumul.INTENSITE_DECROISSANTE
+
+
+def test_seul_un_effet_a_duree_accepte_une_duree():
+    assert Effet(NatureEffet.VULNERABILITE, 100, duree=2).duree == 2
+    with pytest.raises(ValueError):
+        Effet(NatureEffet.BOUCLIER, 6, duree=3)
 
 
 # --- Lancements et repetition ("lancee X fois de plus") ---
@@ -269,7 +275,7 @@ def test_effet_invalide_refuse():
     with pytest.raises(ValueError):
         Effet(NatureEffet.DEGATS, -1)
     with pytest.raises(ValueError):
-        Effet(NatureEffet.BOUCLIER, 5, duree=0)
+        Effet(NatureEffet.VULNERABILITE, 50, duree=0)
     with pytest.raises(ValueError):
         Effet(NatureEffet.REPETITION, 1)  # filtre manquant
     with pytest.raises(ValueError):

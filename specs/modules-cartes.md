@@ -26,7 +26,7 @@ propose donc que le Lanceur de missiles. Changements principaux :
 - **Deck de départ** (10 cartes) : Laser x4, Bouclier x4, Protéger le vaisseau x1, Réparation x1.
   *Réparation* revient dans le pool du module principal ; *Laser perçant* devient Commune (plus dans
   le deck de départ, proposée en récompense).
-- Valeurs : *Bouclier* 5 → 3, *Protéger le vaisseau* 8 → 5, *Blindage ciblé* 7/4 tours → 6/3 tours,
+- Valeurs : *Bouclier* 5 → 3, *Protéger le vaisseau* 8 → 5, *Blindage ciblé* bouclier de 7 pendant 4 tours → **bouclier simple de 6** (sans durée),
   *Protocole d'urgence* X 2 → 1, *Bombardement* 4 → 6, *Torpille* Y 6 → 8.
 - **Incendie** (nouvelle mécanique, non jouable pour l'instant) : *Tir incendiaire* (4),
   *Embrasement* (8, un ennemi) et *Guerre nucléaire* (8, tous les ennemis) ajoutent des points

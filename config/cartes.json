@@ -100,10 +100,10 @@
       "cible_design": "Module Unique",
       "cout": 2,
       "x": 6,
-      "y": 3,
+      "y": null,
       "munition": 3,
-      "description": "Bouclier de X sur un module unique pendant Y tours.",
-      "effet": { "type": "BUFF", "cible": "ALLIE_UNIQUE", "valeur": 6, "action": "BOUCLIER_PAR_TOUR", "duree": 3 }
+      "description": "Bouclier de X sur un module unique",
+      "effet": { "type": "DEFENSE", "cible": "ALLIE_UNIQUE", "valeur": 6 }
     },
     {
       "id": "CRT_47",
