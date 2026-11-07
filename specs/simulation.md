@@ -16,8 +16,8 @@ pour mesurer l'équilibrage du jeu et produire une synthèse chiffrée :
 - **intérêt comparé des choix** du parcours (Aventure, combat, Station service...) ;
 - **force comparée des modules** ;
 - **effet des variantes de règles** en discussion (brouillons
-  [refonte-buffs-debuffs.md](../../specs/refonte-buffs-debuffs.md) et
-  [refonte-modules.md](../../specs/refonte-modules.md)).
+  [refonte-buffs-debuffs.md](refonte-buffs-debuffs.md) et
+  [refonte-modules.md](refonte-modules.md)).
 
 ---
 
@@ -33,13 +33,11 @@ pour mesurer l'équilibrage du jeu et produire une synthèse chiffrée :
   comportement du moteur depuis l'outil (monkeypatch), qui ferait diverger la simulation du jeu.
 - **Reproductibilité.** Tout tirage passe par un `random.Random` à graine explicite (règle de
   `CLAUDE.md`). Une simulation relancée avec les mêmes graines donne exactement les mêmes résultats.
-- **Orchestration du parcours** : l'enchaînement des écrans d'une partie (choix du niveau, combat,
-  récompense, Station, Aventure...) est aujourd'hui codé deux fois, dans `main.py` (PC) et
-  `web/app.js` (web). La simulation en serait une **troisième** version, avec un risque de
-  divergence. Recommandation : extraire cet enchaînement dans `src/gameplay` (une machine à états
-  de partie : « quelle décision est attendue maintenant, quelles options ») réutilisée par le PC, le
-  web et la simulation. C'est un chantier à part entière, à décider avant l'échelle « partie
-  complète » (§5).
+- **Orchestration du parcours** : l'enchaînement des écrans d'une partie est décidé par
+  `src/gameplay/deroulement.py` (parcours.md §2.4), partagé par le PC, le web et la simulation
+  (décision utilisateur : il était auparavant dupliqué dans `main.py` et `web/`, ce qui
+  contredisait la règle « tout le gameplay dans `src/gameplay` »). La simulation appelle les mêmes
+  fonctions de transition, sans réimplémenter l'enchaînement.
 
 ---
 
@@ -236,7 +234,6 @@ python -m outils.simulation combat --variante bouclier_moins_un --parties 2000
 1. Bot de recherche et échelle « combat isolé », avec les règles actuelles ; vérifier qu'il bat
    nettement le bot aléatoire.
 2. Première synthèse : cartes, ennemis, modules en combat.
-3. Décider de l'extraction de l'enchaînement des écrans dans `src/gameplay` (§2), puis échelle
-   « partie complète » avec politique par défaut.
+3. Échelle « partie complète » avec politique par défaut, sur `src/gameplay/deroulement.py` (§2).
 4. Module forcé (§5.3), puis clonage aux points de décision (§5.2).
 5. Paramètres de règles dans `src/gameplay` et variantes (§6).

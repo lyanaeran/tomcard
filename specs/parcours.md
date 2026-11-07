@@ -133,7 +133,7 @@ condition de gating a été dédupliquée).
   d'accueil du joueur (§10.3) pour la même raison
 - `src/gameplay/partie.py` (`reparer_module`, `ameliorer_module`, `mettre_a_jour_module`,
   `deplacer_module`, fonctions pures partagées PC+web) ; `src/ui/ecran_station_service.py` (PC) ;
-  `main.py:_ouvrir_station_service` (PC) ; côté web `web/bridge.py` (`reparer_module_web`/
+  `main.py:_ouvrir_etape` (PC) ; côté web `web/bridge.py` (`reparer_module_web`/
   `ameliorer_module_web`/`mettre_a_jour_module_web`/`deplacer_module_web`/
   `terminer_station_service_web`) + `web/app.js` (`ouvrirStationServicePartie` et les fonctions
   `cliquerModuleStation`/`cliquerActionStation`/`terminerStationServicePartie`)
@@ -191,6 +191,26 @@ Vue d'ensemble de tous les écrans du jeu et de ce que chacun déclenche une foi
 terminée — schéma fourni par l'utilisateur, normalisé ici en un seul endroit. Statut
 d'implémentation entre parenthèses pour chaque écran ; le detail de chacun reste dans sa propre
 section (référencée), cette liste ne fait que les enchaîner.
+
+**Où vit l'enchaînement (décision utilisateur)** : dans `src/gameplay/deroulement.py`, **jamais**
+dans `main.py`, `src/ui/` ou `web/`. Ce module décide de l'écran suivant (énumération `Ecran`) et
+applique les règles de chaque transition :
+
+| Fonction | Rôle |
+|---|---|
+| `ecran_de_reprise` | « Continuer » ou nouvelle partie : choix de module au Niveau 1 sans 2e module, sinon choix du niveau |
+| `candidats_choix_module` / `choisir_module` / `resoudre_carte_module` | Niveau 1 : modules proposés, équipement + cartes proposées, carte ajoutée (ou Passer) puis niveau suivant |
+| `propositions_niveau` / `ecran_pour_etape` | Étapes proposées (déterministes par graine et niveau), écran ouvert par l'étape choisie (tirage de l'Aventure) |
+| `terminer_etape` | Fin d'une étape hors combat (Station, Aventure, Planète commerciale) : niveau suivant |
+| `conclure_combat` | Une seule fois à la fin d'un combat : PV reportés, Argent et candidats de récompense si victoire |
+| `resoudre_fin_combat` | Défaite → partie terminée, accueil ; victoire → carte ajoutée, puis victoire finale (Boss) ou niveau suivant |
+| `terminer_victoire_finale` | Partie terminée, accueil |
+
+`main.py` (`_aller_a`) et `web/app.js` (`allerA`, via `web/bridge.py` qui renvoie
+`{partie, ecran}`) ne font que sauvegarder la partie et afficher l'écran renvoyé ; la simulation
+d'équilibrage (`outils/simulation/`, cf. [simulation.md](simulation.md)) appelle les mêmes
+fonctions. Tout tirage est injecté (`random.Random`) : PC et web passent un générateur non seedé,
+la simulation un générateur à graine.
 
 **Barre latérale persistante** (décision utilisateur) affichée à gauche de **tous** les écrans du
 parcours, Combat compris — Choix de module, Choix du prochain niveau, Station service, les trois
@@ -318,12 +338,12 @@ terminé à ce stade).
      `src/ui/ecran_fin_combat.py`)
 7. **Aventure** (détaillé en §2.5, **trois Aventures implémentées et reliées à l'enchaînement :
    "Trois lunes", "Astéroïdes" et "Police"** ; tirage uniforme non déterministe entre les trois via
-   `tirer_type_aventure`, PC (`main.py`) et web (`type_aventure_web`)) : un choix résolu puis un
+   `tirer_type_aventure`, PC (`main.py`) et web (`ecran_pour_etape_web`)) : un choix résolu puis un
    bouton "Continuer" avance le niveau et revient au Choix du prochain niveau (étape 3), même
    principe que Station service — sauf le choix "Affronter les pirates" de l'Astéroïdes, qui délègue
    au pipeline Combat (étape 5) via un combat scripté plutôt que d'avancer directement.
    `src/ui/ecran_aventure_trois_lunes.py`/`src/ui/ecran_aventure_asteroides.py`/
-   `src/ui/ecran_aventure_police.py` (PC) + `main.py:_ouvrir_aventure_trois_lunes`/
+   `src/ui/ecran_aventure_police.py` (PC) + `main.py:_ouvrir_etape`/
    `_ouvrir_aventure_asteroides`/`_ouvrir_aventure_police` ; côté web `web/bridge.py`
    (`constantes_aventure_trois_lunes_web`/`deck_groupe_par_id_partie_web`/
    `reparer_vaisseau_aventure_web`/`ameliorer_module_aventure_web`/`retirer_carte_aventure_web`/
@@ -341,7 +361,7 @@ terminé à ce stade).
    générique**) : un bouton "j'ai terminé" avance le niveau et revient au Choix du prochain niveau
    (étape 3) — en attendant un vrai contenu, l'écran se limite à afficher l'icône/description déjà
    utilisées au Choix du prochain niveau avec un message "Contenu pas encore défini pour cette
-   étape." `src/ui/ecran_etape_placeholder.py` (PC) + `main.py:_ouvrir_etape_placeholder` ; côté web
+   étape." `src/ui/ecran_etape_placeholder.py` (PC) + `main.py:_ouvrir_etape` ; côté web
    `web/bridge.py` (`terminer_etape_placeholder_web`) + `web/app.js`
    (`ouvrirEtapePlaceholderPartie`/`terminerEtapePlaceholder`)
 10. **Boss** (niveau 10, puis tous les 10 niveaux à terme — §2.3), atteint via la proposition
