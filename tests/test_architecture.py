@@ -41,10 +41,10 @@ def test_src_gameplay_n_importe_jamais_pyglet():
 def test_aucun_tirage_aleatoire_direct_sur_le_module_random_global():
     """Tout tirage doit passer par une instance explicite de random.Random (CLAUDE.md,
     "Determinisme du tirage aleatoire") - jamais random.choice(...)/random.random(...) etc.
-    directement sur le module. Verifie tout le depot (src/, web/, main.py), pas seulement
+    directement sur le module. Verifie tout le depot (src/, web/, outils/), pas seulement
     src/gameplay : la regle vaut aussi pour l'UI PC et le pont web."""
     fautifs = []
-    for dossier in (RACINE / "src", RACINE / "web"):
+    for dossier in (RACINE / "src", RACINE / "web", RACINE / "outils"):
         for fichier in _fichiers_python(dossier):
             arbre = ast.parse(fichier.read_text(), filename=str(fichier))
             for noeud in ast.walk(arbre):

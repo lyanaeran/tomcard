@@ -1,8 +1,8 @@
 # Simulation d'équilibrage — conception de l'outil
 
-*Document de conception de l'outil `outils/simulation/`, rien n'est encore implémenté. Il décrit ce
-que l'outil fera, comment, et ses limites. Les choix marqués « décision utilisateur » sont validés ;
-le reste est une proposition.*
+*Document de conception de l'outil `outils/simulation/`. Les choix marqués « décision
+utilisateur » sont validés. **État d'implémentation et écarts : §11.** Synthèses produites :
+`outils/simulation/synthese/`.*
 
 ---
 
@@ -229,7 +229,7 @@ python -m outils.simulation combat --variante bouclier_moins_un --parties 2000
 
 ---
 
-## 10. Étapes de réalisation
+## 10. Étapes de réalisation (plan initial)
 
 1. Bot de recherche et échelle « combat isolé », avec les règles actuelles ; vérifier qu'il bat
    nettement le bot aléatoire.
@@ -237,3 +237,52 @@ python -m outils.simulation combat --variante bouclier_moins_un --parties 2000
 3. Échelle « partie complète » avec politique par défaut, sur `src/gameplay/deroulement.py` (§2).
 4. Module forcé (§5.3), puis clonage aux points de décision (§5.2).
 5. Paramètres de règles dans `src/gameplay` et variantes (§6).
+
+---
+
+## 11. État d'implémentation (2026-11-07, règles actuelles, pré-refonte)
+
+Implémenté dans `outils/simulation/` (`bot.py`, `partie_auto.py`, `etudes.py`, `rapport.py`,
+`__main__.py`), sur les règles **actuelles** du jeu (aucune variante de refonte, décision
+utilisateur : « on ne mélange pas tout »). Tests : `tests/test_simulation.py`.
+
+**Lancement** : `python -m outils.simulation --budget 500 --parties-par-module 40 --validation 30`
+écrit les résultats bruts (JSON) et leurs tableaux (Markdown) dans `outils/simulation/resultats/`
+(ignoré par git). Exécution en parallèle sur tous les cœurs. Sur Mac, lancer avec
+`caffeinate -i python -m outils.simulation ...` : sans ça, la mise en veille automatique interrompt
+le calcul (constaté lors de la première campagne : 3 min de calcul étalées sur 18 min). Synthèses
+rédigées : `outils/simulation/synthese/analyse_AAAA-MM-JJ.md` (rapports générés, hors `specs/`).
+
+**Écarts et précisions par rapport aux sections précédentes :**
+
+- **Bot de recherche (§3.1)** : recherche **en faisceau** (6 états gardés par profondeur) plutôt
+  qu'exhaustive ; chaque séquence partielle est notée **après la réponse ennemie** simulée sur une
+  copie. Une carte présente en plusieurs exemplaires identiques n'est essayée qu'une fois.
+  Environ 30 ms par tour.
+- **Évaluation (§3.2)** : poids réglés sur 15 combats (principal 2, secondaire 1, ennemi 2,5,
+  malus de 40 par ennemi vivant…), le réglage défensif initial s'enlisait. Ajout d'une **valeur des
+  effets durables** (vulnérabilité posée, bouclier récurrent) : sans elle, la recherche, qui ne
+  voit que le tour suivant, ne jouait presque jamais les debuffs longs ni les buffs récurrents
+  (même taux de victoire avec ou sans, mais usage des cartes réaliste avec).
+- **Triche résiduelle (§3.3)** : une carte qui pioche (*Boost*) révèle au bot les cartes piochées
+  pendant sa recherche (l'ordre de la pioche est copié). Effet limité à ces cartes.
+- **Combats enlisés** : un combat arrêté au bout de 40 tours compte comme une défaite et est
+  signalé à part (« enlisé »).
+- **Clonage (§5.2)** : pas de copie en mémoire. Tout le hasard d'une partie dérive de sa graine, du
+  niveau et de l'usage (combat, récompense, Aventure, bot), donc **rejouer** la graine avec un
+  autre choix imposé au point de décision reproduit exactement le même début de partie : c'est
+  un clone, sans avoir à copier l'état. Seuls les choix du **prochain niveau** sont clonés pour
+  l'instant (pas les choix internes aux Aventures ni à la Station).
+- **Politique par défaut (§5.1)**, telle qu'implémentée : Prime/Boss en priorité, Station si le
+  principal est sous 50 % de ses PV et que l'Argent suffit ; Station : réparer le principal s'il
+  lui manque 15 PV, sinon l'améliorer, tant que l'Argent suffit ; Trois lunes : améliorer le
+  principal ; Astéroïdes : traverser avec le secondaire le plus solide, prendre la carte offerte ;
+  Police : payer la mise aux normes si possible, sinon confiscation ; cartes (module, récompense) :
+  la plus rare.
+- **Séquences internes des Aventures** (deux chocs d'Astéroïdes, Détourner puis choisir de Police)
+  : jouées par l'outil en appelant les fonctions de `src/gameplay/partie.py` dans l'ordre où les
+  écrans les appellent ; ces petites séquences vivent encore dans les écrans (`src/ui/`,
+  `web/app.js`), à extraire dans `src/gameplay` comme l'enchaînement du parcours si elles
+  deviennent plus riches.
+- **Budget par défaut** (500 simulations au plus, décision utilisateur) : 60 combats de
+  validation, 90 combats isolés, 200 parties à module forcé, au plus 150 parties clonées.
