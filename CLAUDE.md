@@ -16,6 +16,10 @@ cédilles)**. `specs/` et les `CLAUDE.md` utilisent l'orthographe normale.
   **Lire d'abord `specs/specs.md`** (index court : quelle section dans quel fichier, quel fichier
   lire selon la tâche), puis seulement le fichier utile. Les références « specs.md §X.Y » du code se
   résolvent avec cet index (numérotation commune à tous les fichiers).
+- **Tous les documents de conception `.md` vont dans `specs/`** (consigne utilisateur), y compris
+  les brouillons de refonte et la conception d'outils (ex. `specs/simulation.md` pour
+  `outils/simulation/`), et sont listés dans l'index `specs/specs.md`. Seules exceptions : les
+  `CLAUDE.md`, `README.md`, et les rapports générés (ex. synthèses de simulation).
 - `specs/cartes.xlsx` — miroir éditable de `config/cartes.json` (une ligne par carte). Pas rechargé
   par le code (`config/cartes.json` reste la seule source de vérité du moteur) : si l'un est modifié,
   reporter le changement dans l'autre à la main.
@@ -67,7 +71,13 @@ Règles :
 Séparation stricte (specs.md §10) :
 
 - `src/gameplay/` — logique de jeu pure, sans pyglet, entièrement testable
-- `src/ui/` — tout ce qui dépend de pyglet ; `main.py` enchaîne les écrans
+- `src/ui/` — tout ce qui dépend de pyglet ; `main.py` ouvre et ferme les fenêtres
+- **L'enchaînement des écrans du parcours (quel écran vient ensuite, règles de chaque transition)
+  vit dans `src/gameplay/deroulement.py`, jamais dans `main.py`, `src/ui/` ou `web/`** (consigne
+  utilisateur) : PC (`main.py:_aller_a`), web (`web/app.js:allerA`) et simulation ne font
+  qu'afficher ou suivre l'`Ecran` qu'il renvoie
+- `outils/simulation/` — simulateur d'équilibrage (conception : `specs/simulation.md`), qui joue
+  des combats et des parties sans affichage en appelant `src/gameplay`
 - `index.html` + `web/` — version web ; `web/bridge.py` importe `src/gameplay/` sans le modifier
 - `config/*.json` — contenu déclaratif (modules, ennemis, cartes), chargé par
   `src/gameplay/donnees.py` (PC) et fetché directement par `web/app.js` (web)

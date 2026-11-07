@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "69";
+const VERSION_CACHE = "70";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -43,6 +43,7 @@ const FICHIERS_A_MONTER = [
     "src/gameplay/combat.py",
     "src/gameplay/config_poc.py",
     "src/gameplay/deck.py",
+    "src/gameplay/deroulement.py",
     "src/gameplay/donnees.py",
     "src/gameplay/ennemi.py",
     "src/gameplay/flotte.py",
@@ -750,20 +751,13 @@ function choisirModule(candidat) {
         console.log("Module choisi :", candidat.nom);
         return;
     }
-    const partie = appelerBridge("choisir_module_partie_web", JSON.stringify(partieActive), candidat.id);
-    partieActive = partie;
-    sauvegarderPartieLocale(joueurCourant.id, partie);
-    ouvrirChoixCarteModule(partie, candidat.id);
-}
-
-// Ecran de choix d'une carte du module fraichement equipe (parcours, specs.md 2.3, point 6
-// utilisateur) : jusqu'a 3 cartes candidates tirees dans le pool jouable non-Base de ce module
-// (bridge.py:candidats_carte_module_web), le joueur en choisit une a ajouter a son deck, ou
-// passe - meme logique que main.py:_ouvrir_choix_carte_module cote PC.
-function ouvrirChoixCarteModule(partie, moduleId) {
-    const resultat = appelerBridge("candidats_carte_module_web", JSON.stringify(partie), moduleId);
+    // Equipe le module et tire jusqu'a 3 cartes de son pool (src/gameplay/deroulement.py) : le
+    // joueur en choisit une a ajouter a son deck, ou passe - meme logique que le PC.
+    const resultat = appelerBridge("choisir_module_partie_web", JSON.stringify(partieActive), candidat.id);
+    partieActive = resultat.partie;
+    sauvegarderPartieLocale(joueurCourant.id, resultat.partie);
     if (resultat.candidats.length === 0) {
-        // Pool vide pour ce module : ecran saute directement, meme comportement que main.py.
+        // Pool vide pour ce module : ecran saute directement, meme comportement que le PC.
         resoudreCarteModule(null);
         return;
     }
@@ -801,13 +795,42 @@ function passerCarteModule() {
     resoudreCarteModule(null);
 }
 
-// Ajoute la carte choisie (ou aucune, bouton Passer) au deck puis avance au niveau suivant -
-// meme logique que main.py:_ouvrir_choix_carte_module cote PC.
+// Ajoute la carte choisie (ou aucune, bouton Passer) au deck puis avance au niveau suivant.
 function resoudreCarteModule(idCarte) {
-    const partie = appelerBridge("resoudre_carte_module_web", JSON.stringify(partieActive), idCarte);
-    partieActive = partie;
+    allerA(appelerBridge("resoudre_carte_module_web", JSON.stringify(partieActive), idCarte));
+}
+
+// Aiguillage vers l'ecran decide par src/gameplay/deroulement.py (via bridge.py, resultat
+// {partie, ecran}) : web/app.js ne decide jamais lui-meme de l'ecran suivant (CLAUDE.md), il
+// sauvegarde la partie et affiche l'ecran - meme role que main.py:_aller_a cote PC.
+function allerA(resultat) {
+    const partie = resultat.partie;
     sauvegarderPartieLocale(joueurCourant.id, partie);
-    ouvrirChoixNiveauPartie(partie);
+    partieActive = partie;
+    const ouvertures = {
+        ACCUEIL: () => {
+            partieActive = null;
+            afficherAccueilJoueur();
+        },
+        CHOIX_MODULE: () => ouvrirChoixModulePartie(partie),
+        CHOIX_NIVEAU: () => ouvrirChoixNiveauPartie(partie),
+        COMBAT: () => ouvrirCombatPartie(partie),
+        STATION_SERVICE: () => ouvrirStationServicePartie(partie),
+        AVENTURE_TROIS_LUNES: () => ouvrirAventureTroisLunesPartie(partie),
+        AVENTURE_ASTEROIDES: () => ouvrirAventureAsteroidesPartie(partie),
+        AVENTURE_POLICE: () => ouvrirAventurePolicePartie(partie),
+        PLANETE_COMMERCIALE: () => ouvrirEtapePlaceholderPartie(partie, "PLANETE_COMMERCIALE"),
+        VICTOIRE_FINALE: () => ouvrirVictoireFinalePartie(partie),
+    };
+    ouvertures[resultat.ecran]();
+}
+
+// Combat Prime/Boss d'une partie reelle (vaisseau/deck reels, cf. continuer_partie_web).
+function ouvrirCombatPartie(partie) {
+    partieActive = partie;
+    masquerTousLesEcrans();
+    document.getElementById("app").classList.remove("cachee");
+    appliquerResultat(appelerBridge("continuer_partie_web", JSON.stringify(partie)));
 }
 
 function nouveauChoixModule(graine = null) {
@@ -817,15 +840,14 @@ function nouveauChoixModule(graine = null) {
 window.nouveauChoixModule = nouveauChoixModule;
 
 // Ouvre le choix de module (Niveau 1) pour une partie reelle - appelee a la creation d'une
-// partie et par la reprise du bouton "Continuer" (cf. continuerPartie), meme condition que
-// main.py:_traiter_action cote PC (Niveau 1 sans 2e module equipe = pas encore choisi).
+// partie et par la reprise du bouton "Continuer" (cf. continuerPartie), sur decision de
+// src/gameplay/deroulement.py (cf. allerA).
 function ouvrirChoixModulePartie(partie) {
     partieActive = partie;
     afficherChoixModule(appelerBridge("choix_module_partie_web", JSON.stringify(partie)));
 }
 
-// Ouvre le choix du prochain niveau pour une partie reelle - meme condition d'appel que
-// main.py:_ouvrir_choix_niveau cote PC.
+// Ouvre le choix du prochain niveau pour une partie reelle (cf. allerA).
 function ouvrirChoixNiveauPartie(partie) {
     partieActive = partie;
     afficherChoixNiveau(appelerBridge("choix_niveau_web", JSON.stringify(partie)));
@@ -1004,9 +1026,7 @@ function cliquerActionStation(action) {
 }
 
 function terminerStationServicePartie() {
-    const partie = appelerBridge("terminer_station_service_web", JSON.stringify(partieActive));
-    sauvegarderPartieLocale(joueurCourant.id, partie);
-    ouvrirChoixNiveauPartie(partie);
+    allerA(appelerBridge("terminer_etape_web", JSON.stringify(partieActive)));
 }
 
 // Ligne d'un choix d'Aventure (specs.md 2.5) : image carree a gauche (aucune -> case vide en
@@ -1168,9 +1188,7 @@ function cliquerCarteTroisLunes(idCarte) {
 }
 
 function terminerAventureTroisLunes() {
-    const partie = appelerBridge("terminer_aventure_trois_lunes_web", JSON.stringify(partieActive));
-    sauvegarderPartieLocale(joueurCourant.id, partie);
-    ouvrirChoixNiveauPartie(partie);
+    allerA(appelerBridge("terminer_etape_web", JSON.stringify(partieActive)));
 }
 
 // Aventure "Asteroides" (specs.md 2.5) : deux choix - Traverser (sequence en 3 temps sur ce meme
@@ -1346,9 +1364,7 @@ function cliquerContinuerAsteroides() {
     if (etapeAventureAsteroides === "sequence_2") {
         continuerSequence2Asteroides();
     } else if (etapeAventureAsteroides === "resolu") {
-        const partie = appelerBridge("terminer_aventure_asteroides_web", JSON.stringify(partieActive));
-        sauvegarderPartieLocale(joueurCourant.id, partie);
-        ouvrirChoixNiveauPartie(partie);
+        allerA(appelerBridge("terminer_etape_web", JSON.stringify(partieActive)));
     }
 }
 
@@ -1469,16 +1485,13 @@ function cliquerChoixPolice(identifiant) {
 }
 
 function terminerAventurePolice() {
-    const partie = appelerBridge("terminer_aventure_police_web", JSON.stringify(partieActive));
-    sauvegarderPartieLocale(joueurCourant.id, partie);
-    ouvrirChoixNiveauPartie(partie);
+    allerA(appelerBridge("terminer_etape_web", JSON.stringify(partieActive)));
 }
 
 // Ecran generique pour une etape sans contenu prepare (Planete commerciale - specs.md 2.4 etape
 // 9, 9.1) : reutilise l'icone/titre de LIBELLES_TYPE_ETAPE (definie plus bas, pour l'ecran
 // "Choix du prochain niveau") avec un message explicite et un bouton "J'ai termine" qui avance
-// simplement au niveau suivant - meme logique que
-// main.py:_ouvrir_etape_placeholder cote PC.
+// simplement au niveau suivant (deroulement.terminer_etape).
 function ouvrirEtapePlaceholderPartie(partie, type) {
     partieActive = partie;
     const [image, titre] = LIBELLES_TYPE_ETAPE[type];
@@ -1490,9 +1503,7 @@ function ouvrirEtapePlaceholderPartie(partie, type) {
 }
 
 function terminerEtapePlaceholder() {
-    const partie = appelerBridge("terminer_etape_placeholder_web", JSON.stringify(partieActive));
-    sauvegarderPartieLocale(joueurCourant.id, partie);
-    ouvrirChoixNiveauPartie(partie);
+    allerA(appelerBridge("terminer_etape_web", JSON.stringify(partieActive)));
 }
 
 // Ecran "Choix du prochain niveau" (specs.md 2.3/2.4) : 3 propositions d'etape d'ordinaire, ou
@@ -1529,37 +1540,14 @@ function afficherChoixNiveau(resultat) {
     actualiserBarreLaterale();
 }
 
-// Types de proposition deja relies a un combat reel (specs.md 2.4) : Station service, Planete
-// commerciale et Aventure ne le sont pas encore, cf. choisirEtape - meme liste que
-// main.py:TYPES_COMBAT cote PC.
-const TYPES_COMBAT = new Set(["PRIME", "BOSS"]);
-
+// Etape choisie : l'ecran a ouvrir (combat, Station, Aventure tiree...) est decide par
+// src/gameplay/deroulement.py (bridge.py:ecran_pour_etape_web).
 function choisirEtape(type) {
     if (!partieActive) {
         console.log("Etape choisie :", type);
         return;
     }
-    if (TYPES_COMBAT.has(type)) {
-        masquerTousLesEcrans();
-        document.getElementById("app").classList.remove("cachee");
-        appliquerResultat(appelerBridge("continuer_partie_web", JSON.stringify(partieActive)));
-    } else if (type === "STATION_SERVICE") {
-        ouvrirStationServicePartie(partieActive);
-    } else if (type === "AVENTURE") {
-        // Trois aventures implementees (specs.md 2.5), tirage uniforme non deterministe cote
-        // Python (type_aventure_web).
-        const typeAventure = appelerBridge("type_aventure_web");
-        if (typeAventure === "TROIS_LUNES") {
-            ouvrirAventureTroisLunesPartie(partieActive);
-        } else if (typeAventure === "ASTEROIDES") {
-            ouvrirAventureAsteroidesPartie(partieActive);
-        } else {
-            ouvrirAventurePolicePartie(partieActive);
-        }
-    } else {
-        // Planete commerciale : contenu pas encore prepare (specs.md 2.4, 9.1).
-        ouvrirEtapePlaceholderPartie(partieActive, type);
-    }
+    allerA({ partie: partieActive, ecran: appelerBridge("ecran_pour_etape_web", type) });
 }
 
 function choixNiveau(partieJson) {
@@ -1632,30 +1620,20 @@ function nouvelleDefaite() {
 window.nouvelleVictoire = nouvelleVictoire;
 window.nouvelleDefaite = nouvelleDefaite;
 
-// Fin d'un combat reel (specs.md 2.4) : appelee depuis la banniere de fin de combat (#app,
-// cf. rendreBanniereFin) quand une partie reelle est en cours - remplace le "Rejouer" du mode
-// demonstration par l'enchainement reel (fin de combat -> choix du niveau, ou defaite -> accueil),
-// meme role que main.py:_ouvrir_fin_combat cote PC.
+// Fin d'un combat reel (specs.md 2.4) : appelee une seule fois depuis la banniere de fin de
+// combat (#app, cf. rendreBanniereFin) quand une partie reelle est en cours. PV, Argent et
+// candidats de recompense sont decides par src/gameplay/deroulement.py (conclure_combat).
 function terminerCombatPartie() {
-    if (etatCourant.etat === "VICTOIRE") {
-        const candidats = appelerBridge("candidats_recompense_partie_web", JSON.stringify(partieActive));
-        afficherFinCombat(true, candidats);
-    } else {
-        afficherFinCombat(false, []);
-    }
+    const resultat = appelerBridge("conclure_combat_partie_web", JSON.stringify(partieActive));
+    partieActive = resultat.partie;
+    sauvegarderPartieLocale(joueurCourant.id, resultat.partie);
+    afficherFinCombat(etatCourant.etat === "VICTOIRE", resultat.candidats);
 }
 
-// Ajoute la carte choisie (ou aucune) au deck de la partie, puis avance au niveau suivant - sauf
-// si c'etait un Boss, auquel cas l'ecran de victoire finale s'ouvre d'abord (specs.md 2.4, etape
-// 11) - meme logique que main.py:_ouvrir_fin_combat cote PC.
+// Ajoute la carte choisie (ou aucune) au deck de la partie ; l'ecran suivant (niveau suivant ou
+// victoire finale apres le Boss) est decide par deroulement.resoudre_fin_combat.
 function finaliserVictoirePartie(idCarte) {
-    const resultat = appelerBridge("resoudre_victoire_partie_web", JSON.stringify(partieActive), idCarte);
-    sauvegarderPartieLocale(joueurCourant.id, resultat.partie);
-    if (resultat.niveau_boss) {
-        ouvrirVictoireFinalePartie(resultat.partie);
-    } else {
-        ouvrirChoixNiveauPartie(resultat.partie);
-    }
+    allerA(appelerBridge("resoudre_fin_combat_web", JSON.stringify(partieActive), true, idCarte));
 }
 
 // Bouton "Continuer" de l'ecran de fin de combat (defaite, ou victoire sans aucun candidat de
@@ -1664,10 +1642,7 @@ function finaliserVictoirePartie(idCarte) {
 function continuerApresFinCombat() {
     if (!partieActive) return;
     if (etatCourant.etat === "DEFAITE") {
-        const partie = appelerBridge("abandonner_partie_web", JSON.stringify(partieActive));
-        sauvegarderPartieLocale(joueurCourant.id, partie);
-        partieActive = null;
-        afficherAccueilJoueur();
+        allerA(appelerBridge("resoudre_fin_combat_web", JSON.stringify(partieActive), false, null));
     } else {
         finaliserVictoirePartie(null);
     }
@@ -1684,8 +1659,7 @@ function passerFinCombat() {
 // run s'arrete reellement au Niveau 10 dans l'etat actuel, specs.md 2), affiche son deck complet
 // (meme rendu que l'ecran "Voir le deck" ci-dessous, mais scope aux elements de cet ecran pour ne
 // pas melanger les gestionnaires de clic des deux grilles) et propose un bouton "Continuer" qui
-// marque la partie TERMINEE et revient a l'ecran de partie - meme logique que
-// main.py:_ouvrir_victoire_finale cote PC.
+// marque la partie TERMINEE et revient a l'ecran de partie (deroulement.terminer_victoire_finale).
 let cartesVictoireFinaleAffichees = [];
 
 function ouvrirVictoireFinalePartie(partie) {
@@ -1723,10 +1697,7 @@ function afficherInfoCarteVictoireFinale(carte) {
 }
 
 function terminerVictoireFinale() {
-    const partie = appelerBridge("terminer_victoire_finale_web", JSON.stringify(partieActive));
-    sauvegarderPartieLocale(joueurCourant.id, partie);
-    partieActive = null;
-    afficherAccueilJoueur();
+    allerA(appelerBridge("terminer_victoire_finale_web", JSON.stringify(partieActive)));
 }
 
 // Ecran "deck en entier" (appelable depuis plusieurs endroits du parcours, specs.md 6). Meme
@@ -1904,15 +1875,8 @@ function afficherAccueilJoueur() {
 
 function continuerPartie() {
     const partie = partieLocale(joueurCourant.id);
-    // Reprend l'etape courante a partir de ce qui est deja connu (niveau + vaisseau) plutot que
-    // d'une "etape courante" dediee, pas encore ajoutee a la sauvegarde (decision utilisateur) :
-    // le Niveau 1 sans 2e module equipe reprend au choix de module, sinon on retire les
-    // propositions du niveau courant - meme condition que main.py:_traiter_action cote PC.
-    if (partie.niveau === 1 && partie.vaisseau.avant_gauche === null) {
-        ouvrirChoixModulePartie(partie);
-        return;
-    }
-    ouvrirChoixNiveauPartie(partie);
+    // Ecran de reprise decide par src/gameplay/deroulement.py (ecran_de_reprise).
+    allerA({ partie, ecran: appelerBridge("ecran_reprise_web", JSON.stringify(partie)) });
 }
 
 function abandonnerPartie() {
@@ -2057,9 +2021,7 @@ function fermerSurvolVaisseau() {
 }
 
 function nouvellePartie() {
-    const partie = appelerBridge("nouvelle_partie_web");
-    sauvegarderPartieLocale(joueurCourant.id, partie);
-    ouvrirChoixModulePartie(partie);
+    allerA(appelerBridge("nouvelle_partie_web"));
 }
 
 document.getElementById("tour-suivant").addEventListener("click", finirTour);

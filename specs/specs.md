@@ -30,6 +30,14 @@ Un deckbuilder roguelike inspiré de Slay the Spire, où le joueur incarne un va
 | §12 | [modules-cartes.md](modules-cartes.md) | Mécaniques de carte : référence d'implémentation et manques restants |
 | §13 | [combat.md](combat.md) | Comportement des ennemis (IA), ennemis de `config/ennemis.json`, flottes |
 
+## Documents de travail (hors numérotation)
+
+| Fichier | Contenu |
+|---|---|
+| [refonte-buffs-debuffs.md](refonte-buffs-debuffs.md) | Brouillon de refonte des buffs/debuffs/bouclier (non décidé, non implémenté) |
+| [refonte-modules.md](refonte-modules.md) | Brouillon de refonte des modules secondaires sacrifiables (non implémenté) |
+| [simulation.md](simulation.md) | Conception de l'outil de simulation d'équilibrage (`outils/simulation/`) |
+
 ## Quel fichier lire selon la tâche
 
 - **Nouvel écran ou étape du parcours, récompenses, Argent, niveaux** → `parcours.md`

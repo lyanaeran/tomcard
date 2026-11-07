@@ -1155,3 +1155,13 @@ def test_finir_tour_joueur_n_ajoute_pas_de_marqueur_de_tour_si_le_combat_se_term
     # tour suivant : il n'y en aura pas, le combat est termine.
     assert combat.journal[-1] != EvenementTour(2)
     assert any(isinstance(evenement, EvenementActionEnnemi) for evenement in combat.journal)
+
+
+def test_cibles_possibles_selon_le_type_de_cible_de_la_carte():
+    combat, vaisseau, flotte = _nouveau_combat()
+
+    assert combat.cibles_possibles(CARTE_ATTAQUE) == flotte.ennemis_vivants()
+    assert combat.cibles_possibles(CARTE_BOUCLIER) == [vaisseau.base]
+    assert combat.cibles_possibles(CARTE_PROTEGER) == [None]
+    for cible in combat.cibles_possibles(CARTE_PERCER):
+        assert combat._cible_valide(CARTE_PERCER, cible)

@@ -186,6 +186,14 @@ class Combat:
                 return position
         return None
 
+    def cibles_possibles(self, carte: Carte) -> list[Module | Ennemi | None]:
+        """Cibles valides pour cette carte en l'etat ([None] pour une carte sans clic de ciblage)
+        - pour un joueur automatique (outils/simulation), meme regle que _cible_valide."""
+        if carte.cible in CIBLES_SANS_CLIC:
+            return [None]
+        candidates = [*self.flotte.ennemis_vivants(), *self._modules_vivants()]
+        return [cible for cible in candidates if self._cible_valide(carte, cible)]
+
     def _cible_valide(self, carte: Carte, cible: Module | Ennemi | None) -> bool:
         """Verifie que la cible correspond au type de carte et est bien vivante dans ce combat."""
         if carte.cible in CIBLES_SANS_CLIC:

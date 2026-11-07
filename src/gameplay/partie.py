@@ -292,8 +292,8 @@ def synchroniser_vaisseau_depuis_combat(partie: Partie, vaisseau: Vaisseau) -> P
     """Reporte sur la partie sauvegardee les PV du vaisseau tel qu'il ressort d'un combat
     (degats subis, soins recus) - operation inverse de combat_depuis_partie, indispensable pour
     que les degats persistent reellement d'un combat a l'autre (specs.md 2.2/3.4). A appeler des
-    qu'un combat se termine (victoire), avant de sauvegarder la partie - `main.py:_ouvrir_combat`
-    (PC) et `web/bridge.py:resoudre_victoire_partie_web` (web).
+    qu'un combat se termine (victoire), avant de sauvegarder la partie - `deroulement.conclure_combat`,
+    commun au PC, au web et a la simulation.
 
     Ne touche qu'aux PV : ni pv_max (ne change que via Ameliorer, Station service), ni le
     bouclier (mecanique de combat ephemere, non persistee, absente d'EtatModule). Modifie et

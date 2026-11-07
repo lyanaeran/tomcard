@@ -128,7 +128,7 @@ restent le plan cible pour les 4 nouveaux modules, à concevoir dans une passe d
   - **Implémenté** en écran de fin de combat autonome (Victoire/Défaite), **relié à l'orchestration
     du parcours** (§2.4) pour une vraie partie : `src/gameplay/parcours.py`
     (`tirer_candidats_recompense` et les fonctions de tirage par palier), `src/ui/ecran_fin_combat.py`
-    (PC), `main.py:_ouvrir_fin_combat` ; côté web `web/bridge.py:candidats_recompense_partie_web`/
+    (PC), `main.py:_ouvrir_fin_combat` ; côté web `web/bridge.py:conclure_combat_partie_web`/
     `resoudre_victoire_partie_web` + `web/app.js:terminerCombatPartie`/`choisirRecompense`. Reste
     aussi accessible en démonstration isolée (candidats tirés depuis un vaisseau tiré au sort plutôt
     qu'une vraie partie) via `web/app.js` (`nouvelleVictoire`/`nouvelleDefaite`, exposées sur
