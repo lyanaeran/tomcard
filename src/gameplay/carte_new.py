@@ -196,7 +196,10 @@ class CarteNew:
     `emplacement` : exemplaire de module auquel cet exemplaire de carte est rattache dans une
     partie ("base", "avant_gauche"...), None tant qu'il ne l'est pas (specs/refonte-modules.md
     3.3 : deux exemplaires du meme module ont chacun leurs cartes).
-    `persistante` : reste jouable si son module est detruit (mot-cle, refonte-modules.md 3.5)."""
+    `persistante` : reste jouable si son module est detruit (mot-cle, refonte-modules.md 3.5).
+    `lancements` : nombre de fois que les effets de la carte s'appliquent quand elle est jouee (1
+    d'ordinaire, 2 pour une carte "lancee deux fois"), avant les lancements supplementaires
+    accordes par les effets REPETITION actifs (cf. nombre_de_lancements)."""
 
     id: str
     nom: str
@@ -210,6 +213,7 @@ class CarteNew:
     description: str = ""
     munitions_max: int | None = None
     persistante: bool = False
+    lancements: int = 1
     emplacement: str | None = None
     munitions_restantes: int | None = None
 
@@ -219,6 +223,8 @@ class CarteNew:
             raise ValueError(f"{self.id} : cout negatif")
         if not self.effets:
             raise ValueError(f"{self.id} : une carte a au moins un effet")
+        if self.lancements < 1:
+            raise ValueError(f"{self.id} : une carte est lancee au moins une fois")
         if self.munitions_max is not None and self.munitions_max < 1:
             raise ValueError(f"{self.id} : munitions_max doit etre None (illimite) ou >= 1")
         if self.cible.camp == Camp.JOUEUR and any(effet.portee in _PORTEES_ENNEMIES for effet in self.effets):
@@ -258,15 +264,19 @@ class CarteNew:
         """False : la carte part en pile Hors service tant que son module est detruit."""
         return self.persistante
 
-    # --- Repetition ("lancee X fois de plus") ---
+    # --- Lancements (carte lancee plusieurs fois) ---
 
     def lancements_supplementaires(self, effets_actifs) -> int:
-        """Nombre de lancements supplementaires de cette carte, d'apres les effets REPETITION
-        actifs (ex. Salve laser active : un Laser de base est lance 1 fois de plus)."""
+        """Lancements accordes en plus par les effets REPETITION actifs dont le filtre vise cette
+        carte (ex. Salve laser active : un Laser de base est lance 1 fois de plus)."""
         return sum(
             effet.valeur for effet in effets_actifs
             if effet.nature == NatureEffet.REPETITION and effet.filtre.correspond(self)
         )
+
+    def nombre_de_lancements(self, effets_actifs=()) -> int:
+        """Nombre total de fois que les effets de la carte s'appliquent quand elle est jouee."""
+        return self.lancements + self.lancements_supplementaires(effets_actifs)
 
     # --- Texte ---
 
@@ -302,6 +312,7 @@ class CarteNew:
             description=entree.get("description", ""),
             munitions_max=entree.get("munition"),
             persistante=entree.get("persistante", False),
+            lancements=entree.get("lancements", 1),
         )
 
     def vers_dict(self) -> dict:
@@ -316,6 +327,7 @@ class CarteNew:
             "cout": self.cout,
             "munition": self.munitions_max,
             "persistante": self.persistante,
+            "lancements": self.lancements,
             "description": self.description,
             "effets": [_effet_vers_dict(effet) for effet in self.effets],
         }

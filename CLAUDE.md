@@ -8,7 +8,10 @@ et le **parcours** (boucle de run) s'enchaîne écran par écran jusqu'au Boss d
 
 Répondre à l'utilisateur en français, y compris pour les messages de statut/résumés. Le code
 (identifiants, commentaires) est en français ; commentaires en **ASCII uniquement (sans accents ni
-cédilles)**. `specs/` et les `CLAUDE.md` utilisent l'orthographe normale.
+cédilles)**. `specs/` et les `CLAUDE.md` utilisent l'orthographe normale. Les **textes affichés
+dans le jeu** (noms et descriptions des cartes dans `config/`, et le registre `specs/cartes.xlsx`
+qui les reflète) gardent leurs accents (consigne utilisateur) ; tout le reste (identifiants,
+clés JSON, code, commentaires) reste sans accent.
 
 ## Documents de référence (à tenir à jour)
 

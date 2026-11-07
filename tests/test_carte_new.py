@@ -34,9 +34,9 @@ REGISTRE_REFONTE = [
            "Inflige X degats a un ennemi unique"),
     _carte("CRT_10", "Bouclier", "Base", "Defense", "Module Unique", 1, [{"nature": "BOUCLIER", "valeur": 3}],
            "Bouclier de X sur un module unique"),
-    _carte("CRT_11", "Proteger le vaisseau", "Base", "Defense", "Module Principal", 1,
+    _carte("CRT_11", "Protéger le vaisseau", "Base", "Defense", "Module Principal", 1,
            [{"nature": "BOUCLIER", "valeur": 5}], "Bouclier de X sur le module principal"),
-    _carte("CRT_12", "Reparation", "Base", "Reparation", "Module Principal", 1,
+    _carte("CRT_12", "Réparation", "Base", "Reparation", "Module Principal", 1,
            [{"nature": "REPARATION", "valeur": 8}], "Repare le module principal pour X", munition=2),
     _carte("CRT_8", "Laser percant", "Commune", "Attaque", "Ennemi Colonne", 2, [{"nature": "DEGATS", "valeur": 8}],
            "Inflige X degats a la colonne ciblee"),
@@ -48,7 +48,7 @@ REGISTRE_REFONTE = [
     _carte("CRT_47", "Laser lourd", "Commune", "Attaque", "Ennemi Unique", 1, [{"nature": "DEGATS", "valeur": 12}],
            "Inflige X degats a un ennemi unique"),
     _carte("CRT_48", "Bouclier stabilise", "Rare", "Buff", "Module Principal", 3,
-           [{"nature": "REPETITION", "valeur": 0, "filtre": {"nom": "Bouclier", "rarete": "Base"}}],
+           [{"nature": "REPETITION", "valeur": 1, "filtre": {"nom": "Bouclier", "rarete": "Base"}}],
            "Les Boucliers de base sont lancés X fois de plus.", munition=1),
     _carte("CRT_49", "Salve laser", "Rare", "Buff", "Module Tous", 2,
            [{"nature": "REPETITION", "valeur": 1, "filtre": {"nom": "Laser", "rarete": "Base"}}],
@@ -158,14 +158,28 @@ def test_protocole_d_urgence_vise_toutes_les_cartes_de_base_et_se_cumule_avec_sa
     actifs = cartes["Protocole d'urgence"].effets + cartes["Salve laser"].effets
 
     assert cartes["Laser"].lancements_supplementaires(actifs) == 2
-    assert cartes["Reparation"].lancements_supplementaires(actifs) == 1
+    assert cartes["Réparation"].lancements_supplementaires(actifs) == 1
     assert cartes["Laser percant"].lancements_supplementaires(actifs) == 0  # Commune
+
+
+def test_une_carte_est_lancee_une_fois_par_defaut():
+    assert _cartes()["Laser"].nombre_de_lancements() == 1
+
+
+def test_carte_lancee_deux_fois_par_nature_et_cumul_avec_les_repetitions():
+    cartes = _cartes()
+    double_laser = CarteNew.depuis_dict(dict(REGISTRE_REFONTE[0], lancements=2))
+
+    assert double_laser.nombre_de_lancements() == 2
+    assert double_laser.nombre_de_lancements(cartes["Salve laser"].effets) == 3
+    assert CarteNew.depuis_dict(double_laser.vers_dict()).lancements == 2
 
 
 def test_bouclier_stabilise_vise_le_bouclier_de_base():
     cartes = _cartes()
     filtre = cartes["Bouclier stabilise"].effets[0].filtre
 
+    assert cartes["Bouclier"].nombre_de_lancements(cartes["Bouclier stabilise"].effets) == 2
     assert filtre.correspond(cartes["Bouclier"])
     assert not filtre.correspond(cartes["Blindage cible"])
 
@@ -186,7 +200,7 @@ def test_cible_camp_et_case_cliquee():
 
 
 def test_munitions_consommees_jusqu_a_epuisement():
-    reparation = _cartes()["Reparation"]
+    reparation = _cartes()["Réparation"]
 
     assert reparation.munitions_restantes == 2
     assert not reparation.consommer_munition()
@@ -202,7 +216,7 @@ def test_carte_sans_munition_jamais_epuisee():
 
 
 def test_copie_et_rattachement_donnent_des_exemplaires_independants():
-    reparation = _cartes()["Reparation"]
+    reparation = _cartes()["Réparation"]
     reparation.consommer_munition()
 
     copie = reparation.copie()
@@ -237,6 +251,7 @@ def test_persistante_lue_depuis_le_json():
         {"cout": -1},
         {"effets": ()},
         {"munitions_max": 0},
+        {"lancements": 0},
         {"cible": CibleCarteNew.MODULE_UNIQUE, "effets": (Effet(NatureEffet.DEGATS, 3, PorteeEffet.AUTRES_ENNEMIS),)},
         {"cible": CibleCarteNew.ENNEMI_TOUS, "effets": (Effet(NatureEffet.DEGATS, 3, PorteeEffet.AUTRES_ENNEMIS),)},
     ],

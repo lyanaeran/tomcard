@@ -34,7 +34,11 @@ propose donc que le Lanceur de missiles. Changements principaux :
 - *Bouclier stabilisé* change d'effet : « les Boucliers de base sont lancés X fois de plus »
   (même famille que *Salve laser* et *Protocole d'urgence*).
 - Classe de carte cible de la refonte : `src/gameplay/carte_new.py` (`CarteNew`), pas encore
-  branchée au moteur.
+  branchée au moteur. Une carte y porte une liste d'effets, un nombre de **lancements** (1 par
+  défaut, 2 pour une carte lancée deux fois ; décision utilisateur), et les effets « les cartes X
+  sont lancées N fois de plus » (*Salve laser*, *Protocole d'urgence*, *Bouclier stabilisé*, X = 1
+  pour ce dernier) ajoutent des lancements aux cartes qu'ils désignent.
+- Textes affichés accentués : *Protéger le vaisseau*, *Réparation* (consigne utilisateur).
 Chaque module a une seule `description` (une phrase, accroche narrative spécifiée par
 l'utilisateur), affichée à l'écran de choix de module et reprise telle quelle dans l'infobulle de
 l'écran Vaisseau au clic/tap sur un module (§2.4) — les decks de cartes détaillés ci-dessous

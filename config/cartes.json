@@ -47,7 +47,7 @@
     },
     {
       "id": "CRT_11",
-      "nom": "Proteger le vaisseau",
+      "nom": "Protéger le vaisseau",
       "image": "assets/cartes/defense.png",
       "module_origine": "Module principal",
       "rarete": "Base",
@@ -62,7 +62,7 @@
     },
     {
       "id": "CRT_12",
-      "nom": "Reparation",
+      "nom": "Réparation",
       "image": "assets/cartes/reparation.png",
       "module_origine": "Module principal",
       "rarete": "Base",
@@ -129,7 +129,7 @@
       "categorie": "Buff",
       "cible_design": "Module Principal",
       "cout": 3,
-      "x": 0,
+      "x": 1,
       "y": null,
       "munition": 1,
       "description": "Les Boucliers de base sont lancés X fois de plus.",
