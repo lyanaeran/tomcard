@@ -293,7 +293,10 @@ représente :
    par durée** (*Brèche* 2 tours vs *Boucliers hors service* 5 tours) — l'avertissement ⚠️ de la §5
    disparaît. *Tordre le canon*, *Tir allié* y entrent naturellement.
 2. **Cumul en intensité** : qui décroît (Poison : *Embrasement*, *Guerre nucléaire*, *Tir
-   incendiaire*), ou **permanente** (Force : `AUGMENTATION_DEGATS` du Boss, montée de dégâts §7.2).
+   incendiaire*), ou **sans décroissance** (Force : `AUGMENTATION_DEGATS` du Boss, montée de dégâts
+   §7.2). Décision utilisateur : les mécaniques des ennemis seront gérées **en dehors des cartes**
+   (pas dans `CarteNew`) ; côté cartes, le cumul sans décroissance sert aux effets « lancées N fois
+   de plus » (*Salve laser*…, modules-cartes.md §4).
 
 Le **bouclier** garde une décroissance **proportionnelle** (moitié comme aujourd'hui, ou un quart
 avec un minimum de 1) ou un plafond, si la montée des dégâts ennemis (§7.2) ne suffit pas à

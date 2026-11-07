@@ -40,6 +40,8 @@ propose donc que le Lanceur de missiles. Changements principaux :
   pour ce dernier) **augmentent directement les lancements** des cartes qu'ils désignent, dans
   toutes les piles, **jusqu'à la fin du combat**, et se cumulent (décision utilisateur ; chaque
   combat recrée ses cartes, l'augmentation disparaît donc d'elle-même).
+- `CarteNew` ne décrit que les **effets des cartes du joueur** : les mécaniques propres aux ennemis
+  (ex. Augmentation de dégâts du Boss) sont gérées **en dehors des cartes** (décision utilisateur).
 - Textes affichés accentués : *Protéger le vaisseau*, *Réparation* (consigne utilisateur).
 Chaque module a une seule `description` (une phrase, accroche narrative spécifiée par
 l'utilisateur), affichée à l'écran de choix de module et reprise telle quelle dans l'infobulle de

@@ -76,8 +76,9 @@ class Cumul(Enum):
     INSTANTANE = auto()
     # L'intensite s'additionne et decroit de 1 a chaque tour (incendie, poison de Slay the Spire)
     INTENSITE_DECROISSANTE = auto()
-    # L'intensite s'additionne et ne decroit jamais (Force de Slay the Spire)
-    INTENSITE_PERMANENTE = auto()
+    # L'intensite s'additionne et ne decroit jamais jusqu'a la fin du combat (Force de Slay the
+    # Spire) : Salve laser et ses semblables
+    INTENSITE_SANS_DECROISSANCE = auto()
     # La duree s'additionne, l'intensite reste celle de la carte (Vulnerable de Slay the Spire)
     DUREE = auto()
     # Etat consomme par un evenement, pas par le temps (Leurre, Bouclier miroir)
@@ -95,7 +96,6 @@ class NatureEffet(Enum):
     INCENDIE = auto()
     VULNERABILITE = auto()
     REDUCTION_DEGATS = auto()
-    AUGMENTATION_DEGATS = auto()
     BOUCLIER_MIROIR = auto()
     ANNULATION_PROCHAINE_ATTAQUE = auto()
     REDIRECTION_CIBLE = auto()
@@ -107,9 +107,11 @@ class NatureEffet(Enum):
 
 
 # INCENDIE : decision utilisateur (registre des cartes, note de Tir incendiaire). REPETITION : dure
-# tout le combat et se cumule (decision utilisateur). VULNERABILITE,
-# REDUCTION_DEGATS, AUGMENTATION_DEGATS, BOUCLIER_MIROIR : proposition du brouillon de refonte des
-# buffs (refonte-buffs-debuffs.md 7.3/7.4), a valider.
+# tout le combat et se cumule (decision utilisateur). VULNERABILITE, REDUCTION_DEGATS,
+# BOUCLIER_MIROIR : proposition du brouillon de refonte des buffs (refonte-buffs-debuffs.md
+# 7.3/7.4), a valider. Seulement les effets des cartes du joueur : les mecaniques propres aux
+# ennemis (ex. Augmentation de degats du Boss) sont gerees en dehors des cartes (decision
+# utilisateur).
 CUMUL_PAR_NATURE = {
     NatureEffet.DEGATS: Cumul.INSTANTANE,
     NatureEffet.BOUCLIER: Cumul.BOUCLIER,
@@ -117,13 +119,12 @@ CUMUL_PAR_NATURE = {
     NatureEffet.INCENDIE: Cumul.INTENSITE_DECROISSANTE,
     NatureEffet.VULNERABILITE: Cumul.DUREE,
     NatureEffet.REDUCTION_DEGATS: Cumul.DUREE,
-    NatureEffet.AUGMENTATION_DEGATS: Cumul.INTENSITE_PERMANENTE,
     NatureEffet.BOUCLIER_MIROIR: Cumul.JUSQU_A_CONSOMMATION,
     NatureEffet.ANNULATION_PROCHAINE_ATTAQUE: Cumul.JUSQU_A_CONSOMMATION,
     NatureEffet.REDIRECTION_CIBLE: Cumul.DUREE,
     NatureEffet.GAIN_ELECTRICITE: Cumul.INSTANTANE,
     NatureEffet.PIOCHE: Cumul.INSTANTANE,
-    NatureEffet.REPETITION: Cumul.INTENSITE_PERMANENTE,
+    NatureEffet.REPETITION: Cumul.INTENSITE_SANS_DECROISSANCE,
 }
 
 

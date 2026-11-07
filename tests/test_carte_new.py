@@ -172,7 +172,7 @@ def test_les_repetitions_se_cumulent_pour_le_combat():
     appliquer_repetition(cartes["Protocole d'urgence"].effets[0], deck)
 
     assert (laser.lancements, reparation.lancements, laser_percant.lancements) == (3, 2, 1)
-    assert cartes["Salve laser"].effets[0].cumul == Cumul.INTENSITE_PERMANENTE
+    assert cartes["Salve laser"].effets[0].cumul == Cumul.INTENSITE_SANS_DECROISSANCE
 
 
 def test_bouclier_stabilise_double_le_bouclier_de_base():
