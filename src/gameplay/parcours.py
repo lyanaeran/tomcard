@@ -16,10 +16,10 @@ NOMBRE_CANDIDATS_MODULE = 3
 
 def modules_equipables(specs_modules: list[SpecModule]) -> list[SpecModule]:
     """Modules pouvant etre proposes en choix : tous sauf le module principal, deja acquis
-    d'office en debut de run (specs.md paragraphe 5), et sauf ceux dont les cartes ne sont pas
-    encore concues (cartes vide dans modules.json, ex. Canon lourd/Controle/Atelier/Radar) - les
-    proposer planterait le tirage du deck (Deck.piocher_cartes/tirer_cartes sur une pool vide)."""
-    return [spec for spec in specs_modules if spec.id != ID_MODULE_PRINCIPAL and spec.cartes]
+    d'office en debut de run (specs.md paragraphe 5), sauf ceux marques non jouables dans
+    modules.json (decision utilisateur : seul le Lanceur de missiles l'est pendant la refonte des
+    cartes) et sauf ceux sans carte (le proposer planterait le tirage du deck)."""
+    return [spec for spec in specs_modules if spec.id != ID_MODULE_PRINCIPAL and spec.jouable and spec.cartes]
 
 
 def tirer_candidats_module(
@@ -28,8 +28,9 @@ def tirer_candidats_module(
     """Tire `quantite` modules differents au hasard dans la pool (specs.md paragraphe 2.3,
     Niveau 1) : uniforme pour l'instant, puisqu'aucun module n'est encore possede a ce stade du
     run (donc pas de ponderation par doublons a appliquer - cf. specs.md 2.3 "points encore
-    ouverts" pour les tirages ulterieurs, apres un Boss, une fois des modules deja possedes)."""
-    return aleatoire.sample(pool, quantite)
+    ouverts" pour les tirages ulterieurs, apres un Boss, une fois des modules deja possedes).
+    Moins de `quantite` candidats si la pool est plus petite (modules non jouables exclus)."""
+    return aleatoire.sample(pool, min(quantite, len(pool)))
 
 
 # Recompenses de fin de combat (specs.md 2.1/6, decision utilisateur) : la rarete d'une carte

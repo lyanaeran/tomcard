@@ -2,6 +2,7 @@
 Tests unitaires pour la generation aleatoire du combat du POC (src/gameplay/config_poc.py).
 """
 
+import dataclasses
 import random
 
 from src.gameplay import config_poc as config_poc_module
@@ -82,8 +83,20 @@ def test_creer_flotte_ne_tire_jamais_le_boss():
         assert all(ennemi.nom != "Le Boss des pirates" for ennemi in flotte.ennemis_vivants())
 
 
+def _specs_tous_jouables():
+    """Modules de config/modules.json, tous marques jouables (cf. test_parcours.py)."""
+    return [dataclasses.replace(spec, jouable=True) for spec in charger_modules()]
+
+
+def test_creer_vaisseau_n_equipe_que_les_modules_jouables_et_laisse_les_autres_emplacements_vides():
+    vaisseau, specs_utilisees = creer_vaisseau(charger_modules(), random.Random(42))
+
+    assert [spec.id for spec in specs_utilisees] == [ID_MODULE_PRINCIPAL, "MOD_2"]
+    assert [module.nom for module in vaisseau.modules_equipes().values()] == ["Lanceur de missiles"]
+
+
 def test_creer_vaisseau_place_le_principal_et_4_modules_differents():
-    specs = charger_modules()
+    specs = _specs_tous_jouables()
     aleatoire = random.Random(42)
 
     vaisseau, specs_utilisees = creer_vaisseau(specs, aleatoire)
@@ -231,7 +244,7 @@ def test_tirer_cartes_renvoie_des_exemplaires_independants():
 
 def test_creer_deck_contient_22_cartes():
     """10 cartes fixes du module principal (deck de base) + 3 par module equipe."""
-    specs_modules = charger_modules()
+    specs_modules = _specs_tous_jouables()
     cartes = charger_cartes()
     aleatoire = random.Random(5)
     _vaisseau, specs_utilisees = creer_vaisseau(specs_modules, aleatoire)
@@ -262,7 +275,7 @@ def test_creer_combat_poc_initialise_un_combat_complet():
 
     assert combat.etat == EtatCombat.EN_COURS
     assert combat.joueur.vaisseau.base.nom == "Principal"
-    assert len(combat.joueur.vaisseau.modules_equipes()) == NOMBRE_MODULES_EQUIPES
+    assert len(combat.joueur.vaisseau.modules_equipes()) == 1  # seul le Lanceur de missiles est jouable
     assert len(combat.flotte.positions()) == 6  # MODE_TEST desactive : les 6 cases sont peuplees
     assert combat.joueur.electricite == ELECTRICITE_PAR_TOUR
     assert len(combat.joueur.deck.main) == 5
@@ -272,8 +285,8 @@ def test_creer_combat_poc_utilise_le_deck_reel_quand_mode_test_desactive():
     combat = creer_combat_poc(random.Random(4))
 
     total = len(combat.joueur.deck.pioche) + len(combat.joueur.deck.main) + len(combat.joueur.deck.defausse)
-    attendu = 10 + CARTES_PAR_MODULE_EQUIPE * NOMBRE_MODULES_EQUIPES
-    assert total == attendu == 22
+    attendu = 10 + CARTES_PAR_MODULE_EQUIPE * len(combat.joueur.vaisseau.modules_equipes())
+    assert total == attendu == 13
 
 
 def test_deux_combats_successifs_ont_des_ennemis_independants():

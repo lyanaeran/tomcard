@@ -16,13 +16,14 @@ from dataclasses import asdict
 
 from src.gameplay import deroulement
 from src.gameplay.donnees import charger_modules
+from src.gameplay.parcours import modules_equipables
 from src.gameplay.partie import combat_depuis_partie, nouvelle_partie
 
 from outils.simulation.bot import BotAleatoire, BotRecherche, jouer_combat
 from outils.simulation.partie_auto import jouer_partie
 
-# Modules secondaires testables : ceux qui ont des cartes (les autres sont exclus du jeu)
-MODULES_TESTES = [spec.id for spec in charger_modules() if spec.id != "MOD_1" and spec.cartes]
+# Modules secondaires testables : ceux que le jeu peut proposer (jouables et avec des cartes)
+MODULES_TESTES = [spec.id for spec in modules_equipables(charger_modules())]
 NIVEAUX_COMBATS_ISOLES = (3, 7, 10)
 
 
