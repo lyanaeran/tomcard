@@ -90,19 +90,32 @@ class Cumul(Enum):
 class NatureEffet(Enum):
     """Ce que fait un effet. Le Cumul de chaque nature est donne par CUMUL_PAR_NATURE."""
 
+    # Retire `valeur` PV (apres le bouclier) a chaque ennemi touche (Laser, Missiles, Bombardement)
     DEGATS = auto()
+    # Ajoute `valeur` de bouclier a chaque module touche, absorbe avant les PV ; pendant `duree`
+    # tours si elle est precisee (Bouclier, Proteger le vaisseau, Blindage cible)
     BOUCLIER = auto()
+    # Rend `valeur` PV au module touche, sans depasser ses PV max (Reparation)
     REPARATION = auto()
+    # Ajoute `valeur` points d'incendie a l'ennemi : il subit autant de degats a chaque tour, puis
+    # l'incendie baisse de 1 (poison de Slay the Spire : Tir incendiaire, Embrasement)
     INCENDIE = auto()
+    # L'ennemi subit `valeur` % de degats en plus (Breche, Ligne avant)
     VULNERABILITE = auto()
+    # L'ennemi inflige `valeur` degats de moins par attaque (Tordre le canon)
     REDUCTION_DEGATS = auto()
+    # Les degats recus par le module touche sont renvoyes a l'attaquant, jusqu'a `valeur` (Renvoi)
     BOUCLIER_MIROIR = auto()
+    # Annule entierement la prochaine attaque recue par le module touche (Leurre)
     ANNULATION_PROCHAINE_ATTAQUE = auto()
+    # L'ennemi touche attaque un de ses allies au hasard au lieu du joueur (Tir allie)
     REDIRECTION_CIBLE = auto()
+    # Donne `valeur` electricite en plus pour ce tour (Surcharge temporaire)
     GAIN_ELECTRICITE = auto()
+    # Pioche `valeur` cartes en plus (Boost)
     PIOCHE = auto()
     # Les cartes designees par le filtre de l'effet sont lancees `valeur` fois de plus, jusqu'a la
-    # fin du combat (appliquer_repetition)
+    # fin du combat (appliquer_repetition : Salve laser, Protocole d'urgence, Bouclier stabilise)
     REPETITION = auto()
 
 
