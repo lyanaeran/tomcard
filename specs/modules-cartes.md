@@ -37,7 +37,9 @@ propose donc que le Lanceur de missiles. Changements principaux :
   branchée au moteur. Une carte y porte une liste d'effets, un nombre de **lancements** (1 par
   défaut, 2 pour une carte lancée deux fois ; décision utilisateur), et les effets « les cartes X
   sont lancées N fois de plus » (*Salve laser*, *Protocole d'urgence*, *Bouclier stabilisé*, X = 1
-  pour ce dernier) ajoutent des lancements aux cartes qu'ils désignent.
+  pour ce dernier) **augmentent directement les lancements** des cartes qu'ils désignent, dans
+  toutes les piles, **jusqu'à la fin du combat**, et se cumulent (décision utilisateur ; chaque
+  combat recrée ses cartes, l'augmentation disparaît donc d'elle-même).
 - Textes affichés accentués : *Protéger le vaisseau*, *Réparation* (consigne utilisateur).
 Chaque module a une seule `description` (une phrase, accroche narrative spécifiée par
 l'utilisateur), affichée à l'écran de choix de module et reprise telle quelle dans l'infobulle de

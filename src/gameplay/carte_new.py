@@ -9,8 +9,10 @@ Differences avec Carte :
   X sur la cible et Y sur les autres ennemis ; Torpille : X sur la ligne avant, Y sur l'arriere) ;
 - chaque nature d'effet declare comment elle se cumule (Cumul) : l'incendie (poison de Slay the
   Spire) additionne son intensite, qui decroit de 1 par tour ;
-- les cartes "lancees X fois de plus" (Salve laser, Protocole d'urgence, Bouclier stabilise) sont
-  un effet REPETITION accompagne d'un FiltreCartes designant les cartes visees ;
+- une carte peut etre lancee plusieurs fois (`lancements`) ; les cartes "les cartes X sont lancees
+  N fois de plus" (Salve laser, Protocole d'urgence, Bouclier stabilise) sont un effet REPETITION
+  dont le FiltreCartes designe les cartes visees : il augmente leur `lancements` jusqu'a la fin du
+  combat (appliquer_repetition) ;
 - mot-cle Persistante et rattachement a un exemplaire de module (emplacement) : une carte dont le
   module est detruit part en pile Hors service, sauf si elle est Persistante
   (specs/refonte-modules.md 3.3 a 3.5) ;
@@ -99,11 +101,13 @@ class NatureEffet(Enum):
     REDIRECTION_CIBLE = auto()
     GAIN_ELECTRICITE = auto()
     PIOCHE = auto()
-    # Les cartes designees par le filtre de l'effet sont lancees `valeur` fois de plus
+    # Les cartes designees par le filtre de l'effet sont lancees `valeur` fois de plus, jusqu'a la
+    # fin du combat (appliquer_repetition)
     REPETITION = auto()
 
 
-# INCENDIE : decision utilisateur (registre des cartes, note de Tir incendiaire). VULNERABILITE,
+# INCENDIE : decision utilisateur (registre des cartes, note de Tir incendiaire). REPETITION : dure
+# tout le combat et se cumule (decision utilisateur). VULNERABILITE,
 # REDUCTION_DEGATS, AUGMENTATION_DEGATS, BOUCLIER_MIROIR : proposition du brouillon de refonte des
 # buffs (refonte-buffs-debuffs.md 7.3/7.4), a valider.
 CUMUL_PAR_NATURE = {
@@ -119,7 +123,7 @@ CUMUL_PAR_NATURE = {
     NatureEffet.REDIRECTION_CIBLE: Cumul.DUREE,
     NatureEffet.GAIN_ELECTRICITE: Cumul.INSTANTANE,
     NatureEffet.PIOCHE: Cumul.INSTANTANE,
-    NatureEffet.REPETITION: Cumul.DUREE,
+    NatureEffet.REPETITION: Cumul.INTENSITE_PERMANENTE,
 }
 
 
@@ -198,8 +202,9 @@ class CarteNew:
     3.3 : deux exemplaires du meme module ont chacun leurs cartes).
     `persistante` : reste jouable si son module est detruit (mot-cle, refonte-modules.md 3.5).
     `lancements` : nombre de fois que les effets de la carte s'appliquent quand elle est jouee (1
-    d'ordinaire, 2 pour une carte "lancee deux fois"), avant les lancements supplementaires
-    accordes par les effets REPETITION actifs (cf. nombre_de_lancements)."""
+    d'ordinaire, 2 pour une carte "lancee deux fois"). Augmente en combat par les effets
+    REPETITION (appliquer_repetition) ; chaque combat recree ses cartes a partir du deck de la
+    partie, donc l'augmentation disparait d'elle-meme a la fin du combat."""
 
     id: str
     nom: str
@@ -264,20 +269,6 @@ class CarteNew:
         """False : la carte part en pile Hors service tant que son module est detruit."""
         return self.persistante
 
-    # --- Lancements (carte lancee plusieurs fois) ---
-
-    def lancements_supplementaires(self, effets_actifs) -> int:
-        """Lancements accordes en plus par les effets REPETITION actifs dont le filtre vise cette
-        carte (ex. Salve laser active : un Laser de base est lance 1 fois de plus)."""
-        return sum(
-            effet.valeur for effet in effets_actifs
-            if effet.nature == NatureEffet.REPETITION and effet.filtre.correspond(self)
-        )
-
-    def nombre_de_lancements(self, effets_actifs=()) -> int:
-        """Nombre total de fois que les effets de la carte s'appliquent quand elle est jouee."""
-        return self.lancements + self.lancements_supplementaires(effets_actifs)
-
     # --- Texte ---
 
     @property
@@ -331,6 +322,19 @@ class CarteNew:
             "description": self.description,
             "effets": [_effet_vers_dict(effet) for effet in self.effets],
         }
+
+
+def appliquer_repetition(effet: Effet, cartes) -> int:
+    """Effet REPETITION joue : chaque carte visee par son filtre est lancee `effet.valeur` fois de
+    plus pour le reste du combat. `cartes` : toutes les cartes du combat, toutes piles confondues
+    (main, pioche, defausse, epuisees, Hors service), pour qu'une carte piochee plus tard soit
+    concernee elle aussi. Renvoie le nombre de cartes modifiees."""
+    if effet.nature != NatureEffet.REPETITION:
+        raise ValueError(f"Effet {effet.nature.name} : seul un effet REPETITION modifie les lancements")
+    visees = [carte for carte in cartes if effet.filtre.correspond(carte)]
+    for carte in visees:
+        carte.lancements += effet.valeur
+    return len(visees)
 
 
 def _effet_depuis_dict(entree: dict) -> Effet:

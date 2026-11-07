@@ -15,6 +15,7 @@ from src.gameplay.carte_new import (
     FiltreCartes,
     NatureEffet,
     PorteeEffet,
+    appliquer_repetition,
 )
 
 MP, LDM = "Module principal", "Lanceur de missiles"
@@ -141,47 +142,50 @@ def test_les_degats_sont_instantanes_et_le_bouclier_suit_sa_propre_regle():
     assert cartes["Bouclier"].effets[0].cumul == Cumul.BOUCLIER
 
 
-# --- Repetition ("lancee X fois de plus") ---
+# --- Lancements et repetition ("lancee X fois de plus") ---
 
 
-def test_salve_laser_ne_vise_que_le_laser_de_base():
-    cartes = _cartes()
-    salve = cartes["Salve laser"].effets
-
-    assert cartes["Laser"].lancements_supplementaires(salve) == 1
-    assert cartes["Laser lourd"].lancements_supplementaires(salve) == 0
-    assert cartes["Bouclier"].lancements_supplementaires(salve) == 0
-
-
-def test_protocole_d_urgence_vise_toutes_les_cartes_de_base_et_se_cumule_avec_salve_laser():
-    cartes = _cartes()
-    actifs = cartes["Protocole d'urgence"].effets + cartes["Salve laser"].effets
-
-    assert cartes["Laser"].lancements_supplementaires(actifs) == 2
-    assert cartes["Réparation"].lancements_supplementaires(actifs) == 1
-    assert cartes["Laser percant"].lancements_supplementaires(actifs) == 0  # Commune
-
-
-def test_une_carte_est_lancee_une_fois_par_defaut():
-    assert _cartes()["Laser"].nombre_de_lancements() == 1
-
-
-def test_carte_lancee_deux_fois_par_nature_et_cumul_avec_les_repetitions():
-    cartes = _cartes()
+def test_une_carte_est_lancee_une_fois_par_defaut_ou_plus_si_precise():
+    assert _cartes()["Laser"].lancements == 1
     double_laser = CarteNew.depuis_dict(dict(REGISTRE_REFONTE[0], lancements=2))
 
-    assert double_laser.nombre_de_lancements() == 2
-    assert double_laser.nombre_de_lancements(cartes["Salve laser"].effets) == 3
+    assert double_laser.lancements == 2
     assert CarteNew.depuis_dict(double_laser.vers_dict()).lancements == 2
 
 
-def test_bouclier_stabilise_vise_le_bouclier_de_base():
+def test_salve_laser_augmente_les_lancements_des_seuls_lasers_de_base_de_toutes_les_piles():
     cartes = _cartes()
-    filtre = cartes["Bouclier stabilise"].effets[0].filtre
+    deck = [cartes["Laser"].copie() for _ in range(4)] + [cartes["Laser lourd"], cartes["Bouclier"]]
 
-    assert cartes["Bouclier"].nombre_de_lancements(cartes["Bouclier stabilise"].effets) == 2
-    assert filtre.correspond(cartes["Bouclier"])
-    assert not filtre.correspond(cartes["Blindage cible"])
+    modifiees = appliquer_repetition(cartes["Salve laser"].effets[0], deck)
+
+    assert modifiees == 4
+    assert [carte.lancements for carte in deck] == [2, 2, 2, 2, 1, 1]
+
+
+def test_les_repetitions_se_cumulent_pour_le_combat():
+    cartes = _cartes()
+    laser, reparation, laser_percant = cartes["Laser"], cartes["Réparation"], cartes["Laser percant"]
+    deck = [laser, reparation, laser_percant]
+
+    appliquer_repetition(cartes["Salve laser"].effets[0], deck)
+    appliquer_repetition(cartes["Protocole d'urgence"].effets[0], deck)
+
+    assert (laser.lancements, reparation.lancements, laser_percant.lancements) == (3, 2, 1)
+    assert cartes["Salve laser"].effets[0].cumul == Cumul.INTENSITE_PERMANENTE
+
+
+def test_bouclier_stabilise_double_le_bouclier_de_base():
+    cartes = _cartes()
+
+    appliquer_repetition(cartes["Bouclier stabilise"].effets[0], [cartes["Bouclier"], cartes["Blindage cible"]])
+
+    assert (cartes["Bouclier"].lancements, cartes["Blindage cible"].lancements) == (2, 1)
+
+
+def test_seul_un_effet_repetition_modifie_les_lancements():
+    with pytest.raises(ValueError):
+        appliquer_repetition(Effet(NatureEffet.DEGATS, 1), [_cartes()["Laser"]])
 
 
 # --- Cible ---
