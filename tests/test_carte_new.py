@@ -3,6 +3,8 @@ Tests unitaires pour src/gameplay/carte_new.py (CarteNew, carte de la refonte) e
 config/carte_new.json (source de verite des cartes revues).
 """
 
+import json
+
 import pytest
 
 from src.gameplay.carte import RareteCarte
@@ -16,6 +18,7 @@ from src.gameplay.carte_new import (
     FiltreCartes,
     NatureEffet,
     PorteeEffet,
+    FICHIER_CARTES_NEW,
     appliquer_repetition,
     charger_cartes_new,
 )
@@ -24,6 +27,12 @@ from src.gameplay.carte_new import (
 def _cartes() -> dict[str, CarteNew]:
     """Cartes de config/carte_new.json, par nom (nouvelles instances a chaque appel)."""
     return {carte.nom: carte for carte in charger_cartes_new().values()}
+
+
+def _entree(id_carte: str) -> dict:
+    """Entree brute d'une carte dans config/carte_new.json (pour fabriquer des variantes)."""
+    return next(entree for entree in json.loads(FICHIER_CARTES_NEW.read_text(encoding="utf-8"))["cartes"]
+                if entree["id"] == id_carte)
 
 
 def _carte_simple(**champs) -> CarteNew:
@@ -68,11 +77,6 @@ def test_les_effets_lisent_leur_valeur_sur_la_carte():
 
     assert [missiles.valeur_de(effet) for effet in missiles.effets] == [15, 6]
     assert missiles.effets[1].portee == PorteeEffet.AUTRES_ENNEMIS
-
-
-def test_vers_dict_puis_depuis_dict_redonne_la_meme_carte():
-    for carte in charger_cartes_new().values():
-        assert CarteNew.depuis_dict(carte.vers_dict()).vers_dict() == carte.vers_dict()
 
 
 # --- Verification des valeurs nommees ---
@@ -132,7 +136,7 @@ def test_l_incendie_et_le_bouclier_baissent_de_un_par_tour():
 
 def test_une_carte_est_lancee_une_fois_par_defaut_ou_plus_si_precise():
     laser = _cartes()["Laser"]
-    double_laser = CarteNew.depuis_dict(dict(laser.vers_dict(), lancements=2))
+    double_laser = CarteNew.depuis_dict(dict(_entree("CRT_7"), lancements=2))
 
     assert laser.lancements_base == laser.lancements_actuels == 1
     assert double_laser.lancements_base == double_laser.lancements_actuels == 2
@@ -245,7 +249,7 @@ def test_seule_une_carte_persistante_reste_jouable_si_son_module_est_detruit():
 def test_persistante_lue_depuis_le_json():
     laser = _cartes()["Laser"]
 
-    assert CarteNew.depuis_dict(dict(laser.vers_dict(), persistante=True)).persistante
+    assert CarteNew.depuis_dict(dict(_entree("CRT_7"), persistante=True)).persistante
     assert not laser.persistante
 
 

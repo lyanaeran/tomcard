@@ -367,7 +367,7 @@ class CarteNew:
         """False : la carte part en pile Hors service tant que son module est detruit."""
         return self.persistante
 
-    # --- Lecture / ecriture JSON (format de config/carte_new.json) ---
+    # --- Lecture JSON (format de config/carte_new.json) ---
 
     @classmethod
     def depuis_dict(cls, entree: dict) -> "CarteNew":
@@ -388,25 +388,6 @@ class CarteNew:
             lancements_base=entree.get("lancements", 1),
             munitions_base=entree.get("munition"),
         )
-
-    def vers_dict(self) -> dict:
-        return {
-            "id": self.id,
-            "nom": self.nom,
-            "image": self.image,
-            "rarete": self.rarete.name.capitalize(),
-            "categorie": self.categorie.value,
-            "cible": self.cible.value,
-            "cout": self.cout,
-            "munition": self.munitions_base,
-            "lancements": self.lancements_base,
-            "persistante": self.persistante,
-            "jouable": self.jouable,
-            "refonte": self.refonte,
-            "description": self.description,
-            "valeurs": dict(self.valeurs),
-            "effets": [_effet_vers_dict(effet) for effet in self.effets],
-        }
 
 
 def charger_cartes_new(fichier: Path = FICHIER_CARTES_NEW) -> dict[str, CarteNew]:
@@ -442,23 +423,3 @@ def _effet_depuis_dict(entree: dict) -> Effet:
             categorie=CategorieCarte(filtre["categorie"]) if "categorie" in filtre else None,
         ) if filtre else None,
     )
-
-
-def _effet_vers_dict(effet: Effet) -> dict:
-    resultat = {"nature": effet.nature.name}
-    if effet.valeur is not None:
-        resultat["valeur"] = effet.valeur
-    if effet.portee != PorteeEffet.CIBLE:
-        resultat["portee"] = effet.portee.name
-    if effet.duree is not None:
-        resultat["duree"] = effet.duree
-    if effet.filtre is not None:
-        filtre = {}
-        if effet.filtre.nom is not None:
-            filtre["nom"] = effet.filtre.nom
-        if effet.filtre.rarete is not None:
-            filtre["rarete"] = effet.filtre.rarete.name.capitalize()
-        if effet.filtre.categorie is not None:
-            filtre["categorie"] = effet.filtre.categorie.value
-        resultat["filtre"] = filtre
-    return resultat
