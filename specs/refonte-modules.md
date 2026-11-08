@@ -304,17 +304,23 @@ Un module mêle aujourd'hui **trois niveaux d'information**, répartis dans troi
 | **Exemplaire dans la partie** | `EtatModule` | identifiant d'exemplaire (`M3`, à ajouter), type, emplacement, PV max avec améliorations, niveau de mise à jour, PV (principal seulement) | sauvegardé d'une partie à l'autre |
 | **État en combat** | `Module` | PV, bouclier, buffs (dont Destruction), leurre, mort, résurrections utilisées | remis à zéro à chaque combat |
 
-**Découpage (décision utilisateur, 2026-11-08)** : tout dans `module_new.py`, en deux classes.
+**Découpage (décision utilisateur, 2026-11-08)** : **une seule classe `ModuleNew`** dans
+`module_new.py`, qui réunit le modèle, l'exemplaire et les champs de combat (PV de combat,
+bouclier, buffs dont Destruction, leurre, détruit) — même principe que `CarteNew`.
 
-- **`ModuleNew`** réunit le **modèle et l'exemplaire** (comme `CarteNew`) : c'est ce qui est
-  sauvegardé dans la partie.
-- **`ModuleEnCombat`** (nom provisoire) porte l'**état en combat** et une **référence vers son
-  `ModuleNew`** : PV du moment, bouclier, buffs (dont Destruction), leurre, détruit. Le nom, l'image
-  ou le PV max se lisent via ce lien, sans duplication. Il est créé en début de combat (PV au
-  maximum pour un secondaire, PV sauvegardés pour le principal) et jeté à la fin, où seuls les PV
-  du principal sont reportés dans son `ModuleNew`. Le champ `exemplaire_module` d'une carte
-  désigne un `ModuleNew`, ce qui permet de retrouver son `ModuleEnCombat` (cartes envoyées en pile
-  Hors service à sa destruction).
+- **Une copie par combat** : au début de chaque combat, le combat travaille sur une **copie** du
+  module, champs de combat remis à zéro (PV au maximum pour un secondaire, PV sauvegardés pour le
+  principal). Le module de la partie n'est jamais modifié pendant le combat : un combat abandonné
+  (« Quitter ») ou copié par le simulateur ne touche pas la partie, et un état de combat ne peut
+  pas fuiter d'un combat à l'autre.
+- **Fin de combat** : seuls les PV du principal sont reportés de la copie vers le module de la
+  partie.
+- **Sauvegarde** : seuls les champs du modèle et de l'exemplaire sont sauvegardés, jamais les
+  champs de combat (liste explicite).
+- **Deux sortes de PV** à nommer clairement : les PV sauvegardés (principal seulement) et les PV du
+  combat en cours.
+- Variante écartée : une classe à part pour le combat, liée à son `ModuleNew` (plus de classes et
+  un lien à suivre, pour le même résultat).
 
 ---
 
@@ -332,14 +338,14 @@ Un module mêle aujourd'hui **trois niveaux d'information**, répartis dans troi
 6. **Résurrection** : quelles pistes garder (§5.1) ; garde-fou contre les boucles en partie réglé
    par la consommation du buff Destruction (§5.2).
 7. **Sacrifice volontaire** (§6) : oui ou non.
-8. ~~**Découpage de `ModuleNew`**~~ : **tranché**, `ModuleNew` (modèle + exemplaire) et
-   `ModuleEnCombat` (état en combat, lié à son `ModuleNew`), dans `module_new.py` (§8).
+8. ~~**Découpage de `ModuleNew`**~~ : **tranché**, une seule classe `ModuleNew` (modèle,
+   exemplaire et champs de combat), avec une copie par combat (§8).
 
 ---
 
 ## 10. Prochaines étapes
 
-1. Créer `module_new.py` (`ModuleNew`, `ModuleEnCombat`, §8), `config/module_new.json`
+1. Créer `module_new.py` (`ModuleNew`, copie par combat, §8), `config/module_new.json`
    (principal 60 PV, Lanceur de missiles 20 PV) et son tableau généré.
 2. Trancher le rattachement des cartes obtenues hors module (§3.3), puis implémenter le lien
    carte ↔ exemplaire de module (identifiant d'exemplaire, format du deck sauvegardé, `CarteNew`,
