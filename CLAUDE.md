@@ -22,7 +22,7 @@ utilisateur) ; tout le reste (identifiants, clés JSON, code, commentaires) rest
   les brouillons de refonte et la conception d'outils (ex. `specs/simulation.md` pour
   `outils/simulation/`), et sont listés dans l'index `specs/specs.md`. Seules exceptions : les
   `CLAUDE.md`, `README.md`, et les fichiers générés (ex. synthèses de simulation,
-  `config/carte_new.md`, `config/module_new.md`).
+  `config/carte_new.md`, `config/module_new.md`, `config/ennemi_new.md`).
 - **Cartes (refonte en cours, décision utilisateur)** :
   - `config/carte_new.json` est la **source de vérité des cartes** : format de la refonte
     (`src/gameplay/carte_new.py:CarteNew`), valeurs nommées, effets, champs `jouable` et `refonte`.
@@ -38,6 +38,10 @@ utilisateur) ; tout le reste (identifiants, clés JSON, code, commentaires) rest
     avec son tableau **généré** `config/module_new.md` (`python -m outils.tableau_modules`,
     `tests/test_tableau_modules.py`). `config/modules.json` reste lu par le moteur actuel jusqu'au
     branchement.
+  - **Ennemis, même principe** : `config/ennemi_new.json` (`src/gameplay/ennemi_new.py:EnnemiNew`)
+    est la source de vérité des ennemis de la refonte, avec son tableau **généré**
+    `config/ennemi_new.md` (`python -m outils.tableau_ennemis`, `tests/test_tableau_ennemis.py`).
+    `config/ennemis.json` reste lu par le moteur actuel jusqu'au branchement.
   - `specs/cartes_legacy.xlsx` : ancien registre (onglets Cartes, Aventures, Ennemis, Modules),
     **archivé, plus maintenu**.
 

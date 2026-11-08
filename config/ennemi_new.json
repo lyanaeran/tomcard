@@ -1,0 +1,100 @@
+{
+  "ennemis": [
+    {
+      "id": "ENM_PAT_LE_PIRATE",
+      "nom": "Pat le Pirate",
+      "image": "assets/ennemis/pat_le_pirate.png",
+      "taille": "S",
+      "pv": 50,
+      "valeurs": {
+        "degats": { "base": 5, "augmentation": 1, "tous_les": 3 }
+      },
+      "actions": [
+        [ { "nature": "ATTAQUE", "valeur": "degats", "cible": "PROXIMITE" } ]
+      ]
+    },
+    {
+      "id": "ENM_LE_NETTOYEUR",
+      "nom": "Le nettoyeur",
+      "image": "assets/ennemis/le_nettoyeur.png",
+      "taille": "S",
+      "placement": "PROTEGE_ARRIERE",
+      "pv": 25,
+      "valeurs": {
+        "degats": { "base": 7, "augmentation": 1, "tous_les": 3 }
+      },
+      "actions": [
+        [ { "nature": "ATTAQUE", "valeur": "degats", "cible": "PROXIMITE", "repetitions": 2 } ]
+      ]
+    },
+    {
+      "id": "ENM_PETIT_JEAN",
+      "nom": "Petit Jean",
+      "image": "assets/ennemis/petit_jean.png",
+      "taille": "S",
+      "placement": "PROTECTEUR_AVANT",
+      "pv": 100,
+      "valeurs": {
+        "degats": { "base": 2, "augmentation": 1, "tous_les": 3 },
+        "bouclier": { "base": 6 }
+      },
+      "actions": [
+        [
+          { "nature": "ATTAQUE", "valeur": "degats", "cible": "PROXIMITE" },
+          { "nature": "BOUCLIER", "valeur": "bouclier", "cible": "SOI_MEME" }
+        ],
+        [ { "nature": "ATTAQUE", "valeur": "degats", "cible": "PROXIMITE" } ]
+      ]
+    },
+    {
+      "id": "ENM_LE_PUZZLE",
+      "nom": "Le puzzle",
+      "image": "assets/ennemis/le_puzzle.png",
+      "taille": "S",
+      "pv": 50,
+      "valeurs": {
+        "degats": { "base": 5, "augmentation": 1, "tous_les": 3 }
+      },
+      "actions": [
+        [ { "nature": "ATTAQUE", "valeur": "degats", "cible": "TOUS_MODULES" } ]
+      ]
+    },
+    {
+      "id": "ENM_MIROIR",
+      "nom": "Miroir",
+      "image": "assets/ennemis/miroir.png",
+      "taille": "S",
+      "pv": 50,
+      "valeurs": {
+        "degats": { "base": 2, "augmentation": 1, "tous_les": 3 },
+        "renvoi": { "base": 5 }
+      },
+      "actions": [
+        [
+          { "nature": "ATTAQUE", "valeur": "degats", "cible": "PROXIMITE" },
+          { "nature": "RENVOI", "valeur": "renvoi", "cible": "ALLIE_AVANT_SINON_ARRIERE" }
+        ]
+      ]
+    },
+    {
+      "id": "ENM_BOSS_PIRATES",
+      "nom": "Le Boss des pirates",
+      "image": "assets/ennemis/boss_pirates.png",
+      "taille": "M",
+      "emplacements": 2,
+      "pv": 150,
+      "valeurs": {
+        "degats": { "base": 5, "augmentation": 2, "tous_les": 3 },
+        "bouclier": { "base": 10 }
+      },
+      "actions": [
+        [ { "nature": "ATTAQUE", "valeur": "degats", "cible": "TOUS_MODULES" } ],
+        [ { "nature": "ATTAQUE", "valeur": "degats", "cible": "TOUS_MODULES" } ],
+        [
+          { "nature": "ATTAQUE", "valeur": "degats", "cible": "TOUS_MODULES" },
+          { "nature": "BOUCLIER", "valeur": "bouclier", "cible": "SOI_MEME" }
+        ]
+      ]
+    }
+  ]
+}

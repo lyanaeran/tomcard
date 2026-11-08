@@ -1,6 +1,7 @@
 # Refonte des ennemis — brouillon de conception
 
-*Document de travail, rien n'est implémenté. Les choix marqués « décision utilisateur » sont
+*Document de travail. Modèle de données codé (`src/gameplay/ennemi_new.py:EnnemiNew`,
+`config/ennemi_new.json`, tableau généré `config/ennemi_new.md`), pas encore branché au combat. Les choix marqués « décision utilisateur » sont
 validés ; le reste est une proposition. Une fois stabilisé, le contenu ira dans
 [combat.md](combat.md) (§3.2, §13) et ce fichier sera supprimé. Voir aussi
 [refonte-buffs-debuffs.md](refonte-buffs-debuffs.md), [refonte-modules.md](refonte-modules.md),
@@ -127,7 +128,7 @@ ses valeurs**, **arrondi à l'inférieur**. Exemple : coefficient 1,5 → dégâ
 - Les **rythmes** (« tous les 2 tours ») et les **durées** ne sont pas des valeurs et ne sont
   jamais multipliés.
 
-### 3.5 Format envisagé (`config/ennemi_new.json`)
+### 3.5 Format (`config/ennemi_new.json`, implémenté)
 
 ```json
 {
@@ -147,8 +148,17 @@ Le nettoyeur, avec ses attaques multiples : `{ "nature": "ATTAQUE", "valeur": "d
 "PROXIMITE", "repetitions": 2 }`.
 
 `actions` est le cycle : chaque élément est une étape (une liste d'effets). Même démarche que les
-cartes et les modules : `config/ennemi_new.json` source de vérité, une classe dédiée (ex.
-`EnnemiNew`, avec une copie par combat), un tableau `.md` généré.
+cartes et les modules : `config/ennemi_new.json` source de vérité, la classe `EnnemiNew` (modèle
+et ennemi en combat, copie par combat avec son coefficient : `pour_combat`), le tableau
+`config/ennemi_new.md` généré par `python -m outils.tableau_ennemis`.
+
+- **Natures d'effet** : `ATTAQUE`, `BOUCLIER`, `RENVOI`. **Cibles** : `PROXIMITE`,
+  `TOUS_MODULES` (attaques), `SOI_MEME`, `ALLIE_AVANT_SINON_ARRIERE` (bouclier, renvoi). Une
+  attaque ne peut viser qu'un module, un bouclier ou un renvoi qu'un ennemi (vérifié au
+  chargement).
+- Une valeur sans `augmentation` est fixe (`tous_les` vaut 1 par défaut).
+- Le coefficient est un nombre décimal ≥ 1, calculé exactement (1,15 × 20 = 23, sans erreur
+  d'arrondi).
 
 ---
 
@@ -162,12 +172,32 @@ reposer le rafraîchit) et **dure un tour**. Corrige le blocage constaté en sim
 - **Ce qui est renvoyé (décision utilisateur)** : les dégâts reçus par l'ennemi protégé sont
   renvoyés **jusqu'à une valeur** (valeur nommée de Miroir, avec augmentation et coefficient) ;
   **l'ennemi protégé encaisse le reste**.
+- **Valeur inventée, à valider** : la valeur de renvoi est un **stock pour le tour**, qui
+  diminue à chaque coup renvoyé (renvoi 5 : un coup de 3 est renvoyé entièrement, le coup suivant
+  de 6 en renvoie 2 et le protégé en encaisse 4), et non une limite par coup. Il s'applique avant
+  le bouclier. L'incendie n'est jamais renvoyé.
+- **Durée** : posé au tour ennemi, le renvoi protège pendant le tour du joueur suivant et prend fin
+  à la fin de ce tour.
 
-### 4.2 Petit Jean et le Boss (sans « bouclier par tour »)
+### 4.2 Les 6 ennemis dans le nouveau format (2026-11-08)
 
-Avec le cycle d'actions, un **bouclier simple** devient une étape du cycle (ex. Petit Jean :
-attaque, attaque, bouclier). Le +2 dégâts du Boss devient une augmentation de sa valeur de dégâts
-(§3.3). Reste à fixer les cycles et les valeurs.
+Première version, au plus près des ennemis actuels ; l'utilisateur ajustera les valeurs ensuite.
+Détail et valeurs tour par tour : `config/ennemi_new.md` (généré).
+
+| Ennemi | PV | Valeurs | Cycle |
+|---|---|---|---|
+| Pat le Pirate | 50 | dégâts 5 (+1 / 3 tours) | ① attaque le plus proche |
+| Le nettoyeur | 25 | dégâts 7 (+1 / 3 tours) | ① attaque le plus proche ×2 |
+| Petit Jean | 100 | dégâts 2 (+1 / 3 tours), bouclier 6 | ① attaque + bouclier sur soi ② attaque |
+| Le puzzle | 50 | dégâts 5 (+1 / 3 tours) | ① attaque tous les modules |
+| Miroir | 50 | dégâts 2 (+1 / 3 tours), renvoi 5 | ① attaque + renvoi sur un allié avant (lui-même s'il est seul) |
+| Boss des pirates | 150 | dégâts 5 (+2 / 3 tours), bouclier 10 | ① attaque tous ② attaque tous ③ attaque tous + bouclier sur soi |
+
+- **Augmentation de +1 tous les 3 tours** pour les dégâts des ennemis autres que le Boss
+  (décision utilisateur, à affiner plus tard) ; le Boss garde son +2, qui tombe désormais aux
+  tours 4, 7, 10… (au lieu de 2, 5, 8…).
+- **Valeurs inventées** : bouclier 6 de Petit Jean et 10 du Boss (remplacent le « bouclier par
+  tour » de 3 pendant 2 tours et de 5, compte tenu de la perte de 1 par tour), renvoi 5 de Miroir.
 
 ---
 
@@ -182,6 +212,6 @@ attaque, attaque, bouclier). Le +2 dégâts du Boss devient une augmentation de 
 
 ## 6. Prochaines étapes
 
-1. Redessiner les 6 ennemis dans ce format (cycles, valeurs, augmentations).
-2. Créer `config/ennemi_new.json`, la classe dédiée et son tableau généré.
-3. Puis le combat de la refonte (`combat_new`), validé par le simulateur.
+1. ~~Redessiner les 6 ennemis, créer `config/ennemi_new.json`, `EnnemiNew` et son tableau~~
+   (fait, 2026-11-08) ; ajuster les valeurs (utilisateur).
+2. Puis le combat de la refonte (`combat_new`), validé par le simulateur.
