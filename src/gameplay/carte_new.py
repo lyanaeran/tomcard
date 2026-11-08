@@ -210,33 +210,47 @@ _MOT_Y = re.compile(r"\bY\b")
 @dataclass(eq=False)
 class CarteNew:
     """Une carte de la refonte. eq=False : deux exemplaires du meme modele sont distincts (comme
-    Carte, chacun a ses propres munitions et son propre module de rattachement).
+    Carte, chacun a ses propres munitions, lancements et module de rattachement).
 
-    `exemplaire_module` : identifiant de l'exemplaire de module de la partie auquel cet exemplaire
-    de carte est rattache (ex. "M3"), None tant qu'il ne l'est pas. Stable meme si la Station
-    service deplace le module (specs/refonte-modules.md 3.3). Le type du module n'est pas stocke
-    sur la carte : il se lit sur l'exemplaire dans la partie, et les cartes de chaque type de
-    module sont listees dans config/modules.json (une carte peut etre commune a plusieurs modules).
-    `persistante` : reste jouable si son module est detruit (mot-cle, refonte-modules.md 3.5).
-    `lancements` : nombre de fois que les effets de la carte s'appliquent quand elle est jouee (1
-    d'ordinaire, 2 pour une carte "lancee deux fois"). Augmente en combat par les effets
-    REPETITION (appliquer_repetition) ; chaque combat recree ses cartes a partir du deck de la
-    partie, donc l'augmentation disparait d'elle-meme a la fin du combat."""
+    Le type du module n'est pas stocke sur la carte : il se lit sur l'exemplaire de module dans la
+    partie, et les cartes de chaque type de module sont listees dans config/modules.json (une carte
+    peut etre commune a plusieurs modules)."""
 
+    # --- Modele : identique pour tous les exemplaires, lu dans config/cartes.json ---
+
+    # Identifiant du modele dans config/cartes.json (ex. "CRT_7"), commun a tous ses exemplaires
     id: str
+    # Nom affiche en jeu (texte affiche : accents autorises, cf. CLAUDE.md)
     nom: str
+    # Chemin de l'image de la carte (assets/cartes/)
     image: str
+    # Palier de rarete : Base (deck de depart), Commune, Rare, Legendaire
     rarete: RareteCarte
+    # Categorie du registre (Attaque, Defense, Buff...), sert aussi aux filtres de REPETITION
     categorie: CategorieCarte
+    # Ce que le joueur cible au clic, avec le vocabulaire du registre ("Ennemi Unique"...)
     cible: CibleCarteNew
+    # Cout en electricite pour jouer la carte
     cout: int
+    # Effets appliques quand la carte est jouee, dans l'ordre (au moins un)
     effets: tuple[Effet, ...]
+    # Description du registre, avec X et Y remplaces a l'affichage (description_affichee)
     description: str = ""
-    munitions_max: int | None = None
+    # Mot-cle Persistante : reste jouable si son module est detruit (refonte-modules.md 3.5)
     persistante: bool = False
+    # Nombre de fois que les effets s'appliquent quand la carte est jouee (1 d'ordinaire, 2 pour une
+    # carte "lancee deux fois") ; augmente en combat par les effets REPETITION (appliquer_repetition)
     lancements: int = 1
-    exemplaire_module: str | None = None
+    # Munitions au depart de chaque combat ; None = illimitee (specs.md 3.6)
+    munitions_max: int | None = None
+
+    # --- Etat de cet exemplaire (propre a chaque copie de la carte) ---
+
+    # Munitions restantes pendant le combat ; a 0 la carte est epuisee ; None = illimitee
     munitions_restantes: int | None = None
+    # Exemplaire de module de la partie auquel cette carte est rattachee (ex. "M3"), None tant
+    # qu'elle ne l'est pas ; stable meme si la Station deplace le module (refonte-modules.md 3.3)
+    exemplaire_module: str | None = None
 
     def __post_init__(self):
         self.effets = tuple(self.effets)
