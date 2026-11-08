@@ -50,11 +50,22 @@ class _AleatoireFixe:
         return self._index
 
 
+def _specs_tous_jouables():
+    """Modules de config/modules.json, tous marques jouables : pour tester le tirage parmi
+    plusieurs modules quel que soit le nombre de modules jouables du moment."""
+    return [dataclasses.replace(spec, jouable=True) for spec in charger_modules()]
+
+
+def test_modules_equipables_exclut_les_modules_non_jouables():
+    """Decision utilisateur : seul le Lanceur de missiles est jouable pendant la refonte."""
+    assert [spec.id for spec in modules_equipables(charger_modules())] == ["MOD_2"]
+
+
 def test_modules_equipables_exclut_le_module_principal_et_les_modules_sans_cartes():
     """4 des 10 modules (Canon lourd/Controle/Atelier/Radar) ont une liste de cartes vide (pas
     encore concues) : exclus aussi, en plus du module principal, pour ne jamais etre tires dans
     un deck (specs.md 5)."""
-    specs = charger_modules()
+    specs = _specs_tous_jouables()
 
     equipables = modules_equipables(specs)
 
@@ -64,7 +75,7 @@ def test_modules_equipables_exclut_le_module_principal_et_les_modules_sans_carte
 
 
 def test_tirer_candidats_module_renvoie_3_modules_differents():
-    specs = charger_modules()
+    specs = _specs_tous_jouables()
     pool = modules_equipables(specs)
     aleatoire = random.Random(1)
 
@@ -85,8 +96,14 @@ def test_tirer_candidats_module_est_deterministe_pour_une_meme_graine():
     assert [c.id for c in candidats_1] == [c.id for c in candidats_2]
 
 
+def test_tirer_candidats_module_moins_de_candidats_si_la_pool_est_petite():
+    candidats = tirer_candidats_module(modules_equipables(charger_modules()), random.Random(1))
+
+    assert [candidat.id for candidat in candidats] == ["MOD_2"]
+
+
 def test_tirer_candidats_module_respecte_la_quantite_demandee():
-    specs = charger_modules()
+    specs = _specs_tous_jouables()
     pool = modules_equipables(specs)
     aleatoire = random.Random(2)
 
@@ -146,7 +163,7 @@ def test_pool_toutes_cartes_exclut_les_cartes_base():
 def test_tirer_candidats_recompense_un_par_module_chacun_pioche_dans_son_propre_pool():
     """Le module principal pioche desormais dans son propre pool (pool_module), comme chaque
     module equipe - jamais dans le pool entier du jeu (bug corrige, cf. CLAUDE.md)."""
-    specs_modules = charger_modules()
+    specs_modules = _specs_tous_jouables()
     cartes = charger_cartes()
     _vaisseau, specs_utilisees = creer_vaisseau(specs_modules, random.Random(5))
 

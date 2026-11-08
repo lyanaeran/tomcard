@@ -20,7 +20,7 @@
       "nom": "Laser percant",
       "image": "assets/cartes/attaque_percante.png",
       "module_origine": "Module principal",
-      "rarete": "Base",
+      "rarete": "Commune",
       "categorie": "Attaque",
       "cible_design": "Ennemi Colonne",
       "cout": 2,
@@ -39,30 +39,30 @@
       "categorie": "Defense",
       "cible_design": "Module Unique",
       "cout": 1,
-      "x": 5,
+      "x": 3,
       "y": null,
       "munition": null,
       "description": "Bouclier de X sur un module unique",
-      "effet": { "type": "DEFENSE", "cible": "ALLIE_UNIQUE", "valeur": 5 }
+      "effet": { "type": "DEFENSE", "cible": "ALLIE_UNIQUE", "valeur": 3 }
     },
     {
       "id": "CRT_11",
-      "nom": "Proteger le vaisseau",
+      "nom": "Protéger le vaisseau",
       "image": "assets/cartes/defense.png",
       "module_origine": "Module principal",
       "rarete": "Base",
       "categorie": "Defense",
       "cible_design": "Module Principal",
       "cout": 1,
-      "x": 8,
+      "x": 5,
       "y": null,
       "munition": null,
       "description": "Bouclier de X sur le module principal",
-      "effet": { "type": "DEFENSE", "cible": "MODULE_PRINCIPAL", "valeur": 8 }
+      "effet": { "type": "DEFENSE", "cible": "MODULE_PRINCIPAL", "valeur": 5 }
     },
     {
       "id": "CRT_12",
-      "nom": "Reparation",
+      "nom": "Réparation",
       "image": "assets/cartes/reparation.png",
       "module_origine": "Module principal",
       "rarete": "Base",
@@ -84,11 +84,11 @@
       "categorie": "Attaque",
       "cible_design": "Ennemi Unique",
       "cout": 2,
-      "x": 8,
-      "y": 3,
+      "x": 4,
+      "y": null,
       "munition": 3,
-      "description": "Inflige X degats pendant Y tours.",
-      "_non_jouable": "effet a duree (degats sur plusieurs tours) non supporte par le moteur actuel, meme limite que Embrasement/Guerre nucleaire. Nom invente (aucun nom fourni dans le design), a valider."
+      "description": "Ajoute X points d’incendie sur la cible",
+      "_non_jouable": "incendie (equivalent du poison de Slay the Spire : intensite cumulative qui decroit de 1 par tour, cf. specs/refonte-buffs-debuffs.md) non supporte par le moteur actuel. Nom invente, a valider."
     },
     {
       "id": "CRT_46",
@@ -99,11 +99,11 @@
       "categorie": "Defense",
       "cible_design": "Module Unique",
       "cout": 2,
-      "x": 7,
-      "y": 4,
+      "x": 6,
+      "y": null,
       "munition": 3,
-      "description": "Bouclier de X sur un module unique pendant Y tours.",
-      "effet": { "type": "BUFF", "cible": "ALLIE_UNIQUE", "valeur": 7, "action": "BOUCLIER_PAR_TOUR", "duree": 4 }
+      "description": "Bouclier de X sur un module unique",
+      "effet": { "type": "DEFENSE", "cible": "ALLIE_UNIQUE", "valeur": 6 }
     },
     {
       "id": "CRT_47",
@@ -129,11 +129,11 @@
       "categorie": "Buff",
       "cible_design": "Module Principal",
       "cout": 3,
-      "x": 0,
+      "x": 1,
       "y": null,
       "munition": 1,
-      "description": "Le bouclier n'est plus divise par 2 en debut de tour",
-      "_non_jouable": "blocage de la dissipation naturelle du bouclier (specs.md 3.5) non supporte par le moteur actuel. Nom invente, a valider."
+      "description": "Les Boucliers de base sont lancés X fois de plus.",
+      "_non_jouable": "duplication d'effet des cartes Bouclier de rarete Base non supportee par le moteur actuel, meme famille que Salve laser/Protocole d'urgence. Nom invente, a valider."
     },
     {
       "id": "CRT_49",
@@ -147,8 +147,8 @@
       "x": 1,
       "y": null,
       "munition": 2,
-      "description": "Les lasers sont lances X fois de plus.",
-      "_non_jouable": "duplication d'effet d'une carte precise (Laser) non supportee par le moteur actuel, meme famille que Double defense/Circuit parallele. Nom invente, a valider."
+      "description": "Les Laser de base sont lances X fois de plus.",
+      "_non_jouable": "duplication d'effet des cartes Laser de rarete Base non supportee par le moteur actuel, meme famille que Double defense/Circuit parallele. Nom invente, a valider."
     },
     {
       "id": "CRT_50",
@@ -159,7 +159,7 @@
       "categorie": "Buff",
       "cible_design": "Module Tous",
       "cout": 3,
-      "x": 2,
+      "x": 1,
       "y": null,
       "munition": 3,
       "description": "Les cartes de bases sont lancees X fois de plus.",
@@ -190,7 +190,7 @@
       "cible_design": "Ennemi Tous",
       "cout": 2,
       "x": 10,
-      "y": 6,
+      "y": 8,
       "munition": null,
       "description": "Inflige X degats a la ligne avant et Y a la ligne arriere",
       "_non_jouable": "effet a deux valeurs (deux zones distinctes) non supporte par le moteur actuel"
@@ -205,7 +205,7 @@
       "cible_design": "Ennemi Tous",
       "cout": 1,
       "x": 8,
-      "y": 0,
+      "y": null,
       "munition": null,
       "description": "Inflige X degats a tous les ennemis",
       "effet": { "type": "ATTAQUE", "cible": "ENNEMIS_MULTIPLES", "valeur": 8 }
@@ -232,13 +232,13 @@
       "module_origine": "Lanceur de missiles",
       "rarete": "Rare",
       "categorie": "Attaque",
-      "cible_design": "Ennemi Tous",
+      "cible_design": "Ennemi Unique",
       "cout": 2,
-      "x": 5,
-      "y": 3,
+      "x": 8,
+      "y": null,
       "munition": null,
-      "description": "Inflige X degats a tous les ennemis pour les Y prochains tours",
-      "_non_jouable": "effet a duree (degats sur plusieurs tours) non supporte par le moteur actuel"
+      "description": "Ajoute X points d’incendie à un ennemi",
+      "_non_jouable": "incendie (equivalent du poison de Slay the Spire : intensite cumulative qui decroit de 1 par tour, cf. specs/refonte-buffs-debuffs.md) non supporte par le moteur actuel"
     },
     {
       "id": "CRT_18",
@@ -252,7 +252,7 @@
       "x": 0,
       "y": null,
       "munition": null,
-      "description": "Annule la prochaine attaque sur le module cible",
+      "description": "Annule la prochaine attaque ciblant le module",
       "effet": { "type": "DEFENSE", "cible": "ALLIE_UNIQUE", "valeur": 0, "action": "ANNULATION_PROCHAINE_ATTAQUE" }
     },
     {
@@ -264,11 +264,11 @@
       "categorie": "Attaque",
       "cible_design": "Ennemi Tous",
       "cout": 3,
-      "x": 15,
-      "y": 2,
+      "x": 8,
+      "y": null,
       "munition": null,
-      "description": "Inflige X degats a tous les ennemis pour les Y prochains tours",
-      "_non_jouable": "effet a duree (degats sur plusieurs tours) non supporte par le moteur actuel"
+      "description": "Ajoute X points d’incendie à tous les ennemis",
+      "_non_jouable": "incendie (equivalent du poison de Slay the Spire : intensite cumulative qui decroit de 1 par tour, cf. specs/refonte-buffs-debuffs.md) non supporte par le moteur actuel"
     },
     {
       "id": "CRT_9",
@@ -279,11 +279,11 @@
       "categorie": "Attaque",
       "cible_design": "Ennemi Tous",
       "cout": 1,
-      "x": 4,
+      "x": 6,
       "y": null,
       "munition": null,
       "description": "Inflige X degats a tous les ennemis",
-      "effet": { "type": "ATTAQUE", "cible": "ENNEMIS_MULTIPLES", "valeur": 4 }
+      "effet": { "type": "ATTAQUE", "cible": "ENNEMIS_MULTIPLES", "valeur": 6 }
     },
     {
       "id": "CRT_20",

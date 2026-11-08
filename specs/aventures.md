@@ -8,8 +8,8 @@ sections : [specs.md](specs.md).*
 ### 2.5 Aventures (contenu)
 
 Contenu concret des 3 premières Aventures spécifiées à ce jour — brouillon détaillé dans
-`specs/cartes.xlsx`, onglet "Aventures" (miroir humainement modifiable, même principe que l'onglet
-Cartes, cf. CLAUDE.md/§10.3). **Les trois Aventures (Trois lunes, Astéroïdes, Police) sont
+l'ancien registre `specs/cartes_legacy.xlsx`, onglet "Aventures" (archivé, plus maintenu ; cette
+section fait foi). **Les trois Aventures (Trois lunes, Astéroïdes, Police) sont
 implémentées** (voir ci-dessous). `TypeEtape.AVENTURE` tire au hasard laquelle des trois ouvrir
 (`tirer_type_aventure`, `TypeAventure`, `src/gameplay/parcours.py` — tirage uniforme non
 déterministe, comme les récompenses de fin de combat).

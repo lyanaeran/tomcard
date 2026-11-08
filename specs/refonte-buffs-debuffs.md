@@ -293,7 +293,10 @@ représente :
    par durée** (*Brèche* 2 tours vs *Boucliers hors service* 5 tours) — l'avertissement ⚠️ de la §5
    disparaît. *Tordre le canon*, *Tir allié* y entrent naturellement.
 2. **Cumul en intensité** : qui décroît (Poison : *Embrasement*, *Guerre nucléaire*, *Tir
-   incendiaire*), ou **permanente** (Force : `AUGMENTATION_DEGATS` du Boss, montée de dégâts §7.2).
+   incendiaire*), ou **sans décroissance** (Force : `AUGMENTATION_DEGATS` du Boss, montée de dégâts
+   §7.2). Décision utilisateur : les mécaniques des ennemis seront gérées **en dehors des cartes**
+   (pas dans `CarteNew`) ; côté cartes, le cumul sans décroissance sert aux effets « lancées N fois
+   de plus » (*Salve laser*…, modules-cartes.md §4).
 
 Le **bouclier** garde une décroissance **proportionnelle** (moitié comme aujourd'hui, ou un quart
 avec un minimum de 1) ou un plafond, si la montée des dégâts ennemis (§7.2) ne suffit pas à
@@ -319,8 +322,11 @@ contenir l'accumulation — à vérifier une fois la montée implémentée.
 
 ## 8. Prochaines étapes
 
-1. Trancher le modèle : « -1/tour pour tout » (§3) ou deux familles (§7.3), et la décroissance du
-   bouclier (fixe + montée des dégâts ennemis, ou proportionnelle).
+1. Trancher le modèle : « -1/tour pour tout » (§3) ou deux familles (§7.3). **Bouclier tranché
+   (décision utilisateur, 2026-11-07)** : il baisse de 1 par tour et c'est tout, sans notion de
+   durée ; l'accumulation (§7.1) est contenue par la montée des dégâts propre à chaque ennemi
+   (§7.2). Conséquence : *Blindage ciblé* devient un bouclier simple de 6 (plus de « pendant Y
+   tours »), et `CarteNew` refuse une durée sur un bouclier.
 2. Fixer la montée de dégâts de chaque ennemi (§7.2) et ajouter le champ à `config/ennemis.json`.
 3. Redessiner Petit Jean et le Boss des pirates (§7.4) si `BOUCLIER_PAR_TOUR` est retiré.
 4. Trancher les points ouverts restants de la §3.3 (taux de décroissance %, bouclier miroir).

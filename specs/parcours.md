@@ -144,7 +144,8 @@ Le run est une suite de **niveaux numérotés** (1, 2, 3...), chacun une étape.
 remplace les pistes encore ouvertes en §2 pour la Station service et la cadence des Boss :
 
 - **Niveau 1** — **Choix de module**, obligatoire, pas de tirage d'étape : 3 modules **différents**
-  tirés au sort parmi le pool, le joueur en choisit un (2ᵉ slot équipé, en plus du module de base —
+  tirés au sort parmi le pool (moins si le pool en compte moins : un seul, le Lanceur de missiles,
+  pendant la refonte des cartes, cf. modules-cartes.md §4), le joueur en choisit un (2ᵉ slot équipé, en plus du module de base —
   voir §5). C'est ce choix qui pourvoit le 2ᵉ des "2 slots" de départ mentionnés en §5.
   **Implémenté** et relié à l'orchestration du parcours (§2.4) pour une vraie partie :
   `src/gameplay/parcours.py` (tirage), `src/ui/ecran_choix_module.py` (PC),

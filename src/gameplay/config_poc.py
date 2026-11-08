@@ -135,20 +135,20 @@ def deck_module_principal(spec_principal: SpecModule, cartes: dict[str, Carte]) 
 
 
 def creer_vaisseau(specs_modules: list[SpecModule], aleatoire: random.Random) -> tuple[Vaisseau, list[SpecModule]]:
-    """Place le module principal et tire au sort 4 modules differents sur les 4 emplacements."""
+    """Place le module principal et tire au sort jusqu'a 4 modules differents parmi les modules
+    equipables ; les emplacements en trop restent vides s'il y en a moins."""
     spec_principal = next(spec for spec in specs_modules if spec.id == ID_MODULE_PRINCIPAL)
-    # Exclut les modules dont les cartes ne sont pas encore concues (cartes vide dans
-    # modules.json) : les tirer planterait creer_deck (tirer_cartes sur une pool vide).
-    specs_equipables = [spec for spec in specs_modules if spec.id != ID_MODULE_PRINCIPAL and spec.cartes]
-    specs_choisies = aleatoire.sample(specs_equipables, NOMBRE_MODULES_EQUIPES)
+    # Meme filtre que parcours.modules_equipables (pas importable ici : parcours importe ce module)
+    specs_equipables = [spec for spec in specs_modules if spec.id != ID_MODULE_PRINCIPAL and spec.jouable and spec.cartes]
+    specs_choisies = aleatoire.sample(specs_equipables, min(NOMBRE_MODULES_EQUIPES, len(specs_equipables)))
 
     modules_par_position = dict(zip(POSITIONS_MODULES_EQUIPES, (_module_depuis_spec(spec) for spec in specs_choisies)))
     vaisseau = Vaisseau(
         base=_module_depuis_spec(spec_principal),
-        avant_gauche=modules_par_position[Position(Colonne.AVANT, Rangee.GAUCHE)],
-        avant_droite=modules_par_position[Position(Colonne.AVANT, Rangee.DROITE)],
-        arriere_gauche=modules_par_position[Position(Colonne.ARRIERE, Rangee.GAUCHE)],
-        arriere_droite=modules_par_position[Position(Colonne.ARRIERE, Rangee.DROITE)],
+        avant_gauche=modules_par_position.get(Position(Colonne.AVANT, Rangee.GAUCHE)),
+        avant_droite=modules_par_position.get(Position(Colonne.AVANT, Rangee.DROITE)),
+        arriere_gauche=modules_par_position.get(Position(Colonne.ARRIERE, Rangee.GAUCHE)),
+        arriere_droite=modules_par_position.get(Position(Colonne.ARRIERE, Rangee.DROITE)),
     )
     return vaisseau, [spec_principal, *specs_choisies]
 

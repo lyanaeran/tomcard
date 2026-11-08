@@ -5,14 +5,16 @@
       "nom": "Principal",
       "image": "assets/modules/principal.png",
       "points_de_vie": 50,
+      "jouable": true,
       "description": "Votre vaisseau, plus cabosse que le Faucon Millenium, mais la prunelle de vos yeux.",
-      "cartes": ["CRT_7", "CRT_8", "CRT_10", "CRT_11", "CRT_46", "CRT_47"]
+      "cartes": ["CRT_7", "CRT_8", "CRT_10", "CRT_11", "CRT_12", "CRT_46", "CRT_47"]
     },
     {
       "id": "MOD_2",
       "nom": "Lanceur de missiles",
       "image": "assets/modules/missiles.png",
       "points_de_vie": 30,
+      "jouable": true,
       "description": "Tout dans la finesse, des bons vieux missiles qui explosent partout (sauf la ou vous etes, on espere).",
       "cartes": ["CRT_9", "CRT_15", "CRT_16", "CRT_18"]
     },
@@ -21,6 +23,7 @@
       "nom": "Blindage",
       "image": "assets/modules/bouclier.png",
       "points_de_vie": 30,
+      "jouable": false,
       "description": "Quand la diplomatie a echoue et qu'on passe a la suite, mieux vaut pouvoir s'abriter.",
       "cartes": ["CRT_20", "CRT_21", "CRT_23", "CRT_24", "CRT_26"]
     },
@@ -29,6 +32,7 @@
       "nom": "Generateur",
       "image": "assets/modules/generateur.png",
       "points_de_vie": 30,
+      "jouable": false,
       "description": "Une eolienne dans l'espace ? Vous etes sur ?",
       "cartes": ["CRT_27", "CRT_31"]
     },
@@ -37,6 +41,7 @@
       "nom": "Soute",
       "image": "assets/modules/soute.png",
       "points_de_vie": 30,
+      "jouable": false,
       "description": "Une soute bien remplie pour parer a toutes les (mauvaises) surprises...",
       "cartes": ["CRT_39"]
     },
@@ -45,6 +50,7 @@
       "nom": "Sabotage",
       "image": "assets/modules/sabotage.png",
       "points_de_vie": 30,
+      "jouable": false,
       "description": "Comment ca ton canon est tombe en panne ? C'est marrant parce que le mien non. Regarde...",
       "cartes": ["CRT_33", "CRT_34", "CRT_35", "CRT_36", "CRT_37", "CRT_38"]
     },
@@ -53,6 +59,7 @@
       "nom": "Canon lourd",
       "image": "assets/modules/canon_lourd.png",
       "points_de_vie": 30,
+      "jouable": false,
       "description": "Ce module envoie du lourd, mieux vaut ne pas se trouver en face.",
       "cartes": []
     },
@@ -61,6 +68,7 @@
       "nom": "Controle",
       "image": "assets/modules/controle.png",
       "points_de_vie": 30,
+      "jouable": false,
       "description": "La meilleure facon de se proteger des attaques de l'ennemi, c'est encore de l'empecher de les lancer.",
       "cartes": []
     },
@@ -69,6 +77,7 @@
       "nom": "Atelier",
       "image": "assets/modules/atelier.png",
       "points_de_vie": 30,
+      "jouable": false,
       "description": "Bricoler le vaisseau alors que ca tire de tout cote ? Meme pas peur !",
       "cartes": []
     },
@@ -77,6 +86,7 @@
       "nom": "Radar",
       "image": "assets/modules/radar.png",
       "points_de_vie": 30,
+      "jouable": false,
       "description": "Quand on connait les points faibles, on peut faire beaucoup plus mal.",
       "cartes": []
     }

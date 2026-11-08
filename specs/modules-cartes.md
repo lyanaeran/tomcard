@@ -15,6 +15,48 @@ deck de cartes jouable (Principal, Lanceur de missiles, Blindage, Générateur, 
 (Canon lourd, Contrôle, Atelier — proche de l'archétype "Réparation" ci-dessous, Radar — proche de
 l'archétype "Radar / Ciblage" en §4.3) : exclus du tirage de choix de module tant qu'ils n'ont pas
 de cartes (`modules_equipables`/`specs_equipables`, §5), pour ne jamais planter le tirage du deck.
+
+**Refonte des cartes en cours (décision utilisateur, 2026-11-07)** : les cartes du module
+principal et du Lanceur de missiles ont été revues (19 cartes, `config/carte_new.json`, nouvelle
+source de vérité des cartes ; valeurs reportées dans `config/cartes.json`, encore lu par le moteur
+actuel ; l'ancien registre `specs/cartes.xlsx` est archivé en `specs/cartes_legacy.xlsx`). Pendant la refonte, **seuls ces deux modules sont jouables** :
+champ `jouable` de `config/modules.json` (`SpecModule.jouable`), les autres ne sont jamais
+proposés ni équipés (`modules_equipables`, et le mode démonstration `config_poc.creer_vaisseau`
+laisse vides les emplacements qu'il ne peut pas pourvoir). Le choix de module du Niveau 1 ne
+propose donc que le Lanceur de missiles. Changements principaux :
+- **Deck de départ** (10 cartes) : Laser x4, Bouclier x4, Protéger le vaisseau x1, Réparation x1.
+  *Réparation* revient dans le pool du module principal ; *Laser perçant* devient Commune (plus dans
+  le deck de départ, proposée en récompense).
+- Valeurs : *Bouclier* 5 → 3, *Protéger le vaisseau* 8 → 5, *Blindage ciblé* bouclier de 7 pendant 4 tours → **bouclier simple de 6** (sans durée),
+  *Protocole d'urgence* X 2 → 1, *Bombardement* 4 → 6, *Torpille* Y 6 → 8.
+- **Incendie** (nouvelle mécanique, non jouable pour l'instant) : *Tir incendiaire* (4),
+  *Embrasement* (8, un ennemi) et *Guerre nucléaire* (8, tous les ennemis) ajoutent des points
+  d'incendie, équivalent du poison de Slay the Spire (décroissance de 1 par tour).
+- *Bouclier stabilisé* change d'effet : « les Boucliers de base sont lancés X fois de plus »
+  (même famille que *Salve laser* et *Protocole d'urgence*).
+- **Format de `config/carte_new.json`** (validé) : chaque carte a des **valeurs nommées**
+  (`"valeurs": {"degats_cible": 15, "degats_autres": 6}`), une liste d'**effets** qui y renvoient par
+  leur nom (`{"nature": "DEGATS", "valeur": "degats_cible"}`, avec une portée, une durée nommée ou
+  un filtre si besoin), une **description** qui cite les valeurs entre accolades (« Inflige
+  {degats_cible} degats… », remplie par `CarteNew.description_affichee`), et deux booléens
+  `jouable` (le moteur sait l'exécuter) et `refonte` (carte revue). Au chargement, tout nom cité
+  doit exister et toute valeur doit servir à un effet, et **toute clé inconnue du JSON est
+  refusée** (coquilles détectées). Un **filtre de cartes** (Salve laser…) désigne une carte précise
+  par son **id** (`{"id": "CRT_7"}`), jamais par son nom affiché, ou un ensemble par rareté ou
+  catégorie. Chaque exemplaire a ses propres dictionnaires `valeurs` et `valeurs_actuelles`
+  (copie), pour pouvoir un jour modifier les valeurs d'une seule carte. En combat, chaque
+  exemplaire a ses `valeurs_actuelles` (copie des valeurs), base de futurs bonus du type « +2 aux
+  dégâts des cartes à cible unique ».
+- Classe de carte cible de la refonte : `src/gameplay/carte_new.py` (`CarteNew`), **relue et
+  validée par l'utilisateur le 2026-11-08**, pas encore branchée au moteur. Une carte y porte une liste d'effets, un nombre de **lancements** de départ (`lancements_base`, 1 par
+  défaut, 2 pour une carte lancée deux fois ; décision utilisateur), et les effets « les cartes X
+  sont lancées N fois de plus » (*Salve laser*, *Protocole d'urgence*, *Bouclier stabilisé*, X = 1
+  pour ce dernier) **augmentent directement les lancements** des cartes qu'ils désignent, dans
+  toutes les piles, **jusqu'à la fin du combat**, et se cumulent (décision utilisateur ; chaque
+  combat recrée ses cartes, l'augmentation disparaît donc d'elle-même).
+- `CarteNew` ne décrit que les **effets des cartes du joueur** : les mécaniques propres aux ennemis
+  (ex. Augmentation de dégâts du Boss) sont gérées **en dehors des cartes** (décision utilisateur).
+- Textes affichés accentués : *Protéger le vaisseau*, *Réparation* (consigne utilisateur).
 Chaque module a une seule `description` (une phrase, accroche narrative spécifiée par
 l'utilisateur), affichée à l'écran de choix de module et reprise telle quelle dans l'infobulle de
 l'écran Vaisseau au clic/tap sur un module (§2.4) — les decks de cartes détaillés ci-dessous
@@ -93,8 +135,9 @@ restent le plan cible pour les 4 nouveaux modules, à concevoir dans une passe d
   "interdire les doublons") : posséder déjà des exemplaires d'un module augmente son poids au
   tirage lors d'un prochain choix de module — détail en §2.3
 - Un module dont le deck de cartes n'est pas encore conçu (`cartes` vide dans `config/modules.json`,
-  §4) n'est **jamais proposé** au tirage (`modules_equipables`/`config_poc.specs_equipables`
-  l'excluent) : le proposer planterait le tirage du deck (`Deck`/`tirer_cartes` sur une pool vide)
+  §4) ou marqué `"jouable": false` (refonte des cartes en cours, §4) n'est **jamais proposé** au
+  tirage (`modules_equipables`/`config_poc.creer_vaisseau` l'excluent) : le proposer planterait le
+  tirage du deck (`Deck`/`tirer_cartes` sur une pool vide)
 
 ---
 
