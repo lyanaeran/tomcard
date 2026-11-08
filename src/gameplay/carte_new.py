@@ -9,9 +9,9 @@ Differences avec Carte :
   X sur la cible et Y sur les autres ennemis ; Torpille : X sur la ligne avant, Y sur l'arriere) ;
 - chaque nature d'effet declare comment elle se cumule (Cumul) : l'incendie (poison de Slay the
   Spire) additionne son intensite, qui decroit de 1 par tour ;
-- une carte peut etre lancee plusieurs fois (`lancements`) ; les cartes "les cartes X sont lancees
+- une carte peut etre lancee plusieurs fois (`lancements_base`) ; les cartes "les cartes X sont lancees
   N fois de plus" (Salve laser, Protocole d'urgence, Bouclier stabilise) sont un effet REPETITION
-  dont le FiltreCartes designe les cartes visees : il augmente leur `lancements` jusqu'a la fin du
+  dont le FiltreCartes designe les cartes visees : il augmente leur `lancements_actuels` jusqu'a la fin du
   combat (appliquer_repetition) ;
 - mot-cle Persistante et rattachement a un exemplaire de module (exemplaire_module) : une carte dont le
   module est detruit part en pile Hors service, sauf si elle est Persistante
@@ -238,9 +238,9 @@ class CarteNew:
     description: str = ""
     # Mot-cle Persistante : reste jouable si son module est detruit (refonte-modules.md 3.5)
     persistante: bool = False
-    # Nombre de fois que les effets s'appliquent quand la carte est jouee (1 d'ordinaire, 2 pour une
-    # carte "lancee deux fois") ; augmente en combat par les effets REPETITION (appliquer_repetition)
-    lancements: int = 1
+    # Nombre de fois que les effets s'appliquent quand la carte est jouee, au depart de chaque combat
+    # (1 d'ordinaire, 2 pour une carte "lancee deux fois")
+    lancements_base: int = 1
     # Munitions au depart de chaque combat ; None = illimitee (specs.md 3.6)
     munitions_max: int | None = None
 
@@ -248,6 +248,9 @@ class CarteNew:
 
     # Munitions restantes pendant le combat ; a 0 la carte est epuisee ; None = illimitee
     munitions_restantes: int | None = None
+    # Nombre de lancements en combat : lancements_base, augmente par les effets REPETITION
+    # (appliquer_repetition) jusqu'a la fin du combat
+    lancements_actuels: int | None = None
     # Exemplaire de module de la partie auquel cette carte est rattachee (ex. "M3"), None tant
     # qu'elle ne l'est pas ; stable meme si la Station deplace le module (refonte-modules.md 3.3)
     exemplaire_module: str | None = None
@@ -258,7 +261,7 @@ class CarteNew:
             raise ValueError(f"{self.id} : cout negatif")
         if not self.effets:
             raise ValueError(f"{self.id} : une carte a au moins un effet")
-        if self.lancements < 1:
+        if self.lancements_base < 1:
             raise ValueError(f"{self.id} : une carte est lancee au moins une fois")
         if self.munitions_max is not None and self.munitions_max < 1:
             raise ValueError(f"{self.id} : munitions_max doit etre None (illimite) ou >= 1")
@@ -270,16 +273,23 @@ class CarteNew:
             raise ValueError(f"{self.id} : 'autres ennemis' suppose une cible Ennemi Unique")
         if self.munitions_restantes is None:
             self.munitions_restantes = self.munitions_max
+        if self.lancements_actuels is None:
+            self.lancements_actuels = self.lancements_base
 
     # --- Exemplaires ---
 
     def copie(self) -> "CarteNew":
-        """Nouvel exemplaire independant : munitions pleines, meme rattachement."""
-        return dataclasses.replace(self, munitions_restantes=self.munitions_max)
+        """Nouvel exemplaire independant : munitions et lancements de depart, meme rattachement."""
+        return dataclasses.replace(self, munitions_restantes=self.munitions_max, lancements_actuels=self.lancements_base)
 
     def rattachee_a(self, exemplaire_module: str) -> "CarteNew":
         """Nouvel exemplaire rattache a cet exemplaire de module de la partie."""
-        return dataclasses.replace(self, exemplaire_module=exemplaire_module, munitions_restantes=self.munitions_max)
+        return dataclasses.replace(
+            self,
+            exemplaire_module=exemplaire_module,
+            munitions_restantes=self.munitions_max,
+            lancements_actuels=self.lancements_base,
+        )
 
     # --- Munitions (specs.md 3.6) ---
 
@@ -332,7 +342,7 @@ class CarteNew:
             description=entree.get("description", ""),
             munitions_max=entree.get("munition"),
             persistante=entree.get("persistante", False),
-            lancements=entree.get("lancements", 1),
+            lancements_base=entree.get("lancements", 1),
         )
 
     def vers_dict(self) -> dict:
@@ -346,7 +356,7 @@ class CarteNew:
             "cout": self.cout,
             "munition": self.munitions_max,
             "persistante": self.persistante,
-            "lancements": self.lancements,
+            "lancements": self.lancements_base,
             "description": self.description,
             "effets": [_effet_vers_dict(effet) for effet in self.effets],
         }
@@ -361,7 +371,7 @@ def appliquer_repetition(effet: Effet, cartes) -> int:
         raise ValueError(f"Effet {effet.nature.name} : seul un effet REPETITION modifie les lancements")
     visees = [carte for carte in cartes if effet.filtre.correspond(carte)]
     for carte in visees:
-        carte.lancements += effet.valeur
+        carte.lancements_actuels += effet.valeur
     return len(visees)
 
 

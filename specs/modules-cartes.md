@@ -34,7 +34,7 @@ propose donc que le Lanceur de missiles. Changements principaux :
 - *Bouclier stabilisé* change d'effet : « les Boucliers de base sont lancés X fois de plus »
   (même famille que *Salve laser* et *Protocole d'urgence*).
 - Classe de carte cible de la refonte : `src/gameplay/carte_new.py` (`CarteNew`), pas encore
-  branchée au moteur. Une carte y porte une liste d'effets, un nombre de **lancements** (1 par
+  branchée au moteur. Une carte y porte une liste d'effets, un nombre de **lancements** de départ (`lancements_base`, 1 par
   défaut, 2 pour une carte lancée deux fois ; décision utilisateur), et les effets « les cartes X
   sont lancées N fois de plus » (*Salve laser*, *Protocole d'urgence*, *Bouclier stabilisé*, X = 1
   pour ce dernier) **augmentent directement les lancements** des cartes qu'ils désignent, dans

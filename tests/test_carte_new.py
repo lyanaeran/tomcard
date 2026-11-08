@@ -149,11 +149,11 @@ def test_seul_un_effet_a_duree_accepte_une_duree():
 
 
 def test_une_carte_est_lancee_une_fois_par_defaut_ou_plus_si_precise():
-    assert _cartes()["Laser"].lancements == 1
+    assert _cartes()["Laser"].lancements_base == _cartes()["Laser"].lancements_actuels == 1
     double_laser = CarteNew.depuis_dict(dict(REGISTRE_REFONTE[0], lancements=2))
 
-    assert double_laser.lancements == 2
-    assert CarteNew.depuis_dict(double_laser.vers_dict()).lancements == 2
+    assert double_laser.lancements_base == double_laser.lancements_actuels == 2
+    assert CarteNew.depuis_dict(double_laser.vers_dict()).lancements_base == 2
 
 
 def test_salve_laser_augmente_les_lancements_des_seuls_lasers_de_base_de_toutes_les_piles():
@@ -163,7 +163,9 @@ def test_salve_laser_augmente_les_lancements_des_seuls_lasers_de_base_de_toutes_
     modifiees = appliquer_repetition(cartes["Salve laser"].effets[0], deck)
 
     assert modifiees == 4
-    assert [carte.lancements for carte in deck] == [2, 2, 2, 2, 1, 1]
+    assert [carte.lancements_actuels for carte in deck] == [2, 2, 2, 2, 1, 1]
+    assert [carte.lancements_base for carte in deck] == [1] * 6  # la valeur du modele ne change pas
+    assert deck[0].copie().lancements_actuels == 1  # un nouvel exemplaire repart de la base
 
 
 def test_les_repetitions_se_cumulent_pour_le_combat():
@@ -174,7 +176,7 @@ def test_les_repetitions_se_cumulent_pour_le_combat():
     appliquer_repetition(cartes["Salve laser"].effets[0], deck)
     appliquer_repetition(cartes["Protocole d'urgence"].effets[0], deck)
 
-    assert (laser.lancements, reparation.lancements, laser_percant.lancements) == (3, 2, 1)
+    assert (laser.lancements_actuels, reparation.lancements_actuels, laser_percant.lancements_actuels) == (3, 2, 1)
     assert cartes["Salve laser"].effets[0].cumul == Cumul.INTENSITE_SANS_DECROISSANCE
 
 
@@ -183,7 +185,7 @@ def test_bouclier_stabilise_double_le_bouclier_de_base():
 
     appliquer_repetition(cartes["Bouclier stabilise"].effets[0], [cartes["Bouclier"], cartes["Blindage cible"]])
 
-    assert (cartes["Bouclier"].lancements, cartes["Blindage cible"].lancements) == (2, 1)
+    assert (cartes["Bouclier"].lancements_actuels, cartes["Blindage cible"].lancements_actuels) == (2, 1)
 
 
 def test_seul_un_effet_repetition_modifie_les_lancements():
@@ -258,7 +260,7 @@ def test_persistante_lue_depuis_le_json():
         {"cout": -1},
         {"effets": ()},
         {"munitions_max": 0},
-        {"lancements": 0},
+        {"lancements_base": 0},
         {"cible": CibleCarteNew.MODULE_UNIQUE, "effets": (Effet(NatureEffet.DEGATS, 3, PorteeEffet.AUTRES_ENNEMIS),)},
         {"cible": CibleCarteNew.ENNEMI_TOUS, "effets": (Effet(NatureEffet.DEGATS, 3, PorteeEffet.AUTRES_ENNEMIS),)},
     ],
