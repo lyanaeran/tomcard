@@ -165,6 +165,22 @@ class PorteeEffet(Enum):
     COLONNE_ARRIERE_ENNEMIE = auto()
 
 
+# Cles autorisees dans config/carte_new.json : une cle inconnue (ex. faute de frappe "persistant")
+# est refusee au chargement plutot qu'ignoree
+CLES_CARTE = {
+    "id", "nom", "image", "rarete", "categorie", "cible", "cout", "munition", "lancements",
+    "persistante", "jouable", "refonte", "description", "valeurs", "effets",
+}
+CLES_EFFET = {"nature", "valeur", "portee", "duree", "filtre"}
+CLES_FILTRE = {"id", "rarete", "categorie"}
+
+
+def _verifier_cles(entree: dict, autorisees: set[str], ou: str) -> None:
+    inconnues = entree.keys() - autorisees
+    if inconnues:
+        raise ValueError(f"{ou} : cles inconnues {sorted(inconnues)}")
+
+
 @dataclass(frozen=True)
 class FiltreCartes:
     """Designe des cartes par leurs caracteristiques (tous les criteres renseignes doivent
@@ -244,22 +260,6 @@ class Effet:
         )
 
 
-# Cles autorisees dans config/carte_new.json : une cle inconnue (ex. faute de frappe "persistant")
-# est refusee au chargement plutot qu'ignoree
-CLES_CARTE = {
-    "id", "nom", "image", "rarete", "categorie", "cible", "cout", "munition", "lancements",
-    "persistante", "jouable", "refonte", "description", "valeurs", "effets",
-}
-CLES_EFFET = {"nature", "valeur", "portee", "duree", "filtre"}
-CLES_FILTRE = {"id", "rarete", "categorie"}
-
-
-def _verifier_cles(entree: dict, autorisees: set[str], ou: str) -> None:
-    inconnues = entree.keys() - autorisees
-    if inconnues:
-        raise ValueError(f"{ou} : cles inconnues {sorted(inconnues)}")
-
-
 _PORTEES_ENNEMIES = (PorteeEffet.AUTRES_ENNEMIS, PorteeEffet.COLONNE_AVANT_ENNEMIE, PorteeEffet.COLONNE_ARRIERE_ENNEMIE)
 
 
@@ -277,7 +277,8 @@ class CarteNew:
     partie, et les cartes de chaque type de module sont listees dans config/modules.json (une carte
     peut etre commune a plusieurs modules)."""
 
-    # --- Modele : identique pour tous les exemplaires, lu dans config/carte_new.json ---
+    # --- Modele : lu dans config/carte_new.json, identique pour tous les exemplaires sauf `valeurs`
+    # (propre a chaque exemplaire, pour pouvoir modifier les valeurs d'une seule carte) ---
 
     # Identifiant du modele (ex. "CRT_7"), commun a tous ses exemplaires
     id: str
@@ -417,24 +418,34 @@ class CarteNew:
 
     @classmethod
     def depuis_dict(cls, entree: dict) -> "CarteNew":
-        _verifier_cles(entree, CLES_CARTE, f"Carte {entree.get('id')}")
-        return cls(
-            id=entree["id"],
-            nom=entree["nom"],
-            image=entree["image"],
-            rarete=RareteCarte[entree["rarete"].upper()],
-            categorie=CategorieCarte(entree["categorie"]),
-            cible=CibleCarteNew(entree["cible"]),
-            cout=entree["cout"],
-            effets=tuple(Effet.depuis_dict(effet) for effet in entree["effets"]),
-            description=entree.get("description", ""),
-            valeurs=dict(entree.get("valeurs", {})),
-            persistante=entree.get("persistante", False),
-            jouable=entree.get("jouable", True),
-            refonte=entree.get("refonte", False),
-            lancements_base=entree.get("lancements", 1),
-            munitions_base=entree.get("munition"),
-        )
+        """Carte a partir d'une entree de config/carte_new.json. Toute erreur de lecture (cle
+        manquante ou inconnue, texte inconnu dans une enumeration, effet invalide) est signalee avec
+        l'id de la carte, pour retrouver facilement la faute dans le JSON ecrit a la main."""
+        carte = f"Carte {entree.get('id', '?')}"
+        try:
+            _verifier_cles(entree, CLES_CARTE, carte)
+            champs = dict(
+                id=entree["id"],
+                nom=entree["nom"],
+                image=entree["image"],
+                rarete=RareteCarte[entree["rarete"].upper()],
+                categorie=CategorieCarte(entree["categorie"]),
+                cible=CibleCarteNew(entree["cible"]),
+                cout=entree["cout"],
+                effets=tuple(Effet.depuis_dict(effet) for effet in entree["effets"]),
+                description=entree.get("description", ""),
+                valeurs=dict(entree.get("valeurs", {})),
+                persistante=entree.get("persistante", False),
+                jouable=entree.get("jouable", True),
+                refonte=entree.get("refonte", False),
+                lancements_base=entree.get("lancements", 1),
+                munitions_base=entree.get("munition"),
+            )
+        except KeyError as erreur:
+            raise ValueError(f"{carte} : cle manquante ou texte inconnu {erreur}") from erreur
+        except ValueError as erreur:
+            raise ValueError(erreur if str(erreur).startswith(carte) else f"{carte} : {erreur}") from erreur
+        return cls(**champs)
 
 
 def charger_cartes_new(fichier: Path = FICHIER_CARTES_NEW) -> dict[str, CarteNew]:

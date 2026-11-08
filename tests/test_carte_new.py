@@ -262,6 +262,24 @@ def test_une_cle_inconnue_dans_le_json_est_refusee(modification):
         CarteNew.depuis_dict(entree)
 
 
+@pytest.mark.parametrize(
+    "modification, message",
+    [
+        (lambda entree: entree.pop("cout"), "cle manquante ou texte inconnu 'cout'"),
+        (lambda entree: entree["effets"][0].update(nature="DEGAT"), "cle manquante ou texte inconnu 'DEGAT'"),
+        (lambda entree: entree.update(cible="Ennemi unique"), "is not a valid CibleCarteNew"),
+        (lambda entree: entree["effets"][0].pop("valeur"), "valeur nommee manquante"),
+    ],
+)
+def test_une_erreur_de_lecture_du_json_indique_la_carte(modification, message):
+    entree = json.loads(json.dumps(_entree("CRT_13")))
+    modification(entree)
+
+    with pytest.raises(ValueError, match="^Carte CRT_13 : ") as erreur:
+        CarteNew.depuis_dict(entree)
+    assert message in str(erreur.value)
+
+
 def test_une_cle_inconnue_dans_un_filtre_est_refusee():
     entree = json.loads(json.dumps(_entree("CRT_49")))
     entree["effets"][0]["filtre"]["nom"] = "Laser"  # ancien critere par nom
