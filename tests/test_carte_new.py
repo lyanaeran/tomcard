@@ -1,5 +1,6 @@
 """
-Tests unitaires pour src/gameplay/carte_new.py (CarteNew, carte de la refonte).
+Tests unitaires pour src/gameplay/carte_new.py (CarteNew, carte de la refonte) et
+config/carte_new.json (source de verite des cartes revues).
 """
 
 import pytest
@@ -16,151 +17,133 @@ from src.gameplay.carte_new import (
     NatureEffet,
     PorteeEffet,
     appliquer_repetition,
+    charger_cartes_new,
 )
-
-def _carte(id_carte, nom, rarete, categorie, cible, cout, effets, description, munition=None):
-    return {
-        "id": id_carte, "nom": nom, "image": "test.png", "rarete": rarete,
-        "categorie": categorie, "cible": cible, "cout": cout, "munition": munition,
-        "description": description, "effets": effets,
-    }
-
-
-# Les 19 cartes revues (colonne "Refonte" de specs/cartes.xlsx), dans le format JSON propose
-REGISTRE_REFONTE = [
-    _carte("CRT_7", "Laser", "Base", "Attaque", "Ennemi Unique", 1, [{"nature": "DEGATS", "valeur": 6}],
-           "Inflige X degats a un ennemi unique"),
-    _carte("CRT_10", "Bouclier", "Base", "Defense", "Module Unique", 1, [{"nature": "BOUCLIER", "valeur": 3}],
-           "Bouclier de X sur un module unique"),
-    _carte("CRT_11", "Protéger le vaisseau", "Base", "Defense", "Module Principal", 1,
-           [{"nature": "BOUCLIER", "valeur": 5}], "Bouclier de X sur le module principal"),
-    _carte("CRT_12", "Réparation", "Base", "Reparation", "Module Principal", 1,
-           [{"nature": "REPARATION", "valeur": 8}], "Repare le module principal pour X", munition=2),
-    _carte("CRT_8", "Laser percant", "Commune", "Attaque", "Ennemi Colonne", 2, [{"nature": "DEGATS", "valeur": 8}],
-           "Inflige X degats a la colonne ciblee"),
-    _carte("CRT_45", "Tir incendiaire", "Commune", "Attaque", "Ennemi Unique", 2, [{"nature": "INCENDIE", "valeur": 4}],
-           "Ajoute X points d’incendie sur la cible", munition=3),
-    _carte("CRT_46", "Blindage cible", "Commune", "Defense", "Module Unique", 2,
-           [{"nature": "BOUCLIER", "valeur": 6}], "Bouclier de X sur un module unique", munition=3),
-    _carte("CRT_47", "Laser lourd", "Commune", "Attaque", "Ennemi Unique", 1, [{"nature": "DEGATS", "valeur": 12}],
-           "Inflige X degats a un ennemi unique"),
-    _carte("CRT_48", "Bouclier stabilise", "Rare", "Buff", "Module Principal", 3,
-           [{"nature": "REPETITION", "valeur": 1, "filtre": {"nom": "Bouclier", "rarete": "Base"}}],
-           "Les Boucliers de base sont lancés X fois de plus.", munition=1),
-    _carte("CRT_49", "Salve laser", "Rare", "Buff", "Module Tous", 2,
-           [{"nature": "REPETITION", "valeur": 1, "filtre": {"nom": "Laser", "rarete": "Base"}}],
-           "Les Laser de base sont lances X fois de plus.", munition=2),
-    _carte("CRT_50", "Protocole d'urgence", "Legendaire", "Buff", "Module Tous", 3,
-           [{"nature": "REPETITION", "valeur": 1, "filtre": {"rarete": "Base"}}],
-           "Les cartes de bases sont lancees X fois de plus.", munition=3),
-    _carte("CRT_13", "Missiles", "Commune", "Attaque", "Ennemi Unique", 2,
-           [{"nature": "DEGATS", "valeur": 15}, {"nature": "DEGATS", "valeur": 6, "portee": "AUTRES_ENNEMIS"}],
-           "Inflige X degats a un ennemi et Y a tous les autres"),
-    _carte("CRT_14", "Torpille", "Commune", "Attaque", "Ennemi Tous", 2,
-           [{"nature": "DEGATS", "valeur": 10, "portee": "COLONNE_AVANT_ENNEMIE"},
-            {"nature": "DEGATS", "valeur": 8, "portee": "COLONNE_ARRIERE_ENNEMIE"}],
-           "Inflige X degats a la ligne avant et Y a la ligne arriere"),
-    _carte("CRT_9", "Bombardement", "Commune", "Attaque", "Ennemi Tous", 1, [{"nature": "DEGATS", "valeur": 6}],
-           "Inflige X degats a tous les ennemis"),
-    _carte("CRT_16", "Ligne arriere", "Commune", "Attaque", "Ennemi Arriere", 1, [{"nature": "DEGATS", "valeur": 8}],
-           "Inflige X degats a tous les ennemis de la ligne arriere"),
-    _carte("CRT_15", "Ciel de missiles", "Rare", "Attaque", "Ennemi Tous", 1, [{"nature": "DEGATS", "valeur": 8}],
-           "Inflige X degats a tous les ennemis"),
-    _carte("CRT_17", "Embrasement", "Rare", "Attaque", "Ennemi Unique", 2, [{"nature": "INCENDIE", "valeur": 8}],
-           "Ajoute X points d’incendie à un ennemi"),
-    _carte("CRT_18", "Leurre", "Rare", "Defense", "Module Unique", 1,
-           [{"nature": "ANNULATION_PROCHAINE_ATTAQUE", "valeur": 0}],
-           "Annule la prochaine attaque ciblant le module"),
-    _carte("CRT_19", "Guerre nucleaire", "Legendaire", "Attaque", "Ennemi Tous", 3, [{"nature": "INCENDIE", "valeur": 8}],
-           "Ajoute X points d’incendie à tous les ennemis"),
-]
 
 
 def _cartes() -> dict[str, CarteNew]:
-    return {entree["nom"]: CarteNew.depuis_dict(entree) for entree in REGISTRE_REFONTE}
+    """Cartes de config/carte_new.json, par nom (nouvelles instances a chaque appel)."""
+    return {carte.nom: carte for carte in charger_cartes_new().values()}
 
 
 def _carte_simple(**champs) -> CarteNew:
     valeurs = dict(
         id="TEST", nom="Test", image="test.png", rarete=RareteCarte.COMMUNE,
         categorie=CategorieCarte.ATTAQUE, cible=CibleCarteNew.ENNEMI_UNIQUE, cout=1,
-        effets=(Effet(NatureEffet.DEGATS, 5),),
+        description="Inflige {degats} degats", valeurs={"degats": 5}, effets=(Effet(NatureEffet.DEGATS, "degats"),),
     )
     valeurs.update(champs)
     return CarteNew(**valeurs)
 
 
-# --- Couverture du registre de la refonte ---
+# --- config/carte_new.json ---
 
 
-def test_les_19_cartes_revues_s_expriment_avec_carte_new():
-    cartes = _cartes()
+def test_carte_new_json_contient_les_19_cartes_revues():
+    cartes = charger_cartes_new()
 
     assert len(cartes) == 19
+    assert all(carte.refonte for carte in cartes.values())
 
 
-def test_description_affichee_remplace_x_et_y():
+def test_jouable_suit_le_moteur_actuel():
+    cartes = _cartes()
+
+    assert cartes["Laser"].jouable and cartes["Blindage cible"].jouable
+    assert not cartes["Missiles"].jouable and not cartes["Embrasement"].jouable
+
+
+def test_description_affichee_remplace_les_valeurs_nommees():
     cartes = _cartes()
 
     assert cartes["Missiles"].description_affichee() == "Inflige 15 degats a un ennemi et 6 a tous les autres"
     assert cartes["Torpille"].description_affichee() == "Inflige 10 degats a la ligne avant et 8 a la ligne arriere"
-    assert cartes["Blindage cible"].description_affichee() == "Bouclier de 6 sur un module unique"
     assert cartes["Laser"].description_affichee() == "Inflige 6 degats a un ennemi unique"
     assert cartes["Tir incendiaire"].description_affichee() == "Ajoute 4 points d’incendie sur la cible"
+    assert cartes["Leurre"].description_affichee() == "Annule la prochaine attaque ciblant le module"
 
 
-def test_x_et_y_suivent_les_colonnes_du_registre():
-    cartes = _cartes()
+def test_les_effets_lisent_leur_valeur_sur_la_carte():
+    missiles = _cartes()["Missiles"]
 
-    assert (cartes["Missiles"].x, cartes["Missiles"].y) == (15, 6)
-    assert (cartes["Blindage cible"].x, cartes["Blindage cible"].y) == (6, None)
-    assert (cartes["Laser lourd"].x, cartes["Laser lourd"].y) == (12, None)
+    assert [missiles.valeur_de(effet) for effet in missiles.effets] == [15, 6]
+    assert missiles.effets[1].portee == PorteeEffet.AUTRES_ENNEMIS
 
 
 def test_vers_dict_puis_depuis_dict_redonne_la_meme_carte():
-    for carte in _cartes().values():
-        relue = CarteNew.depuis_dict(carte.vers_dict())
-        assert relue.vers_dict() == carte.vers_dict()
+    for carte in charger_cartes_new().values():
+        assert CarteNew.depuis_dict(carte.vers_dict()).vers_dict() == carte.vers_dict()
+
+
+# --- Verification des valeurs nommees ---
+
+
+def test_valeur_inconnue_dans_un_effet_refusee():
+    with pytest.raises(ValueError, match="inconnues"):
+        _carte_simple(effets=(Effet(NatureEffet.DEGATS, "degats_cible"),), description="")
+
+
+def test_valeur_inconnue_dans_la_description_refusee():
+    with pytest.raises(ValueError, match="inconnues"):
+        _carte_simple(description="Inflige {degat} degats")  # coquille
+
+
+def test_valeur_utilisee_par_aucun_effet_refusee():
+    with pytest.raises(ValueError, match="aucun effet"):
+        _carte_simple(valeurs={"degats": 5, "oubli": 3})
+
+
+def test_effet_sans_valeur_seulement_pour_les_natures_sans_valeur():
+    assert Effet(NatureEffet.ANNULATION_PROCHAINE_ATTAQUE).valeur is None
+    with pytest.raises(ValueError):
+        Effet(NatureEffet.DEGATS)
+    with pytest.raises(ValueError):
+        Effet(NatureEffet.ANNULATION_PROCHAINE_ATTAQUE, "x")
+
+
+def test_duree_nommee_seulement_pour_un_effet_a_duree():
+    breche = _carte_simple(
+        categorie=CategorieCarte.DEBUFF,
+        description="+{vulnerabilite} % de degats subis pendant {vulnerabilite_duree} tours",
+        valeurs={"vulnerabilite": 100, "vulnerabilite_duree": 2},
+        effets=(Effet(NatureEffet.VULNERABILITE, "vulnerabilite", duree="vulnerabilite_duree"),),
+    )
+
+    assert breche.description_affichee() == "+100 % de degats subis pendant 2 tours"
+    assert breche.duree_de(breche.effets[0]) == 2
+    with pytest.raises(ValueError):
+        Effet(NatureEffet.BOUCLIER, "bouclier", duree="bouclier_duree")
 
 
 # --- Cumul des effets ---
 
 
-def test_l_incendie_s_additionne_et_decroit_de_un_par_tour():
-    """Decision utilisateur : incendie = poison de Slay the Spire, decroissance -1 par tour."""
-    assert _cartes()["Embrasement"].effets[0].cumul == Cumul.INTENSITE_DECROISSANTE
-
-
-def test_les_degats_sont_instantanes_et_le_bouclier_baisse_de_un_par_tour():
-    """Decision utilisateur : apres la refonte, le bouclier baisse de 1 par tour, sans duree."""
+def test_l_incendie_et_le_bouclier_baissent_de_un_par_tour():
+    """Decisions utilisateur : incendie = poison de Slay the Spire ; bouclier -1 par tour, sans duree."""
     cartes = _cartes()
 
-    assert cartes["Laser"].effets[0].cumul == Cumul.INSTANTANE
+    assert cartes["Embrasement"].effets[0].cumul == Cumul.INTENSITE_DECROISSANTE
     assert cartes["Bouclier"].effets[0].cumul == Cumul.INTENSITE_DECROISSANTE
-
-
-def test_seul_un_effet_a_duree_accepte_une_duree():
-    assert Effet(NatureEffet.VULNERABILITE, 100, duree=2).duree == 2
-    with pytest.raises(ValueError):
-        Effet(NatureEffet.BOUCLIER, 6, duree=3)
+    assert cartes["Laser"].effets[0].cumul == Cumul.INSTANTANE
 
 
 # --- Lancements et repetition ("lancee X fois de plus") ---
 
 
 def test_une_carte_est_lancee_une_fois_par_defaut_ou_plus_si_precise():
-    assert _cartes()["Laser"].lancements_base == _cartes()["Laser"].lancements_actuels == 1
-    double_laser = CarteNew.depuis_dict(dict(REGISTRE_REFONTE[0], lancements=2))
+    laser = _cartes()["Laser"]
+    double_laser = CarteNew.depuis_dict(dict(laser.vers_dict(), lancements=2))
 
+    assert laser.lancements_base == laser.lancements_actuels == 1
     assert double_laser.lancements_base == double_laser.lancements_actuels == 2
-    assert CarteNew.depuis_dict(double_laser.vers_dict()).lancements_base == 2
 
 
 def test_salve_laser_augmente_les_lancements_des_seuls_lasers_de_base_de_toutes_les_piles():
     cartes = _cartes()
+    salve = cartes["Salve laser"]
     deck = [cartes["Laser"].copie() for _ in range(4)] + [cartes["Laser lourd"], cartes["Bouclier"]]
 
-    modifiees = appliquer_repetition(cartes["Salve laser"].effets[0], deck)
+    modifiees = appliquer_repetition(salve, salve.effets[0], deck)
 
     assert modifiees == 4
     assert [carte.lancements_actuels for carte in deck] == [2, 2, 2, 2, 1, 1]
@@ -173,8 +156,8 @@ def test_les_repetitions_se_cumulent_pour_le_combat():
     laser, reparation, laser_percant = cartes["Laser"], cartes["Réparation"], cartes["Laser percant"]
     deck = [laser, reparation, laser_percant]
 
-    appliquer_repetition(cartes["Salve laser"].effets[0], deck)
-    appliquer_repetition(cartes["Protocole d'urgence"].effets[0], deck)
+    appliquer_repetition(cartes["Salve laser"], cartes["Salve laser"].effets[0], deck)
+    appliquer_repetition(cartes["Protocole d'urgence"], cartes["Protocole d'urgence"].effets[0], deck)
 
     assert (laser.lancements_actuels, reparation.lancements_actuels, laser_percant.lancements_actuels) == (3, 2, 1)
     assert cartes["Salve laser"].effets[0].cumul == Cumul.INTENSITE_SANS_DECROISSANCE
@@ -182,15 +165,17 @@ def test_les_repetitions_se_cumulent_pour_le_combat():
 
 def test_bouclier_stabilise_double_le_bouclier_de_base():
     cartes = _cartes()
+    stabilise = cartes["Bouclier stabilise"]
 
-    appliquer_repetition(cartes["Bouclier stabilise"].effets[0], [cartes["Bouclier"], cartes["Blindage cible"]])
+    appliquer_repetition(stabilise, stabilise.effets[0], [cartes["Bouclier"], cartes["Blindage cible"]])
 
     assert (cartes["Bouclier"].lancements_actuels, cartes["Blindage cible"].lancements_actuels) == (2, 1)
 
 
 def test_seul_un_effet_repetition_modifie_les_lancements():
+    laser = _cartes()["Laser"]
     with pytest.raises(ValueError):
-        appliquer_repetition(Effet(NatureEffet.DEGATS, 1), [_cartes()["Laser"]])
+        appliquer_repetition(laser, laser.effets[0], [laser])
 
 
 # --- Cible ---
@@ -205,7 +190,7 @@ def test_cible_camp_et_case_cliquee():
     assert not CibleCarteNew.MODULE_PRINCIPAL.depend_de_la_case_cliquee
 
 
-# --- Munitions et exemplaires ---
+# --- Munitions, valeurs et exemplaires ---
 
 
 def test_munitions_consommees_jusqu_a_epuisement():
@@ -222,6 +207,18 @@ def test_carte_sans_munition_jamais_epuisee():
 
     for _ in range(5):
         assert not laser.consommer_munition()
+
+
+def test_valeurs_actuelles_modifiables_sans_toucher_au_modele():
+    """Base d'un futur bonus ("+2 aux degats des cartes a cible unique") : propre a l'exemplaire."""
+    laser = _cartes()["Laser"]
+
+    laser.valeurs_actuelles["degats"] += 2
+
+    assert laser.valeur_de(laser.effets[0]) == 8
+    assert laser.description_affichee() == "Inflige 8 degats a un ennemi unique"
+    assert laser.valeurs["degats"] == 6
+    assert laser.copie().valeur_de(laser.effets[0]) == 6  # un nouvel exemplaire repart du modele
 
 
 def test_copie_donne_un_exemplaire_independant_rattache_si_demande():
@@ -246,10 +243,10 @@ def test_seule_une_carte_persistante_reste_jouable_si_son_module_est_detruit():
 
 
 def test_persistante_lue_depuis_le_json():
-    entree = dict(REGISTRE_REFONTE[0], persistante=True)
+    laser = _cartes()["Laser"]
 
-    assert CarteNew.depuis_dict(entree).persistante
-    assert not CarteNew.depuis_dict(REGISTRE_REFONTE[0]).persistante
+    assert CarteNew.depuis_dict(dict(laser.vers_dict(), persistante=True)).persistante
+    assert not laser.persistante
 
 
 # --- Validations ---
@@ -262,8 +259,11 @@ def test_persistante_lue_depuis_le_json():
         {"effets": ()},
         {"munitions_base": 0},
         {"lancements_base": 0},
-        {"cible": CibleCarteNew.MODULE_UNIQUE, "effets": (Effet(NatureEffet.DEGATS, 3, PorteeEffet.AUTRES_ENNEMIS),)},
-        {"cible": CibleCarteNew.ENNEMI_TOUS, "effets": (Effet(NatureEffet.DEGATS, 3, PorteeEffet.AUTRES_ENNEMIS),)},
+        {"valeurs": {"degats": -1}},
+        {"cible": CibleCarteNew.MODULE_UNIQUE,
+         "effets": (Effet(NatureEffet.DEGATS, "degats", PorteeEffet.AUTRES_ENNEMIS),)},
+        {"cible": CibleCarteNew.ENNEMI_TOUS,
+         "effets": (Effet(NatureEffet.DEGATS, "degats", PorteeEffet.AUTRES_ENNEMIS),)},
     ],
 )
 def test_carte_invalide_refusee(champs):
@@ -273,12 +273,8 @@ def test_carte_invalide_refusee(champs):
 
 def test_effet_invalide_refuse():
     with pytest.raises(ValueError):
-        Effet(NatureEffet.DEGATS, -1)
+        Effet(NatureEffet.REPETITION, "repetitions")  # filtre manquant
     with pytest.raises(ValueError):
-        Effet(NatureEffet.VULNERABILITE, 50, duree=0)
-    with pytest.raises(ValueError):
-        Effet(NatureEffet.REPETITION, 1)  # filtre manquant
-    with pytest.raises(ValueError):
-        Effet(NatureEffet.DEGATS, 1, filtre=FiltreCartes(nom="Laser"))  # filtre interdit
+        Effet(NatureEffet.DEGATS, "degats", filtre=FiltreCartes(nom="Laser"))  # filtre interdit
     with pytest.raises(ValueError):
         FiltreCartes()  # aucun critere

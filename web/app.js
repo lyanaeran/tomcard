@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "71";
+const VERSION_CACHE = "72";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -56,6 +56,7 @@ const FICHIERS_A_MONTER = [
     "src/gameplay/position.py",
     "src/gameplay/vaisseau.py",
     "config/cartes.json",
+    "config/carte_new.json",
     "config/ennemis.json",
     "config/modules.json",
 ];

@@ -161,8 +161,7 @@ service et continue son cycle normal (pioche, main, défausse).
 - **Rare par construction** : réservée à quelques cartes Rares ou Légendaires, sinon le coût de la
   mort (§3.3) disparaît : **0 ou 1 carte Persistante par module** (validé).
 - **Affichage** : le mot-clé apparaît sur la carte (bandeau ou icône), comme les munitions.
-- **Données** : un champ booléen dans `config/cartes.json` (ex. `"persistante": true`), et la
-  colonne correspondante dans `specs/cartes.xlsx`.
+- **Données** : champ booléen `"persistante"` dans `config/carte_new.json` (`CarteNew.persistante`).
 - **Candidates naturelles** : des cartes dont le thème survit au module, par exemple *Leurre*
   (un leurre déjà largué), ou des cartes de résurrection (§5), qui doivent pouvoir ressusciter leur
   propre module. Sans Persistante, une carte de résurrection d'un module mort serait elle-même hors

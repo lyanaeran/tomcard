@@ -9,9 +9,8 @@ et le **parcours** (boucle de run) s'enchaîne écran par écran jusqu'au Boss d
 Répondre à l'utilisateur en français, y compris pour les messages de statut/résumés. Le code
 (identifiants, commentaires) est en français ; commentaires en **ASCII uniquement (sans accents ni
 cédilles)**. `specs/` et les `CLAUDE.md` utilisent l'orthographe normale. Les **textes affichés
-dans le jeu** (noms et descriptions des cartes dans `config/`, et le registre `specs/cartes.xlsx`
-qui les reflète) gardent leurs accents (consigne utilisateur) ; tout le reste (identifiants,
-clés JSON, code, commentaires) reste sans accent.
+dans le jeu** (noms et descriptions des cartes dans `config/`) gardent leurs accents (consigne
+utilisateur) ; tout le reste (identifiants, clés JSON, code, commentaires) reste sans accent.
 
 ## Documents de référence (à tenir à jour)
 
@@ -23,9 +22,16 @@ clés JSON, code, commentaires) reste sans accent.
   les brouillons de refonte et la conception d'outils (ex. `specs/simulation.md` pour
   `outils/simulation/`), et sont listés dans l'index `specs/specs.md`. Seules exceptions : les
   `CLAUDE.md`, `README.md`, et les rapports générés (ex. synthèses de simulation).
-- `specs/cartes.xlsx` — miroir éditable de `config/cartes.json` (une ligne par carte). Pas rechargé
-  par le code (`config/cartes.json` reste la seule source de vérité du moteur) : si l'un est modifié,
-  reporter le changement dans l'autre à la main.
+- **Cartes (refonte en cours, décision utilisateur)** :
+  - `config/carte_new.json` est la **source de vérité des cartes** : format de la refonte
+    (`src/gameplay/carte_new.py:CarteNew`), valeurs nommées, effets, champs `jouable` et `refonte`.
+    C'est là qu'on modifie une carte.
+  - `config/cartes.json` est l'ancien format, **encore lu par le moteur actuel** jusqu'au
+    branchement de `CarteNew`, puis supprimé. D'ici là, une valeur changée dans `carte_new.json`
+    pour une carte jouable doit être reportée à la main dans `cartes.json`, sinon le jeu ne la
+    voit pas.
+  - `specs/cartes_legacy.xlsx` : ancien registre (onglets Cartes, Aventures, Ennemis, Modules),
+    **archivé, plus maintenu**.
 
 **`specs/` doit rester synchronisé avec le code.** Une décision de design prise ou clarifiée en
 cours d'implémentation (règle de ciblage, format d'une carte, retour visuel, mécanique du parcours)

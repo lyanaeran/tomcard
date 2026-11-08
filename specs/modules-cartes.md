@@ -17,8 +17,9 @@ l'archétype "Radar / Ciblage" en §4.3) : exclus du tirage de choix de module t
 de cartes (`modules_equipables`/`specs_equipables`, §5), pour ne jamais planter le tirage du deck.
 
 **Refonte des cartes en cours (décision utilisateur, 2026-11-07)** : les cartes du module
-principal et du Lanceur de missiles ont été revues (colonne « Refonte » de `specs/cartes.xlsx`,
-reportée dans `config/cartes.json`). Pendant la refonte, **seuls ces deux modules sont jouables** :
+principal et du Lanceur de missiles ont été revues (19 cartes, `config/carte_new.json`, nouvelle
+source de vérité des cartes ; valeurs reportées dans `config/cartes.json`, encore lu par le moteur
+actuel ; l'ancien registre `specs/cartes.xlsx` est archivé en `specs/cartes_legacy.xlsx`). Pendant la refonte, **seuls ces deux modules sont jouables** :
 champ `jouable` de `config/modules.json` (`SpecModule.jouable`), les autres ne sont jamais
 proposés ni équipés (`modules_equipables`, et le mode démonstration `config_poc.creer_vaisseau`
 laisse vides les emplacements qu'il ne peut pas pourvoir). Le choix de module du Niveau 1 ne
@@ -33,6 +34,15 @@ propose donc que le Lanceur de missiles. Changements principaux :
   d'incendie, équivalent du poison de Slay the Spire (décroissance de 1 par tour).
 - *Bouclier stabilisé* change d'effet : « les Boucliers de base sont lancés X fois de plus »
   (même famille que *Salve laser* et *Protocole d'urgence*).
+- **Format de `config/carte_new.json`** (validé) : chaque carte a des **valeurs nommées**
+  (`"valeurs": {"degats_cible": 15, "degats_autres": 6}`), une liste d'**effets** qui y renvoient par
+  leur nom (`{"nature": "DEGATS", "valeur": "degats_cible"}`, avec une portée, une durée nommée ou
+  un filtre si besoin), une **description** qui cite les valeurs entre accolades (« Inflige
+  {degats_cible} degats… », remplie par `CarteNew.description_affichee`), et deux booléens
+  `jouable` (le moteur sait l'exécuter) et `refonte` (carte revue). Au chargement, tout nom cité
+  doit exister et toute valeur doit servir à un effet (coquilles détectées). En combat, chaque
+  exemplaire a ses `valeurs_actuelles` (copie des valeurs), base de futurs bonus du type « +2 aux
+  dégâts des cartes à cible unique ».
 - Classe de carte cible de la refonte : `src/gameplay/carte_new.py` (`CarteNew`), pas encore
   branchée au moteur. Une carte y porte une liste d'effets, un nombre de **lancements** de départ (`lancements_base`, 1 par
   défaut, 2 pour une carte lancée deux fois ; décision utilisateur), et les effets « les cartes X
