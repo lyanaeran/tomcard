@@ -78,13 +78,46 @@ C'est ce qui donne un **coût** à la mort. Options examinées :
 Exception : les cartes portant le mot-clé **Persistante** restent jouables (§3.5). Les cartes du
 **module principal** ne sont jamais concernées, puisque sa mort termine la run.
 
-**Implication technique** : il faut lier chaque carte du deck à **l'exemplaire de module** qui l'a
-apportée, et pas seulement au type : deux exemplaires du même module sont possibles (§5). Le deck de
-la partie passerait d'une liste d'ids à une liste de couples (id de carte, emplacement du module),
-ou chaque `Carte` de combat porterait une référence à son `Module`. C'est le plus gros chantier
-moteur de cette refonte (deck, sauvegarde, `web/bridge.py`). Une carte obtenue autrement que par un
-module (Aventure, Planète commerciale) est **rattachée au module principal** (validé), donc jamais
-concernée.
+**Lien carte ↔ exemplaire de module (validé, 2026-11-08)** : aujourd'hui le deck sauvegardé
+d'une partie est une simple liste d'ids de cartes, sans module : avec deux exemplaires du même
+module (§5), impossible de savoir quelle carte appartient auquel. Conception retenue :
+
+1. **Chaque exemplaire de module de la partie reçoit un identifiant d'exemplaire** stable
+   (`EtatModule`, ex. `M1` pour le principal, `M2`, `M3`... ensuite), qui ne change jamais.
+2. **Chaque carte du deck sauvegardé indique son exemplaire** : le deck passe d'une liste d'ids à
+   une liste de couples, ex. `[{"id": "CRT_9", "module": "M2"}, {"id": "CRT_9", "module": "M3"}]`.
+3. **En début de combat**, chaque carte est créée rattachée à son exemplaire (`CarteNew`) ; si cet
+   exemplaire est détruit, ses cartes non persistantes partent en pile Hors service (§3.4).
+
+Un identifiant d'exemplaire plutôt que l'emplacement (`avant_gauche`...) : la Station service
+**déplace** des modules (échange possible entre deux emplacements) ; lié à l'emplacement, chaque
+déplacement obligerait à mettre à jour les cartes, avec un risque d'erreur. Avec un identifiant,
+les cartes suivent leur module sans rien faire (le champ `emplacement` de `CarteNew` deviendra un
+identifiant d'exemplaire).
+
+Rattachement au moment où la carte entre dans le deck :
+
+| Origine de la carte | Exemplaire de rattachement |
+|---|---|
+| Deck de départ | le principal |
+| Carte choisie après le choix de module (Niveau 1) | le module qui vient d'être équipé |
+| Récompense de combat | le module qui a proposé la carte (une candidate par module équipé, §6) |
+| Aventure, Planète commerciale | **à trancher**, voir ci-dessous |
+
+C'est le plus gros chantier moteur de cette refonte (format de sauvegarde dans
+`src/gameplay/partie.py`, `web/bridge.py`, `web/app.js`), à faire au branchement de la refonte avec
+la pile Hors service.
+
+**Cartes obtenues hors module (Aventure, Planète commerciale) : à trancher.** Les rattacher toutes
+au principal (proposition initiale) les rend insensibles à la mort des modules : si beaucoup de
+cartes finissent rattachées au principal, perdre un module coûte de moins en moins, et le mot-clé
+Persistante perd de son intérêt (remarque utilisateur). Pistes :
+- **au module d'origine de la carte** (son type, ex. une carte du Lanceur de missiles va à un
+  Lanceur équipé) ; à préciser si aucun exemplaire de ce type n'est équipé (carte refusée, ou
+  repli sur le principal) et s'il y en a plusieurs (choix du joueur, ou le moins fourni) ;
+- **au choix du joueur** parmi ses modules équipés, au moment de prendre la carte ;
+- **au principal**, en limitant ces cartes (rares, ou réservées aux cartes du module principal) ;
+- **au hasard** parmi les modules secondaires équipés.
 
 ### 3.4 Pile « Hors service » (décision utilisateur : une défausse particulière)
 
@@ -231,8 +264,9 @@ seulement subie.
 ## 8. Valeurs et points à trancher
 
 1. ~~**Cartes d'un module mort**~~ : **tranché et validé**, injouables tant que le module est
-   mort, pile Hors service et ses 6 règles, cartes hors module rattachées au principal, mot-clé
-   Persistante (0 ou 1 par module) — §3.3 à §3.5.
+   mort, pile Hors service et ses 6 règles, lien carte ↔ exemplaire de module par identifiant
+   d'exemplaire, mot-clé Persistante (0 ou 1 par module) — §3.3 à §3.5. **Rouvert** : le
+   rattachement des cartes obtenues hors module (Aventure, Planète commerciale), §3.3.
 2. **PV max des secondaires** : proposition 15 à 20 (inventé), à caler sur les dégâts ennemis et la
    durée moyenne d'un combat.
 3. **PV du principal** : 50 actuels, peut-être 60 à 70 (inventé).
@@ -246,8 +280,9 @@ seulement subie.
 ## 9. Prochaines étapes
 
 1. Trancher les points 2 et 3 de la §8 (PV des secondaires et du principal).
-2. Spécifier le lien carte ↔ exemplaire de module (deck de la partie, `Carte` de combat,
-   sauvegarde, `web/bridge.py`) et choisir les premières cartes Persistantes.
+2. Trancher le rattachement des cartes obtenues hors module (§3.3), puis implémenter le lien
+   carte ↔ exemplaire de module (identifiant d'exemplaire, format du deck sauvegardé, `CarteNew`,
+   `web/bridge.py`, `web/app.js`) et choisir les premières cartes Persistantes.
 3. Choisir les effets à la mort par module et leur format dans `config/modules.json`.
 4. Concevoir les premières cartes de résurrection et de sacrifice.
 5. Une fois stabilisé : migrer dans `combat.md` (§3.4), `parcours.md` (§2.2), `modules-cartes.md`
