@@ -242,7 +242,7 @@ class CarteNew:
     # (1 d'ordinaire, 2 pour une carte "lancee deux fois")
     lancements_base: int = 1
     # Munitions au depart de chaque combat ; None = illimitee (specs.md 3.6)
-    munitions_max: int | None = None
+    munitions_base: int | None = None
 
     # --- Etat de cet exemplaire (propre a chaque copie de la carte) ---
 
@@ -263,8 +263,8 @@ class CarteNew:
             raise ValueError(f"{self.id} : une carte a au moins un effet")
         if self.lancements_base < 1:
             raise ValueError(f"{self.id} : une carte est lancee au moins une fois")
-        if self.munitions_max is not None and self.munitions_max < 1:
-            raise ValueError(f"{self.id} : munitions_max doit etre None (illimite) ou >= 1")
+        if self.munitions_base is not None and self.munitions_base < 1:
+            raise ValueError(f"{self.id} : munitions_base doit etre None (illimite) ou >= 1")
         if self.cible.camp == Camp.JOUEUR and any(effet.portee in _PORTEES_ENNEMIES for effet in self.effets):
             raise ValueError(f"{self.id} : portee ennemie sur une carte qui cible le joueur")
         if any(effet.portee == PorteeEffet.AUTRES_ENNEMIS for effet in self.effets) and (
@@ -272,7 +272,7 @@ class CarteNew:
         ):
             raise ValueError(f"{self.id} : 'autres ennemis' suppose une cible Ennemi Unique")
         if self.munitions_restantes is None:
-            self.munitions_restantes = self.munitions_max
+            self.munitions_restantes = self.munitions_base
         if self.lancements_actuels is None:
             self.lancements_actuels = self.lancements_base
 
@@ -280,14 +280,14 @@ class CarteNew:
 
     def copie(self) -> "CarteNew":
         """Nouvel exemplaire independant : munitions et lancements de depart, meme rattachement."""
-        return dataclasses.replace(self, munitions_restantes=self.munitions_max, lancements_actuels=self.lancements_base)
+        return dataclasses.replace(self, munitions_restantes=self.munitions_base, lancements_actuels=self.lancements_base)
 
     def rattachee_a(self, exemplaire_module: str) -> "CarteNew":
         """Nouvel exemplaire rattache a cet exemplaire de module de la partie."""
         return dataclasses.replace(
             self,
             exemplaire_module=exemplaire_module,
-            munitions_restantes=self.munitions_max,
+            munitions_restantes=self.munitions_base,
             lancements_actuels=self.lancements_base,
         )
 
@@ -340,7 +340,7 @@ class CarteNew:
             cout=entree["cout"],
             effets=tuple(_effet_depuis_dict(effet) for effet in entree["effets"]),
             description=entree.get("description", ""),
-            munitions_max=entree.get("munition"),
+            munitions_base=entree.get("munition"),
             persistante=entree.get("persistante", False),
             lancements_base=entree.get("lancements", 1),
         )
@@ -354,7 +354,7 @@ class CarteNew:
             "categorie": self.categorie.value,
             "cible": self.cible.value,
             "cout": self.cout,
-            "munition": self.munitions_max,
+            "munition": self.munitions_base,
             "persistante": self.persistante,
             "lancements": self.lancements_base,
             "description": self.description,

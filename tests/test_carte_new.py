@@ -259,7 +259,7 @@ def test_persistante_lue_depuis_le_json():
     [
         {"cout": -1},
         {"effets": ()},
-        {"munitions_max": 0},
+        {"munitions_base": 0},
         {"lancements_base": 0},
         {"cible": CibleCarteNew.MODULE_UNIQUE, "effets": (Effet(NatureEffet.DEGATS, 3, PorteeEffet.AUTRES_ENNEMIS),)},
         {"cible": CibleCarteNew.ENNEMI_TOUS, "effets": (Effet(NatureEffet.DEGATS, 3, PorteeEffet.AUTRES_ENNEMIS),)},
