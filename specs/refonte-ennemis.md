@@ -62,8 +62,14 @@ et la synthèse de simulation `outils/simulation/synthese/analyse_2026-11-07.md`
   bouclier des ennemis seront peut-être à réajuster en conséquence.
 - **L'incendie inflige ses dégâts à la fin du tour de l'attaquant** (décision utilisateur) : sur un
   ennemi, à la fin du tour du joueur ; sur un module du joueur, à la fin du tour ennemi.
-  *Proposition* pour l'ordre de fin de tour : l'incendie d'abord (absorbé par le bouclier comme des
-  dégâts ordinaires, puis il baisse de 1), ensuite le bouclier perd 1.
+- **Ordre de fin de tour** (décision utilisateur) : l'incendie inflige d'abord ses dégâts, absorbés
+  par le bouclier s'il y en a, comme des dégâts ordinaires (puis l'incendie baisse de 1) ; ensuite
+  le bouclier perd 1.
+- **Ciblage inchangé** (décision utilisateur) : la plupart des ennemis visent le module le plus
+  proche, quelques-uns tous les modules. Certains **ennemis futurs viseront le module principal**.
+- **Flottes inchangées pour l'instant** (décision utilisateur, à reprendre plus tard) : 1 ennemi
+  jusqu'au niveau 5, puis 2, le Boss des pirates au niveau 10, 3 ennemis aux Astéroïdes ; le
+  coefficient (§3.4) n'est pas encore utilisé par les flottes.
 - **La montée des dégâts propre à chaque ennemi** (refonte-buffs-debuffs.md §7.2) est désormais
   couverte par l'**augmentation des valeurs** (§3.3).
 
@@ -165,23 +171,17 @@ attaque, attaque, bouclier). Le +2 dégâts du Boss devient une augmentation de 
 
 ---
 
-## 5. Questions ouvertes
+## 5. Pour plus tard
 
-1. **Ordre de fin de tour** : confirmer la proposition du §2 (incendie absorbé par le bouclier,
-   puis bouclier −1).
-2. **Ciblage** : avec des secondaires à 20 PV et la pile Hors service, les attaques « au plus
-   proche » détruisent vite les modules avant et protègent le principal ; plus d'attaques de zone,
-   ou un ciblage du principal (refonte-modules.md §7) ?
-3. **Flottes** : utiliser le coefficient (§3.4) et les tailles S/M/L pour une difficulté par niveau ;
-   plusieurs boss.
-4. **Nouveaux ennemis** : plus tard (décision utilisateur, 2026-11-08) ; par exemple un ennemi qui
-   pose de l'incendie ou un debuff sur le joueur.
+1. **Flottes** : difficulté par niveau (coefficient §3.4, tailles S/M/L, nombre d'ennemis),
+   plusieurs boss. La simulation montre des niveaux 2 à 5 et un Boss trop faciles.
+2. **Nouveaux ennemis** : par exemple un ennemi qui vise le module principal, qui pose de
+   l'incendie ou un debuff sur le joueur.
 
 ---
 
 ## 6. Prochaines étapes
 
-1. Trancher les questions du §5.
-2. Redessiner les 6 ennemis dans ce format (cycles, valeurs, augmentations).
-3. Créer `config/ennemi_new.json`, la classe dédiée et son tableau généré.
-4. Puis le combat de la refonte (`combat_new`), validé par le simulateur.
+1. Redessiner les 6 ennemis dans ce format (cycles, valeurs, augmentations).
+2. Créer `config/ennemi_new.json`, la classe dédiée et son tableau généré.
+3. Puis le combat de la refonte (`combat_new`), validé par le simulateur.
