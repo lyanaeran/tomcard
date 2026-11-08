@@ -21,11 +21,14 @@ utilisateur) ; tout le reste (identifiants, clés JSON, code, commentaires) rest
 - **Tous les documents de conception `.md` vont dans `specs/`** (consigne utilisateur), y compris
   les brouillons de refonte et la conception d'outils (ex. `specs/simulation.md` pour
   `outils/simulation/`), et sont listés dans l'index `specs/specs.md`. Seules exceptions : les
-  `CLAUDE.md`, `README.md`, et les rapports générés (ex. synthèses de simulation).
+  `CLAUDE.md`, `README.md`, et les fichiers générés (ex. synthèses de simulation,
+  `config/carte_new.md`).
 - **Cartes (refonte en cours, décision utilisateur)** :
   - `config/carte_new.json` est la **source de vérité des cartes** : format de la refonte
     (`src/gameplay/carte_new.py:CarteNew`), valeurs nommées, effets, champs `jouable` et `refonte`.
-    C'est là qu'on modifie une carte.
+    C'est là qu'on modifie une carte, puis on régénère `config/carte_new.md` (tableau lisible,
+    **toujours généré**, jamais modifié à la main) avec `python -m outils.tableau_cartes` ;
+    `tests/test_tableau_cartes.py` échoue tant que le tableau n'est pas à jour.
   - `config/cartes.json` est l'ancien format, **encore lu par le moteur actuel** jusqu'au
     branchement de `CarteNew`, puis supprimé. D'ici là, une valeur changée dans `carte_new.json`
     pour une carte jouable doit être reportée à la main dans `cartes.json`, sinon le jeu ne la
