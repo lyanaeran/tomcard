@@ -219,6 +219,22 @@ class Effet:
         """Noms des valeurs de la carte utilisees par cet effet."""
         return [nom for nom in (self.valeur, self.duree) if nom is not None]
 
+    @classmethod
+    def depuis_dict(cls, entree: dict) -> "Effet":
+        """Effet a partir d'une entree du tableau "effets" de config/carte_new.json."""
+        filtre = entree.get("filtre")
+        return cls(
+            nature=NatureEffet[entree["nature"]],
+            valeur=entree.get("valeur"),
+            portee=PorteeEffet[entree.get("portee", "CIBLE")],
+            duree=entree.get("duree"),
+            filtre=FiltreCartes(
+                nom=filtre.get("nom"),
+                rarete=RareteCarte[filtre["rarete"].upper()] if "rarete" in filtre else None,
+                categorie=CategorieCarte(filtre["categorie"]) if "categorie" in filtre else None,
+            ) if filtre else None,
+        )
+
 
 _PORTEES_ENNEMIES = (PorteeEffet.AUTRES_ENNEMIS, PorteeEffet.COLONNE_AVANT_ENNEMIE, PorteeEffet.COLONNE_ARRIERE_ENNEMIE)
 
@@ -380,7 +396,7 @@ class CarteNew:
             categorie=CategorieCarte(entree["categorie"]),
             cible=CibleCarteNew(entree["cible"]),
             cout=entree["cout"],
-            effets=tuple(_effet_depuis_dict(effet) for effet in entree["effets"]),
+            effets=tuple(Effet.depuis_dict(effet) for effet in entree["effets"]),
             description=entree.get("description", ""),
             valeurs=dict(entree.get("valeurs", {})),
             persistante=entree.get("persistante", False),
@@ -409,18 +425,3 @@ def appliquer_repetition(effet: Effet, supplement: int, cartes: Iterable[CarteNe
     for carte in visees:
         carte.lancements_actuels += supplement
     return len(visees)
-
-
-def _effet_depuis_dict(entree: dict) -> Effet:
-    filtre = entree.get("filtre")
-    return Effet(
-        nature=NatureEffet[entree["nature"]],
-        valeur=entree.get("valeur"),
-        portee=PorteeEffet[entree.get("portee", "CIBLE")],
-        duree=entree.get("duree"),
-        filtre=FiltreCartes(
-            nom=filtre.get("nom"),
-            rarete=RareteCarte[filtre["rarete"].upper()] if "rarete" in filtre else None,
-            categorie=CategorieCarte(filtre["categorie"]) if "categorie" in filtre else None,
-        ) if filtre else None,
-    )
