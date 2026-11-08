@@ -36,6 +36,7 @@ Un deckbuilder roguelike inspiré de Slay the Spire, où le joueur incarne un va
 |---|---|
 | [refonte-buffs-debuffs.md](refonte-buffs-debuffs.md) | Brouillon de refonte des buffs/debuffs/bouclier (non décidé, non implémenté) |
 | [refonte-modules.md](refonte-modules.md) | Brouillon de refonte des modules secondaires sacrifiables (non implémenté) |
+| [refonte-destruction.md](refonte-destruction.md) | Brouillon du buff « Destruction » (en attente, aucune carte ne le pose encore) |
 | [simulation.md](simulation.md) | Conception de l'outil de simulation d'équilibrage (`outils/simulation/`) |
 
 ## Quel fichier lire selon la tâche

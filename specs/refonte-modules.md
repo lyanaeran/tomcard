@@ -193,29 +193,12 @@ module le **buff « Destruction »**, qui porte un effet déclenché quand ce mo
 - L'ancienne idée d'un effet à la mort par type de module (ex-§4.2) est **abandonnée** ; ses idées
   deviennent des idées de **cartes Destruction** (§4.3).
 
-### 4.2 Format envisagé (à valider au moment de le coder)
+### 4.2 Format et points ouverts : voir [refonte-destruction.md](refonte-destruction.md)
 
-Dans `config/carte_new.json`, une nouvelle nature d'effet `DESTRUCTION`, dont l'effet déclenché est
-décrit avec le même format que les autres effets (valeurs nommées de la carte), dans une liste
-imbriquée :
-
-```json
-"description": "Applique à un module : Destruction - inflige {degats} degats a tous les ennemis",
-"cible": "Module Unique",
-"valeurs": { "degats": 10 },
-"effets": [
-  { "nature": "DESTRUCTION", "declenche": [
-      { "nature": "DEGATS", "valeur": "degats", "portee": "TOUS_ENNEMIS" }
-  ] }
-]
-```
-
-Points à préciser à ce moment-là :
-- **la cible de l'effet déclenché**, qui n'est plus la cible de la carte (le module) : de
-  nouvelles portées, ex. `TOUS_ENNEMIS`, `ENNEMI_DESTRUCTEUR` (celui qui a détruit le module),
-  `MODULE_PRINCIPAL` ;
-- **le module principal** : sa destruction termine la run, un buff Destruction n'y a pas de sens ;
-  proposition : cartes Destruction limitées aux modules secondaires.
+Le format du buff dans `config/carte_new.json` et ses points à trancher (cible de l'effet
+déclenché, moment du déclenchement, valeurs, modules concernés, effets autorisés, affichage) sont
+dans un brouillon dédié, **en attente** : aucune carte ne pose encore ce buff (décision
+utilisateur, 2026-11-08).
 
 ### 4.3 Idées de cartes Destruction (toutes valeurs inventées)
 
@@ -333,8 +316,8 @@ bouclier, buffs dont Destruction, leurre, détruit) — même principe que `Cart
 2. ~~**PV max des secondaires**~~ : **20, provisoire** (validé, en attendant les simulations).
 3. ~~**PV du principal**~~ : **60, provisoire** (validé, en attendant les simulations).
 4. **Réparer** : inchangée (principal seul) ou revue.
-5. ~~**Effet à la mort**~~ : **tranché**, buff « Destruction » apporté par des cartes (§4) ; reste
-   le format exact et les portées de l'effet déclenché (§4.2).
+5. ~~**Effet à la mort**~~ : **tranché**, buff « Destruction » apporté par des cartes (§4) ; format
+   et détails en attente dans [refonte-destruction.md](refonte-destruction.md).
 6. **Résurrection** : quelles pistes garder (§5.1) ; garde-fou contre les boucles en partie réglé
    par la consommation du buff Destruction (§5.2).
 7. **Sacrifice volontaire** (§6) : oui ou non.
@@ -350,8 +333,8 @@ bouclier, buffs dont Destruction, leurre, détruit) — même principe que `Cart
 2. Trancher le rattachement des cartes obtenues hors module (§3.3), puis implémenter le lien
    carte ↔ exemplaire de module (identifiant d'exemplaire, format du deck sauvegardé, `CarteNew`,
    `web/bridge.py`, `web/app.js`) et choisir les premières cartes Persistantes.
-3. Spécifier le buff Destruction dans `CarteNew` (nature, effets déclenchés, portées, §4.2) et
-   concevoir les premières cartes Destruction, de résurrection et de sacrifice.
+3. Concevoir les premières cartes Destruction (puis trancher
+   [refonte-destruction.md](refonte-destruction.md)), de résurrection et de sacrifice.
 4. Simuler pour caler les PV du principal et des secondaires.
 5. Une fois stabilisé : migrer dans `combat.md` (§3.4), `parcours.md` (§2.2), `modules-cartes.md`
    (§4, §5), supprimer ce fichier.
