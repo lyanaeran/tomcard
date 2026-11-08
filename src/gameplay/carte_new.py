@@ -23,6 +23,7 @@ Differences avec Carte :
 
 import dataclasses
 import json
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import Path
@@ -396,14 +397,14 @@ def charger_cartes_new(fichier: Path = FICHIER_CARTES_NEW) -> dict[str, CarteNew
     return {entree["id"]: CarteNew.depuis_dict(entree) for entree in donnees["cartes"]}
 
 
-def appliquer_repetition(carte_jouee: CarteNew, effet: Effet, cartes) -> int:
-    """Effet REPETITION de `carte_jouee` : chaque carte visee par son filtre est lancee autant de
-    fois de plus que la valeur de l'effet, pour le reste du combat. `cartes` : toutes les cartes du
-    combat, toutes piles confondues (main, pioche, defausse, epuisees, Hors service), pour qu'une
-    carte piochee plus tard soit concernee elle aussi. Renvoie le nombre de cartes modifiees."""
+def appliquer_repetition(effet: Effet, supplement: int, cartes: Iterable[CarteNew]) -> int:
+    """Effet REPETITION joue : chaque carte visee par son filtre est lancee `supplement` fois de plus
+    (valeur de l'effet sur la carte jouee : carte.valeur_de(effet)), pour le reste du combat.
+    `cartes` : toutes les cartes du combat, toutes piles confondues (main, pioche, defausse,
+    epuisees, Hors service), pour qu'une carte piochee plus tard soit concernee elle aussi. Renvoie
+    le nombre de cartes modifiees."""
     if effet.nature != NatureEffet.REPETITION:
         raise ValueError(f"Effet {effet.nature.name} : seul un effet REPETITION modifie les lancements")
-    supplement = carte_jouee.valeur_de(effet)
     visees = [carte for carte in cartes if effet.filtre.correspond(carte)]
     for carte in visees:
         carte.lancements_actuels += supplement

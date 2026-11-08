@@ -147,7 +147,7 @@ def test_salve_laser_augmente_les_lancements_des_seuls_lasers_de_base_de_toutes_
     salve = cartes["Salve laser"]
     deck = [cartes["Laser"].copie() for _ in range(4)] + [cartes["Laser lourd"], cartes["Bouclier"]]
 
-    modifiees = appliquer_repetition(salve, salve.effets[0], deck)
+    modifiees = appliquer_repetition(salve.effets[0], salve.valeur_de(salve.effets[0]), deck)
 
     assert modifiees == 4
     assert [carte.lancements_actuels for carte in deck] == [2, 2, 2, 2, 1, 1]
@@ -160,8 +160,9 @@ def test_les_repetitions_se_cumulent_pour_le_combat():
     laser, reparation, laser_percant = cartes["Laser"], cartes["Réparation"], cartes["Laser percant"]
     deck = [laser, reparation, laser_percant]
 
-    appliquer_repetition(cartes["Salve laser"], cartes["Salve laser"].effets[0], deck)
-    appliquer_repetition(cartes["Protocole d'urgence"], cartes["Protocole d'urgence"].effets[0], deck)
+    for nom in ("Salve laser", "Protocole d'urgence"):
+        effet = cartes[nom].effets[0]
+        appliquer_repetition(effet, cartes[nom].valeur_de(effet), deck)
 
     assert (laser.lancements_actuels, reparation.lancements_actuels, laser_percant.lancements_actuels) == (3, 2, 1)
     assert cartes["Salve laser"].effets[0].cumul == Cumul.INTENSITE_SANS_DECROISSANCE
@@ -171,7 +172,8 @@ def test_bouclier_stabilise_double_le_bouclier_de_base():
     cartes = _cartes()
     stabilise = cartes["Bouclier stabilise"]
 
-    appliquer_repetition(stabilise, stabilise.effets[0], [cartes["Bouclier"], cartes["Blindage cible"]])
+    effet = stabilise.effets[0]
+    appliquer_repetition(effet, stabilise.valeur_de(effet), [cartes["Bouclier"], cartes["Blindage cible"]])
 
     assert (cartes["Bouclier"].lancements_actuels, cartes["Blindage cible"].lancements_actuels) == (2, 1)
 
@@ -179,7 +181,7 @@ def test_bouclier_stabilise_double_le_bouclier_de_base():
 def test_seul_un_effet_repetition_modifie_les_lancements():
     laser = _cartes()["Laser"]
     with pytest.raises(ValueError):
-        appliquer_repetition(laser, laser.effets[0], [laser])
+        appliquer_repetition(laser.effets[0], 1, [laser])
 
 
 # --- Cible ---
