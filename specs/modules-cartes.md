@@ -43,8 +43,8 @@ propose donc que le Lanceur de missiles. Changements principaux :
   doit exister et toute valeur doit servir à un effet (coquilles détectées). En combat, chaque
   exemplaire a ses `valeurs_actuelles` (copie des valeurs), base de futurs bonus du type « +2 aux
   dégâts des cartes à cible unique ».
-- Classe de carte cible de la refonte : `src/gameplay/carte_new.py` (`CarteNew`), pas encore
-  branchée au moteur. Une carte y porte une liste d'effets, un nombre de **lancements** de départ (`lancements_base`, 1 par
+- Classe de carte cible de la refonte : `src/gameplay/carte_new.py` (`CarteNew`), **relue et
+  validée par l'utilisateur le 2026-11-08**, pas encore branchée au moteur. Une carte y porte une liste d'effets, un nombre de **lancements** de départ (`lancements_base`, 1 par
   défaut, 2 pour une carte lancée deux fois ; décision utilisateur), et les effets « les cartes X
   sont lancées N fois de plus » (*Salve laser*, *Protocole d'urgence*, *Bouclier stabilisé*, X = 1
   pour ce dernier) **augmentent directement les lancements** des cartes qu'ils désignent, dans

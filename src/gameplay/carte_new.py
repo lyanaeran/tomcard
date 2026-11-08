@@ -1,8 +1,9 @@
 """
 Carte de la refonte (CarteNew, nom provisoire) : modele de donnees cible de la refonte des cartes
 (specs/refonte-buffs-debuffs.md, specs/refonte-modules.md). Source de verite :
-config/carte_new.json (charger_cartes_new). Pas encore branchee au moteur : coexiste avec
-carte.py:Carte (config/cartes.json), qu'elle remplacera une fois relue et validee.
+config/carte_new.json (charger_cartes_new). Relue et validee par l'utilisateur le 2026-11-08.
+Pas encore branchee au moteur : coexiste avec carte.py:Carte (config/cartes.json), qu'elle
+remplacera au branchement de la refonte.
 
 Differences avec Carte :
 - une carte porte des VALEURS NOMMEES (ex. {"degats_cible": 15, "degats_autres": 6}) et une liste
