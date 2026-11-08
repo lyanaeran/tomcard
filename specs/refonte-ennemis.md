@@ -97,8 +97,9 @@ paliers      = (tour - 1) // tous_les
 ```
 
 Avec une augmentation tous les tours (`tous_les` = 1), `paliers` = `tour - 1` : c'est la formule
-donnée par l'utilisateur, `(valeur_base + augmentation × (nb_tour - 1)) × coeff_difficulte`. *À
-confirmer* : la prise en compte du rythme « tous les N tours » par `paliers` ci-dessus.
+donnée par l'utilisateur, `(valeur_base + augmentation × (nb_tour - 1)) × coeff_difficulte`. Prise
+en compte du rythme « tous les N tours » par `paliers` **validée** (décision utilisateur).
+Exemple : dégâts 6, +1 tous les 2 tours, coefficient 1,5 → 9, 9, 10, 10, 12 aux tours 1 à 5.
 
 ### 3.4 Un coefficient de difficulté
 
@@ -168,7 +169,6 @@ attaque, attaque, bouclier). Le +2 dégâts du Boss devient une augmentation de 
 4. **Flottes** : utiliser le coefficient (§3.4) et les tailles S/M/L pour une difficulté par niveau ;
    plusieurs boss.
 5. **Nouveaux ennemis** : par exemple un ennemi qui pose de l'incendie ou un debuff sur le joueur.
-6. Confirmer la prise en compte du rythme « tous les N tours » dans la formule (§3.3).
 
 ---
 
