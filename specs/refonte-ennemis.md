@@ -56,7 +56,14 @@ et la synthèse de simulation `outils/simulation/synthese/analyse_2026-11-07.md`
   `CarteNew` (décision utilisateur).
 - **Le « bouclier par tour » est retiré** par la refonte des buffs : Petit Jean et le Boss sont à
   redessiner.
-- **Le bouclier des cartes perd 1 par tour**, sans durée ; pour les ennemis, à confirmer (§5).
+- **Le bouclier perd 1 par tour**, sans durée, **pour les ennemis comme pour les modules**
+  (décision utilisateur) : celui d'un ennemi baisse de 1 **à la fin du tour du joueur**, une fois
+  les dégâts du joueur encaissés ; celui d'un module, à la fin du tour ennemi. Les valeurs de
+  bouclier des ennemis seront peut-être à réajuster en conséquence.
+- **L'incendie inflige ses dégâts à la fin du tour de l'attaquant** (décision utilisateur) : sur un
+  ennemi, à la fin du tour du joueur ; sur un module du joueur, à la fin du tour ennemi.
+  *Proposition* pour l'ordre de fin de tour : l'incendie d'abord (absorbé par le bouclier comme des
+  dégâts ordinaires, puis il baisse de 1), ensuite le bouclier perd 1.
 - **La montée des dégâts propre à chaque ennemi** (refonte-buffs-debuffs.md §7.2) est désormais
   couverte par l'**augmentation des valeurs** (§3.3).
 
@@ -160,15 +167,15 @@ attaque, attaque, bouclier). Le +2 dégâts du Boss devient une augmentation de 
 
 ## 5. Questions ouvertes
 
-1. **Bouclier des ennemis** : perd-il aussi 1 par tour, comme celui des modules ?
-2. **Incendie** : les ennemis le reçoivent par les cartes ; moment où il inflige ses dégâts dans le
-   tour ennemi, et ordre par rapport à la perte de bouclier.
-3. **Ciblage** : avec des secondaires à 20 PV et la pile Hors service, les attaques « au plus
+1. **Ordre de fin de tour** : confirmer la proposition du §2 (incendie absorbé par le bouclier,
+   puis bouclier −1).
+2. **Ciblage** : avec des secondaires à 20 PV et la pile Hors service, les attaques « au plus
    proche » détruisent vite les modules avant et protègent le principal ; plus d'attaques de zone,
    ou un ciblage du principal (refonte-modules.md §7) ?
-4. **Flottes** : utiliser le coefficient (§3.4) et les tailles S/M/L pour une difficulté par niveau ;
+3. **Flottes** : utiliser le coefficient (§3.4) et les tailles S/M/L pour une difficulté par niveau ;
    plusieurs boss.
-5. **Nouveaux ennemis** : par exemple un ennemi qui pose de l'incendie ou un debuff sur le joueur.
+4. **Nouveaux ennemis** : plus tard (décision utilisateur, 2026-11-08) ; par exemple un ennemi qui
+   pose de l'incendie ou un debuff sur le joueur.
 
 ---
 
