@@ -168,7 +168,7 @@
       "description": "Les Boucliers de base sont lancés {repetitions} fois de plus.",
       "valeurs": { "repetitions": 1 },
       "effets": [
-        { "nature": "REPETITION", "valeur": "repetitions", "filtre": { "nom": "Bouclier", "rarete": "Base" } }
+        { "nature": "REPETITION", "valeur": "repetitions", "filtre": { "id": "CRT_10" } }
       ]
     },
     {
@@ -187,7 +187,7 @@
       "description": "Les Laser de base sont lances {repetitions} fois de plus.",
       "valeurs": { "repetitions": 1 },
       "effets": [
-        { "nature": "REPETITION", "valeur": "repetitions", "filtre": { "nom": "Laser", "rarete": "Base" } }
+        { "nature": "REPETITION", "valeur": "repetitions", "filtre": { "id": "CRT_7" } }
       ]
     },
     {

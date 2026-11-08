@@ -40,7 +40,11 @@ propose donc que le Lanceur de missiles. Changements principaux :
   un filtre si besoin), une **description** qui cite les valeurs entre accolades (« Inflige
   {degats_cible} degats… », remplie par `CarteNew.description_affichee`), et deux booléens
   `jouable` (le moteur sait l'exécuter) et `refonte` (carte revue). Au chargement, tout nom cité
-  doit exister et toute valeur doit servir à un effet (coquilles détectées). En combat, chaque
+  doit exister et toute valeur doit servir à un effet, et **toute clé inconnue du JSON est
+  refusée** (coquilles détectées). Un **filtre de cartes** (Salve laser…) désigne une carte précise
+  par son **id** (`{"id": "CRT_7"}`), jamais par son nom affiché, ou un ensemble par rareté ou
+  catégorie. Chaque exemplaire a ses propres dictionnaires `valeurs` et `valeurs_actuelles`
+  (copie), pour pouvoir un jour modifier les valeurs d'une seule carte. En combat, chaque
   exemplaire a ses `valeurs_actuelles` (copie des valeurs), base de futurs bonus du type « +2 aux
   dégâts des cartes à cible unique ».
 - Classe de carte cible de la refonte : `src/gameplay/carte_new.py` (`CarteNew`), **relue et

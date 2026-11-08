@@ -168,20 +168,24 @@ class PorteeEffet(Enum):
 @dataclass(frozen=True)
 class FiltreCartes:
     """Designe des cartes par leurs caracteristiques (tous les criteres renseignes doivent
-    correspondre) : cartes visees par un effet REPETITION ("les Laser de base", "les cartes de
-    base"...)."""
+    correspondre) : cartes visees par un effet REPETITION ("les Laser de base" : id CRT_7, "les
+    cartes de base" : rarete Base...). Une carte precise est designee par son id, jamais par son nom
+    affiche, qui peut changer."""
 
-    nom: str | None = None
+    # Id d'un modele de carte (ex. "CRT_7")
+    id: str | None = None
+    # Palier de rarete vise
     rarete: RareteCarte | None = None
+    # Categorie visee
     categorie: CategorieCarte | None = None
 
     def __post_init__(self):
-        if self.nom is None and self.rarete is None and self.categorie is None:
+        if self.id is None and self.rarete is None and self.categorie is None:
             raise ValueError("Un filtre de cartes doit avoir au moins un critere")
 
     def correspond(self, carte: "CarteNew") -> bool:
         return (
-            (self.nom is None or carte.nom == self.nom)
+            (self.id is None or carte.id == self.id)
             and (self.rarete is None or carte.rarete == self.rarete)
             and (self.categorie is None or carte.categorie == self.categorie)
         )
@@ -223,18 +227,37 @@ class Effet:
     @classmethod
     def depuis_dict(cls, entree: dict) -> "Effet":
         """Effet a partir d'une entree du tableau "effets" de config/carte_new.json."""
+        _verifier_cles(entree, CLES_EFFET, f"Effet {entree.get('nature')}")
         filtre = entree.get("filtre")
+        if filtre:
+            _verifier_cles(filtre, CLES_FILTRE, f"Filtre de l'effet {entree.get('nature')}")
         return cls(
             nature=NatureEffet[entree["nature"]],
             valeur=entree.get("valeur"),
             portee=PorteeEffet[entree.get("portee", "CIBLE")],
             duree=entree.get("duree"),
             filtre=FiltreCartes(
-                nom=filtre.get("nom"),
+                id=filtre.get("id"),
                 rarete=RareteCarte[filtre["rarete"].upper()] if "rarete" in filtre else None,
                 categorie=CategorieCarte(filtre["categorie"]) if "categorie" in filtre else None,
             ) if filtre else None,
         )
+
+
+# Cles autorisees dans config/carte_new.json : une cle inconnue (ex. faute de frappe "persistant")
+# est refusee au chargement plutot qu'ignoree
+CLES_CARTE = {
+    "id", "nom", "image", "rarete", "categorie", "cible", "cout", "munition", "lancements",
+    "persistante", "jouable", "refonte", "description", "valeurs", "effets",
+}
+CLES_EFFET = {"nature", "valeur", "portee", "duree", "filtre"}
+CLES_FILTRE = {"id", "rarete", "categorie"}
+
+
+def _verifier_cles(entree: dict, autorisees: set[str], ou: str) -> None:
+    inconnues = entree.keys() - autorisees
+    if inconnues:
+        raise ValueError(f"{ou} : cles inconnues {sorted(inconnues)}")
 
 
 _PORTEES_ENNEMIES = (PorteeEffet.AUTRES_ENNEMIS, PorteeEffet.COLONNE_AVANT_ENNEMIE, PorteeEffet.COLONNE_ARRIERE_ENNEMIE)
@@ -274,7 +297,8 @@ class CarteNew:
     effets: tuple[Effet, ...]
     # Description affichee, qui cite les valeurs par leur nom entre accolades ("{degats_cible}")
     description: str = ""
-    # Valeurs nommees de la carte (ex. {"degats_cible": 15}), utilisees par les effets
+    # Valeurs nommees de la carte (ex. {"degats_cible": 15}), utilisees par les effets ; propres a
+    # chaque exemplaire (copie), pour pouvoir un jour modifier les valeurs d'une seule carte
     valeurs: dict[str, int] = field(default_factory=dict)
     # Mot-cle Persistante : reste jouable si son module est detruit (refonte-modules.md 3.5)
     persistante: bool = False
@@ -344,12 +368,16 @@ class CarteNew:
 
     def copie(self, exemplaire_module: str | None = None) -> "CarteNew":
         """Nouvel exemplaire independant, munitions, lancements et valeurs de depart. Rattache a
-        `exemplaire_module` s'il est donne, sinon au meme exemplaire de module que cette carte."""
+        `exemplaire_module` s'il est donne, sinon au meme exemplaire de module que cette carte.
+        Rien de modifiable n'est partage avec la carte copiee : `valeurs` et `valeurs_actuelles`
+        sont des dictionnaires propres a chaque exemplaire ; `effets` est partage, mais ses Effet
+        sont figes (frozen)."""
         return dataclasses.replace(
             self,
             exemplaire_module=exemplaire_module if exemplaire_module is not None else self.exemplaire_module,
             munitions_restantes=self.munitions_base,
             lancements_actuels=self.lancements_base,
+            valeurs=dict(self.valeurs),
             valeurs_actuelles=dict(self.valeurs),
         )
 
@@ -389,6 +417,7 @@ class CarteNew:
 
     @classmethod
     def depuis_dict(cls, entree: dict) -> "CarteNew":
+        _verifier_cles(entree, CLES_CARTE, f"Carte {entree.get('id')}")
         return cls(
             id=entree["id"],
             nom=entree["nom"],

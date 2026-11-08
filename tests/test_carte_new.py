@@ -227,6 +227,49 @@ def test_valeurs_actuelles_modifiables_sans_toucher_au_modele():
     assert laser.copie().valeur_de(laser.effets[0]) == 6  # un nouvel exemplaire repart du modele
 
 
+def test_la_copie_ne_partage_aucun_dictionnaire_de_valeurs():
+    laser = _cartes()["Laser"]
+    copie = laser.copie()
+
+    copie.valeurs["degats"] = 9
+    copie.valeurs_actuelles["degats"] = 11
+
+    assert laser.valeurs["degats"] == 6 and laser.valeurs_actuelles["degats"] == 6
+    assert copie.effets is laser.effets  # partage voulu : les Effet sont figes
+
+
+def test_le_filtre_vise_une_carte_par_son_id_pas_par_son_nom():
+    cartes = _cartes()
+    filtre = cartes["Salve laser"].effets[0].filtre
+    laser_renomme = CarteNew.depuis_dict(dict(_entree("CRT_7"), nom="Laser léger"))
+
+    assert filtre.correspond(laser_renomme)
+    assert not filtre.correspond(cartes["Laser lourd"])
+
+
+@pytest.mark.parametrize(
+    "modification",
+    [
+        lambda entree: entree.update(persistant=True),  # faute de frappe sur une cle de carte
+        lambda entree: entree["effets"][0].update(portée="CIBLE"),  # cle d'effet inconnue
+    ],
+)
+def test_une_cle_inconnue_dans_le_json_est_refusee(modification):
+    entree = json.loads(json.dumps(_entree("CRT_7")))
+    modification(entree)
+
+    with pytest.raises(ValueError, match="cles inconnues"):
+        CarteNew.depuis_dict(entree)
+
+
+def test_une_cle_inconnue_dans_un_filtre_est_refusee():
+    entree = json.loads(json.dumps(_entree("CRT_49")))
+    entree["effets"][0]["filtre"]["nom"] = "Laser"  # ancien critere par nom
+
+    with pytest.raises(ValueError, match="cles inconnues"):
+        CarteNew.depuis_dict(entree)
+
+
 def test_copie_donne_un_exemplaire_independant_rattache_si_demande():
     reparation = _cartes()["Réparation"]
     reparation.consommer_munition()
@@ -281,6 +324,6 @@ def test_effet_invalide_refuse():
     with pytest.raises(ValueError):
         Effet(NatureEffet.REPETITION, "repetitions")  # filtre manquant
     with pytest.raises(ValueError):
-        Effet(NatureEffet.DEGATS, "degats", filtre=FiltreCartes(nom="Laser"))  # filtre interdit
+        Effet(NatureEffet.DEGATS, "degats", filtre=FiltreCartes(id="CRT_7"))  # filtre interdit
     with pytest.raises(ValueError):
         FiltreCartes()  # aucun critere
