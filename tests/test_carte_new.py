@@ -224,16 +224,17 @@ def test_carte_sans_munition_jamais_epuisee():
         assert not laser.consommer_munition()
 
 
-def test_copie_et_rattachement_donnent_des_exemplaires_independants():
+def test_copie_donne_un_exemplaire_independant_rattache_si_demande():
     reparation = _cartes()["Réparation"]
     reparation.consommer_munition()
 
     copie = reparation.copie()
-    rattachee = reparation.rattachee_a("M3")
+    rattachee = reparation.copie("M3")
 
     assert copie is not reparation and copie.munitions_restantes == 2
     assert rattachee.exemplaire_module == "M3" and reparation.exemplaire_module is None
     assert rattachee.munitions_restantes == 2
+    assert rattachee.copie().exemplaire_module == "M3"  # sans argument, garde son rattachement
 
 
 # --- Module detruit (mot-cle Persistante) ---

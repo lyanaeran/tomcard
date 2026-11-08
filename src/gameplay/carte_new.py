@@ -278,15 +278,12 @@ class CarteNew:
 
     # --- Exemplaires ---
 
-    def copie(self) -> "CarteNew":
-        """Nouvel exemplaire independant : munitions et lancements de depart, meme rattachement."""
-        return dataclasses.replace(self, munitions_restantes=self.munitions_base, lancements_actuels=self.lancements_base)
-
-    def rattachee_a(self, exemplaire_module: str) -> "CarteNew":
-        """Nouvel exemplaire rattache a cet exemplaire de module de la partie."""
+    def copie(self, exemplaire_module: str | None = None) -> "CarteNew":
+        """Nouvel exemplaire independant, munitions et lancements de depart. Rattache a
+        `exemplaire_module` s'il est donne, sinon au meme exemplaire de module que cette carte."""
         return dataclasses.replace(
             self,
-            exemplaire_module=exemplaire_module,
+            exemplaire_module=exemplaire_module if exemplaire_module is not None else self.exemplaire_module,
             munitions_restantes=self.munitions_base,
             lancements_actuels=self.lancements_base,
         )
