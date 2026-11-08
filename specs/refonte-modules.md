@@ -304,9 +304,17 @@ Un module mêle aujourd'hui **trois niveaux d'information**, répartis dans troi
 | **Exemplaire dans la partie** | `EtatModule` | identifiant d'exemplaire (`M3`, à ajouter), type, emplacement, PV max avec améliorations, niveau de mise à jour, PV (principal seulement) | sauvegardé d'une partie à l'autre |
 | **État en combat** | `Module` | PV, bouclier, buffs (dont Destruction), leurre, mort, résurrections utilisées | remis à zéro à chaque combat |
 
-**À trancher** : ce que regroupe `ModuleNew`. Recommandation : le **modèle et l'exemplaire** dans
-`ModuleNew` (comme `CarteNew` réunit modèle et exemplaire), l'**état en combat** dans une classe à
-part, car il est jeté à chaque combat alors que l'exemplaire est sauvegardé.
+**Découpage (décision utilisateur, 2026-11-08)** : tout dans `module_new.py`, en deux classes.
+
+- **`ModuleNew`** réunit le **modèle et l'exemplaire** (comme `CarteNew`) : c'est ce qui est
+  sauvegardé dans la partie.
+- **`ModuleEnCombat`** (nom provisoire) porte l'**état en combat** et une **référence vers son
+  `ModuleNew`** : PV du moment, bouclier, buffs (dont Destruction), leurre, détruit. Le nom, l'image
+  ou le PV max se lisent via ce lien, sans duplication. Il est créé en début de combat (PV au
+  maximum pour un secondaire, PV sauvegardés pour le principal) et jeté à la fin, où seuls les PV
+  du principal sont reportés dans son `ModuleNew`. Le champ `exemplaire_module` d'une carte
+  désigne un `ModuleNew`, ce qui permet de retrouver son `ModuleEnCombat` (cartes envoyées en pile
+  Hors service à sa destruction).
 
 ---
 
@@ -324,13 +332,14 @@ part, car il est jeté à chaque combat alors que l'exemplaire est sauvegardé.
 6. **Résurrection** : quelles pistes garder (§5.1) ; garde-fou contre les boucles en partie réglé
    par la consommation du buff Destruction (§5.2).
 7. **Sacrifice volontaire** (§6) : oui ou non.
-8. **Découpage de `ModuleNew`** (§8).
+8. ~~**Découpage de `ModuleNew`**~~ : **tranché**, `ModuleNew` (modèle + exemplaire) et
+   `ModuleEnCombat` (état en combat, lié à son `ModuleNew`), dans `module_new.py` (§8).
 
 ---
 
 ## 10. Prochaines étapes
 
-1. Trancher le découpage de `ModuleNew` (§8), puis créer `module_new.py`, `config/module_new.json`
+1. Créer `module_new.py` (`ModuleNew`, `ModuleEnCombat`, §8), `config/module_new.json`
    (principal 60 PV, Lanceur de missiles 20 PV) et son tableau généré.
 2. Trancher le rattachement des cartes obtenues hors module (§3.3), puis implémenter le lien
    carte ↔ exemplaire de module (identifiant d'exemplaire, format du deck sauvegardé, `CarteNew`,
