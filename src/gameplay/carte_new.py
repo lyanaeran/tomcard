@@ -13,7 +13,7 @@ Differences avec Carte :
   N fois de plus" (Salve laser, Protocole d'urgence, Bouclier stabilise) sont un effet REPETITION
   dont le FiltreCartes designe les cartes visees : il augmente leur `lancements` jusqu'a la fin du
   combat (appliquer_repetition) ;
-- mot-cle Persistante et rattachement a un exemplaire de module (emplacement) : une carte dont le
+- mot-cle Persistante et rattachement a un exemplaire de module (exemplaire_module) : une carte dont le
   module est detruit part en pile Hors service, sauf si elle est Persistante
   (specs/refonte-modules.md 3.3 a 3.5) ;
 - la cible reprend le vocabulaire du registre des cartes ("Ennemi Unique", "Module Tous"...).
@@ -212,10 +212,11 @@ class CarteNew:
     """Une carte de la refonte. eq=False : deux exemplaires du meme modele sont distincts (comme
     Carte, chacun a ses propres munitions et son propre module de rattachement).
 
-    `module_origine` : module dont la carte fait partie (colonne "Module" du registre).
-    `emplacement` : exemplaire de module auquel cet exemplaire de carte est rattache dans une
-    partie ("base", "avant_gauche"...), None tant qu'il ne l'est pas (specs/refonte-modules.md
-    3.3 : deux exemplaires du meme module ont chacun leurs cartes).
+    `exemplaire_module` : identifiant de l'exemplaire de module de la partie auquel cet exemplaire
+    de carte est rattache (ex. "M3"), None tant qu'il ne l'est pas. Stable meme si la Station
+    service deplace le module (specs/refonte-modules.md 3.3). Le type du module n'est pas stocke
+    sur la carte : il se lit sur l'exemplaire dans la partie, et les cartes de chaque type de
+    module sont listees dans config/modules.json (une carte peut etre commune a plusieurs modules).
     `persistante` : reste jouable si son module est detruit (mot-cle, refonte-modules.md 3.5).
     `lancements` : nombre de fois que les effets de la carte s'appliquent quand elle est jouee (1
     d'ordinaire, 2 pour une carte "lancee deux fois"). Augmente en combat par les effets
@@ -225,7 +226,6 @@ class CarteNew:
     id: str
     nom: str
     image: str
-    module_origine: str
     rarete: RareteCarte
     categorie: CategorieCarte
     cible: CibleCarteNew
@@ -235,7 +235,7 @@ class CarteNew:
     munitions_max: int | None = None
     persistante: bool = False
     lancements: int = 1
-    emplacement: str | None = None
+    exemplaire_module: str | None = None
     munitions_restantes: int | None = None
 
     def __post_init__(self):
@@ -263,9 +263,9 @@ class CarteNew:
         """Nouvel exemplaire independant : munitions pleines, meme rattachement."""
         return dataclasses.replace(self, munitions_restantes=self.munitions_max)
 
-    def rattachee_a(self, emplacement: str) -> "CarteNew":
-        """Nouvel exemplaire rattache a l'exemplaire de module de cet emplacement."""
-        return dataclasses.replace(self, emplacement=emplacement, munitions_restantes=self.munitions_max)
+    def rattachee_a(self, exemplaire_module: str) -> "CarteNew":
+        """Nouvel exemplaire rattache a cet exemplaire de module de la partie."""
+        return dataclasses.replace(self, exemplaire_module=exemplaire_module, munitions_restantes=self.munitions_max)
 
     # --- Munitions (specs.md 3.6) ---
 
@@ -310,7 +310,6 @@ class CarteNew:
             id=entree["id"],
             nom=entree["nom"],
             image=entree["image"],
-            module_origine=entree["module_origine"],
             rarete=RareteCarte[entree["rarete"].upper()],
             categorie=CategorieCarte(entree["categorie"]),
             cible=CibleCarteNew(entree["cible"]),
@@ -327,7 +326,6 @@ class CarteNew:
             "id": self.id,
             "nom": self.nom,
             "image": self.image,
-            "module_origine": self.module_origine,
             "rarete": self.rarete.name.capitalize(),
             "categorie": self.categorie.value,
             "cible": self.cible.value,

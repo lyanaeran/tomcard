@@ -18,12 +18,9 @@ from src.gameplay.carte_new import (
     appliquer_repetition,
 )
 
-MP, LDM = "Module principal", "Lanceur de missiles"
-
-
-def _carte(id_carte, nom, rarete, categorie, cible, cout, effets, description, munition=None, module=MP):
+def _carte(id_carte, nom, rarete, categorie, cible, cout, effets, description, munition=None):
     return {
-        "id": id_carte, "nom": nom, "image": "test.png", "module_origine": module, "rarete": rarete,
+        "id": id_carte, "nom": nom, "image": "test.png", "rarete": rarete,
         "categorie": categorie, "cible": cible, "cout": cout, "munition": munition,
         "description": description, "effets": effets,
     }
@@ -58,24 +55,24 @@ REGISTRE_REFONTE = [
            "Les cartes de bases sont lancees X fois de plus.", munition=3),
     _carte("CRT_13", "Missiles", "Commune", "Attaque", "Ennemi Unique", 2,
            [{"nature": "DEGATS", "valeur": 15}, {"nature": "DEGATS", "valeur": 6, "portee": "AUTRES_ENNEMIS"}],
-           "Inflige X degats a un ennemi et Y a tous les autres", module=LDM),
+           "Inflige X degats a un ennemi et Y a tous les autres"),
     _carte("CRT_14", "Torpille", "Commune", "Attaque", "Ennemi Tous", 2,
            [{"nature": "DEGATS", "valeur": 10, "portee": "COLONNE_AVANT_ENNEMIE"},
             {"nature": "DEGATS", "valeur": 8, "portee": "COLONNE_ARRIERE_ENNEMIE"}],
-           "Inflige X degats a la ligne avant et Y a la ligne arriere", module=LDM),
+           "Inflige X degats a la ligne avant et Y a la ligne arriere"),
     _carte("CRT_9", "Bombardement", "Commune", "Attaque", "Ennemi Tous", 1, [{"nature": "DEGATS", "valeur": 6}],
-           "Inflige X degats a tous les ennemis", module=LDM),
+           "Inflige X degats a tous les ennemis"),
     _carte("CRT_16", "Ligne arriere", "Commune", "Attaque", "Ennemi Arriere", 1, [{"nature": "DEGATS", "valeur": 8}],
-           "Inflige X degats a tous les ennemis de la ligne arriere", module=LDM),
+           "Inflige X degats a tous les ennemis de la ligne arriere"),
     _carte("CRT_15", "Ciel de missiles", "Rare", "Attaque", "Ennemi Tous", 1, [{"nature": "DEGATS", "valeur": 8}],
-           "Inflige X degats a tous les ennemis", module=LDM),
+           "Inflige X degats a tous les ennemis"),
     _carte("CRT_17", "Embrasement", "Rare", "Attaque", "Ennemi Unique", 2, [{"nature": "INCENDIE", "valeur": 8}],
-           "Ajoute X points d’incendie à un ennemi", module=LDM),
+           "Ajoute X points d’incendie à un ennemi"),
     _carte("CRT_18", "Leurre", "Rare", "Defense", "Module Unique", 1,
            [{"nature": "ANNULATION_PROCHAINE_ATTAQUE", "valeur": 0}],
-           "Annule la prochaine attaque ciblant le module", module=LDM),
+           "Annule la prochaine attaque ciblant le module"),
     _carte("CRT_19", "Guerre nucleaire", "Legendaire", "Attaque", "Ennemi Tous", 3, [{"nature": "INCENDIE", "valeur": 8}],
-           "Ajoute X points d’incendie à tous les ennemis", module=LDM),
+           "Ajoute X points d’incendie à tous les ennemis"),
 ]
 
 
@@ -85,7 +82,7 @@ def _cartes() -> dict[str, CarteNew]:
 
 def _carte_simple(**champs) -> CarteNew:
     valeurs = dict(
-        id="TEST", nom="Test", image="test.png", module_origine=MP, rarete=RareteCarte.COMMUNE,
+        id="TEST", nom="Test", image="test.png", rarete=RareteCarte.COMMUNE,
         categorie=CategorieCarte.ATTAQUE, cible=CibleCarteNew.ENNEMI_UNIQUE, cout=1,
         effets=(Effet(NatureEffet.DEGATS, 5),),
     )
@@ -230,10 +227,10 @@ def test_copie_et_rattachement_donnent_des_exemplaires_independants():
     reparation.consommer_munition()
 
     copie = reparation.copie()
-    rattachee = reparation.rattachee_a("avant_gauche")
+    rattachee = reparation.rattachee_a("M3")
 
     assert copie is not reparation and copie.munitions_restantes == 2
-    assert rattachee.emplacement == "avant_gauche" and reparation.emplacement is None
+    assert rattachee.exemplaire_module == "M3" and reparation.exemplaire_module is None
     assert rattachee.munitions_restantes == 2
 
 

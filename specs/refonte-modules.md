@@ -92,8 +92,9 @@ module (§5), impossible de savoir quelle carte appartient auquel. Conception re
 Un identifiant d'exemplaire plutôt que l'emplacement (`avant_gauche`...) : la Station service
 **déplace** des modules (échange possible entre deux emplacements) ; lié à l'emplacement, chaque
 déplacement obligerait à mettre à jour les cartes, avec un risque d'erreur. Avec un identifiant,
-les cartes suivent leur module sans rien faire (le champ `emplacement` de `CarteNew` deviendra un
-identifiant d'exemplaire).
+les cartes suivent leur module sans rien faire (champ `exemplaire_module` de `CarteNew`). La carte
+ne stocke pas le type de son module : il se lit sur l'exemplaire, et `config/modules.json` reste la
+seule source de vérité des cartes de chaque type (une carte peut être commune à plusieurs modules).
 
 Rattachement au moment où la carte entre dans le deck :
 
