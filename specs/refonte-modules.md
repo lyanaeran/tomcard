@@ -15,8 +15,9 @@ fichier sera supprimé. Pointeur depuis [a-trancher.md](a-trancher.md) §11.*
   faudra baisser par rapport aux 30 actuels.
 - Les modules secondaires deviennent donc **sacrifiables** : ils peuvent mourir en combat et revenir
   au combat suivant.
-- Ça ouvre une mécanique de jeu liée à leur mort : un **effet déclenché à la mort** (façon « Râle
-  d'agonie » de Hearthstone) et/ou une **résurrection** en cours de combat.
+- Ça ouvre une mécanique de jeu liée à leur mort : un **effet déclenché à la destruction** (buff
+  « Destruction » apporté par des cartes, §4, façon « Râle d'agonie » de Hearthstone) et/ou une
+  **résurrection** en cours de combat.
 
 ---
 
@@ -38,6 +39,8 @@ fichier sera supprimé. Pointeur depuis [a-trancher.md](a-trancher.md) §11.*
   servent donc déjà, de fait, de boucliers au principal.
 - Idée déjà notée en modules-cartes.md §4.2 : *Reconstruction* (3⚡, une fois par run, ressuscite un
   module détruit à 1 PV).
+- **Modules jouables** : champ `jouable` de `config/modules.json` ; pendant la refonte des cartes,
+  seuls le module principal et le Lanceur de missiles le sont (modules-cartes.md §4).
 
 ---
 
@@ -50,8 +53,8 @@ fichier sera supprimé. Pointeur depuis [a-trancher.md](a-trancher.md) §11.*
   PV de la run.
 - **Améliorer** (+PV max) reste utile pour les secondaires : un module plus solide meurt moins vite,
   dans chaque combat. Elle prend même plus de valeur qu'aujourd'hui.
-- **PV du principal** : devient la seule « jauge de vie » de la run. À réévaluer à la hausse
-  (proposition à discuter : 60 à 70) si les secondaires l'exposent davantage en mourant.
+- **PV du principal** : devient la seule « jauge de vie » de la run, réévalué à la hausse
+  (§9 : 60 provisoire, à affiner par simulation).
 - **Persistance** : `EtatModule.pv` devient inutile pour les secondaires (seul `pv_max` compte).
   Les sauvegardes existantes restent lisibles, le champ est simplement ignoré.
 
@@ -135,7 +138,7 @@ Règles (validées) :
    Hors service, **où qu'elles soient** : pioche, défausse et main. La main est défaussée à chaque
    fin de tour (comme dans Slay the Spire), donc un module qui meurt pendant le tour ennemi trouve
    une main vide ; le cas « en main » ne se présente que si le module meurt pendant le tour du
-   joueur (sacrifice volontaire §6, *Renvoi*, effets à la mort en chaîne).
+   joueur (sacrifice volontaire §6, *Renvoi*, buffs Destruction en chaîne).
    - *Alternative écartée* : laisser les cartes dans la pioche et ne les envoyer en pile Hors
      service qu'au moment où elles sont piochées. Plus punitif (pioches perdues), mais crée des
      tours creux frustrants et une règle moins lisible.
@@ -173,42 +176,65 @@ service et continue son cycle normal (pioche, main, défausse).
 
 ---
 
-## 4. Effet à la mort (« Râle d'agonie »)
+## 4. Effet à la destruction : le buff « Destruction » (décision utilisateur, 2026-11-08)
 
-### 4.1 Forme
+### 4.1 Principe
 
-Un effet défini **par module** dans `config/modules.json` (ex. bloc `a_la_mort`, même format qu'un
-`effet` de carte : type, cible, valeur), déclenché **une fois** quand le module tombe à 0 PV, avant
-la suite de la résolution du tour ennemi. Réutilise le moteur d'effets des cartes : pas de nouveau
-type d'effet nécessaire pour la plupart des idées ci-dessous.
+Un module n'a **pas d'effet à la mort propre à son type**. Ce sont des **cartes** qui donnent à un
+module le **buff « Destruction »**, qui porte un effet déclenché quand ce module est détruit
+(façon « Râle d'agonie » conféré dans Hearthstone). Exemple de carte :
 
-### 4.2 Idées par module (toutes valeurs inventées)
+> « Applique à un module : **Destruction** — inflige 10 dégâts à tous les ennemis »
 
-| Module | Effet à la mort | Rôle tactique |
-|---|---|---|
-| Lanceur de missiles | Explose : 8 dégâts à tous les ennemis | Mourir au bon moment finit un combat |
-| Blindage | Transfère un bouclier de 10 au module principal | Protège le principal juste quand il devient exposé |
-| Générateur | +2 électricité immédiatement (ou au prochain tour joueur) | Accélère le tour suivant |
-| Soute | Pioche 2 cartes | Compense la perte des cartes du module (option B) |
-| Sabotage | Vulnérabilité sur l'ennemi qui l'a tué | Punit l'attaquant |
-| Canon lourd *(cartes non conçues)* | Dernier tir : 15 dégâts à l'ennemi qui l'a tué | Idem, version brute |
-| Contrôle *(cartes non conçues)* | L'ennemi qui l'a tué perd sa prochaine action | Gagne un tour |
-| Atelier *(cartes non conçues)* | Répare le module principal de 8 PV | Seule source de soin « gratuite » du principal : à doser |
-| Radar *(cartes non conçues)* | Tous les ennemis subissent +50 % de dégâts pendant 1 tour | Fenêtre d'attaque |
+- La carte cible un **module allié** ; l'effet déclenché vise **autre chose** (ici tous les ennemis).
+- Le buff reste sur le module jusqu'à sa destruction, puis se **déclenche et disparaît** (cumul
+  « jusqu'à consommation », comme le Leurre).
+- Plusieurs buffs Destruction sur un même module se déclenchent **tous**, dans l'ordre de pose.
+- L'ancienne idée d'un effet à la mort par type de module (ex-§4.2) est **abandonnée** ; ses idées
+  deviennent des idées de **cartes Destruction** (§4.3).
 
-Ça donne une **identité** aux 4 modules sans cartes (Canon lourd, Contrôle, Atelier, Radar) avant
-même que leurs cartes soient conçues.
+### 4.2 Format envisagé (à valider au moment de le coder)
 
-### 4.3 Effets apportés par des cartes
+Dans `config/carte_new.json`, une nouvelle nature d'effet `DESTRUCTION`, dont l'effet déclenché est
+décrit avec le même format que les autres effets (valeurs nommées de la carte), dans une liste
+imbriquée :
 
-En plus de l'effet propre au module, des cartes peuvent **ajouter** un effet à la mort à un module
-(comme les « Râle d'agonie » conférés dans Hearthstone) :
+```json
+"description": "Applique à un module : Destruction - inflige {degats} degats a tous les ennemis",
+"cible": "Module Unique",
+"valeurs": { "degats": 10 },
+"effets": [
+  { "nature": "DESTRUCTION", "declenche": [
+      { "nature": "DEGATS", "valeur": "degats", "portee": "TOUS_ENNEMIS" }
+  ] }
+]
+```
 
-- *Charge explosive* : « quand ce module meurt, inflige X dégâts à la colonne ennemie en face »
-- *Capsule de sauvetage* : « quand ce module meurt, ajoute une carte X à votre main »
+Points à préciser à ce moment-là :
+- **la cible de l'effet déclenché**, qui n'est plus la cible de la carte (le module) : de
+  nouvelles portées, ex. `TOUS_ENNEMIS`, `ENNEMI_DESTRUCTEUR` (celui qui a détruit le module),
+  `MODULE_PRINCIPAL` ;
+- **le module principal** : sa destruction termine la run, un buff Destruction n'y a pas de sens ;
+  proposition : cartes Destruction limitées aux modules secondaires.
 
-Et des cartes ou modules qui réagissent à **n'importe quelle** mort alliée :
-- *Recyclage* : « gagne 1 électricité chaque fois qu'un module allié meurt ce combat »
+### 4.3 Idées de cartes Destruction (toutes valeurs inventées)
+
+| Effet déclenché | Rôle tactique |
+|---|---|
+| 8 dégâts à tous les ennemis | Mourir au bon moment finit un combat |
+| Bouclier de 10 sur le module principal | Protège le principal juste quand il devient exposé |
+| +2 électricité au prochain tour | Accélère le tour suivant |
+| Pioche 2 cartes | Compense la perte des cartes du module (§3.3) |
+| Vulnérabilité sur l'ennemi qui a détruit le module | Punit l'attaquant |
+| 15 dégâts à l'ennemi qui a détruit le module | Idem, version brute |
+| L'ennemi qui a détruit le module perd sa prochaine action | Gagne un tour |
+| Répare le module principal de 8 PV | Seule source de soin « gratuite » du principal : à doser |
+| Tous les ennemis subissent +50 % de dégâts pendant 1 tour | Fenêtre d'attaque |
+
+Ces cartes peuvent donner une identité aux modules sans cartes (Canon lourd, Contrôle, Atelier,
+Radar). Autre idée, distincte du buff : une carte ou un module qui réagit à **n'importe quelle**
+mort alliée (*Recyclage* : « gagne 1 électricité chaque fois qu'un module allié meurt ce
+combat »).
 
 ---
 
@@ -218,31 +244,30 @@ Et des cartes ou modules qui réagissent à **n'importe quelle** mort alliée :
 
 | Mécanique | Effet | Remarque |
 |---|---|---|
-| Carte *Reconstruction* (reprise de §4.2) | Ressuscite un module mort à X PV, munitions limitées | Avec l'option B (§3.3), lui rend aussi ses cartes : forte valeur |
+| Carte *Reconstruction* (reprise de modules-cartes.md §4.2) | Ressuscite un module mort à X PV, munitions limitées | Avec l'option B (§3.3), lui rend aussi ses cartes : forte valeur |
 | Module *Atelier* (passif) | Un module mort revient seul après 2 tours, à moitié de ses PV | Façon « Réincarnation » de Hearthstone ; une seule fois par module et par combat |
 | Carte *Nanobots* | Pose un buff sur un module vivant : s'il meurt dans les 2 tours, il revient à 1 PV | Prépare la mort plutôt que la réparer ; s'inscrit dans le modèle de durée de la refonte des buffs |
 | *Pièces détachées* | Chaque mort de module donne 1 « pièce » ; X pièces = un module ressuscité | Ressource de combat supplémentaire, plus lourd à afficher |
 
 ### 5.2 Combo mort + résurrection : garde-fou nécessaire
 
-Un module qui meurt, ressuscite et remeurt **redéclenche son effet à la mort**. C'est une belle
-synergie (Hearthstone la joue volontairement), mais elle peut boucler. Garde-fous possibles :
-
-- un module ne ressuscite **qu'une fois par combat** ;
-- ou l'effet à la mort ne se déclenche **qu'à la première mort** du combat.
+Le buff Destruction **disparaît quand il se déclenche** (§4.1) : un module ressuscité ne le
+redéclenche pas à sa mort suivante, sauf si une nouvelle carte le lui rend. La boucle mort /
+résurrection ne peut donc pas se répéter seule. Garde-fou restant à décider : limiter la
+résurrection à **une fois par module et par combat**.
 
 ---
 
 ## 6. Sacrifice volontaire
 
-Pour que l'effet à la mort soit un choix et pas seulement une conséquence subie :
+Pour que la destruction d'un module soit un choix et pas seulement une conséquence subie :
 
-- Carte *Éjection* (0 ou 1⚡) : détruit un de vos modules secondaires, déclenche son effet à la
-  mort, et donne un bonus (ex. +1 électricité, ou pioche 1).
-- Variante : *Surcharge critique* — double l'effet à la mort du module sacrifié.
+- Carte *Éjection* (0 ou 1⚡) : détruit un de vos modules secondaires, ce qui déclenche ses buffs
+  Destruction, et donne un bonus (ex. +1 électricité, ou pioche 1).
+- Variante : *Surcharge critique* — double les effets Destruction du module sacrifié.
 
-Rend la mort **active** (on choisit quand faire exploser le Lanceur de missiles) plutôt que
-seulement subie.
+Rend la mort **active** (on choisit quand faire exploser un module chargé de Destruction) plutôt
+que seulement subie.
 
 ---
 
@@ -255,35 +280,63 @@ seulement subie.
 - **Leurre**, **boucliers** : protéger un secondaire devient un choix (le garder en vie pour ses
   cartes) plutôt qu'une obligation (préserver des PV pour la suite de la run).
 - **Montée des dégâts ennemis** (refonte buffs §7.2) : rend les morts certaines dans les combats
-  longs, donc les effets à la mort systématiquement utiles.
+  longs, donc les cartes Destruction systématiquement utiles.
 - **Ciblage** : si `PROXIMITE` protège trop bien le principal, prévoir plus d'ennemis à
   `TOUS_MODULES_JOUEUR` ou un ciblage qui vise le principal en priorité.
 
 ---
 
-## 8. Valeurs et points à trancher
+## 8. Modèle de données : `module_new.py` et `config/module_new.json` (décision utilisateur)
+
+Même démarche que pour les cartes (`carte_new.py`, `config/carte_new.json`) :
+
+- **`src/gameplay/module_new.py`** : classe `ModuleNew`, cible de la refonte, d'abord sans
+  branchement au moteur.
+- **`config/module_new.json`** : source de vérité des modules de la refonte, avec **les deux modules
+  jouables** pour commencer (principal et Lanceur de missiles), champs `jouable` et `refonte`,
+  et un tableau lisible `config/module_new.md` **généré** à côté, comme pour les cartes.
+
+Un module mêle aujourd'hui **trois niveaux d'information**, répartis dans trois classes :
+
+| Niveau | Aujourd'hui | Contenu | Durée de vie |
+|---|---|---|---|
+| **Modèle** (le type de module) | `SpecModule` | id (`MOD_2`), nom, image, description, PV max de base, cartes du module, `jouable`, `refonte` | lu dans le JSON, ne change jamais |
+| **Exemplaire dans la partie** | `EtatModule` | identifiant d'exemplaire (`M3`, à ajouter), type, emplacement, PV max avec améliorations, niveau de mise à jour, PV (principal seulement) | sauvegardé d'une partie à l'autre |
+| **État en combat** | `Module` | PV, bouclier, buffs (dont Destruction), leurre, mort, résurrections utilisées | remis à zéro à chaque combat |
+
+**À trancher** : ce que regroupe `ModuleNew`. Recommandation : le **modèle et l'exemplaire** dans
+`ModuleNew` (comme `CarteNew` réunit modèle et exemplaire), l'**état en combat** dans une classe à
+part, car il est jeté à chaque combat alors que l'exemplaire est sauvegardé.
+
+---
+
+## 9. Valeurs et points à trancher
 
 1. ~~**Cartes d'un module mort**~~ : **tranché et validé**, injouables tant que le module est
    mort, pile Hors service et ses 6 règles, lien carte ↔ exemplaire de module par identifiant
    d'exemplaire, mot-clé Persistante (0 ou 1 par module) — §3.3 à §3.5. **Rouvert** : le
    rattachement des cartes obtenues hors module (Aventure, Planète commerciale), §3.3.
-2. **PV max des secondaires** : proposition 15 à 20 (inventé), à caler sur les dégâts ennemis et la
-   durée moyenne d'un combat.
-3. **PV du principal** : 50 actuels, peut-être 60 à 70 (inventé).
+2. ~~**PV max des secondaires**~~ : **20, provisoire** (validé, en attendant les simulations).
+3. ~~**PV du principal**~~ : **60, provisoire** (validé, en attendant les simulations).
 4. **Réparer** : inchangée (principal seul) ou revue.
-5. **Effet à la mort** : un par module (§4.2) seulement, ou aussi apporté par des cartes (§4.3).
-6. **Résurrection** : quelles pistes garder (§5.1) et quel garde-fou (§5.2).
+5. ~~**Effet à la mort**~~ : **tranché**, buff « Destruction » apporté par des cartes (§4) ; reste
+   le format exact et les portées de l'effet déclenché (§4.2).
+6. **Résurrection** : quelles pistes garder (§5.1) ; garde-fou contre les boucles en partie réglé
+   par la consommation du buff Destruction (§5.2).
 7. **Sacrifice volontaire** (§6) : oui ou non.
+8. **Découpage de `ModuleNew`** (§8).
 
 ---
 
-## 9. Prochaines étapes
+## 10. Prochaines étapes
 
-1. Trancher les points 2 et 3 de la §8 (PV des secondaires et du principal).
+1. Trancher le découpage de `ModuleNew` (§8), puis créer `module_new.py`, `config/module_new.json`
+   (principal 60 PV, Lanceur de missiles 20 PV) et son tableau généré.
 2. Trancher le rattachement des cartes obtenues hors module (§3.3), puis implémenter le lien
    carte ↔ exemplaire de module (identifiant d'exemplaire, format du deck sauvegardé, `CarteNew`,
    `web/bridge.py`, `web/app.js`) et choisir les premières cartes Persistantes.
-3. Choisir les effets à la mort par module et leur format dans `config/modules.json`.
-4. Concevoir les premières cartes de résurrection et de sacrifice.
+3. Spécifier le buff Destruction dans `CarteNew` (nature, effets déclenchés, portées, §4.2) et
+   concevoir les premières cartes Destruction, de résurrection et de sacrifice.
+4. Simuler pour caler les PV du principal et des secondaires.
 5. Une fois stabilisé : migrer dans `combat.md` (§3.4), `parcours.md` (§2.2), `modules-cartes.md`
    (§4, §5), supprimer ce fichier.
