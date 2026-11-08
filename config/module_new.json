@@ -1,0 +1,26 @@
+{
+  "modules": [
+    {
+      "id": "MOD_1",
+      "nom": "Principal",
+      "image": "assets/modules/principal.png",
+      "description": "Votre vaisseau, plus cabosse que le Faucon Millenium, mais la prunelle de vos yeux.",
+      "principal": true,
+      "pv_max": 60,
+      "jouable": true,
+      "refonte": true,
+      "cartes": ["CRT_7", "CRT_10", "CRT_11", "CRT_12", "CRT_8", "CRT_45", "CRT_46", "CRT_47", "CRT_48", "CRT_49", "CRT_50"]
+    },
+    {
+      "id": "MOD_2",
+      "nom": "Lanceur de missiles",
+      "image": "assets/modules/missiles.png",
+      "description": "Tout dans la finesse, des bons vieux missiles qui explosent partout (sauf la ou vous etes, on espere).",
+      "principal": false,
+      "pv_max": 20,
+      "jouable": true,
+      "refonte": true,
+      "cartes": ["CRT_13", "CRT_14", "CRT_9", "CRT_16", "CRT_15", "CRT_17", "CRT_18", "CRT_19"]
+    }
+  ]
+}

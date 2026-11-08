@@ -1,0 +1,174 @@
+"""
+Module de la refonte (ModuleNew, nom provisoire) : modele de donnees cible de la refonte des
+modules (specs/refonte-modules.md, 8). Source de verite : config/module_new.json
+(charger_modules_new). Pas encore branche au moteur : coexiste avec donnees.py:SpecModule,
+partie.py:EtatModule et module.py:Module, qu'il remplacera tous les trois.
+
+Une seule classe reunit les trois niveaux d'information d'un module :
+- le MODELE (le type de module, lu dans le JSON : nom, PV de base, cartes...) ;
+- l'EXEMPLAIRE dans la partie (identifiant "M3", emplacement, PV max ameliores...), sauvegarde ;
+- l'ETAT EN COMBAT (PV de combat, bouclier, buffs...), jamais sauvegarde.
+
+Le combat travaille sur une COPIE du module (copie_pour_combat), champs de combat remis a zero :
+le module de la partie n'est jamais modifie pendant un combat (un combat abandonne ne touche pas
+la partie), et seuls les PV du principal y sont reportes a la fin (reporter_combat).
+
+Regles de la refonte : les modules secondaires repartent a leur PV max a chaque combat, seuls les
+PV du principal persistent ; le bouclier baisse de 1 par tour (refonte-buffs-debuffs.md 8).
+"""
+
+import dataclasses
+import json
+from dataclasses import dataclass, field
+from pathlib import Path
+
+FICHIER_MODULES_NEW = Path(__file__).resolve().parents[2] / "config" / "module_new.json"
+
+# Cles autorisees dans config/module_new.json : une cle inconnue est refusee au chargement
+CLES_MODULE = {"id", "nom", "image", "description", "principal", "pv_max", "cartes", "jouable", "refonte"}
+
+
+@dataclass(eq=False)
+class ModuleNew:
+    """Un module de la refonte. eq=False : deux exemplaires du meme type de module sont distincts."""
+
+    # --- Modele : lu dans config/module_new.json, identique pour tous les exemplaires ---
+
+    # Identifiant du type de module (ex. "MOD_2")
+    id: str
+    # Nom affiche en jeu (texte affiche : accents autorises, cf. CLAUDE.md)
+    nom: str
+    # Chemin de l'image du module (assets/modules/)
+    image: str
+    # Accroche narrative affichee au choix du module et dans l'ecran Vaisseau
+    description: str
+    # PV max d'un exemplaire neuf, avant toute amelioration
+    pv_max_base: int
+    # Ids des cartes du module (config/carte_new.json), jouables ou non
+    cartes: tuple[str, ...] = ()
+    # True pour le module principal : toujours equipe, seul a garder ses PV entre deux combats
+    principal: bool = False
+    # True si le module peut etre propose et equipe
+    jouable: bool = True
+    # True si le module a ete revu dans la refonte
+    refonte: bool = False
+
+    # --- Exemplaire dans la partie : sauvegarde ---
+
+    # Identifiant de l'exemplaire dans la partie (ex. "M3"), None pour un simple modele ; stable
+    # meme si la Station deplace le module, les cartes y sont rattachees (refonte-modules.md 3.3)
+    exemplaire: str | None = None
+    # Emplacement sur le vaisseau ("base", "avant_gauche"...), None tant qu'il n'est pas equipe
+    emplacement: str | None = None
+    # PV max de cet exemplaire, ameliorations de la Station comprises (pv_max_base au depart)
+    pv_max: int | None = None
+    # PV sauvegardes entre deux combats : utilises pour le principal seulement, un secondaire
+    # repartant toujours a pv_max
+    pv: int | None = None
+    # Palier de mise a jour (1 a 3), qui ouvre les raretes proposees en recompense (specs.md 6)
+    niveau_maj: int = 1
+
+    # --- Etat en combat : sur la copie de combat seulement, jamais sauvegarde ---
+
+    # PV pendant le combat ; None hors combat
+    pv_combat: int | None = None
+    # Bouclier pendant le combat : absorbe les degats avant les PV, baisse de 1 par tour
+    bouclier: int = 0
+    # Buffs actifs pendant le combat (format defini avec la refonte des buffs, ex. Destruction)
+    buffs: list = field(default_factory=list)
+    # Leurre actif : la prochaine attaque recue est entierement annulee (carte Leurre)
+    leurre_actif: bool = False
+
+    def __post_init__(self):
+        self.cartes = tuple(self.cartes)
+        if self.pv_max_base < 1:
+            raise ValueError(f"{self.id} : pv_max_base doit valoir au moins 1")
+        if not 1 <= self.niveau_maj <= 3:
+            raise ValueError(f"{self.id} : niveau_maj doit etre entre 1 et 3")
+        if self.pv_max is None:
+            self.pv_max = self.pv_max_base
+        if self.pv is None:
+            self.pv = self.pv_max
+
+    # --- Exemplaires ---
+
+    def nouvel_exemplaire(self, exemplaire: str, emplacement: str) -> "ModuleNew":
+        """Nouvel exemplaire de ce type de module pour une partie : PV max de base, PV pleins,
+        palier 1, aucun etat de combat."""
+        return dataclasses.replace(
+            self, exemplaire=exemplaire, emplacement=emplacement, pv_max=self.pv_max_base,
+            pv=self.pv_max_base, niveau_maj=1, pv_combat=None, bouclier=0, buffs=[], leurre_actif=False,
+        )
+
+    def copie_pour_combat(self) -> "ModuleNew":
+        """Copie de ce module pour un combat, champs de combat remis a zero : PV sauvegardes pour
+        le principal, PV max pour un secondaire. Le module d'origine n'est pas modifie."""
+        return dataclasses.replace(
+            self, pv_combat=self.pv if self.principal else self.pv_max, bouclier=0, buffs=[], leurre_actif=False,
+        )
+
+    def reporter_combat(self, copie_de_combat: "ModuleNew") -> None:
+        """Fin de combat : reporte sur ce module de la partie ce qui doit persister, c'est-a-dire
+        les PV du principal seulement."""
+        if self.principal:
+            self.pv = copie_de_combat.pv_combat
+
+    # --- Combat (sur la copie de combat) ---
+
+    def est_detruit(self) -> bool:
+        return self.pv_combat is not None and self.pv_combat <= 0
+
+    def subir_degats(self, degats: int) -> None:
+        """Le bouclier absorbe d'abord ; un leurre actif annule toute l'attaque, puis se consomme."""
+        if self.leurre_actif:
+            self.leurre_actif = False
+            return
+        degats_restants = max(0, degats - self.bouclier)
+        self.bouclier = max(0, self.bouclier - degats)
+        self.pv_combat = max(0, self.pv_combat - degats_restants)
+
+    def ajouter_bouclier(self, valeur: int) -> None:
+        self.bouclier += valeur
+
+    def reparer(self, valeur: int) -> None:
+        """Rend des PV de combat, sans depasser le PV max."""
+        self.pv_combat = min(self.pv_max, self.pv_combat + valeur)
+
+    def debut_de_tour(self) -> None:
+        """Le bouclier baisse de 1 a chaque tour (decision utilisateur, refonte des buffs)."""
+        self.bouclier = max(0, self.bouclier - 1)
+
+    # --- Lecture JSON (format de config/module_new.json) ---
+
+    @classmethod
+    def depuis_dict(cls, entree: dict) -> "ModuleNew":
+        """Modele de module a partir d'une entree de config/module_new.json ; toute erreur de
+        lecture est signalee avec l'id du module."""
+        module = f"Module {entree.get('id', '?')}"
+        inconnues = entree.keys() - CLES_MODULE
+        if inconnues:
+            raise ValueError(f"{module} : cles inconnues {sorted(inconnues)}")
+        try:
+            champs = dict(
+                id=entree["id"],
+                nom=entree["nom"],
+                image=entree["image"],
+                description=entree["description"],
+                pv_max_base=entree["pv_max"],
+                cartes=tuple(entree.get("cartes", [])),
+                principal=entree.get("principal", False),
+                jouable=entree.get("jouable", True),
+                refonte=entree.get("refonte", False),
+            )
+        except KeyError as erreur:
+            raise ValueError(f"{module} : cle manquante {erreur}") from erreur
+        return cls(**champs)
+
+
+def charger_modules_new(fichier: Path = FICHIER_MODULES_NEW) -> dict[str, ModuleNew]:
+    """Charge config/module_new.json. Renvoie un dict id de module -> modele de module."""
+    donnees = json.loads(fichier.read_text(encoding="utf-8"))
+    modules = {entree["id"]: ModuleNew.depuis_dict(entree) for entree in donnees["modules"]}
+    if sum(module.principal for module in modules.values()) != 1:
+        raise ValueError("config/module_new.json : il faut exactement un module principal")
+    return modules

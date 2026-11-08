@@ -305,6 +305,15 @@ bouclier, buffs dont Destruction, leurre, détruit) — même principe que `Cart
 - Variante écartée : une classe à part pour le combat, liée à son `ModuleNew` (plus de classes et
   un lien à suivre, pour le même résultat).
 
+**Implémenté (2026-11-08), pas encore branché au moteur** : `src/gameplay/module_new.py`
+(`ModuleNew`, `charger_modules_new`), `config/module_new.json` (principal 60 PV, Lanceur de
+missiles 20 PV, toutes leurs cartes de `config/carte_new.json`, un champ `principal`), tableau
+généré `config/module_new.md`, tests `tests/test_module_new.py`. Méthodes : `nouvel_exemplaire`
+(exemplaire neuf pour une partie), `copie_pour_combat`, `reporter_combat` (PV du principal
+seulement), règles de combat de base (`subir_degats` avec bouclier puis leurre, `ajouter_bouclier`,
+`reparer`, `debut_de_tour` : bouclier −1). Les buffs restent une simple liste, en attendant la
+refonte des buffs. La sauvegarde de l'exemplaire (`EtatModule`) sera adaptée au branchement.
+
 ---
 
 ## 9. Valeurs et points à trancher
