@@ -71,11 +71,10 @@ il **repart à la première**, et ainsi de suite tout le combat. Remplace la fr�
 départ actuels.
 
 - L'**intention** devient simple à afficher : c'est la prochaine étape du cycle.
-- *À préciser* : une étape peut-elle contenir **plusieurs effets** le même tour (ex. le Boss qui
-  attaque et se renforce), comme une carte a une liste d'effets ? *Proposition* : oui, une étape =
-  une liste d'effets.
-- *À préciser* : les attaques multiples (Le nettoyeur, 7 × 2) : un nombre de répétitions par
-  étape, ou deux effets d'attaque dans l'étape.
+- **Une étape = une liste d'effets** joués le même tour (décision utilisateur), comme les effets
+  d'une carte : ex. le Boss qui attaque et se protège dans la même étape.
+- **Attaques multiples** : un **nombre de répétitions** sur l'effet (décision utilisateur) : Le
+  nettoyeur attaque 2 fois avec la même valeur.
 
 ### 3.2 Des valeurs nommées, comme les cartes
 
@@ -88,8 +87,18 @@ Chaque valeur a une **augmentation** : de combien elle augmente, et tous les com
 Exemple : dégâts 6, +1 tous les 2 tours → 6, 6, 7, 7, 8… Remplace la montée des dégâts par ennemi
 et l'Augmentation de dégâts du Boss (qui n'est plus un buff).
 
-- *À préciser* : le premier palier tombe-t-il au tour `N` ou `N + 1` ? *Proposition* : la valeur
-  vaut la base aux tours 1 à N, puis augmente (tour N + 1, puis tous les N tours).
+**Calcul (décision utilisateur)** : au tour 1 de l'ennemi, les valeurs valent leur base
+(coefficient de difficulté compris, §3.4) ; l'augmentation s'applique **au début du tour du
+joueur, à partir du tour 2** (l'intention affichée tient donc déjà compte de la nouvelle valeur).
+
+```
+valeur(tour) = arrondi_inferieur( (base + augmentation × paliers) × coefficient )
+paliers      = (tour - 1) // tous_les
+```
+
+Avec une augmentation tous les tours (`tous_les` = 1), `paliers` = `tour - 1` : c'est la formule
+donnée par l'utilisateur, `(valeur_base + augmentation × (nb_tour - 1)) × coeff_difficulte`. *À
+confirmer* : la prise en compte du rythme « tous les N tours » par `paliers` ci-dessus.
 
 ### 3.4 Un coefficient de difficulté
 
@@ -97,12 +106,12 @@ et l'Augmentation de dégâts du Boss (qui n'est plus un buff).
 ses valeurs**, **arrondi à l'inférieur**. Exemple : coefficient 1,5 → dégâts 6 → 9, bouclier
 5 → 7. Sert à moduler la difficulté (selon le niveau, versions « élite »…).
 
-- *À préciser* : le coefficient s'applique-t-il aussi aux **PV** ? et aux **augmentations** (le
-  « +1 ») ? *Proposition* : oui pour les PV ; non pour les augmentations, qui restent un rythme.
-- *À préciser* : avec un coefficient inférieur à 1, une valeur peut tomber à 0 (1 × 0,5) :
-  minimum 1 ?
-- Les **durées** et **fréquences** (ex. « tous les 2 tours ») ne sont pas des valeurs et ne sont
-  jamais multipliées.
+- **Le coefficient s'applique aussi aux PV et aux augmentations** (décision utilisateur) : la
+  formule du §3.3 multiplie la somme base + augmentations ; PV = arrondi_inferieur(PV × coefficient).
+- **Le coefficient vaut au moins 1** (décision utilisateur, **vérifié à la création** de
+  l'ennemi) : il ne sert qu'à durcir un ennemi, et une valeur ne peut jamais tomber sous sa base.
+- Les **rythmes** (« tous les 2 tours ») et les **durées** ne sont pas des valeurs et ne sont
+  jamais multipliés.
 
 ### 3.5 Format envisagé (`config/ennemi_new.json`)
 
@@ -120,6 +129,9 @@ ses valeurs**, **arrondi à l'inférieur**. Exemple : coefficient 1,5 → dégâ
 }
 ```
 
+Le nettoyeur, avec ses attaques multiples : `{ "nature": "ATTAQUE", "valeur": "degats", "cible":
+"PROXIMITE", "repetitions": 2 }`.
+
 `actions` est le cycle : chaque élément est une étape (une liste d'effets). Même démarche que les
 cartes et les modules : `config/ennemi_new.json` source de vérité, une classe dédiée (ex.
 `EnnemiNew`, avec une copie par combat), un tableau `.md` généré.
@@ -133,8 +145,9 @@ cartes et les modules : `config/ennemi_new.json` source de vérité, une classe 
 Ce n'est **plus un bouclier** : Miroir pose un **effet de renvoi** qui **ne se cumule plus** (le
 reposer le rafraîchit) et **dure un tour**. Corrige le blocage constaté en simulation.
 
-- *À préciser* : ce qui est renvoyé (tous les dégâts reçus pendant le tour, ou jusqu'à une valeur),
-  et si l'ennemi protégé encaisse quand même les dégâts.
+- **Ce qui est renvoyé (décision utilisateur)** : les dégâts reçus par l'ennemi protégé sont
+  renvoyés **jusqu'à une valeur** (valeur nommée de Miroir, avec augmentation et coefficient) ;
+  **l'ennemi protégé encaisse le reste**.
 
 ### 4.2 Petit Jean et le Boss (sans « bouclier par tour »)
 
@@ -155,13 +168,13 @@ attaque, attaque, bouclier). Le +2 dégâts du Boss devient une augmentation de 
 4. **Flottes** : utiliser le coefficient (§3.4) et les tailles S/M/L pour une difficulté par niveau ;
    plusieurs boss.
 5. **Nouveaux ennemis** : par exemple un ennemi qui pose de l'incendie ou un debuff sur le joueur.
-6. Points à préciser des §3.1, §3.3, §3.4 et §4.1.
+6. Confirmer la prise en compte du rythme « tous les N tours » dans la formule (§3.3).
 
 ---
 
 ## 6. Prochaines étapes
 
-1. Trancher les points à préciser (§3, §4.1) et les questions du §5.
+1. Trancher les questions du §5.
 2. Redessiner les 6 ennemis dans ce format (cycles, valeurs, augmentations).
 3. Créer `config/ennemi_new.json`, la classe dédiée et son tableau généré.
 4. Puis le combat de la refonte (`combat_new`), validé par le simulateur.
