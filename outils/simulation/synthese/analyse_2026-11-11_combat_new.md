@@ -1,19 +1,23 @@
 # Synthèse de simulation — combat de la refonte — 11 novembre 2026
 
+*Campagne refaite le même jour avec les **nouvelles valeurs de bouclier** (décision utilisateur) :
+Bouclier 5, Protéger le vaisseau 7, Blindage ciblé 8. Les campagnes précédentes (boucliers à 3, 5
+et 6) restent dans l'historique git de ce fichier ; la comparaison est faite au §6.*
+
 ## État du jeu testé
 
 | | |
 |---|---|
-| **Date de la campagne** | 2026-11-11, 18 h 23 |
-| **Code** | branche `devjeux` (PR #61) : `CombatNew` après les deux reviews (commit `a5e83ab`), plus le simulateur `outils/simulation/bot_new.py` et `combats_new.py` (même PR). Aucune règle de jeu modifiée pour la simulation |
+| **Date de la campagne** | 2026-11-11, 19 h 07 |
+| **Code** | branche `devjeux` (PR #61) : `CombatNew` après les deux reviews, simulateur `outils/simulation/bot_new.py` et `combats_new.py`, boucliers 5 / 7 / 8 dans `config/carte_new.json`. Aucune règle de jeu modifiée pour la simulation |
 | **Règles** | **Règles de la refonte**, telles que codées dans `src/gameplay/combat_new.py` (`specs/refonte-combat.md`) : statuts partagés (bouclier et incendie −1 par tour, renvoi cumulable jusqu'au tour suivant, leurre), cycles d'actions des ennemis avec montée des valeurs, pile Hors service, défaite seulement si le principal est détruit |
-| **Joueur** | Principal 60 PV, Lanceur de missiles 20 PV (avant gauche). 3 électricité, 5 cartes par tour. Deck **« départ »** : deck de départ (10 cartes) + 1 carte du Lanceur au hasard. Deck **« étoffé »** : le même + 5 cartes revues hors Base au hasard (milieu de partie) |
-| **Cartes** | Les 19 cartes de `config/carte_new.json`, **y compris celles que l'ancien moteur ne sait pas jouer** (Missiles, Torpille, incendie, répétitions) : `CombatNew` les gère toutes |
-| **Ennemis** | Les 6 ennemis de `config/ennemi_new.json` (tableau validé le 2026-11-08 : dégâts +1 tous les 3 tours, Boss +2), coefficient 1. Placement comme le jeu actuel (protecteur devant, protégé derrière) |
-| **Joueur automatique** | Bot « recherche » en faisceau, repris de la campagne du 7 novembre et adapté à `CombatNew` (6 états par profondeur, noté après la réponse ennemie simulée), **plus une valeur des lancements en plus** (idée utilisateur, §6) |
-| **Volume** | **5 760 combats** : 2 000 combats du bot aléatoire (robustesse), 42 combats de validation, 1 260 combats isolés du bot de recherche (21 flottes × 2 decks × 30), 300 enchaînements des niveaux 2 à 10 (2 458 combats) |
-| **Durée** | 2 min 38 s sur 8 cœurs, lancé avec `caffeinate -i` |
-| **Reproduire** | `caffeinate -i python -m outils.simulation.combats_new --graines 30 --robustesse 2000 --enchainements 300 --graine 1` ; résultats bruts dans `outils/simulation/resultats/2026-11-11_1823_combats_new.*` (non versionnés) |
+| **Joueur** | Principal 60 PV, Lanceur de missiles 20 PV (avant gauche). 3 électricité, 5 cartes par tour. Deck **« départ »** : deck de départ (Laser ×4, Bouclier ×4, Protéger le vaisseau, Réparation) + 1 carte du Lanceur au hasard. Deck **« étoffé »** : le même + 5 cartes revues hors Base au hasard (milieu de partie) |
+| **Cartes** | Les 19 cartes de `config/carte_new.json`, **y compris celles que l'ancien moteur ne sait pas jouer** (Missiles, Torpille, incendie, répétitions) : `CombatNew` les gère toutes. **Boucliers : Bouclier 5, Protéger le vaisseau 7, Blindage ciblé 8** |
+| **Ennemis** | Les 6 ennemis de `config/ennemi_new.json` (dégâts +1 tous les 3 tours, Boss +2), coefficient 1. Placement comme le jeu actuel (protecteur devant, protégé derrière) |
+| **Joueur automatique** | Bot « recherche » en faisceau (6 états par profondeur, noté après la réponse ennemie simulée), avec la **valeur des lancements en plus** pour les cartes de répétition (idée utilisateur, §7) |
+| **Volume** | **5 872 combats** : 2 000 combats du bot aléatoire (robustesse), 42 combats de validation, 1 260 combats isolés du bot de recherche (21 flottes × 2 decks × 30), 300 enchaînements des niveaux 2 à 10 (2 570 combats) |
+| **Durée** | 2 min 41 s sur 8 cœurs, lancé avec `caffeinate -i` |
+| **Reproduire** | `caffeinate -i python -m outils.simulation.combats_new --graines 30 --robustesse 2000 --enchainements 300 --graine 1` ; résultats bruts dans `outils/simulation/resultats/2026-11-11_1907_combats_new.*` (non versionnés) |
 
 **Pas de partie complète** : le combat de la refonte n'est pas encore branché au parcours (pas de
 récompenses, de Station ni d'Aventures). L'« enchaînement » (§4) est une **approximation** : un
@@ -23,23 +27,20 @@ combat par niveau, PV du principal reportés, sans aucun soin hors combat.
 
 ## En bref
 
-1. **Tout va bien côté moteur** : 5 760 combats, **aucune erreur, aucun invariant violé** (piles de
-   cartes, PV, statuts, Hors service, journal, intentions, fin de combat).
-2. **Miroir n'est plus un problème** : aucun combat enlisé (47 % des combats contre Miroir
-   s'enlisaient le 7 novembre). Il renvoie 6 à 28 dégâts par combat en moyenne selon la flotte, sans blocage.
-3. **Les combats à un ennemi (niveaux 2 à 5) sont toujours trop faciles** : 100 % de victoires,
-   environ 3 PV perdus.
-4. **Les combats à deux ennemis (niveaux 6 à 9) font mal** : 15 à 22 PV perdus en moyenne, jusqu'à
-   44 avec Le nettoyeur + Le puzzle. Sans soin entre les combats, le principal arrive au Boss avec
-   **27 PV en moyenne**.
-5. **Le Boss est devenu très dur** (il était battu 51 fois sur 51 le 7 novembre) : même avec 60 PV,
-   il bat le deck de départ 63 fois sur 100 ; le deck étoffé le bat presque toujours, mais en y
-   laissant 23 PV. Sur l'enchaînement, **32 % des parties battent le Boss**.
-6. **Le Lanceur de missiles (20 PV) joue bien son rôle de module sacrifiable** : détruit dans 44 %
-   des combats, au tour 4,4 en moyenne, il protège le principal.
-7. **Les cartes de répétition sont fortes une fois que le bot sait les estimer** : *Salve laser*
-   et *Protocole d'urgence* passent de 10 % et 0 % de jeu à 74 % et 63 %, et les parties gagnées de
-   14 % à 32 % (§6). *Bouclier stabilisé* reste à 6 % : il ne fait que doubler le petit Bouclier.
+1. **Tout va bien côté moteur** : 5 872 combats, **aucune erreur, aucun invariant violé**.
+2. **Miroir n'est plus un problème** : aucun combat enlisé, 5 à 28 dégâts renvoyés par combat
+   selon la flotte.
+3. **Les nouveaux boucliers rendent le jeu nettement plus facile** (§6) : sur l'enchaînement, les
+   parties qui battent le Boss passent de **32 % à 59 %** ; le Boss avec le deck de départ passe de
+   37 % à **97 %** de victoires.
+4. **Les combats à un ennemi (niveaux 2 à 5) restent trop faciles** : 100 % de victoires, 2 à 3 PV
+   perdus.
+5. **Les combats à deux ennemis restent le cœur de la difficulté**, surtout avec **Le nettoyeur**
+   : 13 à 15 PV perdus en moyenne par paire, jusqu'à 40 avec Le nettoyeur + Le puzzle.
+6. **Le Boss redevient facile avec un deck étoffé** (100 %, 17 PV perdus) ; il ne tue plus que les
+   principaux déjà très entamés.
+7. **Bouclier n'est pas plus joué** (26 %, contre 24 % à 3) : c'est *Protéger le vaisseau*, à 7,
+   qui en profite, et les cartes de bouclier remplacent en partie le Leurre et la Réparation.
 
 ---
 
@@ -50,33 +51,23 @@ combat par niveau, PV du principal reportés, sans aucun soin hors combat.
 | Bot aléatoire (robustesse) | 2 000 | 0 | 0 |
 | Validation (les deux bots) | 42 | 0 | 0 |
 | Bot de recherche (équilibre) | 1 260 | 0 | 0 |
-| Enchaînements (bot de recherche) | 2 458 | 0 | 0 |
+| Enchaînements (bot de recherche) | 2 570 | 0 | 0 |
 
-Après **chaque carte jouée et chaque fin de tour**, le simulateur vérifie :
-
-- chaque carte est dans une seule pile, et le nombre total de cartes ne change pas ;
-- la main ne dépasse pas 10 cartes ; l'électricité n'est jamais négative ; le tour ne recule pas ;
-- les PV restent entre 0 et le maximum ; aucun statut à 0 ne traîne ;
-- un module détruit n'a plus de statuts, et ses cartes non Persistantes sont toutes en Hors service ;
-- victoire si et seulement si tous les ennemis sont détruits, défaite si et seulement si le
-  principal l'est ;
-- dans le journal, le détail des dégâts (leurre, renvoi, bouclier, PV perdus) ne dépasse jamais
-  les dégâts reçus ;
-- **chaque attaque ennemie a bien la valeur annoncée par son intention**.
-
-Le bot aléatoire joue des coups très variés (cartes au hasard, sur des cibles au hasard), ce qui
-couvre des situations qu'un joueur raisonnable ne provoque pas.
+Après **chaque carte jouée et chaque fin de tour**, le simulateur vérifie : une seule pile par
+carte et aucune carte perdue, main limitée à 10, électricité jamais négative, tour qui ne recule
+pas, PV entre 0 et le maximum, aucun statut à 0, module détruit sans statuts et avec toutes ses
+cartes non Persistantes en Hors service, victoire et défaite au bon moment, détail des dégâts du
+journal cohérent, **attaques ennemies conformes à leur intention**.
 
 ## 2. Le bot est-il fiable ?
 
 | Bot | Combats | Victoires | PV principal perdus |
 |---|---|---|---|
-| Recherche | 42 | 93 % | 20,7 |
-| Aléatoire | 42 | 45 % | 43,8 |
+| Recherche | 42 | 98 % | 14,4 |
+| Aléatoire | 42 | 57 % | 36,7 |
 
-Sur les mêmes combats (deck de départ, toutes les flottes), le bot de recherche gagne deux fois
-plus et perd deux fois moins de PV. Comme le 7 novembre, ses résultats servent à **comparer**
-(ennemis, decks, cartes) ; un joueur humain attentif fera sans doute un peu mieux.
+Sur les mêmes combats, le bot de recherche gagne nettement plus et perd 2,5 fois moins de PV. Ses
+résultats servent à **comparer** ; un joueur humain attentif fera sans doute un peu mieux.
 
 ## 3. Combats isolés (principal à 60 PV)
 
@@ -84,56 +75,49 @@ plus et perd deux fois moins de PV. Comme le 7 novembre, ses résultats servent 
 
 | Ennemi | Deck | Victoires | Tours | PV principal perdus (moy. / max) | Lanceur détruit |
 |---|---|---|---|---|---|
-| Pat le Pirate | départ | 100 % | 4,1 | 2,6 / 10 | 0 % |
-| Le nettoyeur | départ | 100 % | 2,4 | 6,1 / 22 | 13 % |
-| Petit Jean | départ | 100 % | 10,4 | 1,1 / 7 | 0 % |
-| Le puzzle | départ | 100 % | 4,3 | 3,2 / 11 | 3 % |
-| Miroir | départ | 100 % | 6,1 | 3,5 / 14 | 3 % |
+| Pat le Pirate | départ | 100 % | 4,1 | 1,8 / 10 | 0 % |
+| Le nettoyeur | départ | 100 % | 2,4 | 5,3 / 18 | 0 % |
+| Petit Jean | départ | 100 % | 10,4 | 0,2 / 3 | 0 % |
+| Le puzzle | départ | 100 % | 4,3 | 2,2 / 10 | 0 % |
+| Miroir | départ | 100 % | 6,1 | 1,8 / 9 | 0 % |
 
-Avec le deck étoffé, mêmes résultats à quelques PV près. **Aucun combat à un ennemi n'est une
-menace** : c'est le même constat que le 7 novembre.
+**Aucun combat à un ennemi n'est une menace** (2,2 PV perdus en moyenne avec le deck de départ,
+3,5 avec le deck étoffé).
 
-### 3.2 Deux ennemis (niveaux 6 à 9) — les plus durs
+### 3.2 Deux ennemis (niveaux 6 à 9)
 
-| Flotte | Deck | Victoires | Défaites | Tours | PV principal perdus (moy. / max) | Lanceur détruit | Renvoi subi |
-|---|---|---|---|---|---|---|---|
-| Le nettoyeur + Le puzzle | départ | **73 %** | 27 % | 5,3 | **43,8** / 60 | 53 % | 0,0 |
-| Le nettoyeur + Le puzzle | étoffé | 100 % | 0 % | 4,4 | 27,5 / 57 | 33 % | 0,0 |
-| Pat + Le nettoyeur | départ | 93 % | 7 % | 6,0 | **41,1** / 60 | 40 % | 0,0 |
-| Pat + Le nettoyeur | étoffé | 100 % | 0 % | 4,4 | 24,1 / 58 | 47 % | 0,0 |
-| Le nettoyeur + Le nettoyeur | départ | 97 % | 3 % | 4,6 | 31,7 / 60 | 70 % | 0,0 |
-| Le nettoyeur + Le nettoyeur | étoffé | 97 % | 3 % | 3,4 | 24,5 / 60 | 67 % | 0,0 |
-| Petit Jean + Petit Jean | départ | **83 %** | 17 % | **18,3** | 29,1 / 60 | 67 % | 0,0 |
-| Petit Jean + Petit Jean | étoffé | 100 % | 0 % | 10,2 | 6,2 / 26 | 30 % | 0,0 |
-| Le puzzle + Le puzzle | départ | 100 % | 0 % | 8,1 | 26,5 / 36 | **100 %** | 0,0 |
-| Petit Jean + Le puzzle | départ | 100 % | 0 % | 14,4 | 23,2 / 47 | 83 % | 0,0 |
-| Pat + Le puzzle | départ | 100 % | 0 % | 7,7 | 23,0 / 43 | 73 % | 0,0 |
-| Pat + Pat | départ | 100 % | 0 % | 8,3 | 11,1 / 35 | 63 % | 0,0 |
-| Pat + Miroir | départ | 100 % | 0 % | 9,0 | 11,5 / 33 | 50 % | 10,2 |
-| Miroir + Miroir | départ | 100 % | 0 % | 10,3 | 12,0 / 32 | 53 % | 28,0 |
+| Flotte | Deck | Victoires | Défaites | Tours | PV principal perdus (moy. / max) | Lanceur détruit |
+|---|---|---|---|---|---|---|
+| Le nettoyeur + Le puzzle | départ | **80 %** | 20 % | 5,5 | **40,0** / 60 | 40 % |
+| Le nettoyeur + Le puzzle | étoffé | 100 % | 0 % | 4,5 | 24,8 / 57 | 33 % |
+| Pat + Le nettoyeur | départ | 100 % | 0 % | 6,1 | **35,9** / 57 | 40 % |
+| Pat + Le nettoyeur | étoffé | 100 % | 0 % | 4,4 | 22,9 / 58 | 43 % |
+| Le nettoyeur + Le nettoyeur | départ | 100 % | 0 % | 4,6 | 26,4 / 52 | 70 % |
+| Le nettoyeur + Le nettoyeur | étoffé | 97 % | 3 % | 3,4 | 23,2 / 60 | 67 % |
+| Le puzzle + Le puzzle | départ | 100 % | 0 % | 8,1 | 19,9 / 29 | **100 %** |
+| Pat + Le puzzle | départ | 100 % | 0 % | 7,8 | 18,0 / 37 | 73 % |
+| Petit Jean + Petit Jean | départ | 100 % | 0 % | **19,0** | 15,8 / 57 | 57 % |
+| Petit Jean + Le puzzle | départ | 100 % | 0 % | 14,4 | 12,7 / 43 | 57 % |
+| Le nettoyeur + Petit Jean | départ | 100 % | 0 % | 13,1 | 12,2 / 37 | 37 % |
 
-(Tableau complet des 15 paires et des deux decks en annexe.)
+(Tableau complet en annexe.)
 
-- **Le nettoyeur** (2 attaques de 7) est le plus dangereux en paire : il détruit vite le
-  Lanceur, puis frappe le principal.
-- **Le puzzle** (frappe tous les modules) détruit le Lanceur dans presque tous les combats où il
-  est en paire.
-- **Petit Jean** est peu dangereux seul, mais **allonge** les combats (100 PV, bouclier) : à deux,
-  18 tours en moyenne avec le deck de départ. Avec la montée des dégâts (+1 tous les 3 tours), un
-  combat long devient mortel.
-- Le deck étoffé réduit nettement les pertes : 14,6 PV en moyenne par paire, contre 22,3.
+- **Le nettoyeur** (2 attaques de 7) reste l'ennemi le plus dangereux en paire : les 4 paires les
+  plus coûteuses le contiennent. Un bouclier aide peu contre lui : les combats durent 4 à 6 tours,
+  le meilleur moyen de se protéger est de le tuer vite.
+- **Le puzzle** (frappe tous les modules) détruit presque toujours le Lanceur.
+- **Petit Jean** allonge les combats (19 tours à deux) sans être mortel.
+- En moyenne par paire : 15,4 PV perdus avec le deck de départ, 12,9 avec le deck étoffé.
 
 ### 3.3 Le Boss
 
 | Deck | Victoires | Tours | PV principal perdus (moy. / max) |
 |---|---|---|---|
-| départ | **37 %** | 13,9 | 48,7 / 60 |
-| étoffé | 97 % | 9,9 | 23,4 / 60 |
+| départ | **97 %** | 14,7 | 38,5 / 60 |
+| étoffé | **100 %** | 10,1 | 17,0 / 45 |
 
-Le Boss frappe **tous les modules** (5, puis 7, 9, 11… tous les 3 tours) et se protège de 10 tous
-les 3 tours. Sur un combat de 10 à 14 tours, ses dégâts montent à 11 ou 13 par coup : **même avec
-le principal plein, il coûte 23 PV au deck étoffé**, presque la moitié de ce qu'il reste en
-moyenne au principal à ce stade (§4).
+Avec le principal plein, le Boss ne fait plus peur. Il reste coûteux pour un deck de départ
+(38 PV perdus) : un principal entamé peut encore y mourir.
 
 ## 4. Enchaînement des niveaux 2 à 10 (approximation d'une partie)
 
@@ -143,40 +127,92 @@ jusqu'au niveau 5, étoffé ensuite.
 
 | Niveau | Parties encore en vie | PV du principal au début | PV perdus pendant le niveau (nets, Réparation comprise) |
 |---|---|---|---|
-| 2 | 100 % | 60,0 | 3,3 |
-| 3 à 5 | 100 % | 56,7 → 55,3 | moins de 1 |
-| 6 | 100 % | 54,5 | **14,8** |
-| 7 | 98 % | 40,7 | 10,8 |
-| 8 | 87 % | 33,6 | 9,3 |
-| 9 | 76 % | 27,9 | 6,8 |
-| 10 (Boss) | 59 % | 27,0 | 13,4 |
+| 2 | 100 % | 60,0 | 2,1 |
+| 3 à 5 | 100 % | 57,9 → 56,9 | moins de 1 |
+| 6 | 100 % | 56,5 | **12,9** |
+| 7 | 99 % | 44,0 | 9,0 |
+| 8 | 95 % | 36,5 | 7,6 |
+| 9 | 86 % | 31,9 | 6,2 |
+| 10 (Boss) | 76 % | 28,9 | 9,3 |
 
-**32 % des parties battent le Boss.** Les défaites viennent du Boss (80 parties) et des paires
-avec Le nettoyeur (Le nettoyeur + Le puzzle 22, Pat + Le nettoyeur 21, Le nettoyeur + Petit Jean
-18, Le nettoyeur + Le nettoyeur 12). Les parties qui battent le Boss y arrivent avec 35 PV en
-moyenne, celles qui perdent avec 17.
+**59 % des parties battent le Boss.** Les défaites viennent du Boss (51 parties, avec un principal
+déjà bas : 16 PV en moyenne à l'arrivée, contre 33 pour les parties gagnées) et des paires avec Le
+nettoyeur (Le nettoyeur + Le puzzle 16, Pat + Le nettoyeur 13, Le nettoyeur + Petit Jean 12, Le
+nettoyeur + Le nettoyeur 10).
 
-- **Le principal ne remonte pas** : sans Station ni Aventure, seule la carte Réparation (8 PV, 2
-  munitions) soigne. C'est voulu (seuls les PV du principal persistent), mais le jeu complet aura
-  des Stations (niveaux 5 et 9) qui changeront ces chiffres : à refaire après le branchement.
-- **La difficulté est mal répartie** : rien ne se passe pendant 4 niveaux, puis tout se joue aux
-  niveaux 6 à 10.
+- Le jeu complet aura des Stations (niveaux 5 et 9) : ces chiffres sont un plancher, à refaire après
+  le branchement au parcours.
+- **La difficulté reste mal répartie** : rien ne se passe aux niveaux 2 à 5, tout se joue de 6 à 10.
 
 ## 5. Mesures de la refonte
 
 | Mesure | Valeur |
 |---|---|
-| Lanceur détruit | 44 % des combats isolés, au tour 4,4 en moyenne |
-| Cartes en Hors service à la fin (si le Lanceur est détruit) | 2,6 en moyenne |
-| Dégâts absorbés par le bouclier des modules | 14,9 par combat |
-| Dégâts d'incendie infligés | 22,2 par combat en moyenne (sur tous les combats, avec ou sans carte d'incendie dans le deck) |
+| Lanceur détruit | 40 % des combats isolés, au tour 4,5 en moyenne |
+| Cartes en Hors service à la fin (si le Lanceur est détruit) | 2,3 en moyenne |
+| Dégâts absorbés par le bouclier des modules | 21,3 par combat |
+| Dégâts d'incendie infligés | 22,3 par combat en moyenne (sur tous les combats) |
 | Combats enlisés (arrêtés à 40 tours) | **0** |
 
-## 6. Le bot et les cartes de répétition (idée utilisateur)
+## 6. Bouclier : effet des nouvelles valeurs
 
-**Problème** : la première campagne (même jour, 18 h 04) ne jouait jamais *Protocole d'urgence* ni
-*Bouclier stabilisé*, et *Salve laser* 10 % du temps. La recherche du bot ne voit que le tour
-suivant, alors qu'une répétition ne paie que sur les tours d'après.
+Les trois cartes de bouclier sont passées de 3 / 5 / 6 à **5 / 7 / 8** (décision utilisateur,
+après l'essai `essai_bouclier_2026-11-11.md`, qui garde les essais à 3, 4, 5 et 6). Comparaison sur
+les mêmes combats et les mêmes graines :
+
+| | Boucliers 3 / 5 / 6 | **Boucliers 5 / 7 / 8** |
+|---|---|---|
+| Combats isolés : victoires | 97,1 % | **99,4 %** |
+| Combats isolés : PV principal perdus | 15,7 | **12,1** |
+| Un ennemi, deck départ : PV perdus | 3,3 | 2,2 |
+| Deux ennemis, deck départ : PV perdus | 22,3 | **15,4** |
+| Deux ennemis, deck étoffé : PV perdus | 14,6 | 12,9 |
+| Boss, deck départ : victoires / PV perdus | 37 % / 48,7 | **97 % / 38,5** |
+| Boss, deck étoffé : victoires / PV perdus | 97 % / 23,4 | **100 % / 17,0** |
+| Enchaînement : parties qui battent le Boss | 32 % | **59 %** |
+| Dégâts absorbés par les boucliers / combat | 14,9 | 21,3 |
+
+### 6.1 Qui joue quoi
+
+| Carte | Taux de jeu (3 / 5 / 6) | Taux de jeu (5 / 7 / 8) |
+|---|---|---|
+| Bouclier (5) | 24 % | 26 % |
+| Protéger le vaisseau (7) | 53 % | 53 % |
+| Blindage ciblé (8) | 19 % | **11 %** |
+| Bouclier stabilisé (fait lancer Bouclier 2 fois) | 6 % | 13 % |
+| Réparation | 51 % | **43 %** |
+| Leurre | 50 % | **35 %** |
+
+- **Bouclier n'est presque pas plus joué** (24 % → 26 %), contrairement à l'essai sur les combats
+  difficiles (27 % → 37 % à 5). Avec 4 Bouclier dans le deck de départ, la main en contient souvent
+  plusieurs : le bot en joue un ou deux et garde l'électricité pour attaquer. Chaque Bouclier joué
+  protège en revanche bien plus.
+- **Blindage ciblé recule** (19 % → 11 %) : à 8 pour un coût de 2, il fait à peine mieux que
+  Bouclier à 5 pour 1.
+- **Les boucliers remplacent en partie le Leurre et la Réparation** : mieux vaut éviter les dégâts
+  que les réparer.
+
+### 6.2 Accumulation
+
+La campagne ne mesure pas le bouclier maximal ; l'essai dédié l'a fait sur 32 combats
+(`essai_bouclier_2026-11-11.md`) : avec Bouclier à 5, le bouclier d'un module monte jusqu'à 21
+dans les combats difficiles et **jusqu'à 44 contre Petit Jean seul**, sans changer l'issue de ces
+combats (déjà gagnés sans perte). À surveiller, aucun frein ajouté pour l'instant.
+
+### 6.3 À retenir
+
+- Les nouveaux boucliers **règlent le problème du Boss trop dur** et rendent les paires moins
+  coûteuses, mais **ne règlent pas** le déséquilibre entre les niveaux 2 à 5 (trop faciles) et 6 à
+  9 (Le nettoyeur), ni la faible utilisation de la carte Bouclier.
+- Le jeu devient **plutôt facile** pour le bot (99,4 % de combats gagnés) : le prochain levier est la
+  composition des flottes (coefficient de difficulté par niveau), pas les cartes.
+- **Blindage ciblé** mérite d'être revu (coût 1 ? effet en plus ?) s'il doit rester un choix.
+
+## 7. Le bot et les cartes de répétition (idée utilisateur)
+
+**Problème** : une première campagne ne jouait jamais *Protocole d'urgence* ni *Bouclier
+stabilisé*, et *Salve laser* 10 % du temps. La recherche du bot ne voit que le tour suivant, alors
+qu'une répétition ne paie que sur les tours d'après.
 
 **Correction (idée utilisateur)** : le bot donne une valeur à l'**amélioration du deck**. Pour
 chaque carte encore jouable (pioche, main, défausse) qui a des lancements en plus :
@@ -188,128 +224,115 @@ chaque carte encore jouable (pioche, main, défausse) qui a des lancements en pl
   leurre, pioche, électricité avec leur propre poids) ;
 - **nombre de fois où elle sera encore jouée** : tours restants estimés × chance de la piocher (5
   cartes sur le deck actif) × 70 % ;
-- **tours restants** : 10 moins le numéro du tour. **Plus le combat est jeune, plus l'amélioration
-  vaut**, comme le suggérait l'utilisateur.
+- **tours restants** : 10 moins le numéro du tour : **plus le combat est jeune, plus l'amélioration
+  vaut**.
 
 Un premier essai estimait les tours restants d'après les PV des ennemis : le bot gagnait alors des
-points à **ne pas frapper**, et 1 à 7 % des combats s'enlisaient. Le numéro du tour, sur lequel le
-bot n'a pas de prise, règle le problème (0 enlisé).
+points à **ne pas frapper**, et des combats s'enlisaient. Le numéro du tour, sur lequel le bot n'a
+pas de prise, règle le problème.
 
-**Résultat** (mêmes combats, mêmes graines ; le deck de départ, sans répétition, ne change pas) :
+Effet (boucliers à 3 / 5 / 6, mêmes combats) : *Salve laser* 10 % → 74 % de jeu, *Protocole
+d'urgence* 0 % → 63 %, parties de l'enchaînement qui battent le Boss 14 % → 32 %. Ces cartes
+étaient **sous-estimées par le bot**, pas mauvaises. L'autre idée de l'utilisateur (jouer la carte
+avant et après amélioration pour comparer) demande de simuler plusieurs tours à l'avance pour
+chaque essai : gardée en réserve.
 
-| | Bot sans valeur du deck | Bot avec valeur du deck |
-|---|---|---|
-| *Salve laser* jouée | 10 % | **74 %** |
-| *Protocole d'urgence* jouée | 0 % | **63 %** |
-| *Bouclier stabilisé* jouée | 0 % | 6 % |
-| Boss, deck étoffé : victoires / PV perdus | 87 % / 33,5 | 97 % / 23,4 |
-| Enchaînement : parties qui battent le Boss | 14 % | **32 %** |
-
-- Ces cartes étaient donc **sous-estimées par le bot**, pas mauvaises : bien jouées, elles
-  comptent parmi les plus fortes du jeu.
-- **Bouclier stabilisé** reste presque ignoré : il fait lancer deux fois le Bouclier (3), la carte
-  la plus faible du deck (§7). Son sort dépend de celui du Bouclier.
-- L'autre idée de l'utilisateur (jouer la carte avant et après amélioration pour comparer) demande
-  de simuler plusieurs tours à l'avance pour chaque essai : beaucoup plus lent. Gardée en réserve.
-
-## 7. Cartes
+## 8. Cartes
 
 | Carte | Vue en main | Taux de jeu |
 |---|---|---|
-| Missiles | 663 | 74 % |
-| Ciel de missiles | 627 | 74 % |
+| Missiles | 697 | 76 % |
+| Ciel de missiles | 647 | 76 % |
 | Salve laser | 400 | 74 % |
-| Laser | 16 636 | 73 % |
-| Laser lourd | 378 | 71 % |
-| Embrasement | 699 | 67 % |
-| Bombardement | 727 | 67 % |
-| Protocole d'urgence | 394 | 63 % |
-| Torpille | 656 | 59 % |
-| Protéger le vaisseau | 4 090 | 53 % |
-| Guerre nucléaire | 713 | 52 % |
-| Réparation | 3 069 | 51 % |
-| Leurre | 822 | 50 % |
-| Laser perçant | 411 | 36 % |
-| Tir incendiaire | 426 | 34 % |
-| Bouclier | 16 320 | 24 % |
-| Blindage ciblé | 469 | 19 % |
-| Ligne arrière | 672 | 12 % |
-| Bouclier stabilisé | 418 | 6 % |
+| Laser | 16 690 | 73 % |
+| Laser lourd | 376 | 72 % |
+| Bombardement | 769 | 68 % |
+| Embrasement | 718 | 65 % |
+| Protocole d'urgence | 398 | 64 % |
+| Torpille | 681 | 59 % |
+| Protéger le vaisseau | 4 086 | 53 % |
+| Guerre nucléaire | 719 | 52 % |
+| Réparation | 3 295 | 43 % |
+| Laser perçant | 407 | 38 % |
+| Leurre | 889 | 35 % |
+| Tir incendiaire | 428 | 33 % |
+| Bouclier | 16 328 | 26 % |
+| Bouclier stabilisé | 377 | 13 % |
+| Ligne arrière | 720 | 12 % |
+| Blindage ciblé | 470 | 11 % |
 
-- **Les cartes d'attaque dominent** : le bot préfère tuer vite plutôt que se protéger, ce qui
-  rejoint le constat sur la montée des dégâts (un combat long coûte cher).
-- **Bouclier (3) est la carte la moins utile du deck de départ** : 24 %, contre 53 % pour Protéger
-  le vaisseau (5). Avec −1 par tour, 3 de bouclier protègent peu. *Blindage ciblé* (6, coût 2) ne
-  fait guère mieux (19 %).
+- **Les cartes d'attaque dominent** : tuer vite reste la meilleure défense, d'autant que les
+  dégâts ennemis montent avec le temps.
 - **Ligne arrière** (12 %) n'a de cible que si un ennemi est à l'arrière, ce qui est rare avec 1 ou
   2 ennemis.
 
-## 8. Pistes (à décider par l'utilisateur)
+## 9. Pistes (à décider par l'utilisateur)
 
 1. **Répartir la difficulté** : rendre les niveaux 2 à 5 plus menaçants (coefficient de difficulté
-   par niveau, ou deux ennemis plus tôt) et/ou les niveaux 6 à 9 moins brutaux. C'est la question
-   des flottes, laissée pour plus tard (`specs/refonte-ennemis.md` §5).
-2. **Le Boss** : sa montée (+2 tous les 3 tours) sur des combats de 10 à 14 tours le rend très dur
-   pour un principal entamé. Pistes : montée plus lente (+1), ou moins de PV pour raccourcir le
-   combat.
-3. **Le nettoyeur** : ses 2 attaques de 7 sont les plus coûteuses, il est dans les 4 paires les
-   plus mortelles. Si c'est encore vrai après le travail sur les flottes, baisser ses dégâts à 6.
-4. **Petit Jean** : seul, il n'est qu'un combat long et sans risque (10 tours, 1 PV perdu). Lui
-   donner un peu plus de mordant, ou moins de PV.
-5. **Bouclier (3)** : à revaloriser (4 ?) si on veut qu'il reste une carte de base utile avec la
-   perte de 1 par tour ; *Bouclier stabilisé* en profiterait.
-6. **Répétitions** : *Salve laser* et *Protocole d'urgence* sont parmi les cartes les plus fortes ;
-   à surveiller en jeu réel avant d'y toucher.
-7. **Après le branchement au parcours** : relancer des parties complètes (Stations, récompenses)
+   par niveau, ou deux ennemis plus tôt). Avec les nouveaux boucliers, le jeu est devenu plutôt
+   facile : c'est le levier prioritaire (`specs/refonte-ennemis.md` §5, flottes laissées pour plus
+   tard).
+2. **Le nettoyeur** : ses 2 attaques de 7 restent les plus coûteuses (4 paires les plus mortelles).
+   Baisser à 6 si c'est encore vrai après le travail sur les flottes.
+3. **Le Boss** : n'est plus trop dur ; à revoir seulement avec la composition des flottes.
+4. **Petit Jean** : seul, un combat long et sans risque (10 tours, 0,2 PV perdu). Lui donner un peu
+   de mordant, ou moins de PV.
+5. **Blindage ciblé** (8 pour 2) : peu joué face à Bouclier (5 pour 1) ; à revoir s'il doit rester
+   un choix.
+6. **Accumulation du bouclier** : à surveiller (jusqu'à 44 contre Petit Jean) ; freins possibles
+   dans `essai_bouclier_2026-11-11.md`.
+7. **Répétitions** : *Salve laser* et *Protocole d'urgence* sont parmi les cartes les plus fortes ;
+   à surveiller en jeu réel.
+8. **Après le branchement au parcours** : relancer des parties complètes (Stations, récompenses)
    pour caler les PV du principal (60) et du Lanceur (20).
 
 ---
 
-## Annexe : toutes les flottes
+## Annexe : toutes les flottes (boucliers 5 / 7 / 8)
 
 | Flotte | Deck | Victoires | Défaites | Tours | PV principal perdus (moy. / max) | Lanceur détruit | Renvoi subi |
 |---|---|---|---|---|---|---|---|
-| Pat | départ | 100 % | 0 % | 4,1 | 2,6 / 10 | 0 % | 0,0 |
-| Pat | étoffé | 100 % | 0 % | 3,8 | 3,8 / 16 | 0 % | 0,0 |
-| Le nettoyeur | départ | 100 % | 0 % | 2,4 | 6,1 / 22 | 13 % | 0,0 |
-| Le nettoyeur | étoffé | 100 % | 0 % | 2,2 | 4,7 / 18 | 7 % | 0,0 |
-| Petit Jean | départ | 100 % | 0 % | 10,4 | 1,1 / 7 | 0 % | 0,0 |
-| Petit Jean | étoffé | 100 % | 0 % | 7,7 | 1,5 / 12 | 0 % | 0,0 |
-| Le puzzle | départ | 100 % | 0 % | 4,3 | 3,2 / 11 | 3 % | 0,0 |
-| Le puzzle | étoffé | 100 % | 0 % | 3,7 | 6,2 / 15 | 0 % | 0,0 |
-| Miroir | départ | 100 % | 0 % | 6,1 | 3,5 / 14 | 3 % | 17,3 |
-| Miroir | étoffé | 100 % | 0 % | 4,4 | 2,6 / 8 | 3 % | 10,0 |
-| Pat + Pat | départ | 100 % | 0 % | 8,3 | 11,1 / 35 | 63 % | 0,0 |
-| Pat + Pat | étoffé | 100 % | 0 % | 5,3 | 9,0 / 22 | 40 % | 0,0 |
-| Pat + Le nettoyeur | départ | 93 % | 7 % | 6,0 | 41,1 / 60 | 40 % | 0,0 |
-| Pat + Le nettoyeur | étoffé | 100 % | 0 % | 4,4 | 24,1 / 58 | 47 % | 0,0 |
-| Pat + Petit Jean | départ | 100 % | 0 % | 13,6 | 11,1 / 39 | 40 % | 0,0 |
-| Pat + Petit Jean | étoffé | 100 % | 0 % | 9,1 | 5,3 / 26 | 30 % | 0,0 |
-| Pat + Le puzzle | départ | 100 % | 0 % | 7,7 | 23,0 / 43 | 73 % | 0,0 |
-| Pat + Le puzzle | étoffé | 100 % | 0 % | 5,9 | 18,2 / 36 | 67 % | 0,0 |
-| Pat + Miroir | départ | 100 % | 0 % | 9,0 | 11,5 / 33 | 50 % | 10,2 |
-| Pat + Miroir | étoffé | 100 % | 0 % | 5,9 | 7,4 / 27 | 23 % | 7,0 |
-| Le nettoyeur + Le nettoyeur | départ | 97 % | 3 % | 4,6 | 31,7 / 60 | 70 % | 0,0 |
-| Le nettoyeur + Le nettoyeur | étoffé | 97 % | 3 % | 3,4 | 24,5 / 60 | 67 % | 0,0 |
-| Le nettoyeur + Petit Jean | départ | 100 % | 0 % | 12,9 | 18,4 / 54 | 60 % | 0,0 |
-| Le nettoyeur + Petit Jean | étoffé | 100 % | 0 % | 8,9 | 14,7 / 51 | 20 % | 0,0 |
-| Le nettoyeur + Le puzzle | départ | 73 % | 27 % | 5,3 | 43,8 / 60 | 53 % | 0,0 |
-| Le nettoyeur + Le puzzle | étoffé | 100 % | 0 % | 4,4 | 27,5 / 57 | 33 % | 0,0 |
-| Le nettoyeur + Miroir | départ | 100 % | 0 % | 8,1 | 18,3 / 44 | 53 % | 18,8 |
-| Le nettoyeur + Miroir | étoffé | 100 % | 0 % | 5,5 | 18,5 / 56 | 37 % | 11,0 |
-| Petit Jean + Petit Jean | départ | 83 % | 17 % | 18,3 | 29,1 / 60 | 67 % | 0,0 |
-| Petit Jean + Petit Jean | étoffé | 100 % | 0 % | 10,2 | 6,2 / 26 | 30 % | 0,0 |
-| Petit Jean + Le puzzle | départ | 100 % | 0 % | 14,4 | 23,2 / 47 | 83 % | 0,0 |
-| Petit Jean + Le puzzle | étoffé | 100 % | 0 % | 9,3 | 14,2 / 39 | 70 % | 0,0 |
-| Petit Jean + Miroir | départ | 100 % | 0 % | 14,6 | 12,7 / 51 | 30 % | 5,7 |
-| Petit Jean + Miroir | étoffé | 100 % | 0 % | 9,7 | 3,8 / 45 | 30 % | 9,2 |
-| Le puzzle + Le puzzle | départ | 100 % | 0 % | 8,1 | 26,5 / 36 | 100 % | 0,0 |
-| Le puzzle + Le puzzle | étoffé | 100 % | 0 % | 5,8 | 22,2 / 45 | 100 % | 0,0 |
-| Le puzzle + Miroir | départ | 100 % | 0 % | 8,6 | 20,9 / 38 | 83 % | 7,5 |
-| Le puzzle + Miroir | étoffé | 100 % | 0 % | 6,2 | 17,5 / 35 | 90 % | 9,2 |
-| Miroir + Miroir | départ | 100 % | 0 % | 10,3 | 12,0 / 32 | 53 % | 28,0 |
-| Miroir + Miroir | étoffé | 100 % | 0 % | 7,0 | 6,0 / 24 | 33 % | 16,7 |
-| Boss | départ | 37 % | 63 % | 13,9 | 48,7 / 60 | 100 % | 0,0 |
-| Boss | étoffé | 97 % | 3 % | 9,9 | 23,4 / 60 | 100 % | 0,0 |
+| Pat | départ | 100 % | 0 % | 4,1 | 1,8 / 10 | 0 % | 0,0 |
+| Pat | étoffé | 100 % | 0 % | 3,9 | 3,5 / 15 | 0 % | 0,0 |
+| Le nettoyeur | départ | 100 % | 0 % | 2,4 | 5,3 / 18 | 0 % | 0,0 |
+| Le nettoyeur | étoffé | 100 % | 0 % | 2,2 | 4,2 / 16 | 7 % | 0,0 |
+| Petit Jean | départ | 100 % | 0 % | 10,4 | 0,2 / 3 | 0 % | 0,0 |
+| Petit Jean | étoffé | 100 % | 0 % | 7,8 | 1,5 / 12 | 0 % | 0,0 |
+| Le puzzle | départ | 100 % | 0 % | 4,3 | 2,2 / 10 | 0 % | 0,0 |
+| Le puzzle | étoffé | 100 % | 0 % | 3,8 | 6,0 / 16 | 7 % | 0,0 |
+| Miroir | départ | 100 % | 0 % | 6,1 | 1,8 / 9 | 0 % | 16,8 |
+| Miroir | étoffé | 100 % | 0 % | 4,4 | 2,2 / 8 | 3 % | 9,7 |
+| Pat + Pat | départ | 100 % | 0 % | 8,5 | 4,9 / 20 | 53 % | 0,0 |
+| Pat + Pat | étoffé | 100 % | 0 % | 5,4 | 8,5 / 22 | 37 % | 0,0 |
+| Pat + Le nettoyeur | départ | 100 % | 0 % | 6,1 | 35,9 / 57 | 40 % | 0,0 |
+| Pat + Le nettoyeur | étoffé | 100 % | 0 % | 4,4 | 22,9 / 58 | 43 % | 0,0 |
+| Pat + Petit Jean | départ | 100 % | 0 % | 13,9 | 5,9 / 33 | 13 % | 0,0 |
+| Pat + Petit Jean | étoffé | 100 % | 0 % | 9,1 | 3,8 / 25 | 20 % | 0,0 |
+| Pat + Le puzzle | départ | 100 % | 0 % | 7,8 | 18,0 / 37 | 73 % | 0,0 |
+| Pat + Le puzzle | étoffé | 100 % | 0 % | 5,9 | 15,9 / 36 | 63 % | 0,0 |
+| Pat + Miroir | départ | 100 % | 0 % | 8,9 | 5,1 / 19 | 37 % | 9,3 |
+| Pat + Miroir | étoffé | 100 % | 0 % | 6,0 | 6,0 / 27 | 23 % | 7,2 |
+| Le nettoyeur + Le nettoyeur | départ | 100 % | 0 % | 4,6 | 26,4 / 52 | 70 % | 0,0 |
+| Le nettoyeur + Le nettoyeur | étoffé | 97 % | 3 % | 3,4 | 23,2 / 60 | 67 % | 0,0 |
+| Le nettoyeur + Petit Jean | départ | 100 % | 0 % | 13,1 | 12,2 / 37 | 37 % | 0,0 |
+| Le nettoyeur + Petit Jean | étoffé | 100 % | 0 % | 8,9 | 13,1 / 46 | 20 % | 0,0 |
+| Le nettoyeur + Le puzzle | départ | 80 % | 20 % | 5,5 | 40,0 / 60 | 40 % | 0,0 |
+| Le nettoyeur + Le puzzle | étoffé | 100 % | 0 % | 4,5 | 24,8 / 57 | 33 % | 0,0 |
+| Le nettoyeur + Miroir | départ | 100 % | 0 % | 8,1 | 10,1 / 40 | 50 % | 17,7 |
+| Le nettoyeur + Miroir | étoffé | 100 % | 0 % | 5,4 | 16,2 / 56 | 37 % | 11,0 |
+| Petit Jean + Petit Jean | départ | 100 % | 0 % | 19,0 | 15,8 / 57 | 57 % | 0,0 |
+| Petit Jean + Petit Jean | étoffé | 100 % | 0 % | 10,3 | 4,0 / 24 | 23 % | 0,0 |
+| Petit Jean + Le puzzle | départ | 100 % | 0 % | 14,4 | 12,7 / 43 | 57 % | 0,0 |
+| Petit Jean + Le puzzle | étoffé | 100 % | 0 % | 9,3 | 12,4 / 58 | 67 % | 0,0 |
+| Petit Jean + Miroir | départ | 100 % | 0 % | 14,7 | 3,8 / 27 | 20 % | 5,5 |
+| Petit Jean + Miroir | étoffé | 100 % | 0 % | 9,6 | 3,3 / 38 | 33 % | 9,2 |
+| Le puzzle + Le puzzle | départ | 100 % | 0 % | 8,1 | 19,9 / 29 | 100 % | 0,0 |
+| Le puzzle + Le puzzle | étoffé | 100 % | 0 % | 5,7 | 20,6 / 42 | 97 % | 0,0 |
+| Le puzzle + Miroir | départ | 100 % | 0 % | 9,1 | 15,1 / 36 | 73 % | 8,7 |
+| Le puzzle + Miroir | étoffé | 100 % | 0 % | 6,2 | 14,5 / 35 | 93 % | 9,3 |
+| Miroir + Miroir | départ | 100 % | 0 % | 10,4 | 4,5 / 17 | 37 % | 27,8 |
+| Miroir + Miroir | étoffé | 100 % | 0 % | 7,0 | 4,5 / 26 | 33 % | 17,9 |
+| Boss | départ | 97 % | 3 % | 14,7 | 38,5 / 60 | 100 % | 0,0 |
+| Boss | étoffé | 100 % | 0 % | 10,1 | 17,0 / 45 | 100 % | 0,0 |
 
 Aucun combat enlisé dans aucune flotte.

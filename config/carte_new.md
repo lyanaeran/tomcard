@@ -9,12 +9,12 @@
 | Id | Nom | Rareté | Catégorie | Cible | Coût | Munitions | Lancements | Persistante | Jouable | Refonte | Description affichée | Valeurs | Effets |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | CRT_7 | Laser | Base | Attaque | Ennemi Unique | 1 | Illimitées | 1 | Non | Oui | Oui | Inflige 6 degats a un ennemi unique | `{"degats": 6}` | `{"nature": "DEGATS", "valeur": "degats"}` |
-| CRT_10 | Bouclier | Base | Defense | Module Unique | 1 | Illimitées | 1 | Non | Oui | Oui | Bouclier de 3 sur un module unique | `{"bouclier": 3}` | `{"nature": "BOUCLIER", "valeur": "bouclier"}` |
-| CRT_11 | Protéger le vaisseau | Base | Defense | Module Principal | 1 | Illimitées | 1 | Non | Oui | Oui | Bouclier de 5 sur le module principal | `{"bouclier": 5}` | `{"nature": "BOUCLIER", "valeur": "bouclier"}` |
+| CRT_10 | Bouclier | Base | Defense | Module Unique | 1 | Illimitées | 1 | Non | Oui | Oui | Bouclier de 5 sur un module unique | `{"bouclier": 5}` | `{"nature": "BOUCLIER", "valeur": "bouclier"}` |
+| CRT_11 | Protéger le vaisseau | Base | Defense | Module Principal | 1 | Illimitées | 1 | Non | Oui | Oui | Bouclier de 7 sur le module principal | `{"bouclier": 7}` | `{"nature": "BOUCLIER", "valeur": "bouclier"}` |
 | CRT_12 | Réparation | Base | Reparation | Module Principal | 1 | 2 | 1 | Non | Oui | Oui | Repare le module principal pour 8 | `{"reparation": 8}` | `{"nature": "REPARATION", "valeur": "reparation"}` |
 | CRT_8 | Laser percant | Commune | Attaque | Ennemi Colonne | 2 | Illimitées | 1 | Non | Oui | Oui | Inflige 8 degats a la colonne ciblee | `{"degats": 8}` | `{"nature": "DEGATS", "valeur": "degats"}` |
 | CRT_45 | Tir incendiaire | Commune | Attaque | Ennemi Unique | 2 | 3 | 1 | Non | Non | Oui | Ajoute 4 points d’incendie sur la cible | `{"incendie": 4}` | `{"nature": "INCENDIE", "valeur": "incendie"}` |
-| CRT_46 | Blindage cible | Commune | Defense | Module Unique | 2 | 3 | 1 | Non | Oui | Oui | Bouclier de 6 sur un module unique | `{"bouclier": 6}` | `{"nature": "BOUCLIER", "valeur": "bouclier"}` |
+| CRT_46 | Blindage cible | Commune | Defense | Module Unique | 2 | 3 | 1 | Non | Oui | Oui | Bouclier de 8 sur un module unique | `{"bouclier": 8}` | `{"nature": "BOUCLIER", "valeur": "bouclier"}` |
 | CRT_47 | Laser lourd | Commune | Attaque | Ennemi Unique | 1 | Illimitées | 1 | Non | Oui | Oui | Inflige 12 degats a un ennemi unique | `{"degats": 12}` | `{"nature": "DEGATS", "valeur": "degats"}` |
 | CRT_48 | Bouclier stabilise | Rare | Buff | Module Principal | 3 | 1 | 1 | Non | Non | Oui | Les Boucliers de base sont lancés 1 fois de plus. | `{"repetitions": 1}` | `{"nature": "REPETITION", "valeur": "repetitions", "filtre": {"id": "CRT_10"}}` |
 | CRT_49 | Salve laser | Rare | Buff | Module Tous | 2 | 2 | 1 | Non | Non | Oui | Les Laser de base sont lances 1 fois de plus. | `{"repetitions": 1}` | `{"nature": "REPETITION", "valeur": "repetitions", "filtre": {"id": "CRT_7"}}` |

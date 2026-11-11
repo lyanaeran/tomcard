@@ -39,11 +39,11 @@
       "categorie": "Defense",
       "cible_design": "Module Unique",
       "cout": 1,
-      "x": 3,
+      "x": 5,
       "y": null,
       "munition": null,
       "description": "Bouclier de X sur un module unique",
-      "effet": { "type": "DEFENSE", "cible": "ALLIE_UNIQUE", "valeur": 3 }
+      "effet": { "type": "DEFENSE", "cible": "ALLIE_UNIQUE", "valeur": 5 }
     },
     {
       "id": "CRT_11",
@@ -54,11 +54,11 @@
       "categorie": "Defense",
       "cible_design": "Module Principal",
       "cout": 1,
-      "x": 5,
+      "x": 7,
       "y": null,
       "munition": null,
       "description": "Bouclier de X sur le module principal",
-      "effet": { "type": "DEFENSE", "cible": "MODULE_PRINCIPAL", "valeur": 5 }
+      "effet": { "type": "DEFENSE", "cible": "MODULE_PRINCIPAL", "valeur": 7 }
     },
     {
       "id": "CRT_12",
@@ -99,11 +99,11 @@
       "categorie": "Defense",
       "cible_design": "Module Unique",
       "cout": 2,
-      "x": 6,
+      "x": 8,
       "y": null,
       "munition": 3,
       "description": "Bouclier de X sur un module unique",
-      "effet": { "type": "DEFENSE", "cible": "ALLIE_UNIQUE", "valeur": 6 }
+      "effet": { "type": "DEFENSE", "cible": "ALLIE_UNIQUE", "valeur": 8 }
     },
     {
       "id": "CRT_47",

@@ -135,3 +135,22 @@ La valeur du Bouclier se compare aux deux autres cartes de bouclier du principal
 - **6** : le plus efficace, mais *Blindage ciblé* et *Protéger le vaisseau* perdent tout intérêt.
 - Si l'équilibre entre les trois cartes compte plus que la force du Bouclier, **rester à 3 ou passer
   à 4** garde la hiérarchie actuelle (Bouclier < Protéger le vaisseau < Blindage ciblé).
+
+## Solution choisie (décision utilisateur, 2026-11-11)
+
+Les trois cartes de bouclier montent ensemble, pour que Bouclier devienne un vrai choix sans
+écraser les deux autres :
+
+| Carte | Coût | Cible | Avant | **Après** |
+|---|---|---|---|---|
+| Bouclier | 1 | un module au choix | 3 | **5** |
+| Protéger le vaisseau | 1 | le principal seulement | 5 | **7** |
+| Blindage ciblé | 2 | un module au choix, 3 munitions | 6 | **8** |
+
+- La hiérarchie est gardée : Bouclier (5, souple) < Protéger le vaisseau (7, principal seulement)
+  < Blindage ciblé (8, mais coût 2 et 3 munitions).
+- Appliqué dans `config/carte_new.json` (et reporté dans `config/cartes.json`, encore lu par le jeu
+  actuel). L'accumulation (§ « Accumulation ») reste à surveiller ; aucun frein n'est ajouté pour
+  l'instant.
+- Effet sur l'ensemble des combats : voir la campagne refaite avec ces valeurs,
+  `analyse_2026-11-11_combat_new.md` (partie « Bouclier »).

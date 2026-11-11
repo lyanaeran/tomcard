@@ -24,6 +24,8 @@ AVANT_DROITE = Position(Colonne.AVANT, Rangee.DROITE)
 ARRIERE_MID = Position(Colonne.ARRIERE, Rangee.MID)
 ARRIERE_DROITE = Position(Colonne.ARRIERE, Rangee.DROITE)
 CARTES = charger_cartes_new()
+# Valeur de la carte Bouclier (CRT_10), lue dans config/carte_new.json pour suivre les reglages
+BOUCLIER_CARTE = CARTES["CRT_10"].valeurs["bouclier"]
 
 
 def _ennemi(id_ennemi="ENM_PAT_LE_PIRATE", coefficient=1):
@@ -213,7 +215,7 @@ def test_bouclier_et_leurre_sur_un_module_incendie_sur_un_ennemi():
     combat.jouer_carte(incendiaire, AVANT_MID)
 
     lanceur, pat = combat.vaisseau.module_d_exemplaire("M2"), combat.flotte.ennemi_en(AVANT_MID)
-    assert lanceur.statuts.intensites == {Statut.BOUCLIER: 3, Statut.LEURRE: 1}
+    assert lanceur.statuts.intensites == {Statut.BOUCLIER: BOUCLIER_CARTE, Statut.LEURRE: 1}
     assert pat.statuts[Statut.INCENDIE] == 4
 
 
@@ -484,7 +486,7 @@ def test_carte_lancee_deux_fois_un_seul_cout_et_effets_a_chaque_lancement():
 
     assert combat.electricite == 1  # 3 - 1 - 1
     assert combat.flotte.ennemi_en(AVANT_MID).pv == 26  # 50 - 12 - 12
-    assert combat.vaisseau.principal.statuts[Statut.BOUCLIER] == 6
+    assert combat.vaisseau.principal.statuts[Statut.BOUCLIER] == 2 * BOUCLIER_CARTE
 
 
 def test_pioche_et_gain_d_electricite_a_chaque_lancement():
