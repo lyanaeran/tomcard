@@ -142,11 +142,13 @@ Un ennemi sur 2 cases n'est touché **qu'une fois** par effet, même si les deux
 
 1. L'électricité est payée **une fois**.
 2. La carte est **lancée `lancements_actuels` fois** ; à chaque lancement, ses effets sont
-   appliqués **dans l'ordre**, avec ses valeurs actuelles (`valeurs_actuelles`).
+   appliqués **dans l'ordre**, avec ses valeurs actuelles (`valeurs_actuelles`). La cible est
+   choisie une fois pour tous les lancements ; détruite, les lancements suivants sont perdus sur
+   elle **(proposition, §10)**.
 3. Chaque effet touche, selon sa **portée** (`PorteeEffet`) : la cible de la carte (`CIBLE`), les
    autres ennemis vivants (`AUTRES_ENNEMIS`), la colonne avant ou arrière ennemie.
 4. **Munitions** : une munition est consommée **par carte jouée**, pas par lancement
-   **(proposition)**. À 0, la carte part dans les **épuisées** (combat.md §3.6) ; sinon dans la
+   (décision utilisateur). À 0, la carte part dans les **épuisées** (combat.md §3.6) ; sinon dans la
    défausse.
 5. Après la carte : un module détruit (par un renvoi) l'est selon §6 ; ennemis tous détruits →
    **victoire** immédiate.
@@ -173,10 +175,10 @@ module il expose.
 
 - Le renvoi diminue d'autant à chaque coup renvoyé (décision utilisateur) : avec un renvoi de 5, un
   coup de 5 est entièrement renvoyé et le renvoi tombe à 0.
-- **(proposition)** Les dégâts renvoyés sont une **attaque** sur ce module : son leurre l'annule,
-  son bouclier l'absorbe.
-- **(proposition)** Si ce module est déjà détruit (carte Persistante), les dégâts renvoyés vont au
-  **principal**.
+- Les dégâts renvoyés sont une **attaque** sur ce module : son leurre l'annule, son bouclier
+  l'absorbe (décision utilisateur).
+- Si ce module est déjà détruit (carte Persistante), les dégâts renvoyés vont au **principal**
+  (décision utilisateur).
 
 ---
 
@@ -185,8 +187,8 @@ module il expose.
 ### 5.1 Ordre de jeu des ennemis (décision utilisateur)
 
 Dans l'**ordre de la flotte, de l'avant vers l'arrière** : colonne avant d'abord, puis colonne
-arrière ; dans une colonne, rangées gauche, milieu, droite **(proposition pour l'ordre des
-rangées)**. Un ennemi sur 2 cases joue **une seule fois**, à sa case avant. Un ennemi **détruit ne
+arrière ; dans une colonne, rangées **droite, milieu, gauche** (décision utilisateur : la rangée
+gauche est en bas de l'écran, on joue donc de haut en bas). Un ennemi sur 2 cases joue **une seule fois**, à sa case avant. Un ennemi **détruit ne
 joue plus** et son cycle s'arrête.
 
 ### 5.2 Effets d'une étape
@@ -198,9 +200,10 @@ joue plus** et son cycle s'arrête.
 | Bouclier, Renvoi | `SOI_MEME` | L'ennemi lui-même |
 | Bouclier, Renvoi | `ALLIE_AVANT_SINON_ARRIERE` | Un ennemi vivant tiré au hasard dans la colonne avant (lui-même compris), sinon dans la colonne arrière ; tirage au moment de jouer, avec l'aléatoire injecté |
 
-- **Répétitions** (Le nettoyeur ×2) : l'effet est joué autant de fois, **cible recalculée à chaque
-  fois** **(proposition)** : si la première attaque détruit le module visé, la seconde frappe le
-  module suivant le plus proche.
+- **Répétitions** (Le nettoyeur ×2) : la cible est **choisie une seule fois**, au début de
+  l'effet, puis l'attaque est répétée sur elle (décision utilisateur). Si la cible est détruite par
+  la première attaque, les suivantes sont perdues : elles ne passent pas au module suivant. Avec
+  `TOUS_MODULES`, chaque répétition frappe les modules encore vivants parmi ceux visés au départ.
 - Une attaque sur un module passe par ses statuts (`subir_degats` : leurre, bouclier, PV).
 
 ### 5.3 Intention
@@ -289,10 +292,12 @@ une règle (CLAUDE.md), et le simulateur en a besoin aussi.
 
 ## 10. Points à trancher
 
-1. **Munitions** : une munition par carte jouée, et non par lancement (§4.3) ?
-2. **Dégâts renvoyés** : traités comme une attaque (leurre et bouclier du module), et redirigés vers
-   le principal si le module de la carte est détruit (§4.5) ?
-3. **Ordre des rangées** pour l'ordre de jeu des ennemis : gauche, milieu, droite (§5.1) ?
-4. **Répétitions d'une attaque ennemie** : cible recalculée à chaque coup (§5.2) ?
-5. **Rattachement des cartes hors module** : au principal pour l'instant, à trancher plus tard
+1. **Rattachement des cartes hors module** : au principal pour l'instant, à trancher plus tard
    (refonte-modules.md §3.3).
+2. **Lancements multiples d'une carte sur une cible détruite** : par cohérence avec les
+   répétitions ennemies (§5.2), la cible d'une carte est choisie une fois ; si elle est détruite
+   par le premier lancement, les suivants sont perdus **(proposition)**.
+
+Tranchés le 2026-11-11 : une munition par carte jouée (§4.3), dégâts renvoyés traités comme une
+attaque et redirigés vers le principal si besoin (§4.5), ennemis joués de la rangée droite à la
+gauche (§5.1), cible d'une attaque répétée choisie une seule fois (§5.2).
