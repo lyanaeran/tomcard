@@ -17,7 +17,9 @@ Differences avec Ennemi :
   joueur.
 
 Comme ModuleNew, la meme classe sert de modele (lu dans le JSON) et d'ennemi en combat : le combat
-travaille sur une copie (pour_combat), le modele n'est jamais modifie.
+travaille sur une copie (pour_combat), le modele n'est jamais modifie. Le numero de tour n'est pas
+dans l'ennemi : c'est le combat qui le tient (il passe au tour suivant au debut du tour du joueur,
+a partir du tour 2) et le donne pour lire une valeur (valeur, valeurs_au_tour).
 """
 
 import dataclasses
@@ -170,8 +172,6 @@ class EnnemiNew:
     # PV max et PV du combat (pv_base x coefficient, arrondi a l'inferieur) ; None hors combat
     pv_max: int | None = None
     pv: int | None = None
-    # Tour du combat (1 au debut), qui fait monter les valeurs (passer_au_tour_suivant)
-    tour: int = 1
     # Index de la prochaine etape du cycle
     etape: int = 0
     bouclier: int = 0
@@ -197,25 +197,25 @@ class EnnemiNew:
 
     def pour_combat(self, coefficient: float | Fraction = 1) -> "EnnemiNew":
         """Copie de cet ennemi pour un combat, avec son coefficient de difficulte (au moins 1,
-        decision utilisateur) : PV pleins, tour 1, debut du cycle, aucun etat de combat."""
+        decision utilisateur) : PV pleins, debut du cycle, aucun etat de combat."""
         # Fraction(str(...)) : 1.15 x 20 vaut exactement 23, sans erreur d'arrondi des flottants
         coefficient = Fraction(str(coefficient))
         if coefficient < 1:
             raise ValueError(f"Ennemi {self.id} : le coefficient doit valoir au moins 1 ({coefficient})")
         pv_max = math.floor(self.pv_base * coefficient)
         return dataclasses.replace(
-            self, coefficient=coefficient, pv_max=pv_max, pv=pv_max, tour=1, etape=0, bouclier=0, renvoi=0, incendie=0,
+            self, coefficient=coefficient, pv_max=pv_max, pv=pv_max, etape=0, bouclier=0, renvoi=0, incendie=0,
         )
 
     # --- Valeurs et cycle ---
 
-    def valeur(self, nom: str) -> int:
-        """Valeur nommee au tour courant, augmentation et coefficient compris."""
-        return self.valeurs[nom].au_tour(self.tour, self.coefficient)
+    def valeur(self, nom: str, tour: int) -> int:
+        """Valeur nommee au tour donne du combat (tenu par le combat, pas par l'ennemi),
+        augmentation et coefficient compris."""
+        return self.valeurs[nom].au_tour(tour, self.coefficient)
 
-    @property
-    def valeurs_actuelles(self) -> dict[str, int]:
-        return {nom: self.valeur(nom) for nom in self.valeurs}
+    def valeurs_au_tour(self, tour: int) -> dict[str, int]:
+        return {nom: self.valeur(nom, tour) for nom in self.valeurs}
 
     @property
     def etape_courante(self) -> tuple[EffetEnnemi, ...]:
@@ -225,11 +225,6 @@ class EnnemiNew:
     def avancer_cycle(self) -> None:
         """Apres avoir joue l'etape courante : passe a la suivante, ou revient a la premiere."""
         self.etape = (self.etape + 1) % len(self.actions)
-
-    def passer_au_tour_suivant(self) -> None:
-        """Au debut du tour du joueur, a partir du tour 2 : les valeurs montent d'un tour
-        (l'intention affichee en tient donc deja compte)."""
-        self.tour += 1
 
     # --- Combat ---
 

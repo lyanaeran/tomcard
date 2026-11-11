@@ -63,7 +63,7 @@ def test_le_coefficient_s_applique_aux_pv_et_aux_valeurs_arrondi_a_l_inferieur()
     boss = _en_combat("ENM_BOSS_PIRATES", 1.5)
 
     assert (boss.pv_max, boss.pv) == (225, 225)
-    assert boss.valeurs_actuelles == {"degats": 7, "bouclier": 15}
+    assert boss.valeurs_au_tour(1) == {"degats": 7, "bouclier": 15}
 
 
 def test_le_coefficient_ne_souffre_pas_des_erreurs_d_arrondi_des_flottants():
@@ -78,22 +78,17 @@ def test_un_coefficient_inferieur_a_1_est_refuse():
 
 def test_les_valeurs_montent_au_fil_des_tours():
     pat = _en_combat("ENM_PAT_LE_PIRATE")
-    degats = []
-    for _ in range(6):
-        degats.append(pat.valeur("degats"))
-        pat.passer_au_tour_suivant()
 
-    assert degats == [5, 5, 5, 6, 6, 6]
+    assert [pat.valeur("degats", tour) for tour in range(1, 7)] == [5, 5, 5, 6, 6, 6]
 
 
 def test_le_modele_n_est_jamais_modifie_par_le_combat():
     modele = charger_ennemis_new()["ENM_PETIT_JEAN"]
     combat = modele.pour_combat(2)
     combat.subir_degats(30)
-    combat.passer_au_tour_suivant()
     combat.avancer_cycle()
 
-    assert (modele.pv, modele.tour, modele.etape, modele.coefficient) == (None, 1, 0, 1)
+    assert (modele.pv, modele.etape, modele.coefficient) == (None, 0, 1)
 
 
 # --- Cycle d'actions ---

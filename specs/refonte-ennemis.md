@@ -156,6 +156,9 @@ et ennemi en combat, copie par combat avec son coefficient : `pour_combat`), le 
   `TOUS_MODULES` (attaques), `SOI_MEME`, `ALLIE_AVANT_SINON_ARRIERE` (bouclier, renvoi). Une
   attaque ne peut viser qu'un module, un bouclier ou un renvoi qu'un ennemi (vérifié au
   chargement).
+- **Le numéro de tour est tenu par le combat**, pas par l'ennemi (décision utilisateur) : le
+  combat le donne pour lire une valeur (`valeur(nom, tour)`). L'ennemi garde en revanche sa
+  position dans son propre cycle.
 - Une valeur sans `augmentation` est fixe (`tous_les` vaut 1 par défaut).
 - Le coefficient est un nombre décimal ≥ 1, calculé exactement (1,15 × 20 = 23, sans erreur
   d'arrondi).
