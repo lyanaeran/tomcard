@@ -1,6 +1,8 @@
 # Refonte du combat (`combat_new`) — spécification
 
-*Document de travail. Rien n'est implémenté. Spécifie `src/gameplay/combat_new.py`, le combat de la
+*Document de travail. **Implémenté (2026-11-11), pas encore branché** : `combat_new.py`,
+`vaisseau_new.py`, `flotte_new.py`, `deck_new.py` dans `src/gameplay/`, avec leurs tests. Spécifie
+`src/gameplay/combat_new.py`, le combat de la
 refonte, qui fait jouer ensemble `CarteNew`, `ModuleNew`, `EnnemiNew` et les statuts. **Gameplay
 seulement** : l'affichage (PC et web), la sauvegarde de la partie et l'enchaînement des écrans
 viendront au branchement (§9). Une fois stabilisé, le contenu ira dans [combat.md](combat.md) et
@@ -10,7 +12,7 @@ Documents liés : [refonte-statuts.md](refonte-statuts.md), [refonte-ennemis.md]
 [refonte-modules.md](refonte-modules.md), [refonte-buffs-debuffs.md](refonte-buffs-debuffs.md),
 [simulation.md](simulation.md).
 
-Les points marqués **(proposition)** ne sont pas encore validés par l'utilisateur.
+Les choix faits en codant, là où la spec ne disait rien, sont listés au §11 (à relire).
 
 ---
 
@@ -144,7 +146,7 @@ Un ennemi sur 2 cases n'est touché **qu'une fois** par effet, même si les deux
 2. La carte est **lancée `lancements_actuels` fois** ; à chaque lancement, ses effets sont
    appliqués **dans l'ordre**, avec ses valeurs actuelles (`valeurs_actuelles`). La cible est
    choisie une fois pour tous les lancements ; détruite, les lancements suivants sont perdus sur
-   elle **(proposition, §10)**.
+   elle (décision utilisateur).
 3. Chaque effet touche, selon sa **portée** (`PorteeEffet`) : la cible de la carte (`CIBLE`), les
    autres ennemis vivants (`AUTRES_ENNEMIS`), la colonne avant ou arrière ennemie.
 4. **Munitions** : une munition est consommée **par carte jouée**, pas par lancement
@@ -276,12 +278,13 @@ une règle (CLAUDE.md), et le simulateur en a besoin aussi.
 
 ## 9. Plan de réalisation
 
-1. **`src/gameplay/combat_new.py`** (et, si besoin, des petits fichiers pour la grille de modules
-   et la flotte de la refonte), ajoutés à `FICHIERS_A_MONTER` de `web/app.js`.
-2. **`tests/test_combat_new.py`** : tour complet, chaque nature d'effet, portées, lancements,
-   munitions, renvoi vers le module de la carte, ordre des ennemis, répétitions, intentions,
-   destruction et pile Hors service, Persistante, victoire, défaite.
-3. **Simulateur** (`outils/simulation/`) : jouer `combat_new` avec le bot, puis simuler pour caler
+1. ~~**`src/gameplay/combat_new.py`**~~ (fait, 2026-11-11) : `CombatNew` (`combat_new.py`), et trois
+   petits fichiers : `VaisseauNew` (`vaisseau_new.py`, modules sur la grille du joueur),
+   `FlotteNew` (`flotte_new.py`, ennemis sur la grille ennemie, ordre de jeu), `DeckNew`
+   (`deck_new.py`, cinq piles et deck de départ). Montés côté web (`FICHIERS_A_MONTER`).
+2. ~~**Tests**~~ (fait) : `tests/test_combat_new.py`, `test_vaisseau_new.py`, `test_flotte_new.py`,
+   `test_deck_new.py`.
+3. **Simulateur** (à faire après relecture, décision utilisateur) (`outils/simulation/`) : jouer `combat_new` avec le bot, puis simuler pour caler
    les valeurs provisoires (PV 60/20, boucliers de Petit Jean et du Boss, renvoi de Miroir,
    augmentations des ennemis).
 4. **Branchement** (hors de ce document) : sauvegarde de la partie (deck avec exemplaires, modules),
@@ -294,10 +297,34 @@ une règle (CLAUDE.md), et le simulateur en a besoin aussi.
 
 1. **Rattachement des cartes hors module** : au principal pour l'instant, à trancher plus tard
    (refonte-modules.md §3.3).
-2. **Lancements multiples d'une carte sur une cible détruite** : par cohérence avec les
-   répétitions ennemies (§5.2), la cible d'une carte est choisie une fois ; si elle est détruite
-   par le premier lancement, les suivants sont perdus **(proposition)**.
 
 Tranchés le 2026-11-11 : une munition par carte jouée (§4.3), dégâts renvoyés traités comme une
 attaque et redirigés vers le principal si besoin (§4.5), ennemis joués de la rangée droite à la
-gauche (§5.1), cible d'une attaque répétée choisie une seule fois (§5.2).
+gauche (§5.1), cible d'une attaque répétée choisie une seule fois (§5.2), cible d'une carte lancée
+plusieurs fois choisie une seule fois (§4.3).
+
+---
+
+## 11. Précisions d'implémentation (à relire)
+
+Choix faits en codant, là où la spec ne disait rien :
+
+1. **La cible d'une carte est une case** (`jouer_carte(carte, case)`, `cibles_possibles` renvoie
+   des cases) : c'est la case qui donne la colonne pour Ennemi Colonne, y compris pour un ennemi
+   sur deux cases.
+2. **Le principal compte dans les deux colonnes** (il occupe toute la rangée du milieu) : il est
+   touché par une carte Module Avant.
+3. **Un ennemi sur deux cases est touché une fois par effet**, mais une carte à deux effets
+   (Torpille : colonne avant puis colonne arrière) le touche deux fois, une par effet.
+4. **Électricité, pioche et répétition** s'appliquent une fois par lancement de la carte.
+5. **Une carte dont le module meurt pendant qu'elle est jouée** (dégâts renvoyés) part en Hors
+   service une fois jouée, sauf si elle est épuisée ou Persistante.
+6. **Victoire ou défaite au milieu d'une carte** : les effets et lancements restants ne sont pas
+   joués.
+7. **Renvoi porté par un module** (aucune carte ne le pose pour l'instant) : les dégâts renvoyés
+   iraient à l'ennemi attaquant ; des dégâts renvoyés ne sont jamais renvoyés à leur tour.
+8. **Journal** : des événements typés (`NatureEvenement` : carte jouée, attaque avec dégâts et PV
+   perdus, renvoi, statut posé, réparation, incendie, électricité, pioche, répétition,
+   destruction, cartes hors service, victoire, défaite), sans texte.
+9. **La composition des flottes** (quels ennemis, placement préféré) reste hors de `combat_new` :
+   `FlotteNew` reçoit des ennemis déjà placés.
