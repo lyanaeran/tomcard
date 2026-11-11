@@ -1,5 +1,11 @@
 # Refonte des buffs/debuffs/bouclier — brouillon de conception
 
+> **En partie dépassé (2026-11-11)** : les décisions prises depuis (bouclier et incendie −1 par
+> tour, statuts partagés, renvoi, retrait du « bouclier par tour ») sont dans
+> [refonte-statuts.md](refonte-statuts.md) et codées dans `src/gameplay/statut_new.py`. Ce fichier
+> garde la réflexion d'origine et les pistes non tranchées (Vulnérabilité, Réduction de dégâts,
+> statuts à durée). Vue d'ensemble : [refonte.md](refonte.md).
+
 *Document de travail, pas encore une section numérotée du document de conception (cf.
 [specs.md](specs.md)) : rien ci-dessous n'est décidé ni implémenté. Une fois le modèle tranché, le
 contenu stabilisé ira dans [combat.md](combat.md) (§3.5, §13 point 2) et
