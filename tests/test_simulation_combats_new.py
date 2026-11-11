@@ -28,3 +28,26 @@ def test_le_controle_detecte_un_invariant_casse():
     controle.apres_action(combat)
 
     assert "carte presente dans deux piles" in controle.violations
+
+
+def test_valeur_d_un_lancement_d_une_carte_de_colonne_ne_compte_que_sa_colonne():
+    from outils.simulation.bot_new import valeur_d_un_lancement
+    from src.gameplay.carte_new import charger_cartes_new
+
+    combat = construire_combat("depart", ("ENM_PAT_LE_PIRATE", "ENM_LE_NETTOYEUR"), 1)  # un avant, un arriere
+    cartes = charger_cartes_new()
+
+    assert valeur_d_un_lancement(cartes["CRT_8"], combat.flotte) == valeur_d_un_lancement(cartes["CRT_47"], combat.flotte) * 8 / 12
+    assert valeur_d_un_lancement(cartes["CRT_9"], combat.flotte) == 2 * valeur_d_un_lancement(cartes["CRT_7"], combat.flotte)
+
+
+def test_la_recherche_du_bot_ne_connait_pas_les_vrais_melanges():
+    import random
+
+    from outils.simulation.bot_new import BotRecherche
+
+    combat = construire_combat("depart", ("ENM_PAT_LE_PIRATE",), 1)
+    copie = BotRecherche(random.Random(7))._copie_reensemencee(combat)
+
+    assert copie.deck.aleatoire is copie.aleatoire
+    assert copie.deck.aleatoire.getstate() != combat.deck.aleatoire.getstate()

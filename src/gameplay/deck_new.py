@@ -32,13 +32,14 @@ class DeckNew:
     pendant qu'elle est jouee (retiree de la main, puis rangee par `ranger_carte_jouee`)."""
 
     def __init__(self, cartes: Iterable[CarteNew], aleatoire: random.Random):
-        self._aleatoire = aleatoire
+        # Generateur des melanges ; remplace par CombatNew.remplacer_aleatoire (copies du bot)
+        self.aleatoire = aleatoire
         self.pioche: list[CarteNew] = list(cartes)
         self.main: list[CarteNew] = []
         self.defausse: list[CarteNew] = []
         self.epuisees: list[CarteNew] = []
         self.hors_service: list[CarteNew] = []
-        self._aleatoire.shuffle(self.pioche)
+        self.aleatoire.shuffle(self.pioche)
 
     def toutes_les_cartes(self) -> list[CarteNew]:
         return self.pioche + self.main + self.defausse + self.epuisees + self.hors_service
@@ -53,7 +54,7 @@ class DeckNew:
                 break
             if not self.pioche:
                 self.pioche, self.defausse = self.defausse, []
-                self._aleatoire.shuffle(self.pioche)
+                self.aleatoire.shuffle(self.pioche)
             if not self.pioche:
                 break
             self.main.append(self.pioche.pop())

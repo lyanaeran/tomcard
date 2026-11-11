@@ -11,6 +11,9 @@ from collections import Counter
 
 from src.gameplay.carte_new import CarteNew, CibleCarteNew, NatureEffet, PorteeEffet
 from src.gameplay.combat_new import CombatNew, EtatCombatNew
+from src.gameplay.deck_new import CARTES_PIOCHEES_PAR_TOUR
+from src.gameplay.flotte_new import FlotteNew
+from src.gameplay.position import Colonne
 from src.gameplay.statut_new import Statut
 
 # Memes garde-fous que bot.py
@@ -119,19 +122,36 @@ def evaluer(combat: CombatNew) -> float:
     return score
 
 
-def valeur_d_un_lancement(carte: CarteNew, ennemis_vivants: int) -> float:
-    """Valeur estimee d'un lancement de la carte : somme de ses effets ; un effet sur tous les
-    ennemis (ou les autres) compte pour chaque ennemi vivant."""
+def _nombre_de_cibles(carte: CarteNew, effet, flotte: FlotteNew) -> int:
+    """Ennemis touches par un effet : tous, les autres, ceux d'une colonne (la plus peuplee pour
+    une carte Ennemi Colonne, le joueur choisissant la meilleure), sinon un seul."""
+    vivants = len(flotte.ennemis_vivants())
+    par_colonne = {colonne: len(flotte.ennemis_vivants_de_colonne(colonne)) for colonne in Colonne}
+    if effet.portee == PorteeEffet.AUTRES_ENNEMIS:
+        return vivants - 1
+    if effet.portee == PorteeEffet.COLONNE_AVANT_ENNEMIE:
+        return par_colonne[Colonne.AVANT]
+    if effet.portee == PorteeEffet.COLONNE_ARRIERE_ENNEMIE:
+        return par_colonne[Colonne.ARRIERE]
+    if carte.cible in (CibleCarteNew.ENNEMI_TOUS, CibleCarteNew.MODULE_TOUS):
+        return vivants if carte.cible == CibleCarteNew.ENNEMI_TOUS else 1
+    if carte.cible == CibleCarteNew.ENNEMI_COLONNE:
+        return max(par_colonne.values())
+    if carte.cible in (CibleCarteNew.ENNEMI_AVANT, CibleCarteNew.ENNEMI_ARRIERE):
+        return par_colonne[Colonne.AVANT if carte.cible == CibleCarteNew.ENNEMI_AVANT else Colonne.ARRIERE]
+    return 1
+
+
+def valeur_d_un_lancement(carte: CarteNew, flotte: FlotteNew) -> float:
+    """Valeur estimee d'un lancement de la carte : somme de ses effets, chacun multiplie par le
+    nombre d'ennemis qu'il touche (_nombre_de_cibles)."""
     valeur = 0.0
     for effet in carte.effets:
         if effet.nature == NatureEffet.ANNULATION_PROCHAINE_ATTAQUE:
             valeur += VALEUR_LEURRE
             continue
         par_point = VALEUR_PAR_NATURE.get(effet.nature, 0.0)
-        cibles = 1
-        if carte.cible in (CibleCarteNew.ENNEMI_TOUS, CibleCarteNew.ENNEMI_COLONNE) or effet.portee != PorteeEffet.CIBLE:
-            cibles = max(1, ennemis_vivants - (effet.portee == PorteeEffet.AUTRES_ENNEMIS))
-        valeur += par_point * (carte.valeur_de(effet) or 0) * cibles
+        valeur += par_point * (carte.valeur_de(effet) or 0) * max(0, _nombre_de_cibles(carte, effet, flotte))
     return valeur
 
 
@@ -143,11 +163,10 @@ def valeur_des_lancements_en_plus(combat: CombatNew) -> float:
     actives = deck.pioche + deck.main + deck.defausse
     if not actives:
         return 0.0
-    ennemis = combat.flotte.ennemis_vivants()
     tours_restants = max(1, DUREE_COMBAT_ESTIMEE - combat.tour)
-    jeux_par_carte = tours_restants * min(1.0, 5 / len(actives)) * TAUX_DE_JEU_ESTIME
+    jeux_par_carte = tours_restants * min(1.0, CARTES_PIOCHEES_PAR_TOUR / len(actives)) * TAUX_DE_JEU_ESTIME
     return sum(
-        (carte.lancements_actuels - carte.lancements_base) * valeur_d_un_lancement(carte, len(ennemis)) * jeux_par_carte
+        (carte.lancements_actuels - carte.lancements_base) * valeur_d_un_lancement(carte, combat.flotte) * jeux_par_carte
         for carte in actives
         if carte.lancements_actuels > carte.lancements_base
     )
@@ -159,19 +178,25 @@ class BotRecherche:
 
     def __init__(self, aleatoire: random.Random):
         # Donne un nouveau generateur a chaque copie evaluee (3.3) : le bot ne doit pas connaitre a
-        # l'avance le resultat des tirages du vrai combat
+        # l'avance le resultat des tirages du vrai combat (cibles au hasard, melanges du deck)
         self.aleatoire = aleatoire
+
+    def _copie_reensemencee(self, etat: CombatNew) -> CombatNew:
+        copie = copie_sans_journal(etat)
+        copie.remplacer_aleatoire(random.Random(self.aleatoire.random()))
+        return copie
 
     def _note_apres_reponse_ennemie(self, etat: CombatNew) -> float:
         if etat.etat != EtatCombatNew.EN_COURS:
             return evaluer(etat)
-        copie = copie_sans_journal(etat)
-        copie.aleatoire = random.Random(self.aleatoire.random())
+        copie = self._copie_reensemencee(etat)
         copie.finir_tour()
         return evaluer(copie)
 
     def choisir_sequence(self, combat: CombatNew) -> list[tuple[int, object]]:
-        racine = copie_sans_journal(combat)
+        # Racine reensemencee : les copies de la recherche en heritent (une carte de pioche jouee
+        # pendant la recherche ne remelange pas comme dans le vrai combat)
+        racine = self._copie_reensemencee(combat)
         meilleure = ([], self._note_apres_reponse_ennemie(racine))
         faisceau = [(racine, [])]
         for _profondeur in range(PROFONDEUR_MAX):
@@ -191,10 +216,21 @@ class BotRecherche:
         return meilleure[0]
 
     def jouer_tour(self, combat: CombatNew, cartes_jouees: Counter, controle=None) -> None:
-        for action in self.choisir_sequence(combat):
-            cartes_jouees[jouer(combat, action)] += 1
-            if controle:
-                controle.apres_action(combat)
+        """Joue la meilleure sequence. Apres une carte qui pioche, la main reelle differe de celle
+        de la recherche (tirages reensemences) : on recalcule la suite depuis l'etat reel."""
+        while combat.etat == EtatCombatNew.EN_COURS:
+            sequence = self.choisir_sequence(combat)
+            if not sequence:
+                return
+            for action in sequence:
+                carte = combat.deck.main[action[0]]
+                cartes_jouees[jouer(combat, action)] += 1
+                if controle:
+                    controle.apres_action(combat)
+                if any(effet.nature == NatureEffet.PIOCHE for effet in carte.effets):
+                    break
+            else:
+                return
 
 
 class BotAleatoire:

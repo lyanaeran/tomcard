@@ -130,6 +130,8 @@ class Controle:
         self.tour = combat.tour
         self._intentions: dict[int, list[int]] = {}
         self._taille_journal = 0
+        # Entrees du journal deja controlees : seules les nouvelles sont verifiees a chaque action
+        self._journal_controle = 0
 
     def _verifier(self, condition: bool, message: str) -> None:
         if not condition and message not in self.violations:
@@ -174,11 +176,12 @@ class Controle:
         verifier(
             (combat.etat == EtatCombatNew.DEFAITE) == combat.vaisseau.principal.est_detruit(), "defaite incoherente",
         )
-        for evenement in combat.journal:
+        for evenement in combat.journal[self._journal_controle:]:
             if evenement.nature in DEGATS:
                 proteges = evenement.annules_leurre + evenement.renvoyes + evenement.absorbes_bouclier
                 verifier(proteges + evenement.pv_perdus <= evenement.valeur, "journal : detail des degats > degats")
                 verifier(evenement.pv_perdus >= 0 and evenement.pv_restants >= 0, "journal : PV negatifs")
+        self._journal_controle = len(combat.journal)
         verifier(
             combat.journal[-1].nature not in (NatureEvenement.VICTOIRE, NatureEvenement.DEFAITE)
             or combat.etat != EtatCombatNew.EN_COURS,
@@ -255,8 +258,11 @@ def simuler_enchainement(graine: int) -> dict:
             combat = construire_combat("depart" if niveau <= 5 else "etoffe", flotte, graine * 100 + niveau, pv)
             controle = Controle(combat)
             stats = jouer_combat(combat, BotRecherche(random.Random(graine * 100 + niveau)), controle)
-            if controle.violations:
-                resultat["violations"] = controle.violations
+            for violation in controle.violations:
+                # Toutes les violations de tous les niveaux, chacune une fois, avec son niveau
+                message = f"niveau {niveau} : {violation}"
+                if message not in resultat.setdefault("violations", []):
+                    resultat["violations"].append(message)
             pv = combat.vaisseau.principal.pv_combat
             pv_par_niveau[niveau] = pv
             if not stats["victoire"]:

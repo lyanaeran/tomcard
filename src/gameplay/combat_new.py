@@ -29,14 +29,6 @@ NATURES_NON_GEREES = {NatureEffet.VULNERABILITE, NatureEffet.REDUCTION_DEGATS, N
 # Natures qui agissent sur le joueur lui-meme (electricite, pioche, cartes), pas sur une entite
 NATURES_GLOBALES = {NatureEffet.GAIN_ELECTRICITE, NatureEffet.PIOCHE, NatureEffet.REPETITION}
 
-# Camp touche par chaque portee autre que CIBLE (qui touche le camp de la cible de la carte) ; une
-# nouvelle portee doit etre ajoutee ici (KeyError sinon, plutot qu'un camp devine)
-CAMP_PAR_PORTEE = {
-    PorteeEffet.AUTRES_ENNEMIS: Camp.ENNEMI,
-    PorteeEffet.COLONNE_AVANT_ENNEMIE: Camp.ENNEMI,
-    PorteeEffet.COLONNE_ARRIERE_ENNEMIE: Camp.ENNEMI,
-}
-
 # Camp que chaque nature d'effet peut toucher : une carte qui l'applique a l'autre camp est
 # injouable (verifie avant toute modification du combat)
 CAMP_PAR_NATURE = {
@@ -144,6 +136,12 @@ class CombatNew:
         self._detruits: list[Entite] = []
         self._debut_tour_joueur()
 
+    def remplacer_aleatoire(self, aleatoire: random.Random) -> None:
+        """Remplace le generateur de tout le combat (melanges du deck compris) : un bot qui essaie
+        des coups sur une copie ne doit pas connaitre a l'avance les vrais tirages."""
+        self.aleatoire = aleatoire
+        self.deck.aleatoire = aleatoire
+
     # --- Consultations ---
 
     @property
@@ -194,7 +192,7 @@ class CombatNew:
         camp = CAMP_PAR_NATURE.get(effet.nature)
         if camp is None:
             return True
-        camp_touche = carte.cible.camp if effet.portee == PorteeEffet.CIBLE else CAMP_PAR_PORTEE[effet.portee]
+        camp_touche = effet.portee.camp or carte.cible.camp
         return camp == camp_touche
 
     def intentions(self) -> list[Intention]:

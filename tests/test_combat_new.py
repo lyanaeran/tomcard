@@ -559,3 +559,12 @@ def test_un_ennemi_detruit_pendant_son_etape_ne_joue_pas_la_suite():
     assert jean.est_detruit() and combat.etat == EtatCombatNew.VICTOIRE
     assert not _evenements(combat, NatureEvenement.STATUT_POSE)  # son bouclier n'est pas pose
 
+
+
+def test_remplacer_aleatoire_change_aussi_les_melanges_du_deck():
+    combat = _combat()
+    nouveau = random.Random(42)
+
+    combat.remplacer_aleatoire(nouveau)
+
+    assert combat.aleatoire is nouveau and combat.deck.aleatoire is nouveau

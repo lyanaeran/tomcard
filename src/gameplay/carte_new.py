@@ -143,6 +143,20 @@ class PorteeEffet(Enum):
     COLONNE_AVANT_ENNEMIE = auto()
     COLONNE_ARRIERE_ENNEMIE = auto()
 
+    @property
+    def camp(self) -> "Camp | None":
+        """Camp touche par cette portee ; None pour CIBLE, qui touche le camp de la cible de la
+        carte. Une nouvelle portee doit etre ajoutee a _CAMP_PAR_PORTEE (KeyError sinon)."""
+        return _CAMP_PAR_PORTEE[self]
+
+
+_CAMP_PAR_PORTEE = {
+    PorteeEffet.CIBLE: None,
+    PorteeEffet.AUTRES_ENNEMIS: Camp.ENNEMI,
+    PorteeEffet.COLONNE_AVANT_ENNEMIE: Camp.ENNEMI,
+    PorteeEffet.COLONNE_ARRIERE_ENNEMIE: Camp.ENNEMI,
+}
+
 
 # Cles autorisees dans config/carte_new.json : une cle inconnue (ex. faute de frappe "persistant")
 # est refusee au chargement plutot qu'ignoree
@@ -235,7 +249,7 @@ class Effet:
         )
 
 
-_PORTEES_ENNEMIES = (PorteeEffet.AUTRES_ENNEMIS, PorteeEffet.COLONNE_AVANT_ENNEMIE, PorteeEffet.COLONNE_ARRIERE_ENNEMIE)
+_PORTEES_ENNEMIES = tuple(portee for portee in PorteeEffet if portee.camp == Camp.ENNEMI)
 
 
 def _noms_cites(description: str) -> set[str]:
