@@ -79,7 +79,8 @@ Les tableaux `config/*_new.md` sont **générés** (`python -m outils.tableau_ca
 
 ## 5. Ce qui reste à faire
 
-**Branchement** (le gros chantier suivant, pas encore commencé) :
+**Branchement** (le gros chantier suivant, pas encore commencé ; proposition détaillée, à valider :
+[refonte-branchement.md](refonte-branchement.md)) :
 1. Sauvegarde de la partie : deck avec exemplaire de module par carte, modules `ModuleNew`
    (`partie.py`, `web/bridge.py`).
 2. Composition des flottes de la refonte (placement, coefficient par niveau) et appel de
