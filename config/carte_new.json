@@ -33,7 +33,7 @@
       "jouable": true,
       "refonte": true,
       "description": "Bouclier de {bouclier} sur un module unique",
-      "valeurs": { "bouclier": 5 },
+      "valeurs": { "bouclier": 4 },
       "effets": [
         { "nature": "BOUCLIER", "valeur": "bouclier" }
       ]
@@ -52,7 +52,7 @@
       "jouable": true,
       "refonte": true,
       "description": "Bouclier de {bouclier} sur le module principal",
-      "valeurs": { "bouclier": 7 },
+      "valeurs": { "bouclier": 6 },
       "effets": [
         { "nature": "BOUCLIER", "valeur": "bouclier" }
       ]

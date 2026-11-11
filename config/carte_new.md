@@ -9,8 +9,8 @@
 | Id | Nom | Rareté | Catégorie | Cible | Coût | Munitions | Lancements | Persistante | Jouable | Refonte | Description affichée | Valeurs | Effets |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | CRT_7 | Laser | Base | Attaque | Ennemi Unique | 1 | Illimitées | 1 | Non | Oui | Oui | Inflige 6 degats a un ennemi unique | `{"degats": 6}` | `{"nature": "DEGATS", "valeur": "degats"}` |
-| CRT_10 | Bouclier | Base | Defense | Module Unique | 1 | Illimitées | 1 | Non | Oui | Oui | Bouclier de 5 sur un module unique | `{"bouclier": 5}` | `{"nature": "BOUCLIER", "valeur": "bouclier"}` |
-| CRT_11 | Protéger le vaisseau | Base | Defense | Module Principal | 1 | Illimitées | 1 | Non | Oui | Oui | Bouclier de 7 sur le module principal | `{"bouclier": 7}` | `{"nature": "BOUCLIER", "valeur": "bouclier"}` |
+| CRT_10 | Bouclier | Base | Defense | Module Unique | 1 | Illimitées | 1 | Non | Oui | Oui | Bouclier de 4 sur un module unique | `{"bouclier": 4}` | `{"nature": "BOUCLIER", "valeur": "bouclier"}` |
+| CRT_11 | Protéger le vaisseau | Base | Defense | Module Principal | 1 | Illimitées | 1 | Non | Oui | Oui | Bouclier de 6 sur le module principal | `{"bouclier": 6}` | `{"nature": "BOUCLIER", "valeur": "bouclier"}` |
 | CRT_12 | Réparation | Base | Reparation | Module Principal | 1 | 2 | 1 | Non | Oui | Oui | Repare le module principal pour 8 | `{"reparation": 8}` | `{"nature": "REPARATION", "valeur": "reparation"}` |
 | CRT_8 | Laser percant | Commune | Attaque | Ennemi Colonne | 2 | Illimitées | 1 | Non | Oui | Oui | Inflige 8 degats a la colonne ciblee | `{"degats": 8}` | `{"nature": "DEGATS", "valeur": "degats"}` |
 | CRT_45 | Tir incendiaire | Commune | Attaque | Ennemi Unique | 2 | 3 | 1 | Non | Non | Oui | Ajoute 4 points d’incendie sur la cible | `{"incendie": 4}` | `{"nature": "INCENDIE", "valeur": "incendie"}` |

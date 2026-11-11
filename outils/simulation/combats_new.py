@@ -399,15 +399,28 @@ def tableau_flottes(resultats: list[dict]) -> str:
 
 
 def tableau_cartes(resultats: list[dict]) -> str:
-    jouees, vues = Counter(), Counter()
+    """Usage des cartes. Le taux de jeu (jouee / vue en main) penalise une carte presente en
+    plusieurs exemplaires quand l'electricite manque (3 par tour) : on donne aussi, par tour de
+    combat ou la carte a ete vue, combien d'exemplaires sont en main et joues, et la part de
+    l'electricite depensee qu'elle prend."""
+    jouees, vues, tours = Counter(), Counter(), Counter()
     for r in resultats:
         if r["etude"] == "equilibre" and "exception" not in r:
             jouees.update(r["cartes_jouees"])
             vues.update(r["cartes_vues"])
-    noms = {id_carte: carte.nom for id_carte, carte in charger_cartes_new().items()}
-    lignes = ["| Carte | Vue en main | Jouée | Taux de jeu |", "|---|---|---|---|"]
+            tours.update({id_carte: r["tours"] for id_carte in r["cartes_vues"]})
+    modeles = charger_cartes_new()
+    electricite = sum(jouees[i] * modeles[i].cout for i in jouees) or 1
+    lignes = [
+        "| Carte | Coût | Vue en main | Jouée | Taux de jeu | En main / tour | Jouée / tour | Part de l'électricité dépensée |",
+        "|---|---|---|---|---|---|---|---|",
+    ]
     for id_carte in sorted(vues, key=lambda i: jouees[i] / vues[i], reverse=True):
-        lignes.append(f"| {noms[id_carte]} ({id_carte}) | {vues[id_carte]} | {jouees[id_carte]} | {_pct(jouees[id_carte], vues[id_carte])} |")
+        lignes.append(
+            f"| {modeles[id_carte].nom} ({id_carte}) | {modeles[id_carte].cout} | {vues[id_carte]} | {jouees[id_carte]} | "
+            f"{_pct(jouees[id_carte], vues[id_carte])} | {vues[id_carte] / tours[id_carte]:.2f} | "
+            f"{jouees[id_carte] / tours[id_carte]:.2f} | {_pct(jouees[id_carte] * modeles[id_carte].cout, electricite)} |"
+        )
     return "\n".join(lignes) + "\n"
 
 

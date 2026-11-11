@@ -1,5 +1,9 @@
 # Synthèse de simulation — combat de la refonte — 11 novembre 2026
 
+> **Mise à jour** : après cette campagne, l'utilisateur a jugé le réglage 5 / 7 / 8 trop haut et
+> retenu **Bouclier 4, Protéger le vaisseau 6, Blindage ciblé 8**, **non simulé** à ce jour. Les
+> chiffres ci-dessous sont ceux du réglage 5 / 7 / 8.
+
 *Campagne refaite le même jour avec les **nouvelles valeurs de bouclier** (décision utilisateur) :
 Bouclier 5, Protéger le vaisseau 7, Blindage ciblé 8. Les campagnes précédentes (boucliers à 3, 5
 et 6) restent dans l'historique git de ce fichier ; la comparaison est faite au §6.*
@@ -39,8 +43,9 @@ combat par niveau, PV du principal reportés, sans aucun soin hors combat.
    : 13 à 15 PV perdus en moyenne par paire, jusqu'à 40 avec Le nettoyeur + Le puzzle.
 6. **Le Boss redevient facile avec un deck étoffé** (100 %, 17 PV perdus) ; il ne tue plus que les
    principaux déjà très entamés.
-7. **Bouclier n'est pas plus joué** (26 %, contre 24 % à 3) : c'est *Protéger le vaisseau*, à 7,
-   qui en profite, et les cartes de bouclier remplacent en partie le Leurre et la Réparation.
+7. **On ne joue pas plus de Bouclier, mais chacun rapporte plus** : environ un tous les deux tours,
+   à 3 comme à 5, parce que l'électricité manque (§6.1) ; les cartes de bouclier remplacent en
+   partie le Leurre et la Réparation.
 
 ---
 
@@ -183,10 +188,21 @@ les mêmes combats et les mêmes graines :
 | Réparation | 51 % | **43 %** |
 | Leurre | 50 % | **35 %** |
 
-- **Bouclier n'est presque pas plus joué** (24 % → 26 %), contrairement à l'essai sur les combats
-  difficiles (27 % → 37 % à 5). Avec 4 Bouclier dans le deck de départ, la main en contient souvent
-  plusieurs : le bot en joue un ou deux et garde l'électricité pour attaquer. Chaque Bouclier joué
-  protège en revanche bien plus.
+- **Le taux de jeu de Bouclier (24 % → 26 %) est trompeur** : il compte chaque exemplaire en main.
+  Par tour, avec le deck de départ :
+
+  | | Boucliers 3 / 5 / 6 | Boucliers 5 / 7 / 8 |
+  |---|---|---|
+  | Électricité dépensée par tour (sur 3) | 2,86 | 2,87 |
+  | Laser : en main / joués par tour | 1,95 / 1,57 | 1,92 / 1,55 |
+  | Bouclier : en main / joués par tour | 1,92 / 0,47 | 1,89 / 0,51 |
+  | Part de l'électricité : Laser / Bouclier | 55 % / 17 % | 54 % / 18 % |
+
+  L'électricité est presque toujours dépensée en entier ; le Laser passe en premier (80 % des
+  Lasers en main sont joués) et le Bouclier prend ce qui reste, **environ un tous les deux tours, à
+  3 comme à 5**. Ce n'est donc pas une carte faible mais une carte moins prioritaire quand
+  l'électricité manque. Remonter sa valeur ne change pas combien on en joue, mais ce que chacun
+  rapporte (dégâts absorbés 14,9 → 21,3 par combat).
 - **Blindage ciblé recule** (19 % → 11 %) : à 8 pour un coût de 2, il fait à peine mieux que
   Bouclier à 5 pour 1.
 - **Les boucliers remplacent en partie le Leurre et la Réparation** : mieux vaut éviter les dégâts
@@ -239,27 +255,33 @@ chaque essai : gardée en réserve.
 
 ## 8. Cartes
 
-| Carte | Vue en main | Taux de jeu |
-|---|---|---|
-| Missiles | 697 | 76 % |
-| Ciel de missiles | 647 | 76 % |
-| Salve laser | 400 | 74 % |
-| Laser | 16 690 | 73 % |
-| Laser lourd | 376 | 72 % |
-| Bombardement | 769 | 68 % |
-| Embrasement | 718 | 65 % |
-| Protocole d'urgence | 398 | 64 % |
-| Torpille | 681 | 59 % |
-| Protéger le vaisseau | 4 086 | 53 % |
-| Guerre nucléaire | 719 | 52 % |
-| Réparation | 3 295 | 43 % |
-| Laser perçant | 407 | 38 % |
-| Leurre | 889 | 35 % |
-| Tir incendiaire | 428 | 33 % |
-| Bouclier | 16 328 | 26 % |
-| Bouclier stabilisé | 377 | 13 % |
-| Ligne arrière | 720 | 12 % |
-| Blindage ciblé | 470 | 11 % |
+« En main / tour » et « jouée / tour » sont comptés sur les tours des combats où la carte était
+dans le deck : ils sont plus parlants que le taux de jeu pour une carte en plusieurs exemplaires.
+
+| Carte | Coût | Taux de jeu | En main / tour | Jouée / tour | Part de l'électricité dépensée |
+|---|---|---|---|---|---|
+| Missiles | 2 | 76 % | 0,34 | 0,25 | 4 % |
+| Ciel de missiles | 1 | 76 % | 0,32 | 0,25 | 2 % |
+| Salve laser | 2 | 74 % | 0,37 | 0,27 | 2 % |
+| Laser | 1 | 73 % | 1,70 | **1,23** | **44 %** |
+| Laser lourd | 1 | 72 % | 0,36 | 0,25 | 1 % |
+| Bombardement | 1 | 68 % | 0,33 | 0,22 | 2 % |
+| Embrasement | 2 | 65 % | 0,35 | 0,23 | 3 % |
+| Protocole d'urgence | 3 | 64 % | 0,37 | 0,24 | 3 % |
+| Torpille | 2 | 59 % | 0,32 | 0,19 | 3 % |
+| Protéger le vaisseau | 1 | 53 % | 0,42 | 0,22 | 8 % |
+| Guerre nucléaire | 3 | 52 % | 0,37 | 0,19 | 4 % |
+| Réparation | 1 | 43 % | 0,34 | 0,15 | 5 % |
+| Laser perçant | 2 | 38 % | 0,37 | 0,14 | 1 % |
+| Leurre | 1 | 35 % | 0,33 | 0,12 | 1 % |
+| Tir incendiaire | 2 | 33 % | 0,36 | 0,12 | 1 % |
+| Bouclier | 1 | 26 % | 1,66 | **0,44** | **16 %** |
+| Bouclier stabilisé | 3 | 13 % | 0,32 | 0,04 | 1 % |
+| Ligne arrière | 1 | 12 % | 0,33 | 0,04 | 0 % |
+| Blindage ciblé | 2 | 11 % | 0,39 | 0,04 | 0 % |
+
+- **Bouclier est la deuxième carte du jeu en électricité dépensée** (16 %, après le Laser) : son
+  faible taux de jeu vient du nombre d'exemplaires, pas d'un manque d'intérêt.
 
 - **Les cartes d'attaque dominent** : tuer vite reste la meilleure défense, d'autant que les
   dégâts ennemis montent avec le temps.

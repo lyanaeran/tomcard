@@ -138,19 +138,39 @@ La valeur du Bouclier se compare aux deux autres cartes de bouclier du principal
 
 ## Solution choisie (décision utilisateur, 2026-11-11)
 
-Les trois cartes de bouclier montent ensemble, pour que Bouclier devienne un vrai choix sans
-écraser les deux autres :
+**Décision finale : Bouclier 4, Protéger le vaisseau 6, Blindage ciblé 8.**
 
-| Carte | Coût | Cible | Avant | **Après** |
+Un premier réglage à **5 / 7 / 8** a été appliqué et simulé (campagne complète,
+`analyse_2026-11-11_combat_new.md`) : il rendait le jeu nettement plus facile (Boss battu 97 % du
+temps avec le deck de départ, parties approchées gagnées 32 % → 59 %). L'utilisateur l'a jugé trop
+haut et l'a ramené à **4 / 6 / 8** (non simulé à ce jour).
+
+**Correction d'analyse** : le faible taux de jeu de Bouclier (25 % environ, à 3 comme à 5) ne
+voulait pas dire « carte faible ». Par tour, le deck de départ a près de 2 Bouclier et 2 Laser en
+main pour 3 d'électricité, presque toujours dépensée en entier (2,9 sur 3) : le Laser passe en
+premier (80 % des Lasers en main sont joués, 55 % de l'électricité), et le Bouclier prend ce qui
+reste, environ un tous les deux tours. Remonter sa valeur ne change donc pas combien on en joue,
+mais ce que chacun rapporte. Le rapport du simulateur donne désormais les cartes jouées par tour et
+la part de l'électricité, plus parlantes que le taux de jeu.
+
+Réglage 5 / 7 / 8 essayé, pour mémoire :
+
+| Carte | Coût | Cible | Avant | Essayé |
 |---|---|---|---|---|
-| Bouclier | 1 | un module au choix | 3 | **5** |
-| Protéger le vaisseau | 1 | le principal seulement | 5 | **7** |
-| Blindage ciblé | 2 | un module au choix, 3 munitions | 6 | **8** |
+| Bouclier | 1 | un module au choix | 3 | 5 |
+| Protéger le vaisseau | 1 | le principal seulement | 5 | 7 |
+| Blindage ciblé | 2 | un module au choix, 3 munitions | 6 | 8 |
 
-- La hiérarchie est gardée : Bouclier (5, souple) < Protéger le vaisseau (7, principal seulement)
+Décision finale appliquée :
+
+| Carte | Coût | Cible | Bouclier |
+|---|---|---|---|
+| Bouclier | 1 | un module au choix | **4** |
+| Protéger le vaisseau | 1 | le principal seulement | **6** |
+| Blindage ciblé | 2 | un module au choix, 3 munitions | **8** |
+
+- La hiérarchie est gardée : Bouclier (4, souple) < Protéger le vaisseau (6, principal seulement)
   < Blindage ciblé (8, mais coût 2 et 3 munitions).
 - Appliqué dans `config/carte_new.json` (et reporté dans `config/cartes.json`, encore lu par le jeu
   actuel). L'accumulation (§ « Accumulation ») reste à surveiller ; aucun frein n'est ajouté pour
   l'instant.
-- Effet sur l'ensemble des combats : voir la campagne refaite avec ces valeurs,
-  `analyse_2026-11-11_combat_new.md` (partie « Bouclier »).

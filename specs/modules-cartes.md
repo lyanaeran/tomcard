@@ -29,10 +29,12 @@ propose donc que le Lanceur de missiles. Changements principaux :
   le deck de départ, proposée en récompense).
 - Valeurs : *Bouclier* 5 → 3, *Protéger le vaisseau* 8 → 5, *Blindage ciblé* bouclier de 7 pendant 4 tours → **bouclier simple de 6** (sans durée),
   *Protocole d'urgence* X 2 → 1, *Bombardement* 4 → 6, *Torpille* Y 6 → 8.
-- **Boucliers remontés (décision utilisateur, 2026-11-11, après simulation)** : *Bouclier* 3 → **5**,
-  *Protéger le vaisseau* 5 → **7**, *Blindage ciblé* 6 → **8** : à 3, Bouclier était la carte la
-  moins jouée du deck de départ ; les trois montent ensemble pour garder leur hiérarchie
-  (`outils/simulation/synthese/essai_bouclier_2026-11-11.md`).
+- **Boucliers remontés (décision utilisateur, 2026-11-11, après simulation)** : *Bouclier* 3 → **4**,
+  *Protéger le vaisseau* 5 → **6**, *Blindage ciblé* 6 → **8**. Les trois montent ensemble pour
+  garder leur hiérarchie. Un premier réglage à 5 / 7 / 8 a été simulé puis jugé trop haut
+  (`outils/simulation/synthese/essai_bouclier_2026-11-11.md`). Le faible taux de jeu de Bouclier
+  vient surtout du manque d'électricité (4 exemplaires, 3 électricité, le Laser passe en premier),
+  pas de sa faiblesse.
 - **Incendie** (nouvelle mécanique, non jouable pour l'instant) : *Tir incendiaire* (4),
   *Embrasement* (8, un ennemi) et *Guerre nucléaire* (8, tous les ennemis) ajoutent des points
   d'incendie, équivalent du poison de Slay the Spire (décroissance de 1 par tour).
