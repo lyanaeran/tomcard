@@ -46,3 +46,10 @@ def test_la_flotte_est_vide_quand_tous_les_ennemis_sont_detruits():
     pat.subir_degats(50)
 
     assert flotte.est_vide() and flotte.ennemi_en(Position(Colonne.AVANT, Rangee.MID)) is None
+
+
+def test_les_cases_d_un_ennemi_absent_de_la_flotte_sont_refusees():
+    flotte = FlotteNew({Position(Colonne.AVANT, Rangee.MID): _ennemi("ENM_PAT_LE_PIRATE")})
+
+    with pytest.raises(ValueError, match="absent de cette flotte"):
+        flotte.cases_de(_ennemi("ENM_PAT_LE_PIRATE"))

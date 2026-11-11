@@ -29,6 +29,14 @@ NATURES_NON_GEREES = {NatureEffet.VULNERABILITE, NatureEffet.REDUCTION_DEGATS, N
 # Natures qui agissent sur le joueur lui-meme (electricite, pioche, cartes), pas sur une entite
 NATURES_GLOBALES = {NatureEffet.GAIN_ELECTRICITE, NatureEffet.PIOCHE, NatureEffet.REPETITION}
 
+# Camp touche par chaque portee autre que CIBLE (qui touche le camp de la cible de la carte) ; une
+# nouvelle portee doit etre ajoutee ici (KeyError sinon, plutot qu'un camp devine)
+CAMP_PAR_PORTEE = {
+    PorteeEffet.AUTRES_ENNEMIS: Camp.ENNEMI,
+    PorteeEffet.COLONNE_AVANT_ENNEMIE: Camp.ENNEMI,
+    PorteeEffet.COLONNE_ARRIERE_ENNEMIE: Camp.ENNEMI,
+}
+
 # Camp que chaque nature d'effet peut toucher : une carte qui l'applique a l'autre camp est
 # injouable (verifie avant toute modification du combat)
 CAMP_PAR_NATURE = {
@@ -186,8 +194,8 @@ class CombatNew:
         camp = CAMP_PAR_NATURE.get(effet.nature)
         if camp is None:
             return True
-        touche_ennemis = effet.portee != PorteeEffet.CIBLE or carte.cible.camp == Camp.ENNEMI
-        return camp == (Camp.ENNEMI if touche_ennemis else Camp.JOUEUR)
+        camp_touche = carte.cible.camp if effet.portee == PorteeEffet.CIBLE else CAMP_PAR_PORTEE[effet.portee]
+        return camp == camp_touche
 
     def intentions(self) -> list[Intention]:
         """Ce que chaque ennemi vivant jouera a son prochain tour (refonte-combat.md 5.3)."""

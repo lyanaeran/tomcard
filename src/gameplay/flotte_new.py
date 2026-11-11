@@ -69,7 +69,9 @@ class FlotteNew:
         return None if ennemi is None or ennemi.est_detruit() else ennemi
 
     def cases_de(self, ennemi: EnnemiNew) -> list[Position]:
-        index = next(i for i, deja in enumerate(self._ennemis) if deja is ennemi)
+        index = next((i for i, deja in enumerate(self._ennemis) if deja is ennemi), None)
+        if index is None:
+            raise ValueError(f"Ennemi {ennemi.id} : absent de cette flotte")
         return list(self._cases[index])
 
     def cases_vivantes(self) -> list[Position]:
