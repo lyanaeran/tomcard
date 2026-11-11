@@ -91,7 +91,7 @@ def test_laser_inflige_ses_degats_coute_son_electricite_et_part_en_defausse():
     pat = combat.flotte.ennemi_en(AVANT_MID)
     assert (pat.pv, combat.electricite, combat.deck.defausse) == (44, 2, [laser])
     (attaque,) = _evenements(combat, NatureEvenement.ATTAQUE)
-    assert (attaque.source, attaque.cible, attaque.valeur, attaque.pv_perdus) == (laser, pat, 6, 6)
+    assert (attaque.source, attaque.cible, attaque.valeur, attaque.pv_perdus, attaque.pv_restants) == (laser, pat, 6, 6, 44)
 
 
 def test_cibles_possibles_selon_la_cible_de_la_carte():
@@ -400,3 +400,105 @@ def test_dernier_ennemi_detruit_victoire():
     assert combat.etat == EtatCombatNew.VICTOIRE
     assert combat.ennemis_detruits() == [pat]
     assert [e.nature for e in combat.journal[-2:]] == [NatureEvenement.ENNEMI_DETRUIT, NatureEvenement.VICTOIRE]
+
+
+# --- Journal detaille (degats absorbes, PV perdus et restants) ---
+
+
+def test_journal_d_une_attaque_ennemie_bouclier_puis_pv():
+    pat = _ennemi()
+    combat = _combat({AVANT_GAUCHE: pat})
+    lanceur = combat.vaisseau.module_d_exemplaire("M2")
+    lanceur.statuts.ajouter(Statut.BOUCLIER, 3)
+
+    combat.finir_tour()
+
+    (attaque,) = _evenements(combat, NatureEvenement.ATTAQUE)
+    assert (attaque.source, attaque.cible) == (pat, lanceur)
+    assert (attaque.valeur, attaque.absorbes_bouclier, attaque.annules_leurre, attaque.renvoyes) == (5, 3, 0, 0)
+    assert (attaque.pv_perdus, attaque.pv_restants) == (2, 18)
+
+
+def test_journal_d_une_attaque_annulee_par_le_leurre():
+    combat = _combat({AVANT_GAUCHE: _ennemi()})
+    combat.vaisseau.module_d_exemplaire("M2").statuts.ajouter(Statut.LEURRE, 1)
+
+    combat.finir_tour()
+
+    (attaque,) = _evenements(combat, NatureEvenement.ATTAQUE)
+    assert (attaque.annules_leurre, attaque.pv_perdus, attaque.pv_restants) == (5, 0, 20)
+
+
+def test_journal_du_renvoi_et_de_ses_degats():
+    miroir = _ennemi("ENM_MIROIR")
+    combat = _combat({AVANT_MID: miroir})
+    miroir.statuts.ajouter(Statut.RENVOI, 5)
+    miroir.statuts.ajouter(Statut.BOUCLIER, 2)
+    (laser,) = _en_main(combat, _carte("CRT_7"))
+
+    combat.jouer_carte(laser, AVANT_MID)
+
+    (attaque,) = _evenements(combat, NatureEvenement.ATTAQUE)
+    assert (attaque.renvoyes, attaque.absorbes_bouclier, attaque.pv_perdus, attaque.pv_restants) == (5, 1, 0, 50)
+    (renvoi,) = _evenements(combat, NatureEvenement.RENVOI)
+    assert (renvoi.source, renvoi.cible, renvoi.valeur, renvoi.pv_perdus, renvoi.pv_restants) == (
+        miroir, combat.vaisseau.principal, 5, 5, 55,
+    )
+
+
+def test_journal_de_l_incendie_absorbe_par_le_bouclier():
+    pat = _ennemi()
+    combat = _combat({AVANT_MID: pat})
+    pat.statuts.ajouter(Statut.INCENDIE, 4)
+    pat.statuts.ajouter(Statut.BOUCLIER, 1)
+
+    combat.finir_tour()
+
+    (incendie,) = _evenements(combat, NatureEvenement.INCENDIE)
+    assert (incendie.valeur, incendie.absorbes_bouclier, incendie.pv_perdus, incendie.pv_restants) == (4, 1, 3, 47)
+
+
+def test_journal_pv_perdus_plafonnes_par_les_pv_restants():
+    pat = _ennemi()
+    pat.pv = 4
+    pat2 = _ennemi()
+    combat = _combat({AVANT_MID: pat, AVANT_DROITE: pat2})
+    (laser,) = _en_main(combat, _carte("CRT_7"))
+
+    combat.jouer_carte(laser, AVANT_MID)
+
+    (attaque,) = _evenements(combat, NatureEvenement.ATTAQUE)
+    assert (attaque.valeur, attaque.pv_perdus, attaque.pv_restants) == (6, 4, 0)
+
+
+# --- Lancements multiples : un seul cout, tous les effets a chaque lancement (4.3) ---
+
+
+def test_carte_lancee_deux_fois_un_seul_cout_et_effets_a_chaque_lancement():
+    combat = _combat()
+    laser, bouclier = _en_main(combat, _carte("CRT_47"), _carte("CRT_10"))
+    laser.lancements_actuels = bouclier.lancements_actuels = 2
+
+    combat.jouer_carte(laser, AVANT_MID)
+    combat.jouer_carte(bouclier, AVANT_MID)
+
+    assert combat.electricite == 1  # 3 - 1 - 1
+    assert combat.flotte.ennemi_en(AVANT_MID).pv == 26  # 50 - 12 - 12
+    assert combat.vaisseau.principal.statuts[Statut.BOUCLIER] == 6
+
+
+def test_pioche_et_gain_d_electricite_a_chaque_lancement():
+    boost = CarteNew(
+        id="TEST", nom="Boost", image="", rarete=RareteCarte.COMMUNE, categorie=CategorieCarte.OUTILS,
+        cible=CibleCarteNew.MODULE_PRINCIPAL, cout=1, description="", valeurs={"pioche": 1, "electricite": 1},
+        effets=(Effet(NatureEffet.PIOCHE, "pioche"), Effet(NatureEffet.GAIN_ELECTRICITE, "electricite")),
+        exemplaire_module="M1", lancements_actuels=2,
+    )
+    combat = _combat()
+    _en_main(combat, boost)
+    combat.deck.pioche = [_carte("CRT_7"), _carte("CRT_7"), _carte("CRT_7")]
+
+    combat.jouer_carte(boost, AVANT_MID)
+
+    assert (len(combat.deck.main), len(combat.deck.pioche)) == (2, 1)
+    assert combat.electricite == 4  # 3 - 1 + 1 + 1

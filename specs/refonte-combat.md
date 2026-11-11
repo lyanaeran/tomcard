@@ -316,15 +316,21 @@ Choix faits en codant, là où la spec ne disait rien :
    touché par une carte Module Avant.
 3. **Un ennemi sur deux cases est touché une fois par effet**, mais une carte à deux effets
    (Torpille : colonne avant puis colonne arrière) le touche deux fois, une par effet.
-4. **Électricité, pioche et répétition** s'appliquent une fois par lancement de la carte.
+4. **Lancements multiples** (validé) : le coût en électricité est payé une seule fois, et **tous
+   les effets** de la carte s'appliquent à chaque lancement, y compris le gain d'électricité
+   (Surcharge), la pioche et la répétition.
 5. **Une carte dont le module meurt pendant qu'elle est jouée** (dégâts renvoyés) part en Hors
    service une fois jouée, sauf si elle est épuisée ou Persistante.
 6. **Victoire ou défaite au milieu d'une carte** : les effets et lancements restants ne sont pas
    joués.
 7. **Renvoi porté par un module** (aucune carte ne le pose pour l'instant) : les dégâts renvoyés
    iraient à l'ennemi attaquant ; des dégâts renvoyés ne sont jamais renvoyés à leur tour.
-8. **Journal** : des événements typés (`NatureEvenement` : carte jouée, attaque avec dégâts et PV
-   perdus, renvoi, statut posé, réparation, incendie, électricité, pioche, répétition,
-   destruction, cartes hors service, victoire, défaite), sans texte.
+8. **Journal** (validé, détaillé à la demande de l'utilisateur) : des événements typés
+   (`NatureEvenement` : carte jouée, attaque, renvoi, statut posé, réparation, incendie,
+   électricité, pioche, répétition, destruction, cartes hors service, victoire, défaite), sans
+   texte. **Pour des dégâts** (attaque, dégâts renvoyés, incendie) : qui attaque qui, les dégâts
+   reçus, la part **annulée par le leurre**, **renvoyée**, **absorbée par le bouclier**, les **PV
+   perdus** et les **PV restants**. Ex. : Pat le Pirate attaque le Lanceur de missiles, 5 dégâts,
+   3 absorbés par le bouclier, 2 PV perdus, 18 PV restants.
 9. **La composition des flottes** (quels ennemis, placement préféré) reste hors de `combat_new` :
    `FlotteNew` reçoit des ennemis déjà placés.

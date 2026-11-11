@@ -148,9 +148,9 @@ def test_le_renvoi_renvoie_jusqu_a_sa_valeur_et_le_protege_encaisse_le_reste():
     pat = _en_combat("ENM_PAT_LE_PIRATE")
     pat.statuts.ajouter(Statut.RENVOI, 5)
 
-    assert pat.subir_degats(3) == 3 and pat.pv == 50
-    assert pat.subir_degats(6) == 2 and pat.pv == 46
-    assert pat.subir_degats(4) == 0 and pat.pv == 42
+    assert pat.subir_degats(3).renvoyes == 3 and pat.pv == 50
+    assert pat.subir_degats(6).renvoyes == 2 and pat.pv == 46
+    assert pat.subir_degats(4).renvoyes == 0 and pat.pv == 42
 
 
 def test_les_renvois_s_additionnent_et_durent_jusqu_au_tour_ennemi_suivant():
@@ -160,7 +160,7 @@ def test_les_renvois_s_additionnent_et_durent_jusqu_au_tour_ennemi_suivant():
     assert pat.statuts[Statut.RENVOI] == 10
 
     pat.fin_du_tour_du_joueur()
-    assert pat.subir_degats(6) == 0 and pat.pv == 44
+    assert pat.subir_degats(6).renvoyes == 0 and pat.pv == 44
 
 
 def test_l_ennemi_est_detruit_a_zero_pv():

@@ -16,7 +16,7 @@ from src.gameplay.ennemi_new import CibleEffetEnnemi, EffetEnnemi, EnnemiNew, Na
 from src.gameplay.flotte_new import FlotteNew
 from src.gameplay.module_new import ModuleNew
 from src.gameplay.position import Colonne, Position
-from src.gameplay.statut_new import Statut
+from src.gameplay.statut_new import Encaissement, Statut
 from src.gameplay.vaisseau_new import VaisseauNew
 
 # Valeur inchangee par rapport au moteur actuel (config_poc.ELECTRICITE_PAR_TOUR, combat.md 3.3)
@@ -45,15 +45,16 @@ class NatureEvenement(Enum):
     DEBUT_TOUR = auto()
     # Carte jouee (carte, cible : entite de la case choisie)
     CARTE_JOUEE = auto()
-    # Attaque (source : carte ou ennemi, cible, valeur : degats, pv_perdus)
+    # Attaque (source : carte ou ennemi, cible, valeur : degats, et le detail des degats)
     ATTAQUE = auto()
-    # Degats renvoyes par un renvoi (source : entite protegee, cible : qui les recoit)
+    # Attaque des degats renvoyes par un renvoi (source : entite protegee, cible : qui les recoit,
+    # valeur : degats renvoyes, et le detail des degats)
     RENVOI = auto()
     # Statut pose (cible, statut, valeur : intensite posee)
     STATUT_POSE = auto()
-    # Reparation (cible, valeur : PV rendus)
+    # Reparation (cible, valeur : PV rendus, pv_restants)
     REPARATION = auto()
-    # Incendie en fin de tour (cible, valeur : intensite, pv_perdus)
+    # Incendie en fin de tour (cible, valeur : intensite, et le detail des degats)
     INCENDIE = auto()
     # Electricite gagnee, cartes piochees, cartes dont les lancements augmentent (valeur)
     ELECTRICITE = auto()
@@ -69,15 +70,22 @@ class NatureEvenement(Enum):
 
 @dataclass(frozen=True)
 class Evenement:
-    """Une entree du journal de combat."""
+    """Une entree du journal de combat. Pour des degats (ATTAQUE, RENVOI, INCENDIE) : valeur =
+    annules_leurre + renvoyes + absorbes_bouclier + degats sur les PV ; pv_perdus est plafonne par
+    les PV qui restaient ; pv_restants : PV de la cible apres l'evenement."""
 
     nature: NatureEvenement
     tour: int
     source: object = None
     cible: object = None
     valeur: int | None = None
-    pv_perdus: int | None = None
     statut: Statut | None = None
+    # Detail des degats recus
+    annules_leurre: int | None = None
+    renvoyes: int | None = None
+    absorbes_bouclier: int | None = None
+    pv_perdus: int | None = None
+    pv_restants: int | None = None
 
 
 @dataclass(frozen=True)
@@ -223,11 +231,10 @@ class CombatNew:
     def _fin_de_tour_d_entite(self, entite: Entite, fin_de_tour) -> None:
         """Fin de tour d'un module ou d'un ennemi : incendie (note au journal) puis extinction des
         statuts, puis destruction eventuelle."""
-        incendie = entite.statuts[Statut.INCENDIE]
         pv_avant = self._pv(entite)
-        fin_de_tour()
-        if incendie:
-            self._noter(NatureEvenement.INCENDIE, cible=entite, valeur=incendie, pv_perdus=pv_avant - self._pv(entite))
+        encaissement = fin_de_tour()
+        if encaissement.degats:
+            self._noter_degats(NatureEvenement.INCENDIE, None, entite, encaissement, pv_avant)
         self._traiter_destruction(entite)
 
     def _tour_ennemi(self) -> None:
@@ -331,7 +338,10 @@ class CombatNew:
             elif nature == NatureEffet.REPARATION:
                 pv_avant = cible.pv_combat
                 cible.reparer(valeur)
-                self._noter(NatureEvenement.REPARATION, source=carte, cible=cible, valeur=cible.pv_combat - pv_avant)
+                self._noter(
+                    NatureEvenement.REPARATION, source=carte, cible=cible, valeur=cible.pv_combat - pv_avant,
+                    pv_restants=cible.pv_combat,
+                )
             elif nature.statut_pose is not None:
                 # Le leurre n'a pas de valeur : intensite 1
                 self._poser_statut(cible, nature.statut_pose, valeur if valeur is not None else 1, source=carte)
@@ -347,14 +357,24 @@ class CombatNew:
         """Une attaque de `degats` sur `cible` ; les degats renvoyes sont une nouvelle attaque sur
         `renvoi_vers` (decision utilisateur, 4.5), qui ne renvoie rien a son tour."""
         pv_avant = self._pv(cible)
-        renvoyes = cible.subir_degats(degats)
-        self._noter(NatureEvenement.ATTAQUE, source=source, cible=cible, valeur=degats, pv_perdus=pv_avant - self._pv(cible))
+        encaissement = cible.subir_degats(degats)
+        self._noter_degats(NatureEvenement.ATTAQUE, source, cible, encaissement, pv_avant)
         self._traiter_destruction(cible)
-        if renvoyes and not renvoi_vers.est_detruit() and self.en_cours:
+        if encaissement.renvoyes and not renvoi_vers.est_detruit() and self.en_cours:
             pv_avant = self._pv(renvoi_vers)
-            renvoi_vers.subir_degats(renvoyes)
-            self._noter(NatureEvenement.RENVOI, source=cible, cible=renvoi_vers, valeur=renvoyes, pv_perdus=pv_avant - self._pv(renvoi_vers))
+            # Les degats renvoyes ne sont jamais renvoyes a leur tour : leur propre renvoi est ignore
+            renvoi = renvoi_vers.subir_degats(encaissement.renvoyes)
+            self._noter_degats(NatureEvenement.RENVOI, cible, renvoi_vers, renvoi, pv_avant)
             self._traiter_destruction(renvoi_vers)
+
+    def _noter_degats(self, nature: NatureEvenement, source: object, cible: Entite, encaissement: Encaissement, pv_avant: int) -> None:
+        """Note des degats recus avec leur detail : leurre, renvoi, bouclier, PV perdus et restants."""
+        self._noter(
+            nature, source=source, cible=cible, valeur=encaissement.degats,
+            annules_leurre=encaissement.annules_leurre, renvoyes=encaissement.renvoyes,
+            absorbes_bouclier=encaissement.absorbes_bouclier, pv_perdus=pv_avant - self._pv(cible),
+            pv_restants=self._pv(cible),
+        )
 
     def _poser_statut(self, cible: Entite, statut: Statut, valeur: int, source: object = None) -> None:
         cible.statuts.ajouter(statut, valeur)

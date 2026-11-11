@@ -72,12 +72,19 @@ REGLES_STATUT = {
 
 @dataclass(frozen=True)
 class Encaissement:
-    """Resultat d'une attaque recue, une fois les statuts appliques."""
+    """Detail de degats recus (attaque ou incendie), une fois les statuts appliques :
+    degats = annules_leurre + renvoyes + absorbes_bouclier + degats_pv."""
 
-    # Degats a retirer des PV
+    # Degats recus, avant les statuts
+    degats: int
+    # Degats a retirer des PV, apres les statuts
     degats_pv: int
-    # Degats a renvoyer a l'attaquant (statut RENVOI)
+    # Degats annules par un leurre (toute l'attaque)
+    annules_leurre: int = 0
+    # Degats renvoyes a l'attaquant (statut RENVOI)
     renvoyes: int = 0
+    # Degats absorbes par le bouclier
+    absorbes_bouclier: int = 0
 
 
 @dataclass
@@ -123,21 +130,26 @@ class Statuts:
         les PV. Une attaque a 0 degat ne consomme rien."""
         if degats <= 0:
             # Une attaque sans degats ne consomme ni leurre ni renvoi
-            return Encaissement(degats_pv=0)
+            return Encaissement(degats=max(0, degats), degats_pv=0)
         if self.retirer(Statut.LEURRE, 1):
-            return Encaissement(degats_pv=0)
+            return Encaissement(degats=degats, degats_pv=0, annules_leurre=degats)
         renvoyes = self.retirer(Statut.RENVOI, degats)
-        return Encaissement(degats_pv=self.absorber_par_bouclier(degats - renvoyes), renvoyes=renvoyes)
+        degats_pv = self.absorber_par_bouclier(degats - renvoyes)
+        return Encaissement(
+            degats=degats, degats_pv=degats_pv, renvoyes=renvoyes, absorbes_bouclier=degats - renvoyes - degats_pv,
+        )
 
-    def fin_de_tour(self) -> int:
+    def fin_de_tour(self) -> Encaissement:
         """Fin de tour de l'entite (decision utilisateur) : l'incendie frappe d'abord, absorbe par
         le bouclier, puis chaque statut s'eteint selon sa regle (bouclier et incendie -1, renvoi
-        retire). Renvoie les degats d'incendie a retirer des PV."""
-        degats_pv = self.absorber_par_bouclier(self[Statut.INCENDIE])
+        retire). Renvoie le detail des degats d'incendie (degats_pv : a retirer des PV)."""
+        incendie = self[Statut.INCENDIE]
+        degats_pv = self.absorber_par_bouclier(incendie)
+        encaissement = Encaissement(degats=incendie, degats_pv=degats_pv, absorbes_bouclier=incendie - degats_pv)
         for statut in list(self.intensites):
             extinction = statut.regle.extinction
             if extinction == ExtinctionStatut.MOINS_UN_PAR_TOUR:
                 self[statut] -= 1
             elif extinction == ExtinctionStatut.TOUR_SUIVANT:
                 self[statut] = 0
-        return degats_pv
+        return encaissement

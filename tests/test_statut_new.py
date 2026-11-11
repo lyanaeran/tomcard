@@ -50,7 +50,7 @@ def test_le_bouclier_absorbe_puis_disparait_a_zero():
 
     encaissement = statuts.encaisser_attaque(7)
 
-    assert (encaissement.degats_pv, encaissement.renvoyes) == (2, 0)
+    assert (encaissement.degats_pv, encaissement.renvoyes, encaissement.absorbes_bouclier) == (2, 0, 5)
     assert Statut.BOUCLIER not in statuts.intensites
 
 
@@ -59,7 +59,7 @@ def test_le_leurre_annule_toute_l_attaque_avant_renvoi_et_bouclier():
 
     encaissement = statuts.encaisser_attaque(50)
 
-    assert (encaissement.degats_pv, encaissement.renvoyes) == (0, 0)
+    assert (encaissement.degats_pv, encaissement.renvoyes, encaissement.annules_leurre) == (0, 0, 50)
     assert statuts.intensites == {Statut.RENVOI: 5, Statut.BOUCLIER: 3}
 
 
@@ -70,16 +70,16 @@ def test_le_renvoi_passe_avant_le_bouclier_et_diminue():
     seconde = statuts.encaisser_attaque(6)
 
     assert (premiere.degats_pv, premiere.renvoyes) == (0, 3)
-    assert (seconde.degats_pv, seconde.renvoyes) == (2, 2)  # 4 non renvoyes, dont 2 absorbes
+    assert (seconde.degats_pv, seconde.renvoyes, seconde.absorbes_bouclier) == (2, 2, 2)  # 4 non renvoyes, dont 2 absorbes
     assert statuts.intensites == {}
 
 
 def test_fin_de_tour_l_incendie_frappe_a_travers_le_bouclier_puis_tout_baisse():
     statuts = Statuts({Statut.BOUCLIER: 3, Statut.INCENDIE: 4, Statut.RENVOI: 5, Statut.LEURRE: 1})
 
-    degats_pv = statuts.fin_de_tour()
+    encaissement = statuts.fin_de_tour()
 
-    assert degats_pv == 1
+    assert (encaissement.degats, encaissement.absorbes_bouclier, encaissement.degats_pv) == (4, 3, 1)
     # bouclier vide par l'incendie, incendie -1, renvoi termine, leurre intact
     assert statuts.intensites == {Statut.INCENDIE: 3, Statut.LEURRE: 1}
 
@@ -87,7 +87,7 @@ def test_fin_de_tour_l_incendie_frappe_a_travers_le_bouclier_puis_tout_baisse():
 def test_fin_de_tour_sans_incendie_le_bouclier_baisse_de_un():
     statuts = Statuts({Statut.BOUCLIER: 3})
 
-    assert statuts.fin_de_tour() == 0
+    assert statuts.fin_de_tour().degats_pv == 0
     assert statuts[Statut.BOUCLIER] == 2
 
 
