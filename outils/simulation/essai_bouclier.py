@@ -1,5 +1,5 @@
 """
-Essai limite (demande utilisateur, 2026-11-11) : la carte Bouclier (CRT_10) a 3 ou a 4, sur les
+Essai limite (demande utilisateur, 2026-11-11) : la carte Bouclier (CRT_10) a 3, 4, 5 ou 6, sur les
 memes 20 combats difficiles (memes graines, deck de depart, bot de recherche). Ne modifie pas
 config/carte_new.json : la valeur est changee sur les cartes du combat simule.
 
@@ -23,6 +23,7 @@ FLOTTES = [
     ("ENM_BOSS_PIRATES",),
 ]
 GRAINES = range(1, 5)
+VALEURS = (3, 4, 5, 6)
 
 
 def jouer(flotte: tuple[str, ...], graine: int, bouclier: int) -> dict:
@@ -36,11 +37,11 @@ def jouer(flotte: tuple[str, ...], graine: int, bouclier: int) -> dict:
 
 
 def main() -> None:
-    resultats = {b: {(f, g): jouer(f, g, b) for f in FLOTTES for g in GRAINES} for b in (3, 4)}
+    resultats = {b: {(f, g): jouer(f, g, b) for f in FLOTTES for g in GRAINES} for b in VALEURS}
     print("| Flotte | Bouclier | Victoires | PV principal perdus (moy.) | Tours | Bouclier joué / vu | Dégâts absorbés par les boucliers |")
     print("|---|---|---|---|---|---|---|")
     for flotte in FLOTTES + [None]:
-        for bouclier in (3, 4):
+        for bouclier in VALEURS:
             groupe = [r for (f, _g), r in resultats[bouclier].items() if flotte is None or f == flotte]
             jouees, vues = Counter(), Counter()
             for r in groupe:
