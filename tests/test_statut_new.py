@@ -89,3 +89,11 @@ def test_fin_de_tour_sans_incendie_le_bouclier_baisse_de_un():
 
     assert statuts.fin_de_tour() == 0
     assert statuts[Statut.BOUCLIER] == 2
+
+
+def test_une_intensite_mise_a_zero_retire_le_statut():
+    statuts = Statuts({Statut.BOUCLIER: 2})
+
+    statuts[Statut.BOUCLIER] -= 2
+
+    assert statuts.intensites == {}

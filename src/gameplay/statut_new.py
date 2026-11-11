@@ -82,7 +82,9 @@ class Encaissement:
 
 @dataclass
 class Statuts:
-    """Les statuts d'une entite en combat. Jamais d'intensite nulle dans le dictionnaire."""
+    """Les statuts d'une entite en combat. Lecture et ecriture d'une intensite toujours par
+    statuts[statut] (jamais directement dans `intensites`) : un statut absent se lit 0, une
+    intensite mise a 0 retire le statut. Pour poser un statut selon sa regle de cumul : ajouter."""
 
     intensites: dict[Statut, int] = field(default_factory=dict)
 
@@ -90,26 +92,26 @@ class Statuts:
         """Intensite du statut, 0 s'il est absent."""
         return self.intensites.get(statut, 0)
 
+    def __setitem__(self, statut: Statut, intensite: int) -> None:
+        """Fixe l'intensite brute (sans regle de cumul) ; 0 ou moins retire le statut."""
+        if intensite > 0:
+            self.intensites[statut] = intensite
+        else:
+            self.intensites.pop(statut, None)
+
     def ajouter(self, statut: Statut, intensite: int) -> None:
         """Pose un statut selon son cumul ; une intensite nulle ou negative ne pose rien."""
         if intensite <= 0:
             return
         if statut.regle.cumul == CumulStatut.ADDITION:
             intensite += self[statut]
-        self.intensites[statut] = intensite
+        self[statut] = intensite
 
     def retirer(self, statut: Statut, quantite: int) -> int:
         """Baisse un statut d'au plus `quantite` ; renvoie ce qui a ete reellement retire."""
         retire = min(self[statut], max(0, quantite))
-        if retire:
-            self._fixer(statut, self[statut] - retire)
+        self[statut] -= retire
         return retire
-
-    def _fixer(self, statut: Statut, intensite: int) -> None:
-        if intensite > 0:
-            self.intensites[statut] = intensite
-        else:
-            self.intensites.pop(statut, None)
 
     def absorber_par_bouclier(self, degats: int) -> int:
         """Le bouclier absorbe ce qu'il peut ; renvoie les degats restants."""
@@ -132,7 +134,7 @@ class Statuts:
         for statut in list(self.intensites):
             extinction = statut.regle.extinction
             if extinction == ExtinctionStatut.MOINS_UN_PAR_TOUR:
-                self._fixer(statut, self[statut] - 1)
+                self[statut] -= 1
             elif extinction == ExtinctionStatut.TOUR_SUIVANT:
-                self._fixer(statut, 0)
+                self[statut] = 0
         return degats_pv
