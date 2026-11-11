@@ -81,9 +81,9 @@ class ModuleNew:
     def __post_init__(self):
         self.cartes = tuple(self.cartes)
         if self.pv_max_base < 1:
-            raise ValueError(f"{self.id} : pv_max_base doit valoir au moins 1")
+            raise ValueError("pv_max_base doit valoir au moins 1")
         if not 1 <= self.niveau_maj <= 3:
-            raise ValueError(f"{self.id} : niveau_maj doit etre entre 1 et 3")
+            raise ValueError("niveau_maj doit etre entre 1 et 3")
         if self.pv_max is None:
             self.pv_max = self.pv_max_base
         if self.pv is None:
@@ -117,9 +117,15 @@ class ModuleNew:
     def est_detruit(self) -> bool:
         return self.pv_combat is not None and self.pv_combat <= 0
 
+    def _verifier_en_combat(self) -> None:
+        """Les methodes de combat ne s'appellent que sur une copie de combat (copie_pour_combat)."""
+        if self.pv_combat is None:
+            raise ValueError(f"Module {self.id} : hors combat, utiliser sa copie de combat (copie_pour_combat)")
+
     def subir_degats(self, degats: int) -> int:
         """Encaisse une attaque a travers les statuts (leurre, renvoi, bouclier : Statuts.
         encaisser_attaque). Renvoie les degats a renvoyer a l'attaquant (0 sans renvoi)."""
+        self._verifier_en_combat()
         encaissement = self.statuts.encaisser_attaque(degats)
         self._perdre_pv(encaissement.degats_pv)
         return encaissement.renvoyes
@@ -128,11 +134,16 @@ class ModuleNew:
         self.pv_combat = max(0, self.pv_combat - degats)
 
     def reparer(self, valeur: int) -> None:
-        """Rend des PV de combat, sans depasser le PV max."""
+        """Rend des PV de combat, sans depasser le PV max. Sans effet sur un module detruit : la
+        resurrection est une mecanique a part (refonte-modules.md 5, refonte-combat.md 4.4)."""
+        self._verifier_en_combat()
+        if self.est_detruit():
+            return
         self.pv_combat = min(self.pv_max, self.pv_combat + valeur)
 
     def fin_du_tour_ennemi(self) -> None:
         """L'incendie frappe puis les statuts s'eteignent (Statuts.fin_de_tour)."""
+        self._verifier_en_combat()
         self._perdre_pv(self.statuts.fin_de_tour())
 
     # --- Lecture JSON (format de config/module_new.json) ---
@@ -159,13 +170,23 @@ class ModuleNew:
             )
         except KeyError as erreur:
             raise ValueError(f"{module} : cle manquante {erreur}") from erreur
-        return cls(**champs)
+        try:
+            return cls(**champs)
+        except (TypeError, ValueError) as erreur:
+            # Mauvais type (ex. "pv_max": "60") ou valeur refusee par __post_init__
+            raise ValueError(f"{module} : {erreur}") from erreur
 
 
 def charger_modules_new(fichier: Path = FICHIER_MODULES_NEW) -> dict[str, ModuleNew]:
-    """Charge config/module_new.json. Renvoie un dict id de module -> modele de module."""
+    """Charge config/module_new.json. Renvoie un dict id de module -> modele de module ; un id
+    en double est refuse."""
     donnees = json.loads(fichier.read_text(encoding="utf-8"))
-    modules = {entree["id"]: ModuleNew.depuis_dict(entree) for entree in donnees["modules"]}
+    modules = {}
+    for entree in donnees["modules"]:
+        module = ModuleNew.depuis_dict(entree)
+        if module.id in modules:
+            raise ValueError(f"config/module_new.json : module {module.id} en double")
+        modules[module.id] = module
     if sum(module.principal for module in modules.values()) != 1:
         raise ValueError("config/module_new.json : il faut exactement un module principal")
     return modules

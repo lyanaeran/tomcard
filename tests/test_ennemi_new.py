@@ -213,3 +213,33 @@ def test_une_etape_vide_est_refusee():
 def test_une_cible_du_mauvais_camp_est_refusee(nature, cible):
     with pytest.raises(ValueError, match="ne peut pas viser"):
         EffetEnnemi(nature, "degats", cible)
+
+
+# --- Corrections de la review de la PR #60 ---
+
+
+def test_un_tour_inferieur_a_1_est_refuse():
+    with pytest.raises(ValueError, match="tour doit valoir au moins 1"):
+        ValeurEnnemi(base=5, augmentation=2).au_tour(0)
+
+
+def test_une_valeur_qui_n_est_pas_un_objet_est_signalee_avec_l_id_de_l_ennemi():
+    entree = _entree("ENM_PAT_LE_PIRATE")
+    entree["valeurs"]["degats"] = 5
+
+    with pytest.raises(ValueError, match="^Ennemi ENM_PAT_LE_PIRATE, valeur 'degats' : objet attendu"):
+        EnnemiNew.depuis_dict(entree)
+
+
+def test_un_id_d_ennemi_en_double_est_refuse(tmp_path):
+    fichier = tmp_path / "ennemi_new.json"
+    entrees = [_entree("ENM_PAT_LE_PIRATE"), _entree("ENM_PAT_LE_PIRATE")]
+    fichier.write_text(json.dumps({"ennemis": entrees}), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="ENM_PAT_LE_PIRATE en double"):
+        charger_ennemis_new(fichier)
+
+
+def test_les_methodes_de_combat_refusent_un_ennemi_hors_combat():
+    with pytest.raises(ValueError, match="hors combat"):
+        charger_ennemis_new()["ENM_PAT_LE_PIRATE"].subir_degats(5)

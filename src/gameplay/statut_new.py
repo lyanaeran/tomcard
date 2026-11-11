@@ -120,7 +120,10 @@ class Statuts:
     def encaisser_attaque(self, degats: int) -> Encaissement:
         """Ordre d'une attaque recue : le leurre l'annule entierement (et se consomme) ; sinon le
         renvoi prend les degats jusqu'a son intensite, puis le bouclier absorbe le reste avant
-        les PV."""
+        les PV. Une attaque a 0 degat ne consomme rien."""
+        if degats <= 0:
+            # Une attaque sans degats ne consomme ni leurre ni renvoi
+            return Encaissement(degats_pv=0)
         if self.retirer(Statut.LEURRE, 1):
             return Encaissement(degats_pv=0)
         renvoyes = self.retirer(Statut.RENVOI, degats)

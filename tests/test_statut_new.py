@@ -97,3 +97,12 @@ def test_une_intensite_mise_a_zero_retire_le_statut():
     statuts[Statut.BOUCLIER] -= 2
 
     assert statuts.intensites == {}
+
+
+def test_une_attaque_a_zero_degat_ne_consomme_ni_leurre_ni_renvoi():
+    statuts = Statuts({Statut.LEURRE: 1, Statut.RENVOI: 5})
+
+    encaissement = statuts.encaisser_attaque(0)
+
+    assert (encaissement.degats_pv, encaissement.renvoyes) == (0, 0)
+    assert statuts.intensites == {Statut.LEURRE: 1, Statut.RENVOI: 5}

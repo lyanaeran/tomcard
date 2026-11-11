@@ -196,3 +196,39 @@ def test_module_invalide_refuse(champs):
 
     with pytest.raises(ValueError):
         ModuleNew(**valeurs)
+
+
+# --- Corrections de la review de la PR #60 ---
+
+
+def test_la_reparation_ne_ressuscite_pas_un_module_detruit():
+    _, lanceur = _exemplaires()
+    combat = lanceur.copie_pour_combat()
+    combat.subir_degats(20)
+
+    combat.reparer(5)
+
+    assert combat.est_detruit() and combat.pv_combat == 0
+
+
+def test_une_valeur_de_mauvais_type_est_signalee_avec_l_id_du_module():
+    entree = _entree("MOD_2")
+    entree["pv_max"] = "20"
+
+    with pytest.raises(ValueError, match="^Module MOD_2 : "):
+        ModuleNew.depuis_dict(entree)
+
+
+def test_un_id_de_module_en_double_est_refuse(tmp_path):
+    fichier = tmp_path / "module_new.json"
+    fichier.write_text(json.dumps({"modules": [_entree("MOD_1"), _entree("MOD_2"), _entree("MOD_2")]}), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="MOD_2 en double"):
+        charger_modules_new(fichier)
+
+
+def test_les_methodes_de_combat_refusent_un_module_hors_combat():
+    principal, _ = _exemplaires()
+
+    with pytest.raises(ValueError, match="hors combat"):
+        principal.subir_degats(5)

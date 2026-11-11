@@ -110,6 +110,8 @@ class ValeurEnnemi:
         """Valeur au tour donne (1 = premier tour du combat) : arrondi_inferieur((base +
         augmentation x paliers) x coefficient), paliers = (tour - 1) // tous_les
         (specs/refonte-ennemis.md 3.3)."""
+        if tour < 1:
+            raise ValueError(f"tour doit valoir au moins 1 ({tour})")
         paliers = (tour - 1) // self.tous_les
         return math.floor((self.base + self.augmentation * paliers) * coefficient)
 
@@ -234,9 +236,15 @@ class EnnemiNew:
     def est_detruit(self) -> bool:
         return self.pv is not None and self.pv <= 0
 
+    def _verifier_en_combat(self) -> None:
+        """Les methodes de combat ne s'appellent que sur une copie de combat (pour_combat)."""
+        if self.pv is None:
+            raise ValueError(f"Ennemi {self.id} : hors combat, utiliser sa copie de combat (pour_combat)")
+
     def subir_degats(self, degats: int) -> int:
         """Encaisse une attaque a travers les statuts (leurre, renvoi, bouclier : Statuts.
         encaisser_attaque). Renvoie les degats a renvoyer a l'attaquant (0 sans renvoi)."""
+        self._verifier_en_combat()
         encaissement = self.statuts.encaisser_attaque(degats)
         self._perdre_pv(encaissement.degats_pv)
         return encaissement.renvoyes
@@ -246,6 +254,7 @@ class EnnemiNew:
 
     def fin_du_tour_du_joueur(self) -> None:
         """L'incendie frappe puis les statuts s'eteignent (Statuts.fin_de_tour)."""
+        self._verifier_en_combat()
         self._perdre_pv(self.statuts.fin_de_tour())
 
     # --- Lecture JSON (format de config/ennemi_new.json) ---
@@ -259,6 +268,8 @@ class EnnemiNew:
         try:
             valeurs = {}
             for nom, valeur in entree["valeurs"].items():
+                if not isinstance(valeur, dict):
+                    raise ValueError(f"{ennemi}, valeur '{nom}' : objet attendu, ex. {{\"base\": 5}}")
                 _verifier_cles(valeur, CLES_VALEUR, f"{ennemi}, valeur '{nom}'")
                 valeurs[nom] = ValeurEnnemi(**valeur)
             placement = entree.get("placement")
@@ -282,6 +293,13 @@ class EnnemiNew:
 
 
 def charger_ennemis_new(fichier: Path = FICHIER_ENNEMIS_NEW) -> dict[str, EnnemiNew]:
-    """Charge config/ennemi_new.json. Renvoie un dict id d'ennemi -> modele d'ennemi."""
+    """Charge config/ennemi_new.json. Renvoie un dict id d'ennemi -> modele d'ennemi ; un id en
+    double est refuse."""
     donnees = json.loads(fichier.read_text(encoding="utf-8"))
-    return {entree["id"]: EnnemiNew.depuis_dict(entree) for entree in donnees["ennemis"]}
+    ennemis = {}
+    for entree in donnees["ennemis"]:
+        ennemi = EnnemiNew.depuis_dict(entree)
+        if ennemi.id in ennemis:
+            raise ValueError(f"config/ennemi_new.json : ennemi {ennemi.id} en double")
+        ennemis[ennemi.id] = ennemi
+    return ennemis

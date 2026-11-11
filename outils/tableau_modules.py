@@ -6,10 +6,10 @@ chaque modification du JSON (tests/test_tableau_modules.py echoue sinon).
     python -m outils.tableau_modules
 """
 
-import json
 from pathlib import Path
 
 from src.gameplay.carte_new import charger_cartes_new
+from src.gameplay.module_new import charger_modules_new
 
 RACINE = Path(__file__).resolve().parents[1]
 FICHIER_JSON = RACINE / "config" / "module_new.json"
@@ -36,18 +36,22 @@ def _oui_non(valeur: bool) -> str:
 
 
 def tableau_markdown(fichier_json: Path = FICHIER_JSON) -> str:
-    """Contenu complet de config/module_new.md pour ce fichier JSON."""
-    entrees = json.loads(fichier_json.read_text(encoding="utf-8"))["modules"]
+    """Contenu complet de config/module_new.md pour ce fichier JSON. Passe par le chargeur
+    (lecture stricte) ; une carte absente de config/carte_new.json est une erreur."""
+    modules = charger_modules_new(fichier_json).values()
     noms_cartes = {id_carte: carte.nom for id_carte, carte in charger_cartes_new().items()}
     lignes = ["| " + " | ".join(COLONNES) + " |", "|" + "|".join("---" for _ in COLONNES) + "|"]
-    for entree in entrees:
-        cartes = "<br>".join(f"{id_carte} {noms_cartes.get(id_carte, '(inconnue)')}" for id_carte in entree["cartes"])
+    for module in modules:
+        inconnues = [id_carte for id_carte in module.cartes if id_carte not in noms_cartes]
+        if inconnues:
+            raise ValueError(f"Module {module.id} : cartes absentes de config/carte_new.json {inconnues}")
+        cartes = "<br>".join(f"{id_carte} {noms_cartes[id_carte]}" for id_carte in module.cartes)
         valeurs = [
-            entree["id"], entree["nom"], _oui_non(entree.get("principal", False)), str(entree["pv_max"]),
-            _oui_non(entree.get("jouable", True)), _oui_non(entree.get("refonte", False)), entree["description"], cartes,
+            module.id, module.nom, _oui_non(module.principal), str(module.pv_max_base),
+            _oui_non(module.jouable), _oui_non(module.refonte), module.description, cartes,
         ]
         lignes.append("| " + " | ".join(_cellule(valeur) for valeur in valeurs) + " |")
-    return ENTETE + f"{len(entrees)} modules.\n\n" + "\n".join(lignes) + "\n"
+    return ENTETE + f"{len(modules)} modules.\n\n" + "\n".join(lignes) + "\n"
 
 
 def main() -> None:
