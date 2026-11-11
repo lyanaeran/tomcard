@@ -5,7 +5,8 @@
 validés ; le reste est une proposition. Une fois stabilisé, le contenu ira dans
 [combat.md](combat.md) (§3.2, §13) et ce fichier sera supprimé. Voir aussi
 [refonte-buffs-debuffs.md](refonte-buffs-debuffs.md), [refonte-modules.md](refonte-modules.md),
-et la synthèse de simulation `outils/simulation/synthese/analyse_2026-11-07.md`.*
+la synthèse de simulation `outils/simulation/synthese/analyse_2026-11-07.md` (ancien moteur) et
+`analyse_2026-11-11_combat_new.md` (refonte). Vue d'ensemble : [refonte.md](refonte.md).*
 
 ---
 
@@ -223,5 +224,6 @@ Détail et valeurs tour par tour : `config/ennemi_new.md` (généré).
 
 1. ~~Redessiner les 6 ennemis, créer `config/ennemi_new.json`, `EnnemiNew` et son tableau~~
    (fait, 2026-11-08) ; ajuster les valeurs (utilisateur).
-2. Puis le combat de la refonte (`combat_new`, spécifié dans [refonte-combat.md](refonte-combat.md)),
-   validé par le simulateur.
+2. ~~Le combat de la refonte (`combat_new`, spécifié dans [refonte-combat.md](refonte-combat.md)),
+   validé par le simulateur~~ (fait, 2026-11-11 : `outils/simulation/synthese/analyse_2026-11-11_combat_new.md`).
+3. Composition des flottes par niveau (§5), au branchement.

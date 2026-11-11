@@ -9,6 +9,21 @@ Seule source de vérité des règles de jeu, exécutée telle quelle par le PC (
 (Pyodide, via `web/bridge.py`). **Zéro dépendance pyglet** : si une fonction a besoin d'affichage,
 elle appartient à `src/ui`. Couvert par pytest (`tests/`, un fichier de test par module).
 
+## Deux moteurs (refonte en cours)
+
+Les fichiers `*_new.py` (`carte_new`, `module_new`, `ennemi_new`, `statut_new`, `combat_new`,
+`deck_new`, `flotte_new`, `vaisseau_new`) sont le **moteur de la refonte**, codé et testé mais
+**pas encore branché** : le jeu (parcours, sauvegarde, PC, web) utilise toujours l'ancien moteur
+(`carte.py`, `module.py`, `ennemi.py`, `combat.py`...). Vue d'ensemble : `specs/refonte.md`.
+
+- Ne pas mélanger les deux : un fichier `_new` n'importe pas l'ancien moteur, sauf réutilisation
+  explicite d'un élément neutre (`position.py`, `RareteCarte`).
+- Dans le moteur de la refonte, les objets de la partie (cartes, modules) ne sont **jamais modifiés
+  par un combat** : `CombatNew` travaille sur des copies (`CarteNew.copie`,
+  `ModuleNew.copie_pour_combat`, `EnnemiNew.pour_combat`).
+- Les tests ne doivent pas coder en dur une valeur de carte réglable (ex. Bouclier) : la lire dans
+  `config/carte_new.json`, l'utilisateur ajuste souvent les valeurs.
+
 ## Compatibilité avec le web
 
 - Avant de renommer/déplacer une fonction, une signature ou un champ d'entité, vérifier ce que

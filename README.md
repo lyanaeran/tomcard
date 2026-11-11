@@ -1,8 +1,9 @@
 # Space Fight
 
-Deckbuilder roguelike (thème vaisseaux spatiaux) inspiré de Slay the Spire. Le **POC de combat** est
-jouable ; le développement porte maintenant sur le **parcours** (boucle de run) — voir
-`specs/specs.md` pour la vision de conception globale du jeu complet.
+Deckbuilder roguelike (thème vaisseaux spatiaux) inspiré de Slay the Spire. Le combat et le
+**parcours** (boucle de run jusqu'au Boss du niveau 10) sont jouables. Une **refonte** des cartes,
+modules, ennemis et du combat est en cours, codée à côté du moteur actuel et pas encore branchée :
+voir `specs/refonte.md`. Conception complète : `specs/specs.md`.
 
 Le jeu se lance de **deux façons**, qui partagent exactement la même logique de jeu
 (`src/gameplay/`) et doivent toutes les deux rester fonctionnelles :
@@ -47,3 +48,10 @@ pytest
 
 Les tests couvrent `src/gameplay/` (pur Python, sans dépendance à pyglet ni à la version web) et
 `src/ui/animation.py`. Voir `CLAUDE.md` pour les conventions de code et la stack complète.
+
+## Outils
+
+- Tableaux lisibles des données de la refonte (générés, à relancer après chaque modification du
+  JSON) : `python -m outils.tableau_cartes`, `python -m outils.tableau_modules`,
+  `python -m outils.tableau_ennemis`.
+- Simulateurs d'équilibrage : voir `outils/simulation/CLAUDE.md` (campagnes de quelques minutes).

@@ -286,3 +286,38 @@ rédigées : `outils/simulation/synthese/analyse_AAAA-MM-JJ.md` (rapports géné
   deviennent plus riches.
 - **Budget par défaut** (500 simulations au plus, décision utilisateur) : 60 combats de
   validation, 90 combats isolés, 200 parties à module forcé, au plus 150 parties clonées.
+
+---
+
+## 12. Simulateur du combat de la refonte (2026-11-11)
+
+Le combat de la refonte (`CombatNew`, [refonte-combat.md](refonte-combat.md)) a son propre
+simulateur, à côté de celui des règles actuelles (§11), qui reste inchangé :
+
+- `outils/simulation/bot_new.py` : bot « recherche » (même faisceau et mêmes poids que §11, plus
+  un leurre et l'incendie restant dans l'évaluation) et bot aléatoire, sur l'API de `CombatNew`
+  (`jouer_carte(carte, case)`, `finir_tour`). La recherche copie le combat **sans son journal**.
+  **Valeur du deck** (idée utilisateur, 2026-11-11) : l'évaluation ajoute ce que rapporteront les
+  lancements en plus (cartes de répétition) d'ici la fin du combat, d'autant plus que le combat est
+  jeune (tours restants estimés d'après le numéro du tour, jamais d'après les PV ennemis, qui
+  incitaient le bot à ne pas frapper). Sans elle, *Protocole d'urgence* n'était jamais joué.
+- `outils/simulation/combats_new.py` : **combats isolés** seulement (le combat n'est pas encore
+  branché au parcours) :
+  - **robustesse** : le bot aléatoire joue des milliers de combats et un contrôle vérifie après
+    chaque action des **invariants** (piles de cartes, PV, statuts, pile Hors service, cohérence
+    victoire/défaite, détail des dégâts du journal, attaques conformes aux intentions) ;
+  - **équilibre** : chaque ennemi seul, chaque paire, le Boss, avec un deck « départ » et un deck
+    « étoffé » ;
+  - **enchaînement** : approximation d'une partie (un combat par niveau du 2 au 10, PV du
+    principal reportés, sans soin hors combat).
+- Lancement : `caffeinate -i python -m outils.simulation.combats_new --graines 30 --robustesse 2000
+  --enchainements 300` (environ 3 minutes sur 8 cœurs). Tests : `tests/test_simulation_combats_new.py`.
+- La **composition des flottes** (placement préféré) est reprise de `config_poc` dans l'outil, en
+  attendant celle de la refonte.
+- Première synthèse : `outils/simulation/synthese/analyse_2026-11-11_combat_new.md`.
+- **Essais limités** : `construire_combat(..., valeurs_cartes={"CRT_10": {"bouclier": 4}})` change
+  la valeur d'une carte pour un essai, sans toucher à `config/carte_new.json`. Premier essai :
+  `outils/simulation/essai_bouclier.py` (Bouclier à 3, 4, 5 ou 6 sur 20 combats difficiles et 12 faciles, avec le bouclier maximal atteint), synthèse
+  `outils/simulation/synthese/essai_bouclier_2026-11-11.md`.
+- **Pas de campagne sans l'accord de l'utilisateur** (consigne du 2026-11-11 : trop long).
+

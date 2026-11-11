@@ -1,8 +1,10 @@
 # Refonte des modules secondaires — brouillon de conception
 
 *Document de travail, pas encore une section numérotée du document de conception (cf.
-[specs.md](specs.md)) : rien ci-dessous n'est décidé ni implémenté, sauf mention « décision
-utilisateur ». Une fois le modèle tranché, le contenu stabilisé ira dans [combat.md](combat.md)
+[specs.md](specs.md)). Les choix marqués « décision utilisateur » sont validés, le reste est une
+proposition. **Codé (pas encore branché)** : `ModuleNew` (§8), la pile Hors service et le mot-clé
+Persistante dans le combat de la refonte (`combat_new.py`, `deck_new.py`). Vue d'ensemble :
+[refonte.md](refonte.md). Une fois le modèle tranché, le contenu stabilisé ira dans [combat.md](combat.md)
 (§3.4), [parcours.md](parcours.md) (§2.2) et [modules-cartes.md](modules-cartes.md) (§4, §5), et ce
 fichier sera supprimé. Pointeur depuis [a-trancher.md](a-trancher.md) §11.*
 
@@ -338,13 +340,15 @@ sauvegarde de l'exemplaire (`EtatModule`) sera adaptée au branchement.
 
 ## 10. Prochaines étapes
 
-1. Créer `module_new.py` (`ModuleNew`, copie par combat, §8), `config/module_new.json`
-   (principal 60 PV, Lanceur de missiles 20 PV) et son tableau généré.
-2. Trancher le rattachement des cartes obtenues hors module (§3.3), puis implémenter le lien
-   carte ↔ exemplaire de module (identifiant d'exemplaire, format du deck sauvegardé, `CarteNew`,
+1. ~~Créer `module_new.py` (`ModuleNew`, copie par combat, §8), `config/module_new.json`
+   (principal 60 PV, Lanceur de missiles 20 PV) et son tableau généré~~ (fait, 2026-11-08) ; pile
+   Hors service et Persistante codées dans le combat de la refonte (2026-11-11).
+2. Trancher le rattachement des cartes obtenues hors module (§3.3 ; au principal pour l'instant),
+   puis, au branchement, implémenter le lien carte ↔ exemplaire de module dans la partie (identifiant d'exemplaire, format du deck sauvegardé, `CarteNew`,
    `web/bridge.py`, `web/app.js`) et choisir les premières cartes Persistantes.
 3. Concevoir les premières cartes Destruction (puis trancher
    [refonte-destruction.md](refonte-destruction.md)), de résurrection et de sacrifice.
-4. Simuler pour caler les PV du principal et des secondaires.
+4. Simuler pour caler les PV du principal et des secondaires (premières campagnes de combats
+   isolés faites le 2026-11-11 ; parties complètes après le branchement).
 5. Une fois stabilisé : migrer dans `combat.md` (§3.4), `parcours.md` (§2.2), `modules-cartes.md`
    (§4, §5), supprimer ce fichier.

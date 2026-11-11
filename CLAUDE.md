@@ -4,6 +4,11 @@ Deckbuilder roguelike (thème vaisseaux spatiaux) inspiré de Slay the Spire. Le
 et le **parcours** (boucle de run) s'enchaîne écran par écran jusqu'au Boss du niveau 10
 (specs.md §2.4), sur les deux versions : `main.py` côté PC, `web/app.js` côté web.
 
+**Une refonte est en cours** (cartes, modules, ennemis, statuts, combat) : un **nouveau moteur**
+(fichiers `*_new.py`, `config/*_new.json`) est codé et testé **à côté de l'ancien**, mais pas
+encore branché au jeu, qui utilise toujours l'ancien. **Lire `specs/refonte.md` en premier** : état
+des lieux, où est quoi, ce qui reste à faire.
+
 ## Langue
 
 Répondre à l'utilisateur en français, y compris pour les messages de statut/résumés. Le code
@@ -12,18 +17,38 @@ cédilles)**. `specs/` et les `CLAUDE.md` utilisent l'orthographe normale. Les *
 dans le jeu** (noms et descriptions des cartes dans `config/`) gardent leurs accents (consigne
 utilisateur) ; tout le reste (identifiants, clés JSON, code, commentaires) reste sans accent.
 
+## Travailler avec l'utilisateur
+
+L'utilisateur conçoit le jeu ; l'agent propose, documente et code. Préférences constatées :
+
+- **Spécifier avant de coder.** Une nouvelle mécanique se discute d'abord (propositions, questions
+  numérotées), puis la décision est notée dans `specs/` (« décision utilisateur », avec la date),
+  puis seulement codée quand l'utilisateur le demande. Quand il dit « ne code rien » ou pose une
+  question, répondre et proposer, sans modifier le code.
+- **Signaler ce qu'on invente** : une valeur ou une règle choisie faute de spec est marquée
+  « proposition » ou « valeur inventée » dans `specs/` et dans la PR, et soumise à l'utilisateur.
+- **Ne jamais lancer une campagne de simulation sans son accord** (c'est long) : proposer le volume
+  et la durée, attendre le feu vert. Un essai qu'il a lui-même demandé et dimensionné est autorisé
+  tel quel.
+- **Réponses courtes et concrètes, en français**, avec des exemples chiffrés plutôt que du jargon ;
+  dire clairement ce qui a été testé et ce qui ne l'a pas été.
+- **Revues de PR** : un bot (Claude Code) commente les PR. À la demande de l'utilisateur, lire les
+  commentaires (`~/.local/bin/gh api repos/{owner}/{repo}/pulls/<n>/comments`), corriger ce qui
+  est juste (avec un test), et répondre sous chaque commentaire (corrigé dans tel commit, ou
+  pourquoi on ne change pas).
+
 ## Documents de référence (à tenir à jour)
 
 - `specs/` — document de conception, **seule source de vérité pour le design**, découpé par thème.
   **Lire d'abord `specs/specs.md`** (index court : quelle section dans quel fichier, quel fichier
-  lire selon la tâche), puis seulement le fichier utile. Les références « specs.md §X.Y » du code se
+  lire selon la tâche), puis seulement le fichier utile ; pour la refonte, `specs/refonte.md`. Les références « specs.md §X.Y » du code se
   résolvent avec cet index (numérotation commune à tous les fichiers).
 - **Tous les documents de conception `.md` vont dans `specs/`** (consigne utilisateur), y compris
   les brouillons de refonte et la conception d'outils (ex. `specs/simulation.md` pour
   `outils/simulation/`), et sont listés dans l'index `specs/specs.md`. Seules exceptions : les
   `CLAUDE.md`, `README.md`, et les fichiers générés (ex. synthèses de simulation,
   `config/carte_new.md`, `config/module_new.md`, `config/ennemi_new.md`).
-- **Cartes (refonte en cours, décision utilisateur)** :
+- **Données de la refonte (décision utilisateur)** :
   - `config/carte_new.json` est la **source de vérité des cartes** : format de la refonte
     (`src/gameplay/carte_new.py:CarteNew`), valeurs nommées, effets, champs `jouable` et `refonte`.
     C'est là qu'on modifie une carte, puis on régénère `config/carte_new.md` (tableau lisible,
@@ -55,7 +80,8 @@ relire la section concernée.
 Les détails propres à chaque partie sont dans des `CLAUDE.md` chargés quand on travaille dans le
 dossier : `src/gameplay/CLAUDE.md` (compatibilité web, déterminisme du tirage aléatoire),
 `src/ui/CLAUDE.md` (pièges pyglet, méthode de test PC par capture), `web/CLAUDE.md` (Pyodide,
-cache-busting, méthode de test web). **Les lire avant de toucher ces dossiers ou de tester.**
+cache-busting, méthode de test web), `outils/simulation/CLAUDE.md` (lancer les simulations, les
+deux simulateurs, les synthèses). **Les lire avant de toucher ces dossiers ou de tester.**
 
 ## Deux façons de jouer (PC et web/iOS) — les deux doivent rester fonctionnelles
 
@@ -97,13 +123,16 @@ Séparation stricte (specs.md §10) :
   vit dans `src/gameplay/deroulement.py`, jamais dans `main.py`, `src/ui/` ou `web/`** (consigne
   utilisateur) : PC (`main.py:_aller_a`), web (`web/app.js:allerA`) et simulation ne font
   qu'afficher ou suivre l'`Ecran` qu'il renvoie
-- `outils/simulation/` — simulateur d'équilibrage (conception : `specs/simulation.md`), qui joue
-  des combats et des parties sans affichage en appelant `src/gameplay`
+- `outils/simulation/` — simulateurs d'équilibrage (conception : `specs/simulation.md`), qui jouent
+  des combats et des parties sans affichage en appelant `src/gameplay` : un pour l'ancien moteur,
+  un pour le combat de la refonte
+- `outils/tableau_*.py` — génèrent les tableaux lisibles `config/*_new.md` à partir des JSON
 - `index.html` + `web/` — version web ; `web/bridge.py` importe `src/gameplay/` sans le modifier
 - `config/*.json` — contenu déclaratif (modules, ennemis, cartes), chargé par
   `src/gameplay/donnees.py` (PC) et fetché directement par `web/app.js` (web)
-- `assets/` — images ; `tests/` — un fichier de test par module de `src/gameplay/`, plus
-  `test_animation.py` et `test_architecture.py`
+- `assets/` — images ; `tests/` — un fichier de test par module de `src/gameplay/` (ancien et
+  `_new`), plus `test_animation.py`, `test_architecture.py`, les tests des tableaux générés et des
+  simulateurs
 
 **`src/ui` et `web/` ne possèdent jamais de règle de jeu ni d'état de session** (uniquement la
 présentation d'un état décidé par `src/gameplay`) — précédents : le journal de combat
@@ -136,3 +165,5 @@ sinon le commit reste orphelin.
 demande (préférence confirmée par l'utilisateur) : nouvelle PR si la précédente est mergée/fermée,
 sinon mise à jour de la description de celle qui est ouverte. Sur le Mac de l'utilisateur, `gh` est
 installé dans `~/.local/bin/gh` (pas dans le `PATH`) et authentifié.
+
+Messages de commit en français sans accents (comme le code), titre court puis détail si besoin.

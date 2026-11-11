@@ -30,7 +30,7 @@ from enum import Enum, auto
 from fractions import Fraction
 from pathlib import Path
 
-from src.gameplay.statut_new import Statut, Statuts
+from src.gameplay.statut_new import Encaissement, Statut, Statuts
 
 FICHIER_ENNEMIS_NEW = Path(__file__).resolve().parents[2] / "config" / "ennemi_new.json"
 
@@ -241,21 +241,24 @@ class EnnemiNew:
         if self.pv is None:
             raise ValueError(f"Ennemi {self.id} : hors combat, utiliser sa copie de combat (pour_combat)")
 
-    def subir_degats(self, degats: int) -> int:
+    def subir_degats(self, degats: int) -> Encaissement:
         """Encaisse une attaque a travers les statuts (leurre, renvoi, bouclier : Statuts.
-        encaisser_attaque). Renvoie les degats a renvoyer a l'attaquant (0 sans renvoi)."""
+        encaisser_attaque). Renvoie le detail, dont les degats a renvoyer a l'attaquant."""
         self._verifier_en_combat()
         encaissement = self.statuts.encaisser_attaque(degats)
         self._perdre_pv(encaissement.degats_pv)
-        return encaissement.renvoyes
+        return encaissement
 
     def _perdre_pv(self, degats: int) -> None:
         self.pv = max(0, self.pv - degats)
 
-    def fin_du_tour_du_joueur(self) -> None:
-        """L'incendie frappe puis les statuts s'eteignent (Statuts.fin_de_tour)."""
+    def fin_du_tour_du_joueur(self) -> Encaissement:
+        """L'incendie frappe puis les statuts s'eteignent (Statuts.fin_de_tour). Renvoie le detail
+        des degats d'incendie."""
         self._verifier_en_combat()
-        self._perdre_pv(self.statuts.fin_de_tour())
+        encaissement = self.statuts.fin_de_tour()
+        self._perdre_pv(encaissement.degats_pv)
+        return encaissement
 
     # --- Lecture JSON (format de config/ennemi_new.json) ---
 

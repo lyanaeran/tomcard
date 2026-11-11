@@ -345,3 +345,8 @@ def test_effet_invalide_refuse():
         Effet(NatureEffet.DEGATS, "degats", filtre=FiltreCartes(id="CRT_7"))  # filtre interdit
     with pytest.raises(ValueError):
         FiltreCartes()  # aucun critere
+
+
+def test_chaque_portee_declare_le_camp_qu_elle_touche():
+    assert PorteeEffet.CIBLE.camp is None
+    assert all(portee.camp == Camp.ENNEMI for portee in PorteeEffet if portee != PorteeEffet.CIBLE)
