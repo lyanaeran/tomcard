@@ -106,7 +106,7 @@ Rattachement au moment où la carte entre dans le deck :
 | Deck de départ | le principal |
 | Carte choisie après le choix de module (Niveau 1) | le module qui vient d'être équipé |
 | Récompense de combat | le module qui a proposé la carte (une candidate par module équipé, §6) |
-| Aventure, Planète commerciale | **à trancher**, voir ci-dessous |
+| Aventure, Planète commerciale | **le principal pour l'instant** (décision utilisateur, 2026-11-11), question toujours ouverte, voir ci-dessous |
 
 C'est le plus gros chantier moteur de cette refonte (format de sauvegarde dans
 `src/gameplay/partie.py`, `web/bridge.py`, `web/app.js`), à faire au branchement de la refonte avec

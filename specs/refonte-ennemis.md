@@ -223,4 +223,5 @@ Détail et valeurs tour par tour : `config/ennemi_new.md` (généré).
 
 1. ~~Redessiner les 6 ennemis, créer `config/ennemi_new.json`, `EnnemiNew` et son tableau~~
    (fait, 2026-11-08) ; ajuster les valeurs (utilisateur).
-2. Puis le combat de la refonte (`combat_new`), validé par le simulateur.
+2. Puis le combat de la refonte (`combat_new`, spécifié dans [refonte-combat.md](refonte-combat.md)),
+   validé par le simulateur.
