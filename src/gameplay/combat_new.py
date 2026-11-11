@@ -16,7 +16,7 @@ from src.gameplay.ennemi_new import CibleEffetEnnemi, EffetEnnemi, EnnemiNew, Na
 from src.gameplay.flotte_new import FlotteNew
 from src.gameplay.module_new import ModuleNew
 from src.gameplay.position import Colonne, Position
-from src.gameplay.statut_new import Encaissement, Statut
+from src.gameplay.statut_new import Encaissement, Statut, Statuts
 from src.gameplay.vaisseau_new import VaisseauNew
 
 # Valeur inchangee par rapport au moteur actuel (config_poc.ELECTRICITE_PAR_TOUR, combat.md 3.3)
@@ -28,6 +28,16 @@ NATURES_NON_GEREES = {NatureEffet.VULNERABILITE, NatureEffet.REDUCTION_DEGATS, N
 
 # Natures qui agissent sur le joueur lui-meme (electricite, pioche, cartes), pas sur une entite
 NATURES_GLOBALES = {NatureEffet.GAIN_ELECTRICITE, NatureEffet.PIOCHE, NatureEffet.REPETITION}
+
+# Camp que chaque nature d'effet peut toucher : une carte qui l'applique a l'autre camp est
+# injouable (verifie avant toute modification du combat)
+CAMP_PAR_NATURE = {
+    NatureEffet.DEGATS: Camp.ENNEMI,
+    NatureEffet.INCENDIE: Camp.ENNEMI,
+    NatureEffet.BOUCLIER: Camp.JOUEUR,
+    NatureEffet.REPARATION: Camp.JOUEUR,
+    NatureEffet.ANNULATION_PROCHAINE_ATTAQUE: Camp.JOUEUR,
+}
 
 Entite = ModuleNew | EnnemiNew
 
@@ -115,7 +125,9 @@ class CombatNew:
         for carte in deck:
             if carte.exemplaire_module is None or self.vaisseau.module_d_exemplaire(carte.exemplaire_module) is None:
                 raise ValueError(f"Carte {carte.id} : rattachee a un module absent ({carte.exemplaire_module})")
-        self.deck = DeckNew(deck, aleatoire)
+        # Copie de chaque carte, comme les modules et les ennemis : munitions et lancements
+        # repartent de leur base, et le deck de la partie n'est jamais modifie (7)
+        self.deck = DeckNew([carte.copie() for carte in deck], aleatoire)
         self.etat = EtatCombatNew.EN_COURS
         self.tour = 1
         self.electricite = 0
@@ -152,14 +164,30 @@ class CombatNew:
         return cases
 
     def peut_jouer(self, carte: CarteNew) -> bool:
-        """En main, electricite suffisante, au moins une cible, aucune nature laissee pour plus tard."""
-        return (
+        """En main, electricite suffisante, effets geres, au moins une cible."""
+        return bool(self._cases_jouables(carte))
+
+    def _cases_jouables(self, carte: CarteNew) -> list[Position]:
+        """Cases ou la carte peut etre jouee maintenant ; vide si elle est injouable (hors main,
+        electricite, nature laissee pour plus tard ou appliquee au mauvais camp, aucune cible)."""
+        if not (
             self.en_cours
             and any(carte is en_main for en_main in self.deck.main)
             and carte.cout <= self.electricite
-            and not any(effet.nature in NATURES_NON_GEREES for effet in carte.effets)
-            and bool(self.cibles_possibles(carte))
-        )
+            and all(self._effet_gere(carte, effet) for effet in carte.effets)
+        ):
+            return []
+        return self.cibles_possibles(carte)
+
+    @staticmethod
+    def _effet_gere(carte: CarteNew, effet: Effet) -> bool:
+        if effet.nature in NATURES_NON_GEREES:
+            return False
+        camp = CAMP_PAR_NATURE.get(effet.nature)
+        if camp is None:
+            return True
+        touche_ennemis = effet.portee != PorteeEffet.CIBLE or carte.cible.camp == Camp.ENNEMI
+        return camp == (Camp.ENNEMI if touche_ennemis else Camp.JOUEUR)
 
     def intentions(self) -> list[Intention]:
         """Ce que chaque ennemi vivant jouera a son prochain tour (refonte-combat.md 5.3)."""
@@ -182,9 +210,10 @@ class CombatNew:
     def jouer_carte(self, carte: CarteNew, case: Position) -> None:
         """Joue une carte de la main sur la case choisie (refonte-combat.md 4). Refuse une action
         invalide (ValueError)."""
-        if not self.peut_jouer(carte):
+        cases = self._cases_jouables(carte)
+        if not cases:
             raise ValueError(f"Carte {carte.id} : injouable maintenant")
-        if case not in self.cibles_possibles(carte):
+        if case not in cases:
             raise ValueError(f"Carte {carte.id} : cible invalide {case}")
         cible_choisie = self._entite_en(carte, case)
         self.deck.retirer_de_la_main(carte)
@@ -209,8 +238,8 @@ class CombatNew:
         self.deck.defausser_main()
         for ennemi in self.flotte.ennemis_vivants():
             self._fin_de_tour_d_entite(ennemi, ennemi.fin_du_tour_du_joueur)
-        if self._verifier_victoire():
-            return
+            if not self.en_cours:
+                return
         self._tour_ennemi()
         if not self.en_cours:
             return
@@ -246,7 +275,11 @@ class CombatNew:
                 self._jouer_effet_ennemi(ennemi, effet)
                 if not self.en_cours:
                     return
-            ennemi.avancer_cycle()
+                if ennemi.est_detruit():
+                    # Detruit pendant son etape (renvoi d'un module) : il ne joue plus
+                    break
+            else:
+                ennemi.avancer_cycle()
 
     def _jouer_effet_ennemi(self, ennemi: EnnemiNew, effet: EffetEnnemi) -> None:
         """Un effet d'etape ennemie. Cible choisie une seule fois, puis l'effet est repete sur elle
@@ -385,6 +418,8 @@ class CombatNew:
         if not entite.est_detruit() or any(entite is deja for deja in self._detruits):
             return
         self._detruits.append(entite)
+        # Ses statuts sont perdus (6)
+        entite.statuts = Statuts()
         if isinstance(entite, ModuleNew):
             self._noter(NatureEvenement.MODULE_DETRUIT, cible=entite)
             deplacees = self.deck.mettre_hors_service(entite.exemplaire)

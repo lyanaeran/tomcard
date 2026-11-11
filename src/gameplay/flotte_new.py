@@ -25,7 +25,20 @@ class FlotteNew:
 
     def __init__(self, ennemis: dict[Position, EnnemiNew]):
         self._par_case = dict(ennemis)
-        for ennemi in self.ennemis:
+        # Le placement ne change jamais pendant un combat : ennemis et cases calcules une fois
+        self._ennemis: list[EnnemiNew] = []
+        self._cases: list[list[Position]] = []
+        for case in ORDRE_DE_JEU:
+            ennemi = self._par_case.get(case)
+            if ennemi is None:
+                continue
+            index = next((i for i, deja in enumerate(self._ennemis) if deja is ennemi), None)
+            if index is None:
+                self._ennemis.append(ennemi)
+                self._cases.append([case])
+            else:
+                self._cases[index].append(case)
+        for ennemi in self._ennemis:
             if ennemi.pv is None:
                 raise ValueError(f"Ennemi {ennemi.id} : la flotte prend des ennemis en combat (pour_combat)")
             cases = self.cases_de(ennemi)
@@ -39,12 +52,7 @@ class FlotteNew:
     @property
     def ennemis(self) -> list[EnnemiNew]:
         """Tous les ennemis, detruits compris, une fois chacun, dans l'ordre de jeu."""
-        resultat: list[EnnemiNew] = []
-        for case in ORDRE_DE_JEU:
-            ennemi = self._par_case.get(case)
-            if ennemi is not None and not any(ennemi is deja for deja in resultat):
-                resultat.append(ennemi)
-        return resultat
+        return list(self._ennemis)
 
     def ennemis_vivants(self) -> list[EnnemiNew]:
         """Ennemis vivants dans l'ordre de jeu (decision utilisateur, refonte-combat.md 5.1)."""
@@ -61,7 +69,8 @@ class FlotteNew:
         return None if ennemi is None or ennemi.est_detruit() else ennemi
 
     def cases_de(self, ennemi: EnnemiNew) -> list[Position]:
-        return [case for case in ORDRE_DE_JEU if self._par_case.get(case) is ennemi]
+        index = next(i for i, deja in enumerate(self._ennemis) if deja is ennemi)
+        return list(self._cases[index])
 
     def cases_vivantes(self) -> list[Position]:
         return [case for case in ORDRE_DE_JEU if self.ennemi_en(case) is not None]

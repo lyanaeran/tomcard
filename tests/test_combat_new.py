@@ -502,3 +502,58 @@ def test_pioche_et_gain_d_electricite_a_chaque_lancement():
 
     assert (len(combat.deck.main), len(combat.deck.pioche)) == (2, 1)
     assert combat.electricite == 4  # 3 - 1 + 1 + 1
+
+
+# --- Corrections de la review de la PR #61 ---
+
+
+def test_le_combat_ne_modifie_pas_les_cartes_du_deck_de_la_partie():
+    deck = deck_de_depart(CARTES, "M1")
+    combat = _combat(deck=deck)
+    reparation = next(carte for carte in combat.deck.toutes_les_cartes() if carte.id == "CRT_12")
+    combat.deck.main = [reparation]
+
+    combat.jouer_carte(reparation, AVANT_MID)
+
+    assert not any(carte is originale for carte in combat.deck.toutes_les_cartes() for originale in deck)
+    assert next(carte for carte in deck if carte.id == "CRT_12").munitions_restantes == 2
+    assert reparation.munitions_restantes == 1
+
+
+def test_une_nature_appliquee_au_mauvais_camp_est_refusee_avant_toute_modification():
+    degats_sur_module = CarteNew(
+        id="TEST", nom="Erreur", image="", rarete=RareteCarte.COMMUNE, categorie=CategorieCarte.ATTAQUE,
+        cible=CibleCarteNew.MODULE_UNIQUE, cout=1, description="", valeurs={"degats": 5},
+        effets=(Effet(NatureEffet.DEGATS, "degats"),), exemplaire_module="M1",
+    )
+    combat = _combat()
+    _en_main(combat, degats_sur_module)
+
+    assert not combat.peut_jouer(degats_sur_module)
+    with pytest.raises(ValueError, match="injouable"):
+        combat.jouer_carte(degats_sur_module, AVANT_MID)
+    assert combat.electricite == 3 and combat.deck.main == [degats_sur_module]
+
+
+def test_un_module_detruit_perd_ses_statuts():
+    combat = _combat({AVANT_GAUCHE: _ennemi()})
+    lanceur = combat.vaisseau.module_d_exemplaire("M2")
+    lanceur.pv_combat = 1
+    lanceur.statuts.ajouter(Statut.INCENDIE, 3)
+
+    combat.finir_tour()
+
+    assert lanceur.est_detruit() and lanceur.statuts.intensites == {}
+
+
+def test_un_ennemi_detruit_pendant_son_etape_ne_joue_pas_la_suite():
+    jean = _ennemi("ENM_PETIT_JEAN")
+    jean.pv = 2
+    combat = _combat({AVANT_GAUCHE: jean})
+    combat.vaisseau.module_d_exemplaire("M2").statuts.ajouter(Statut.RENVOI, 10)
+
+    combat.finir_tour()
+
+    assert jean.est_detruit() and combat.etat == EtatCombatNew.VICTOIRE
+    assert not _evenements(combat, NatureEvenement.STATUT_POSE)  # son bouclier n'est pas pose
+
