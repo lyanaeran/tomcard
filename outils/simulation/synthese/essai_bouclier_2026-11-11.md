@@ -143,7 +143,9 @@ La valeur du Bouclier se compare aux deux autres cartes de bouclier du principal
 Un premier réglage à **5 / 7 / 8** a été appliqué et simulé (campagne complète,
 `analyse_2026-11-11_combat_new.md`) : il rendait le jeu nettement plus facile (Boss battu 97 % du
 temps avec le deck de départ, parties approchées gagnées 32 % → 59 %). L'utilisateur l'a jugé trop
-haut et l'a ramené à **4 / 6 / 8** (non simulé à ce jour).
+haut et l'a ramené à **4 / 6 / 8**, simulé ensuite (campagne complète de 19 h 35 : 45 % des
+parties approchées battent le Boss, contre 32 % à 3 / 5 / 6 et 59 % à 5 / 7 / 8 ; détail dans
+`analyse_2026-11-11_combat_new.md` §6).
 
 **Correction d'analyse** : le faible taux de jeu de Bouclier (25 % environ, à 3 comme à 5) ne
 voulait pas dire « carte faible ». Par tour, le deck de départ a près de 2 Bouclier et 2 Laser en

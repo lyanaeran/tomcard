@@ -71,8 +71,8 @@ Les tableaux `config/*_new.md` sont **générés** (`python -m outils.tableau_ca
 
 - `outils/simulation/synthese/analyse_2026-11-11_combat_new.md` : 5 800 combats sans aucune erreur
   moteur ; Miroir ne bloque plus ; combats à un ennemi trop faciles, Le nettoyeur le plus dangereux
-  en paire ; chiffres du réglage de boucliers 5 / 7 / 8 (le réglage actuel 4 / 6 / 8 n'est pas
-  encore simulé).
+  en paire ; réglage actuel des boucliers 4 / 6 / 8 (45 % des parties approchées battent le Boss),
+  comparé aux réglages 3 / 5 / 6 et 5 / 7 / 8.
 - `outils/simulation/synthese/essai_bouclier_2026-11-11.md` : Bouclier à 3, 4, 5, 6, accumulation
   du bouclier, décision 4 / 6 / 8.
 - `outils/simulation/synthese/analyse_2026-11-07.md` : ancien moteur (avant refonte).
