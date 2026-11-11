@@ -4,12 +4,13 @@
 
 | | |
 |---|---|
-| **Question** | La carte *Bouclier* (CRT_10, coût 1, Module Unique) donne 3 de bouclier. Avec 4, 5 ou 6, devient-elle plus utile, ou trop forte ? |
-| **Combats** | **20 combats difficiles**, joués quatre fois avec les **mêmes graines** (même deck mélangé, mêmes ennemis, mêmes tirages) : avec Bouclier à 3, 4, 5 puis 6. Seule la valeur de la carte change |
-| **Flottes** | Les 5 plus dures de la campagne du jour (`analyse_2026-11-11_combat_new.md`), 4 combats chacune : Le nettoyeur + Le puzzle, Pat + Le nettoyeur, Le nettoyeur + Le nettoyeur, Petit Jean + Petit Jean, le Boss |
+| **Question** | La carte *Bouclier* (CRT_10, coût 1, Module Unique) donne 3 de bouclier. Avec 4, 5 ou 6, devient-elle plus utile, ou trop forte ? Et le bouclier, qui ne perd que 1 par tour, s'accumule-t-il jusqu'à des montants très élevés ? |
+| **Combats** | **20 combats difficiles** et **12 combats contre des ennemis faibles**, joués quatre fois avec les **mêmes graines** (même deck mélangé, mêmes ennemis, mêmes tirages) : avec Bouclier à 3, 4, 5 puis 6. Seule la valeur de la carte change |
+| **Flottes** | Difficiles : les 5 plus dures de la campagne du jour (`analyse_2026-11-11_combat_new.md`), 4 combats chacune : Le nettoyeur + Le puzzle, Pat + Le nettoyeur, Le nettoyeur + Le nettoyeur, Petit Jean + Petit Jean, le Boss. Faibles : Petit Jean, Pat le Pirate, Miroir, seuls, 4 combats chacun |
 | **Joueur** | Deck de départ (4 Bouclier sur 11 cartes), principal 60 PV, Lanceur de missiles 20 PV, bot de recherche avec la valeur du deck |
 | **Code** | `config/carte_new.json` n'est **pas modifié** : la valeur est changée seulement sur les cartes du combat simulé (`construire_combat(..., valeurs_cartes=...)`) |
-| **Reproduire** | `python -m outils.simulation.essai_bouclier` (22 secondes) |
+| **Reproduire** | `python -m outils.simulation.essai_bouclier` (31 secondes) |
+| **Bouclier max atteint** | Plus gros bouclier porté par un module du joueur à un moment du combat, relevé après chaque carte jouée et chaque fin de tour |
 
 **Attention, petit échantillon** : 4 combats par flotte. Un écart d'une victoire ou de quelques PV
 peut venir du hasard. L'essai sert à voir un ordre de grandeur, pas à trancher au point près.
@@ -52,7 +53,36 @@ peut venir du hasard. L'essai sert à voir un ordre de grandeur, pas à trancher
 | | 5 | 3/4 | 21,8 | 14,5 | 50 % | 88,2 |
 | | 6 | 4/4 | 20,5 | 13,5 | 54 % | 78,5 |
 
+### Accumulation : bouclier maximal atteint
+
+| Flottes | Bouclier | Victoires | PV principal perdus (moy.) | Tours | Bouclier joué quand il est en main | Bouclier max atteint (moy. / max) |
+|---|---|---|---|---|---|---|
+| Difficiles (20) | 3 | 16/20 | 36,2 | 9,7 | 27 % | 6,9 / 11 |
+| | 4 | 17/20 | 34,0 | 10,1 | 28 % | 8,6 / 15 |
+| | 5 | 18/20 | 29,9 | 10,2 | 37 % | 10,2 / 21 |
+| | 6 | 19/20 | 26,9 | 9,9 | 40 % | 12,1 / 28 |
+| Faibles (12) | 3 | 12/12 | 1,7 | 7,2 | 26 % | 9,0 / 24 |
+| | 4 | 12/12 | 1,1 | 7,2 | 28 % | 11,4 / 34 |
+| | 5 | 12/12 | 0,8 | 7,2 | 39 % | 15,2 / 44 |
+| | 6 | 12/12 | 0,8 | 7,2 | 46 % | 19,2 / 63 |
+
+| Ennemi faible | Bouclier | PV principal perdus (moy.) | Tours | Bouclier max atteint (moy. / max) |
+|---|---|---|---|---|
+| Petit Jean | 3 | 0,2 | 10,5 | 12,8 / 24 |
+| | 4 | 0,0 | 10,5 | 16,5 / 34 |
+| | 5 | 0,0 | 10,5 | 23,5 / 44 |
+| | 6 | 0,0 | 10,5 | **32,5 / 63** |
+| Pat le Pirate | 3 | 0,0 | 5,0 | 6,5 / 9 |
+| | 6 | 0,0 | 5,0 | 9,0 / 12 |
+| Miroir | 3 | 4,8 | 6,0 | 7,8 / 12 |
+| | 6 | 2,2 | 6,2 | 16,0 / 24 |
+
+Bouclier max atteint des combats difficiles, par flotte (moyenne / max) : Le nettoyeur + Le puzzle
+5 → 7,5 / 12 ; Pat + Le nettoyeur 5,2 → 6,0 / 12 ; Le nettoyeur + Le nettoyeur 6,0 → 10,5 / 12 ;
+Petit Jean + Petit Jean 8,0 → 17,0 / 20 ; Boss 10,2 → 19,5 / 28 (de Bouclier 3 à Bouclier 6).
+
 ## Ce qu'on en retient
+
 
 1. **Chaque point de bouclier rapporte, de façon régulière** : de 3 à 6, les PV perdus baissent de
    36,2 à 26,9 (environ 3 PV par point), et les victoires montent de 16 à 19 sur 20.
@@ -64,6 +94,22 @@ peut venir du hasard. L'essai sert à voir un ordre de grandeur, pas à trancher
 4. **À 6, aucun déséquilibre visible dans ces combats**, mais le gain sur 5 est modeste (3 PV par
    combat), et ce sont les combats les plus durs : dans les combats faciles, un bouclier plus fort
    ne fait que rendre le jeu plus facile.
+
+5. **L'accumulation existe, surtout contre les ennemis faibles et dans les combats longs** :
+   contre Petit Jean seul (2 à 3 dégâts par tour, 10 tours), le bouclier monte jusqu'à 24 avec
+   Bouclier à 3 et jusqu'à **63** avec Bouclier à 6. Contre le Boss, jusqu'à 28 à 6. Dans les
+   combats courts et violents (Le nettoyeur), il ne dépasse pas 12 : les dégâts le consomment.
+6. **Mais elle ne change pas le résultat de ces combats** : contre Petit Jean, le principal ne
+   perd déjà presque rien avec Bouclier à 3, et le combat dure autant (10,5 tours) quelle que soit
+   la valeur : c'est le temps de tuer Petit Jean, pas un blocage. L'excès de bouclier est perdu.
+   Le risque n'est pas « trop facile » mais **un jeu où l'on empile sans enjeu** dans les combats
+   faibles ; il le deviendrait si un combat récompensait le fait de durer (ennemis qui ne meurent
+   pas, objectif de survie), ou avec *Bouclier stabilisé* (Bouclier lancé deux fois : 10 par carte
+   à 5).
+7. **Freins possibles, si besoin** (non testés) : plafond de bouclier par module (ex. ses PV max),
+   perte plus forte au-delà d'un seuil (ex. −1 par tour plus la moitié de l'excédent au-delà de
+   10), ou bouclier remis à zéro chaque tour comme dans Slay the Spire (annulerait la décision
+   « −1 par tour »).
 
 ## Attention aux autres cartes de bouclier
 
