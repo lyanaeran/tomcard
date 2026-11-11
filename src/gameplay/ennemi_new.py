@@ -172,8 +172,10 @@ class EnnemiNew:
     # PV max et PV du combat (pv_base x coefficient, arrondi a l'inferieur) ; None hors combat
     pv_max: int | None = None
     pv: int | None = None
-    # Index de la prochaine etape du cycle
+    # Position dans le cycle d'actions : index dans `actions` de l'etape jouee au prochain tour
+    # ennemi (l'intention affichee), avance par avancer_cycle
     etape: int = 0
+    # Bouclier en cours : absorbe les degats avant les PV, baisse de 1 a la fin du tour du joueur
     bouclier: int = 0
     # Degats encore renvoyables jusqu'a la fin du tour du joueur (0 : pas de renvoi)
     renvoi: int = 0
