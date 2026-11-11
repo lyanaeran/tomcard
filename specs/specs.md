@@ -36,6 +36,10 @@ Un deckbuilder roguelike inspiré de Slay the Spire, où le joueur incarne un va
 |---|---|
 | [refonte-buffs-debuffs.md](refonte-buffs-debuffs.md) | Brouillon de refonte des buffs/debuffs/bouclier (non décidé, non implémenté) |
 | [refonte-modules.md](refonte-modules.md) | Brouillon de refonte des modules secondaires sacrifiables (non implémenté) |
+| [refonte-destruction.md](refonte-destruction.md) | Brouillon du buff « Destruction » (en attente, aucune carte ne le pose encore) |
+| [refonte-statuts.md](refonte-statuts.md) | Statuts (bouclier, incendie, renvoi, leurre…) gérés ensemble pour modules et ennemis : règles de cumul et d'extinction, déroulement ; codé (`statut_new.py`), pas encore branché au combat |
+| [refonte-ennemis.md](refonte-ennemis.md) | Brouillon de refonte des ennemis : cycle d'actions, valeurs nommées qui augmentent, coefficient de difficulté ; modèle codé (`EnnemiNew`, `config/ennemi_new.json`), pas encore branché au combat |
+| [refonte-combat.md](refonte-combat.md) | Spécification du combat de la refonte (`combat_new`) : entrées, déroulement du tour, jeu d'une carte, tour ennemi, destruction, fin de combat (gameplay seulement, non implémenté) |
 | [simulation.md](simulation.md) | Conception de l'outil de simulation d'équilibrage (`outils/simulation/`) |
 
 ## Quel fichier lire selon la tâche

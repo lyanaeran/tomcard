@@ -13,7 +13,6 @@ from src.gameplay.carte_new import (
     CarteNew,
     CategorieCarte,
     CibleCarteNew,
-    Cumul,
     Effet,
     FiltreCartes,
     NatureEffet,
@@ -22,6 +21,7 @@ from src.gameplay.carte_new import (
     appliquer_repetition,
     charger_cartes_new,
 )
+from src.gameplay.statut_new import Statut
 
 
 def _cartes() -> dict[str, CarteNew]:
@@ -119,16 +119,17 @@ def test_duree_nommee_seulement_pour_un_effet_a_duree():
         Effet(NatureEffet.BOUCLIER, "bouclier", duree="bouclier_duree")
 
 
-# --- Cumul des effets ---
+# --- Statuts poses (regles dans statut_new.py) ---
 
 
-def test_l_incendie_et_le_bouclier_baissent_de_un_par_tour():
-    """Decisions utilisateur : incendie = poison de Slay the Spire ; bouclier -1 par tour, sans duree."""
+def test_bouclier_incendie_et_leurre_posent_le_statut_correspondant():
+    """Une seule source pour les regles de cumul et d'extinction : statut_new.py."""
     cartes = _cartes()
 
-    assert cartes["Embrasement"].effets[0].cumul == Cumul.INTENSITE_DECROISSANTE
-    assert cartes["Bouclier"].effets[0].cumul == Cumul.INTENSITE_DECROISSANTE
-    assert cartes["Laser"].effets[0].cumul == Cumul.INSTANTANE
+    assert cartes["Embrasement"].effets[0].nature.statut_pose == Statut.INCENDIE
+    assert cartes["Bouclier"].effets[0].nature.statut_pose == Statut.BOUCLIER
+    assert NatureEffet.ANNULATION_PROCHAINE_ATTAQUE.statut_pose == Statut.LEURRE
+    assert cartes["Laser"].effets[0].nature.statut_pose is None
 
 
 # --- Lancements et repetition ("lancee X fois de plus") ---
@@ -165,7 +166,6 @@ def test_les_repetitions_se_cumulent_pour_le_combat():
         appliquer_repetition(effet, cartes[nom].valeur_de(effet), deck)
 
     assert (laser.lancements_actuels, reparation.lancements_actuels, laser_percant.lancements_actuels) == (3, 2, 1)
-    assert cartes["Salve laser"].effets[0].cumul == Cumul.INTENSITE_SANS_DECROISSANCE
 
 
 def test_bouclier_stabilise_double_le_bouclier_de_base():
