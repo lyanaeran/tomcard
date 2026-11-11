@@ -149,7 +149,9 @@ journal ajoutées par la dernière action.
 **Quatre PR successives sur la seule branche `devjeux`** (décision utilisateur, 2026-11-11) : une
 PR ouverte à la fois ; après chaque merge, `devjeux` est remise à jour depuis `main` avant la
 suivante (règle de `CLAUDE.md`). **Ordre (décision utilisateur) : la version web / iPhone avant la
-version PC.** **Le jeu peut être cassé sur `main` entre deux merges**, par
+version PC**, seulement parce que l'utilisateur ne pourra pas tester sur PC ces prochains jours.
+**Le PC reste la version de référence** (CLAUDE.md) : la PR 3 le met au niveau, et une
+différence entre les deux se corrige en faveur de la spec et du PC. **Le jeu peut être cassé sur `main` entre deux merges**, par
 exemple l'affichage qui lit encore l'ancien combat après la PR 1 : c'est accepté (décision
 utilisateur). Chaque PR reste testée (`pytest`, et captures ou navigateur pour l'affichage) et
 signale dans sa description ce qui ne fonctionne pas encore.
@@ -176,8 +178,9 @@ PR 2 pour le web et la PR 3 pour le PC (accepté). La description de chaque PR l
   l'utilisateur (décision 6), puis le reste de l'affichage.
 - Lecture de l'API de `CombatNew` (tableau du §3) par `bridge.py`, sérialisée en JSON ; éléments
   du §4 dans `app.js` / `style.css`.
-- Clic : la case touchée est passée directement à `jouer_carte` (`cliquerCase`). Ce flux sert
-  ensuite de référence au PC (PR 3), qui devra être identique (specs.md §8.3).
+- Clic : la case touchée est passée directement à `jouer_carte` (`cliquerCase`), avec le flux de
+  clics actuel, déjà identique au PC (specs.md §8.3) : sélectionner la carte, puis confirmer sur
+  une case vivante du bon camp.
 - Vérification dans le navigateur (méthode de `web/CLAUDE.md`), au format iPhone en priorité :
   début de combat, carte sélectionnée et cases valides, renvoi de Miroir, module détruit et Hors
   service, victoire, défaite.
