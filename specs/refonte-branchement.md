@@ -145,7 +145,12 @@ journal ajoutées par la dernière action.
 
 ## 5. Plan en quatre PR
 
-Chaque PR est testée et relue avant la suivante ; le jeu reste jouable entre chaque.
+**Quatre PR successives sur la seule branche `devjeux`** (décision utilisateur, 2026-11-11) : une
+PR ouverte à la fois ; après chaque merge, `devjeux` est remise à jour depuis `main` avant la
+suivante (règle de `CLAUDE.md`). **Le jeu peut être cassé sur `main` entre deux merges**, par
+exemple l'affichage qui lit encore l'ancien combat après la PR 1 : c'est accepté (décision
+utilisateur). Chaque PR reste testée (`pytest`, et captures ou navigateur pour l'affichage) et
+signale dans sa description ce qui ne fonctionne pas encore.
 
 ### PR 1 — Gameplay (sans affichage)
 
@@ -159,10 +164,8 @@ Chaque PR est testée et relue avant la suivante ; le jeu reste jouable entre ch
 - Simulateur de parties complètes basculé sur le nouveau moteur.
 - Tests : `test_partie.py`, `test_deroulement.py`, conversion d'une ancienne sauvegarde.
 
-**Problème** : à la fin de cette PR, l'affichage lit encore l'ancien combat. Deux options : faire les
-PR 1 et 2 ensemble sur `devjeux` avant de merger, ou garder pendant la PR 1 une petite conversion
-provisoire. **Proposition** : enchaîner PR 1 et PR 2 sans merger entre les deux (le jeu web reste
-celui de `main` en attendant).
+Après cette PR, l'affichage PC et web lit encore l'ancien combat : **le jeu est cassé** jusqu'aux
+PR 2 et 3 (accepté). La description de la PR le signale.
 
 ### PR 2 — Affichage PC (`src/ui/fenetre.py`, écrans du parcours touchés)
 
