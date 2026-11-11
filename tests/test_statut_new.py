@@ -22,12 +22,20 @@ def test_bouclier_et_incendie_s_additionnent():
     assert statuts[Statut.BOUCLIER] == 7
 
 
-def test_le_renvoi_ne_se_cumule_pas():
+def test_les_renvois_s_additionnent():
     statuts = Statuts()
     statuts.ajouter(Statut.RENVOI, 5)
     statuts.ajouter(Statut.RENVOI, 3)
 
-    assert statuts[Statut.RENVOI] == 3
+    assert statuts[Statut.RENVOI] == 8
+
+
+def test_le_leurre_ne_se_cumule_pas():
+    statuts = Statuts()
+    statuts.ajouter(Statut.LEURRE, 1)
+    statuts.ajouter(Statut.LEURRE, 1)
+
+    assert statuts[Statut.LEURRE] == 1
 
 
 def test_une_intensite_nulle_ne_pose_rien():

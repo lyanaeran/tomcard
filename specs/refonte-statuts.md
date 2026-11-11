@@ -31,7 +31,7 @@ Deux caractéristiques :
 | Caractéristique | Valeurs |
 |---|---|
 | **Cumul** : ce que fait une nouvelle pose d'un statut déjà présent | **Addition** des intensités, ou **Remplacement** (non cumulable) |
-| **Extinction** : comment il disparaît | **−1 par tour** (à chaque fin de tour), **fin du tour** (disparaît entièrement), ou **consommation** (seulement en servant) |
+| **Extinction** : comment il disparaît | **−1 par tour** (à chaque fin de tour), **tour suivant** (valable de la pose au début du tour suivant du camp qui l'a posé, puis disparaît entièrement), ou **consommation** (seulement en servant) |
 
 ## 3. Statuts actuels
 
@@ -39,11 +39,12 @@ Deux caractéristiques :
 |---|---|---|---|
 | **Bouclier** | Addition | −1 par tour | Absorbe les dégâts avant les PV |
 | **Incendie** | Addition | −1 par tour | Inflige son intensité en dégâts à la fin du tour, avant la baisse |
-| **Renvoi** | Remplacement | Fin du tour | Renvoie à l'attaquant les dégâts reçus jusqu'à son intensité, qui diminue d'autant ; l'entité encaisse le reste (Miroir) |
+| **Renvoi** | Addition | Tour suivant | Renvoie à l'attaquant les dégâts reçus jusqu'à son intensité, qui diminue d'autant ; l'entité encaisse le reste (Miroir) |
 | **Leurre** | Remplacement | Consommation | Annule entièrement la prochaine attaque reçue, puis disparaît (intensité 1) |
 
-Décisions utilisateur : bouclier et incendie (−1 par tour, cumulables), renvoi de Miroir (non
-cumulable, un tour). Le **renvoi comme stock qui diminue** à chaque coup est une interprétation à
+Décisions utilisateur : bouclier et incendie (−1 par tour, cumulables), renvoi (cumulable,
+valable jusqu'au tour suivant, 2026-11-11 ; posé seulement par l'ennemi Miroir pour l'instant, la
+carte *Renvoi* du Blindage sera revue avec son module). Le **renvoi comme stock qui diminue** à chaque coup est une interprétation à
 valider ([refonte-ennemis.md](refonte-ennemis.md) §4.1).
 
 ---
@@ -72,14 +73,18 @@ pour un ennemi, fin du tour ennemi pour un module.
 
 ## 5. Points ouverts
 
-1. **Carte *Renvoi* du joueur** (`BOUCLIER_MIROIR` dans `config/carte_new.json`) : la carte la
-   décrit comme durant **jusqu'à consommation**, alors que le renvoi de Miroir dure **un tour**.
-   Même statut avec une règle commune, ou deux statuts distincts ?
-2. **Statuts à durée** (Vulnérabilité, Réduction de dégâts : une intensité **et** une durée en
+1. **Statuts à durée** (à traiter plus tard, décision utilisateur) (Vulnérabilité, Réduction de dégâts : une intensité **et** une durée en
    tours, cumul « Durée » de `CarteNew`) : une intensité seule ne suffit plus ; il faudra une
    petite valeur (intensité, tours restants) pour ces statuts.
-3. **Destruction** ([refonte-destruction.md](refonte-destruction.md)) porte des **effets**, pas un
+2. **Destruction** ([refonte-destruction.md](refonte-destruction.md)) porte des **effets**, pas un
    nombre : ce n'est pas un statut de ce dictionnaire, il aura son propre champ.
-4. **Lien avec les cartes** : `CarteNew` décrit le cumul de ses effets avec sa propre énumération
-   (`Cumul`) ; au branchement, chaque nature d'effet qui pose un statut renverra au `Statut`
-   correspondant, et les deux descriptions devront être alignées.
+
+## 6. Lien avec les cartes (décision utilisateur, 2026-11-11)
+
+**Une seule source pour les règles** : `CarteNew` n'a plus sa propre énumération de cumul. Chaque
+nature d'effet qui pose un statut le désigne (`NatureEffet.statut_pose`) : `BOUCLIER` → Bouclier,
+`INCENDIE` → Incendie, `ANNULATION_PROCHAINE_ATTAQUE` → Leurre. Les autres natures sont
+instantanées (dégâts, réparation, pioche, électricité) ou à reprendre plus tard (Vulnérabilité,
+Réduction de dégâts, Tir allié : seules natures où un effet peut avoir une `duree` ; Répétition,
+bonus sur des cartes). La nature `BOUCLIER_MIROIR` est retirée des cartes (renvoi réservé à
+l'ennemi).

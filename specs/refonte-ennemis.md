@@ -171,8 +171,12 @@ et ennemi en combat, copie par combat avec son coefficient : `pour_combat`), le 
 
 ### 4.1 Miroir (décision utilisateur)
 
-Ce n'est **plus un bouclier** : Miroir pose un **effet de renvoi** qui **ne se cumule plus** (le
-reposer le rafraîchit) et **dure un tour**. Corrige le blocage constaté en simulation.
+Ce n'est **plus un bouclier** : Miroir pose un **effet de renvoi** (statut Renvoi,
+[refonte-statuts.md](refonte-statuts.md)) **valable de la pose jusqu'au début du tour ennemi
+suivant**, puis il disparaît ; **plusieurs renvois s'additionnent** (décision utilisateur,
+2026-11-11, qui remplace « non cumulable »). Corrige le blocage constaté en simulation (avant : permanent).
+Pour l'instant, **seul l'ennemi pose un renvoi** : la carte *Renvoi* du Blindage sera revue avec son
+module.
 
 - **Ce qui est renvoyé (décision utilisateur)** : les dégâts reçus par l'ennemi protégé sont
   renvoyés **jusqu'à une valeur** (valeur nommée de Miroir, avec augmentation et coefficient) ;
@@ -182,7 +186,7 @@ reposer le rafraîchit) et **dure un tour**. Corrige le blocage constaté en sim
   de 6 en renvoie 2 et le protégé en encaisse 4), et non une limite par coup. Il s'applique avant
   le bouclier. L'incendie n'est jamais renvoyé.
 - **Durée** : posé au tour ennemi, le renvoi protège pendant le tour du joueur suivant et prend fin
-  à la fin de ce tour.
+  au début du tour ennemi suivant (techniquement : à la fin du tour du joueur).
 
 ### 4.2 Les 6 ennemis dans le nouveau format (2026-11-08)
 

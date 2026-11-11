@@ -10,8 +10,8 @@ Differences avec Carte :
   d'EFFETS qui y renvoient par leur nom : plusieurs valeurs par carte (Missiles : degats sur la
   cible et sur les autres ennemis), et une description qui les cite entre accolades ("Inflige
   {degats_cible} degats...") ;
-- chaque nature d'effet declare comment elle se cumule (Cumul) : l'incendie (poison de Slay the
-  Spire) et le bouclier additionnent leur intensite, qui decroit de 1 par tour ;
+- les natures d'effet qui posent un etat durable (bouclier, incendie, leurre) renvoient a un
+  STATUT (statut_new.py, statut_pose), qui porte seul ses regles de cumul et d'extinction ;
 - une carte peut etre lancee plusieurs fois (`lancements_base`) ; les cartes "les cartes X sont
   lancees N fois de plus" (Salve laser, Protocole d'urgence, Bouclier stabilise) sont un effet
   REPETITION dont le FiltreCartes designe les cartes visees : il augmente leur `lancements_actuels`
@@ -31,6 +31,7 @@ from pathlib import Path
 from string import Formatter
 
 from src.gameplay.carte import RareteCarte
+from src.gameplay.statut_new import Statut
 
 FICHIER_CARTES_NEW = Path(__file__).resolve().parents[2] / "config" / "carte_new.json"
 
@@ -77,44 +78,27 @@ class CibleCarteNew(Enum):
         return self in (CibleCarteNew.ENNEMI_UNIQUE, CibleCarteNew.ENNEMI_COLONNE, CibleCarteNew.MODULE_UNIQUE)
 
 
-class Cumul(Enum):
-    """Comment un effet se combine avec le meme effet deja actif sur l'entite visee."""
-
-    # Applique une fois, rien ne reste actif (degats, reparation, gain d'electricite...)
-    INSTANTANE = auto()
-    # L'intensite s'additionne et decroit de 1 a chaque tour (incendie, poison de Slay the Spire ;
-    # bouclier, decision utilisateur)
-    INTENSITE_DECROISSANTE = auto()
-    # L'intensite s'additionne et ne decroit jamais jusqu'a la fin du combat (Force de Slay the
-    # Spire) : Salve laser et ses semblables
-    INTENSITE_SANS_DECROISSANCE = auto()
-    # La duree s'additionne, l'intensite reste celle de la carte (Vulnerable de Slay the Spire)
-    DUREE = auto()
-    # Etat consomme par un evenement, pas par le temps (Leurre, Bouclier miroir)
-    JUSQU_A_CONSOMMATION = auto()
-
-
 class NatureEffet(Enum):
     """Ce que fait un effet. `valeur` designe la valeur nommee de la carte que l'effet utilise. Le
-    Cumul de chaque nature est donne par CUMUL_PAR_NATURE."""
+    statut pose, s'il y en a un, est donne par statut_pose (STATUT_PAR_NATURE)."""
 
     # Retire `valeur` PV (apres le bouclier) a chaque ennemi touche (Laser, Missiles, Bombardement)
     DEGATS = auto()
-    # Ajoute `valeur` de bouclier a chaque module touche, absorbe avant les PV ; le bouclier baisse
-    # de 1 a chaque tour, sans autre notion de duree (Bouclier, Proteger le vaisseau, Blindage cible)
+    # Pose le statut BOUCLIER d'intensite `valeur` sur chaque module touche (Bouclier, Proteger le
+    # vaisseau, Blindage cible)
     BOUCLIER = auto()
     # Rend `valeur` PV au module touche, sans depasser ses PV max (Reparation)
     REPARATION = auto()
-    # Ajoute `valeur` points d'incendie a l'ennemi : il subit autant de degats a chaque tour, puis
-    # l'incendie baisse de 1 (poison de Slay the Spire : Tir incendiaire, Embrasement)
+    # Pose le statut INCENDIE d'intensite `valeur` sur l'ennemi (poison de Slay the Spire : Tir
+    # incendiaire, Embrasement)
     INCENDIE = auto()
     # L'ennemi subit `valeur` % de degats en plus (Breche, Ligne avant)
     VULNERABILITE = auto()
     # L'ennemi inflige `valeur` degats de moins par attaque (Tordre le canon)
     REDUCTION_DEGATS = auto()
-    # Les degats recus par le module touche sont renvoyes a l'attaquant, jusqu'a `valeur` (Renvoi)
-    BOUCLIER_MIROIR = auto()
-    # Annule entierement la prochaine attaque recue par le module touche, sans valeur (Leurre)
+    # Pose le statut LEURRE sur le module touche : annule sa prochaine attaque recue, sans valeur
+    # (Leurre). Pas de nature "renvoi" : le renvoi n'est pose que par l'ennemi Miroir pour l'instant
+    # (decision utilisateur), la carte Renvoi du Blindage sera revue avec son module
     ANNULATION_PROCHAINE_ATTAQUE = auto()
     # L'ennemi touche attaque un de ses allies au hasard au lieu du joueur, sans valeur (Tir allie)
     REDIRECTION_CIBLE = auto()
@@ -126,31 +110,26 @@ class NatureEffet(Enum):
     # fin du combat (appliquer_repetition : Salve laser, Protocole d'urgence, Bouclier stabilise)
     REPETITION = auto()
 
+    @property
+    def statut_pose(self) -> Statut | None:
+        """Statut pose sur l'entite touchee, None pour un effet sans etat durable."""
+        return STATUT_PAR_NATURE.get(self)
+
 
 # Natures sans valeur numerique : leur effet ne renvoie a aucune valeur nommee de la carte
 NATURES_SANS_VALEUR = {NatureEffet.ANNULATION_PROCHAINE_ATTAQUE, NatureEffet.REDIRECTION_CIBLE}
 
-# INCENDIE : decision utilisateur (registre des cartes, note de Tir incendiaire). BOUCLIER : baisse
-# de 1 par tour et c'est tout, sans duree (decision utilisateur). REPETITION : dure
-# tout le combat et se cumule (decision utilisateur). VULNERABILITE, REDUCTION_DEGATS,
-# BOUCLIER_MIROIR : proposition du brouillon de refonte des buffs (refonte-buffs-debuffs.md
-# 7.3/7.4), a valider. Seulement les effets des cartes du joueur : les mecaniques propres aux
-# ennemis (ex. Augmentation de degats du Boss) sont gerees en dehors des cartes (decision
-# utilisateur).
-CUMUL_PAR_NATURE = {
-    NatureEffet.DEGATS: Cumul.INSTANTANE,
-    NatureEffet.BOUCLIER: Cumul.INTENSITE_DECROISSANTE,
-    NatureEffet.REPARATION: Cumul.INSTANTANE,
-    NatureEffet.INCENDIE: Cumul.INTENSITE_DECROISSANTE,
-    NatureEffet.VULNERABILITE: Cumul.DUREE,
-    NatureEffet.REDUCTION_DEGATS: Cumul.DUREE,
-    NatureEffet.BOUCLIER_MIROIR: Cumul.JUSQU_A_CONSOMMATION,
-    NatureEffet.ANNULATION_PROCHAINE_ATTAQUE: Cumul.JUSQU_A_CONSOMMATION,
-    NatureEffet.REDIRECTION_CIBLE: Cumul.DUREE,
-    NatureEffet.GAIN_ELECTRICITE: Cumul.INSTANTANE,
-    NatureEffet.PIOCHE: Cumul.INSTANTANE,
-    NatureEffet.REPETITION: Cumul.INTENSITE_SANS_DECROISSANCE,
+# Statut pose sur l'entite touchee : ses regles de cumul et d'extinction sont celles de
+# statut_new.py (une seule source, partagee avec les modules et les ennemis, specs/refonte-statuts.md)
+STATUT_PAR_NATURE = {
+    NatureEffet.BOUCLIER: Statut.BOUCLIER,
+    NatureEffet.INCENDIE: Statut.INCENDIE,
+    NatureEffet.ANNULATION_PROCHAINE_ATTAQUE: Statut.LEURRE,
 }
+
+# Natures dont l'effet peut avoir une duree en tours (statuts a duree, geres plus tard :
+# specs/refonte-statuts.md 5)
+NATURES_A_DUREE = {NatureEffet.VULNERABILITE, NatureEffet.REDUCTION_DEGATS, NatureEffet.REDIRECTION_CIBLE}
 
 
 class PorteeEffet(Enum):
@@ -218,7 +197,7 @@ class Effet:
     valeur: str | None = None
     # Ce que touche l'effet, par rapport a la cible de la carte
     portee: PorteeEffet = PorteeEffet.CIBLE
-    # Nom de la valeur donnant la duree en tours, seulement pour un effet a duree (Cumul.DUREE)
+    # Nom de la valeur donnant la duree en tours, seulement pour une nature de NATURES_A_DUREE
     duree: str | None = None
     # Cartes visees, obligatoire pour REPETITION et interdit sinon
     filtre: FiltreCartes | None = None
@@ -226,14 +205,10 @@ class Effet:
     def __post_init__(self):
         if (self.valeur is None) != (self.nature in NATURES_SANS_VALEUR):
             raise ValueError(f"{self.nature.name} : valeur nommee manquante ou en trop")
-        if self.duree is not None and self.cumul != Cumul.DUREE:
+        if self.duree is not None and self.nature not in NATURES_A_DUREE:
             raise ValueError(f"{self.nature.name} n'a pas de duree")
         if (self.nature == NatureEffet.REPETITION) != (self.filtre is not None):
             raise ValueError("Un filtre de cartes est requis pour REPETITION, et seulement pour elle")
-
-    @property
-    def cumul(self) -> Cumul:
-        return CUMUL_PAR_NATURE[self.nature]
 
     @property
     def noms_de_valeurs(self) -> list[str]:

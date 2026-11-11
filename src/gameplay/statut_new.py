@@ -18,7 +18,7 @@ class CumulStatut(Enum):
 
     # Les intensites s'additionnent (bouclier, incendie)
     ADDITION = auto()
-    # La nouvelle pose remplace l'ancienne, non cumulable (renvoi de Miroir, leurre)
+    # La nouvelle pose remplace l'ancienne, non cumulable (leurre)
     REMPLACEMENT = auto()
 
 
@@ -27,8 +27,9 @@ class ExtinctionStatut(Enum):
 
     # Baisse de 1 a chaque fin de tour (bouclier, incendie)
     MOINS_UN_PAR_TOUR = auto()
-    # Disparait entierement a la fin du tour (renvoi de Miroir)
-    FIN_DU_TOUR = auto()
+    # Valable de la pose jusqu'au debut du tour suivant du camp qui l'a pose, puis disparait
+    # entierement (renvoi de Miroir) : c'est la fin de tour de l'entite qui le porte
+    TOUR_SUIVANT = auto()
     # Ne baisse qu'en etant consomme par les attaques recues (leurre)
     CONSOMMATION = auto()
 
@@ -58,12 +59,13 @@ class Statut(Enum):
         return REGLES_STATUT[self]
 
 
-# Decisions utilisateur : bouclier et incendie -1 par tour, cumulables ; renvoi non cumulable,
-# un tour (specs/refonte-ennemis.md 4.1) ; leurre consomme par la premiere attaque.
+# Decisions utilisateur : bouclier et incendie -1 par tour, cumulables ; renvoi cumulable, valable
+# jusqu'au tour suivant (2026-11-11, pose seulement par l'ennemi Miroir pour l'instant) ; leurre
+# consomme par la premiere attaque (specs/refonte-statuts.md 3).
 REGLES_STATUT = {
     Statut.BOUCLIER: RegleStatut(CumulStatut.ADDITION, ExtinctionStatut.MOINS_UN_PAR_TOUR),
     Statut.INCENDIE: RegleStatut(CumulStatut.ADDITION, ExtinctionStatut.MOINS_UN_PAR_TOUR),
-    Statut.RENVOI: RegleStatut(CumulStatut.REMPLACEMENT, ExtinctionStatut.FIN_DU_TOUR),
+    Statut.RENVOI: RegleStatut(CumulStatut.ADDITION, ExtinctionStatut.TOUR_SUIVANT),
     Statut.LEURRE: RegleStatut(CumulStatut.REMPLACEMENT, ExtinctionStatut.CONSOMMATION),
 }
 
@@ -131,6 +133,6 @@ class Statuts:
             extinction = statut.regle.extinction
             if extinction == ExtinctionStatut.MOINS_UN_PAR_TOUR:
                 self._fixer(statut, self[statut] - 1)
-            elif extinction == ExtinctionStatut.FIN_DU_TOUR:
+            elif extinction == ExtinctionStatut.TOUR_SUIVANT:
                 self._fixer(statut, 0)
         return degats_pv

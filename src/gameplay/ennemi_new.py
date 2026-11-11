@@ -13,8 +13,8 @@ Differences avec Ennemi :
   donne a la creation pour le combat) multiplie base, augmentations et PV, arrondi a l'inferieur ;
 - bouclier, incendie et renvoi sont des STATUTS (statut_new.py, specs/refonte-statuts.md),
   partages avec ModuleNew ; ils s'eteignent a la fin du tour du joueur (fin_du_tour_du_joueur) ;
-- Miroir pose un RENVOI (plus un bouclier) : non cumulable, il dure jusqu'a la fin du tour du
-  joueur.
+- Miroir pose un RENVOI (plus un bouclier) : cumulable, il dure jusqu'au debut du tour ennemi
+  suivant.
 
 Comme ModuleNew, la meme classe sert de modele (lu dans le JSON) et d'ennemi en combat : le combat
 travaille sur une copie (pour_combat), le modele n'est jamais modifie. Le numero de tour n'est pas
