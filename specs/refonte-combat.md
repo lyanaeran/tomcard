@@ -26,8 +26,8 @@ Les points marqués **(proposition)** ne sont pas encore validés par l'utilisat
 - Les **6 ennemis** de `config/ennemi_new.json` : cycle d'actions, valeurs qui montent avec le
   tour, coefficient de difficulté, bouclier, renvoi.
 - La **pile Hors service** et le mot-clé **Persistante** (refonte-modules.md §3.3 à §3.5).
-- Les **informations dont l'affichage aura besoin** : intentions des ennemis, cibles possibles
-  d'une carte, journal des événements.
+- L'**API** de `combat_new` (§8) : jouer une carte, finir le tour, et les consultations qui
+  répondent à une question de règle (cibles valides, intentions, journal).
 
 ### 1.2 Exclu, pour plus tard (décision utilisateur)
 
@@ -90,8 +90,8 @@ début de chaque tour du joueur à partir du tour 2. Il sert à lire les valeurs
 
 ### 3.2 Tour du joueur
 
-1. **Début** : à partir du tour 2, le numéro de tour augmente de 1 (les intentions affichées tiennent
-   donc compte des nouvelles valeurs). Électricité remise à **3**, pioche de **5** cartes (main
+1. **Début** : à partir du tour 2, le numéro de tour augmente de 1 (les intentions consultées
+   ensuite tiennent donc compte des nouvelles valeurs). Électricité remise à **3**, pioche de **5** cartes (main
    limitée à **10**), valeurs inchangées par rapport à aujourd'hui (décision utilisateur).
 2. **Jeu** : le joueur joue les cartes qu'il veut, dans l'ordre qu'il veut (§4).
 3. **Fin** :
@@ -119,9 +119,9 @@ début de chaque tour du joueur à partir du tour 2. Il sert à lire les valeurs
 Une carte peut être jouée si elle est **en main**, si l'électricité suffit (`cout`), et si elle a
 une **cible valide** (§4.2). Une carte en pile Hors service ou épuisée n'est jamais en main.
 
-Le flux d'interaction reste celui d'aujourd'hui (specs.md §8.3 : sélection puis clic de
-confirmation sur une case vivante du bon camp, identique PC et web) ; `combat_new` fournit les
-cases valides (`cibles_possibles`) et refuse une cible invalide.
+`jouer_carte` refuse une carte qui ne remplit pas ces conditions, ou une cible invalide (erreur
+explicite). La façon dont le joueur choisit sa carte et sa cible (clics, taps, specs.md §8.3)
+relève de l'affichage et n'est pas spécifiée ici.
 
 ### 4.2 Cible de la carte (`CibleCarteNew`)
 
@@ -241,16 +241,33 @@ Un module à 0 PV est **détruit** pour le reste du combat :
 
 ---
 
-## 8. Informations fournies à l'affichage (sans affichage)
+## 8. API de `combat_new`
 
-`src/ui` et `web/` ne possèdent aucune règle (CLAUDE.md) ; `combat_new` leur fournit tout :
+`combat_new` ne contient **aucun affichage** : il expose une API, utilisée par le simulateur
+aujourd'hui, par l'affichage PC et web au branchement.
 
-- état : tour, électricité, piles (pioche, main, défausse, épuisées, Hors service), PV et statuts
-  des modules et des ennemis ;
-- `cibles_possibles(carte)` : les cases valides pour confirmer une carte ;
-- intentions des ennemis (§5.3) ;
-- **journal** des événements (carte jouée, dégâts, renvoi, statut posé, incendie, destruction,
-  carte hors service, victoire/défaite), comme `Combat.journal` aujourd'hui.
+### 8.1 Actions
+
+- `jouer_carte(carte, cible)` : joue une carte de la main sur une cible (§4) ; refuse une action
+  invalide.
+- `finir_tour()` : termine le tour du joueur, joue le tour ennemi (§3.2, §3.3) et commence le tour
+  suivant, sauf fin de combat.
+
+### 8.2 Consultations
+
+Lectures seules, qui ne modifient rien. Elles sont dans `combat_new` et non dans l'affichage parce
+que **chacune répond à une question de règle** : `src/ui` et `web/` ne doivent jamais recalculer
+une règle (CLAUDE.md), et le simulateur en a besoin aussi.
+
+- **État** : tour, électricité, piles (pioche, main, défausse, épuisées, Hors service), PV et
+  statuts des modules et des ennemis, combat en cours / gagné / perdu.
+- `cibles_possibles(carte)` : les cibles valides d'une carte (règles du §4.2), pour ne proposer
+  que des coups légaux.
+- **Intentions** des ennemis (§5.3) : ce que chaque ennemi va jouer, d'après son cycle, la valeur
+  du tour et le ciblage par proximité.
+- **Journal** des événements (carte jouée, dégâts, renvoi, statut posé, incendie, destruction,
+  carte hors service, victoire/défaite) : ce qui s'est passé, dans l'ordre, comme
+  `Combat.journal` aujourd'hui. Seulement des faits, sans mise en forme ni texte affiché.
 
 ---
 
