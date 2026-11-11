@@ -1,7 +1,8 @@
 # Branchement de la refonte — proposition
 
-*Document de travail, hors numérotation (cf. [specs.md](specs.md)). **Proposition, rien n'est
-décidé ni codé** (2026-11-11). Décrit comment faire passer le jeu (parcours, sauvegarde, affichage
+*Document de travail, hors numérotation (cf. [specs.md](specs.md)). **Plan validé, rien n'est
+encore codé** (décisions du §2 et ordre des PR du §5 tranchés le 2026-11-11 ; l'affichage du §4
+reste une proposition, à valider sur maquette). Décrit comment faire passer le jeu (parcours, sauvegarde, affichage
 PC et web) sur le moteur de la refonte (`CombatNew` et les fichiers `*_new.py`), puis supprimer
 l'ancien moteur. Contexte : [refonte.md](refonte.md) ; règles du nouveau combat :
 [refonte-combat.md](refonte-combat.md).*
@@ -24,19 +25,19 @@ Le branchement doit :
 
 ---
 
-## 2. Décisions à prendre (utilisateur)
+## 2. Décisions (utilisateur, 2026-11-11)
 
-Chaque point donne une **proposition** ; rien n'est codé tant qu'il n'est pas tranché.
+Toutes tranchées le 2026-11-11.
 
-| # | Question | Proposition |
+| # | Question | Décision |
 |---|---|---|
-| 1 | **Sauvegardes existantes** : le deck sauvegardé doit dire à quel module appartient chaque carte. | Convertir à la lecture : toute carte d'une ancienne sauvegarde est rattachée au principal ; les modules gardent leur emplacement et reçoivent un identifiant (`M1` principal, `M2`…). Aucune partie perdue. |
-| 2 | **Station service** : un secondaire repart plein à chaque combat, réparer un secondaire n'a plus de sens. | « Réparer » ne vise plus que le principal ; « Améliorer » (+PV max) reste possible sur tous les modules ; « Mettre à jour » et « Déplacer » inchangés. |
-| 3 | **Aventures** : Trois lunes (réparer le vaisseau) et Astéroïdes (dégâts sur un module choisi) touchent aussi des secondaires. | Trois lunes : soigne le principal. Astéroïdes : les dégâts vont au principal (le choix du module disparaît), ou bien on garde le choix en le reformulant « le module choisi est détruit pour le prochain combat ». À trancher. |
-| 4 | **Flottes** : composition par niveau (laissée pour plus tard). | Reprendre les règles actuelles avec les nouveaux ennemis, coefficient 1 : 1 ennemi jusqu'au niveau 5, 2 ensuite, le Boss au niveau 10, 3 ennemis aux Astéroïdes, placement préféré respecté. Le travail sur la difficulté par niveau viendra ensuite. |
-| 5 | **Cartes proposées en récompense** : le nouveau combat sait jouer les 19 cartes revues (Missiles, Torpille, incendie, répétitions compris). | Toutes les cartes revues des modules équipés deviennent proposables ; le champ `jouable` de `carte_new.json` passe à `true` pour toutes. |
-| 6 | **Affichage des nouveautés** (intentions, statuts, Hors service, lancements…). | Garder le style actuel (pastilles, infobulles, popups) ; détail au §4, maquette à valider avant de coder. |
-| 7 | **Méthode** : basculer d'un coup, ou garder un interrupteur ancien / nouveau moteur. | **D'un coup**, en plusieurs PR successives (§5). Un interrupteur obligerait à maintenir deux affichages pendant la transition. |
+| 1 | **Sauvegardes existantes** : le deck sauvegardé doit dire à quel module appartient chaque carte. | **Abandonner** : les parties en cours d'une ancienne version sont effacées à la lecture, le profil est gardé. Aucune conversion à coder. |
+| 2 | **Station service** : un secondaire repart plein à chaque combat, réparer un secondaire n'a plus de sens. | « Réparer » ne vise plus que le **principal** ; « Améliorer » (+PV max) reste possible sur tous les modules ; « Mettre à jour » et « Déplacer » inchangés. |
+| 3 | **Aventures** : les dégâts et soins sur un secondaire seraient effacés au combat suivant. | **Astéroïdes** (« Traverser ») : les chocs touchent **toujours le principal**, le choix du module disparaît. **Trois lunes** (« Réparer le vaisseau ») : soigne le principal, seul module dont les PV comptent (conséquence directe, pas une décision à part). |
+| 4 | **Flottes** : composition par niveau. | **Règles actuelles** avec les nouveaux ennemis, coefficient 1 : 1 ennemi jusqu'au niveau 5, 2 ensuite, le Boss au niveau 10, 3 ennemis aux Astéroïdes, placement préféré respecté. La difficulté par niveau sera réglée après le branchement, avec des simulations de parties complètes. |
+| 5 | **Cartes proposées en récompense**. | **Les 19 cartes revues** des modules équipés deviennent proposables ; le champ `jouable` de `carte_new.json` passe à `true` pour toutes. |
+| 6 | **Affichage des nouveautés** (intentions, statuts, Hors service, lancements…). | **Maquette d'abord** : au début de la PR 2, une maquette web (captures d'un combat) des éléments du §4, validée par l'utilisateur avant de finir l'affichage. |
+| 7 | **Méthode** : basculer d'un coup, ou garder un interrupteur ancien / nouveau moteur. | **D'un coup**, en quatre PR successives sur `devjeux`, web avant PC (§5). |
 
 ---
 
@@ -145,38 +146,50 @@ journal ajoutées par la dernière action.
 
 ## 5. Plan en quatre PR
 
-Chaque PR est testée et relue avant la suivante ; le jeu reste jouable entre chaque.
+**Quatre PR successives sur la seule branche `devjeux`** (décision utilisateur, 2026-11-11) : une
+PR ouverte à la fois ; après chaque merge, `devjeux` est remise à jour depuis `main` avant la
+suivante (règle de `CLAUDE.md`). **Ordre (décision utilisateur) : la version web / iPhone avant la
+version PC**, seulement parce que l'utilisateur ne pourra pas tester sur PC ces prochains jours.
+**Le PC reste la version de référence** (CLAUDE.md) : la PR 3 le met au niveau, et une
+différence entre les deux se corrige en faveur de la spec et du PC. **Le jeu peut être cassé sur `main` entre deux merges**, par
+exemple l'affichage qui lit encore l'ancien combat après la PR 1 : c'est accepté (décision
+utilisateur). Chaque PR reste testée (`pytest`, et captures ou navigateur pour l'affichage) et
+signale dans sa description ce qui ne fonctionne pas encore.
 
 ### PR 1 — Gameplay (sans affichage)
 
 - `partie.py` : exemplaires de modules en `ModuleNew` (avec identifiant `M1`, `M2`…), deck
-  sauvegardé comme liste `{"id": ..., "module": ...}`, **conversion des anciennes sauvegardes**
-  (décision 1).
+  sauvegardé comme liste `{"id": ..., "module": ...}` ; une **ancienne sauvegarde est
+  abandonnée** à la lecture (décision 1).
 - Création d'un `CombatNew` à partir de la partie (flottes : décision 4) ; fin de combat : report
   des PV du principal, Argent par ennemi détruit (`ennemis_detruits()`), récompenses.
 - `deroulement.py` : mêmes écrans, mêmes transitions, avec le nouveau combat.
 - Station et Aventures adaptées (décisions 2 et 3).
 - Simulateur de parties complètes basculé sur le nouveau moteur.
-- Tests : `test_partie.py`, `test_deroulement.py`, conversion d'une ancienne sauvegarde.
+- `carte_new.json` : `jouable` à `true` pour les 19 cartes (décision 5), tableau régénéré.
+- Tests : `test_partie.py`, `test_deroulement.py`, abandon d'une ancienne sauvegarde.
 
-**Problème** : à la fin de cette PR, l'affichage lit encore l'ancien combat. Deux options : faire les
-PR 1 et 2 ensemble sur `devjeux` avant de merger, ou garder pendant la PR 1 une petite conversion
-provisoire. **Proposition** : enchaîner PR 1 et PR 2 sans merger entre les deux (le jeu web reste
-celui de `main` en attendant).
+Après cette PR, l'affichage web et PC lit encore l'ancien combat : **le jeu est cassé** jusqu'à la
+PR 2 pour le web et la PR 3 pour le PC (accepté). La description de chaque PR le signale.
 
-### PR 2 — Affichage PC (`src/ui/fenetre.py`, écrans du parcours touchés)
+### PR 2 — Affichage web / iPhone (`web/bridge.py`, `web/app.js`, `web/style.css`)
 
-- Lecture de l'API de `CombatNew` (tableau du §3), éléments du §4.
-- Clic : la case cliquée est passée directement à `jouer_carte` (`_essayer_de_cibler`).
-- Vérification par captures d'écran (méthode de `src/ui/CLAUDE.md`) : début de combat, carte
-  sélectionnée et cases valides, renvoi de Miroir, module détruit et Hors service, victoire,
-  défaite.
+- **D'abord une maquette** des éléments du §4 (captures d'un combat au format iPhone), validée par
+  l'utilisateur (décision 6), puis le reste de l'affichage.
+- Lecture de l'API de `CombatNew` (tableau du §3) par `bridge.py`, sérialisée en JSON ; éléments
+  du §4 dans `app.js` / `style.css`.
+- Clic : la case touchée est passée directement à `jouer_carte` (`cliquerCase`), avec le flux de
+  clics actuel, déjà identique au PC (specs.md §8.3) : sélectionner la carte, puis confirmer sur
+  une case vivante du bon camp.
+- Vérification dans le navigateur (méthode de `web/CLAUDE.md`), au format iPhone en priorité :
+  début de combat, carte sélectionnée et cases valides, renvoi de Miroir, module détruit et Hors
+  service, victoire, défaite.
 
-### PR 3 — Affichage web (`web/bridge.py`, `web/app.js`, `web/style.css`)
+### PR 3 — Affichage PC (`src/ui/fenetre.py`, écrans du parcours touchés)
 
-- Même contenu que le PC, sérialisé en JSON par `bridge.py` ; `cliquerCase` identique à
-  `_essayer_de_cibler`.
-- Vérification dans le navigateur (méthode de `web/CLAUDE.md`), y compris au format iPhone.
+- Même contenu que le web, lu dans l'API de `CombatNew` ; `_essayer_de_cibler` identique à
+  `cliquerCase` de la PR 2.
+- Vérification par captures d'écran (méthode de `src/ui/CLAUDE.md`).
 
 ### PR 4 — Nettoyage
 
