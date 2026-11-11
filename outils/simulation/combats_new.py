@@ -95,8 +95,13 @@ def construire_flotte(ids_ennemis: tuple[str, ...], aleatoire: random.Random) ->
     return FlotteNew(places)
 
 
-def construire_combat(variante: str, ids_ennemis: tuple[str, ...], graine: int, pv_principal: int | None = None) -> CombatNew:
-    """Combat isole ; `pv_principal` : PV du principal au debut (pleins par defaut)."""
+def construire_combat(
+    variante: str, ids_ennemis: tuple[str, ...], graine: int, pv_principal: int | None = None,
+    valeurs_cartes: dict[str, dict[str, int]] | None = None,
+) -> CombatNew:
+    """Combat isole ; `pv_principal` : PV du principal au debut (pleins par defaut) ;
+    `valeurs_cartes` : variante de valeurs de cartes pour un essai, ex. {"CRT_10": {"bouclier": 4}},
+    sans toucher a config/carte_new.json."""
     aleatoire = random.Random(f"{graine}:{variante}:{ids_ennemis}")
     modeles = charger_modules_new()
     principal = modeles["MOD_1"].nouvel_exemplaire("M1", "base")
@@ -107,6 +112,8 @@ def construire_combat(variante: str, ids_ennemis: tuple[str, ...], graine: int, 
         modeles["MOD_2"].nouvel_exemplaire("M2", EMPLACEMENT_LANCEUR).copie_pour_combat(),
     ]
     deck = construire_deck(variante, aleatoire)
+    for carte in deck:
+        carte.valeurs.update((valeurs_cartes or {}).get(carte.id, {}))
     return CombatNew(modules, deck, construire_flotte(ids_ennemis, aleatoire), random.Random(aleatoire.random()))
 
 

@@ -315,4 +315,9 @@ simulateur, à côté de celui des règles actuelles (§11), qui reste inchangé
 - La **composition des flottes** (placement préféré) est reprise de `config_poc` dans l'outil, en
   attendant celle de la refonte.
 - Première synthèse : `outils/simulation/synthese/analyse_2026-11-11_combat_new.md`.
+- **Essais limités** : `construire_combat(..., valeurs_cartes={"CRT_10": {"bouclier": 4}})` change
+  la valeur d'une carte pour un essai, sans toucher à `config/carte_new.json`. Premier essai :
+  `outils/simulation/essai_bouclier.py` (Bouclier à 3 ou à 4 sur 20 combats difficiles), synthèse
+  `outils/simulation/synthese/essai_bouclier_2026-11-11.md`.
+- **Pas de campagne sans l'accord de l'utilisateur** (consigne du 2026-11-11 : trop long).
 
