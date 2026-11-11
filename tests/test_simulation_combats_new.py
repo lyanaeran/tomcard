@@ -37,8 +37,21 @@ def test_valeur_d_un_lancement_d_une_carte_de_colonne_ne_compte_que_sa_colonne()
     combat = construire_combat("depart", ("ENM_PAT_LE_PIRATE", "ENM_LE_NETTOYEUR"), 1)  # un avant, un arriere
     cartes = charger_cartes_new()
 
-    assert valeur_d_un_lancement(cartes["CRT_8"], combat.flotte) == valeur_d_un_lancement(cartes["CRT_47"], combat.flotte) * 8 / 12
-    assert valeur_d_un_lancement(cartes["CRT_9"], combat.flotte) == 2 * valeur_d_un_lancement(cartes["CRT_7"], combat.flotte)
+    assert valeur_d_un_lancement(cartes["CRT_8"], combat) == valeur_d_un_lancement(cartes["CRT_47"], combat) * 8 / 12
+    assert valeur_d_un_lancement(cartes["CRT_9"], combat) == 2 * valeur_d_un_lancement(cartes["CRT_7"], combat)
+
+
+def test_valeur_d_un_lancement_sur_tous_les_modules_compte_chaque_module_vivant():
+    from outils.simulation.bot_new import valeur_d_un_lancement
+    from src.gameplay.carte_new import CarteNew, CategorieCarte, CibleCarteNew, Effet, NatureEffet, RareteCarte
+
+    combat = construire_combat("depart", ("ENM_PAT_LE_PIRATE",), 1)
+    bouclier_de_zone = CarteNew(
+        id="TEST", nom="Bouclier de zone", image="", rarete=RareteCarte.COMMUNE, categorie=CategorieCarte.DEFENSE,
+        cible=CibleCarteNew.MODULE_TOUS, cout=1, valeurs={"bouclier": 4}, effets=(Effet(NatureEffet.BOUCLIER, "bouclier"),),
+    )
+
+    assert valeur_d_un_lancement(bouclier_de_zone, combat) == 2 * 4 * 1.0  # principal + Lanceur
 
 
 def test_la_recherche_du_bot_ne_connait_pas_les_vrais_melanges():

@@ -12,7 +12,6 @@ from collections import Counter
 from src.gameplay.carte_new import CarteNew, CibleCarteNew, NatureEffet, PorteeEffet
 from src.gameplay.combat_new import CombatNew, EtatCombatNew
 from src.gameplay.deck_new import CARTES_PIOCHEES_PAR_TOUR
-from src.gameplay.flotte_new import FlotteNew
 from src.gameplay.position import Colonne
 from src.gameplay.statut_new import Statut
 
@@ -122,9 +121,11 @@ def evaluer(combat: CombatNew) -> float:
     return score
 
 
-def _nombre_de_cibles(carte: CarteNew, effet, flotte: FlotteNew) -> int:
-    """Ennemis touches par un effet : tous, les autres, ceux d'une colonne (la plus peuplee pour
-    une carte Ennemi Colonne, le joueur choisissant la meilleure), sinon un seul."""
+def _nombre_de_cibles(carte: CarteNew, effet, combat: CombatNew) -> int:
+    """Entites touchees par un effet : tous les ennemis, les autres, ceux d'une colonne (la plus
+    peuplee pour une carte Ennemi Colonne, le joueur choisissant la meilleure), tous les modules
+    vivants ou ceux de la colonne avant, sinon une seule."""
+    flotte = combat.flotte
     vivants = len(flotte.ennemis_vivants())
     par_colonne = {colonne: len(flotte.ennemis_vivants_de_colonne(colonne)) for colonne in Colonne}
     if effet.portee == PorteeEffet.AUTRES_ENNEMIS:
@@ -133,8 +134,12 @@ def _nombre_de_cibles(carte: CarteNew, effet, flotte: FlotteNew) -> int:
         return par_colonne[Colonne.AVANT]
     if effet.portee == PorteeEffet.COLONNE_ARRIERE_ENNEMIE:
         return par_colonne[Colonne.ARRIERE]
-    if carte.cible in (CibleCarteNew.ENNEMI_TOUS, CibleCarteNew.MODULE_TOUS):
-        return vivants if carte.cible == CibleCarteNew.ENNEMI_TOUS else 1
+    if carte.cible == CibleCarteNew.ENNEMI_TOUS:
+        return vivants
+    if carte.cible == CibleCarteNew.MODULE_TOUS:
+        return len(combat.vaisseau.modules_vivants())
+    if carte.cible == CibleCarteNew.MODULE_AVANT:
+        return len(combat.vaisseau.modules_vivants_de_colonne(Colonne.AVANT))
     if carte.cible == CibleCarteNew.ENNEMI_COLONNE:
         return max(par_colonne.values())
     if carte.cible in (CibleCarteNew.ENNEMI_AVANT, CibleCarteNew.ENNEMI_ARRIERE):
@@ -142,7 +147,7 @@ def _nombre_de_cibles(carte: CarteNew, effet, flotte: FlotteNew) -> int:
     return 1
 
 
-def valeur_d_un_lancement(carte: CarteNew, flotte: FlotteNew) -> float:
+def valeur_d_un_lancement(carte: CarteNew, combat: CombatNew) -> float:
     """Valeur estimee d'un lancement de la carte : somme de ses effets, chacun multiplie par le
     nombre d'ennemis qu'il touche (_nombre_de_cibles)."""
     valeur = 0.0
@@ -151,7 +156,7 @@ def valeur_d_un_lancement(carte: CarteNew, flotte: FlotteNew) -> float:
             valeur += VALEUR_LEURRE
             continue
         par_point = VALEUR_PAR_NATURE.get(effet.nature, 0.0)
-        valeur += par_point * (carte.valeur_de(effet) or 0) * max(0, _nombre_de_cibles(carte, effet, flotte))
+        valeur += par_point * (carte.valeur_de(effet) or 0) * max(0, _nombre_de_cibles(carte, effet, combat))
     return valeur
 
 
@@ -166,7 +171,7 @@ def valeur_des_lancements_en_plus(combat: CombatNew) -> float:
     tours_restants = max(1, DUREE_COMBAT_ESTIMEE - combat.tour)
     jeux_par_carte = tours_restants * min(1.0, CARTES_PIOCHEES_PAR_TOUR / len(actives)) * TAUX_DE_JEU_ESTIME
     return sum(
-        (carte.lancements_actuels - carte.lancements_base) * valeur_d_un_lancement(carte, combat.flotte) * jeux_par_carte
+        (carte.lancements_actuels - carte.lancements_base) * valeur_d_un_lancement(carte, combat) * jeux_par_carte
         for carte in actives
         if carte.lancements_actuels > carte.lancements_base
     )

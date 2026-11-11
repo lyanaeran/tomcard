@@ -7,13 +7,8 @@ from statistics import mean
 
 from src.gameplay.donnees import charger_cartes, charger_modules
 
-
-def _pct(n: int, total: int) -> str:
-    return f"{100 * n / total:.0f} %" if total else "-"
-
-
-def _moy(valeurs: list) -> str:
-    return f"{mean(valeurs):.1f}" if valeurs else "-"
+from outils.simulation.format import moyenne as _moy
+from outils.simulation.format import pourcentage as _pct
 
 
 def _tableau(entetes: list[str], lignes: list[list]) -> str:

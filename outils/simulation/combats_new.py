@@ -16,7 +16,6 @@ import itertools
 import json
 import os
 import random
-import statistics
 import time
 import traceback
 from collections import Counter, defaultdict
@@ -33,6 +32,8 @@ from src.gameplay.module_new import charger_modules_new
 from src.gameplay.position import Colonne, Position, Rangee
 
 from outils.simulation.bot_new import BotAleatoire, BotRecherche, jouer_combat
+from outils.simulation.format import moyenne as _moy
+from outils.simulation.format import pourcentage as _pct
 
 DOSSIER_RESULTATS = Path(__file__).parent / "resultats"
 
@@ -247,7 +248,8 @@ NIVEAUX = range(2, 11)
 def simuler_enchainement(graine: int) -> dict:
     aleatoire = random.Random(f"enchainement:{graine}")
     pv = charger_modules_new()["MOD_1"].pv_max_base
-    pv_par_niveau = {}
+    # PV au depart de la partie, ranges comme ceux d'un niveau 1 fictif (lus par le tableau)
+    pv_par_niveau = {NIVEAUX[0] - 1: pv}
     resultat = {"etude": "enchainement", "graine": graine}
     try:
         for niveau in NIVEAUX:
@@ -280,7 +282,7 @@ def tableau_enchainement(enchainements: list[dict]) -> str:
     lignes = ["| Niveau | Parties encore en vie au début | PV du principal au début (moyenne) |", "|---|---|---|"]
     for niveau in NIVEAUX:
         vivantes = [r for r in valides if r["niveau_atteint"] >= niveau]
-        pv_debut = [60 if niveau == 2 else r["pv_par_niveau"].get(niveau - 1) for r in vivantes]
+        pv_debut = [r["pv_par_niveau"].get(niveau - 1) for r in vivantes]
         lignes.append(f"| {niveau}{' (Boss)' if niveau == 10 else ''} | {_pct(len(vivantes), n)} | {_moy(pv_debut)} |")
     gagnees = sum(r["victoire_finale"] for r in valides)
     texte = "\n".join(lignes) + f"\n\n**Parties gagnées (Boss battu) : {_pct(gagnees, n)}** sur {n}.\n"
@@ -335,15 +337,6 @@ NOMS = {
     "ENM_PAT_LE_PIRATE": "Pat", "ENM_LE_NETTOYEUR": "Nettoyeur", "ENM_PETIT_JEAN": "Petit Jean",
     "ENM_LE_PUZZLE": "Puzzle", "ENM_MIROIR": "Miroir", "ENM_BOSS_PIRATES": "Boss",
 }
-
-
-def _pct(n: int, total: int) -> str:
-    return f"{100 * n / total:.0f} %" if total else "-"
-
-
-def _moy(valeurs) -> str:
-    valeurs = [v for v in valeurs if v is not None]
-    return f"{statistics.mean(valeurs):.1f}" if valeurs else "-"
 
 
 def tableau_robustesse(resultats: list[dict]) -> str:
