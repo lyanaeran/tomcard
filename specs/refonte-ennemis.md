@@ -152,6 +152,8 @@ cartes et les modules : `config/ennemi_new.json` source de vérité, la classe `
 et ennemi en combat, copie par combat avec son coefficient : `pour_combat`), le tableau
 `config/ennemi_new.md` généré par `python -m outils.tableau_ennemis`.
 
+- **Statuts** : bouclier, incendie et renvoi sont des statuts partagés avec les modules
+  ([refonte-statuts.md](refonte-statuts.md)) ; `BOUCLIER` et `RENVOI` posent le statut du même nom.
 - **Natures d'effet** : `ATTAQUE`, `BOUCLIER`, `RENVOI`. **Cibles** : `PROXIMITE`,
   `TOUS_MODULES` (attaques), `SOI_MEME`, `ALLIE_AVANT_SINON_ARRIERE` (bouclier, renvoi). Une
   attaque ne peut viser qu'un module, un bouclier ou un renvoi qu'un ennemi (vérifié au

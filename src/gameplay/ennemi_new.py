@@ -11,8 +11,8 @@ Differences avec Ennemi :
 - les effets renvoient a des VALEURS NOMMEES de l'ennemi, comme les cartes ; chaque valeur a une
   augmentation (de combien, tous les combien de tours) et un COEFFICIENT de difficulte (>= 1,
   donne a la creation pour le combat) multiplie base, augmentations et PV, arrondi a l'inferieur ;
-- le bouclier baisse de 1 a la fin du tour du joueur ; l'incendie frappe a la fin du tour du joueur,
-  avant cette baisse ;
+- bouclier, incendie et renvoi sont des STATUTS (statut_new.py, specs/refonte-statuts.md),
+  partages avec ModuleNew ; ils s'eteignent a la fin du tour du joueur (fin_du_tour_du_joueur) ;
 - Miroir pose un RENVOI (plus un bouclier) : non cumulable, il dure jusqu'a la fin du tour du
   joueur.
 
@@ -29,6 +29,8 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from fractions import Fraction
 from pathlib import Path
+
+from src.gameplay.statut_new import Statut, Statuts
 
 FICHIER_ENNEMIS_NEW = Path(__file__).resolve().parents[2] / "config" / "ennemi_new.json"
 
@@ -58,12 +60,15 @@ class NatureEffetEnnemi(Enum):
 
     # Inflige `valeur` degats a chaque module touche (apres son bouclier)
     ATTAQUE = auto()
-    # Ajoute `valeur` de bouclier ; il baisse de 1 a la fin du tour du joueur
+    # Pose le statut BOUCLIER d'intensite `valeur`
     BOUCLIER = auto()
-    # Pose un renvoi de `valeur` : les degats recus sont renvoyes a l'attaquant jusqu'a `valeur`,
-    # l'ennemi encaisse le reste ; non cumulable (le reposer le remplace), jusqu'a la fin du tour
-    # du joueur (Miroir)
+    # Pose le statut RENVOI d'intensite `valeur` (Miroir)
     RENVOI = auto()
+
+    @property
+    def statut_pose(self) -> Statut | None:
+        """Statut pose sur la cible, None pour une attaque."""
+        return {NatureEffetEnnemi.BOUCLIER: Statut.BOUCLIER, NatureEffetEnnemi.RENVOI: Statut.RENVOI}.get(self)
 
 
 class CibleEffetEnnemi(Enum):
@@ -175,12 +180,8 @@ class EnnemiNew:
     # Position dans le cycle d'actions : index dans `actions` de l'etape jouee au prochain tour
     # ennemi (l'intention affichee), avance par avancer_cycle
     etape: int = 0
-    # Bouclier en cours : absorbe les degats avant les PV, baisse de 1 a la fin du tour du joueur
-    bouclier: int = 0
-    # Degats encore renvoyables jusqu'a la fin du tour du joueur (0 : pas de renvoi)
-    renvoi: int = 0
-    # Points d'incendie : autant de degats a la fin du tour du joueur, puis -1
-    incendie: int = 0
+    # Statuts en cours (bouclier, incendie, renvoi...), partages avec les modules (statut_new.py)
+    statuts: Statuts = field(default_factory=Statuts)
 
     def __post_init__(self):
         self.actions = tuple(tuple(etape) for etape in self.actions)
@@ -206,7 +207,7 @@ class EnnemiNew:
             raise ValueError(f"Ennemi {self.id} : le coefficient doit valoir au moins 1 ({coefficient})")
         pv_max = math.floor(self.pv_base * coefficient)
         return dataclasses.replace(
-            self, coefficient=coefficient, pv_max=pv_max, pv=pv_max, etape=0, bouclier=0, renvoi=0, incendie=0,
+            self, coefficient=coefficient, pv_max=pv_max, pv=pv_max, etape=0, statuts=Statuts(),
         )
 
     # --- Valeurs et cycle ---
@@ -234,38 +235,18 @@ class EnnemiNew:
         return self.pv is not None and self.pv <= 0
 
     def subir_degats(self, degats: int) -> int:
-        """Encaisse une attaque. Un renvoi actif prend les degats en premier, jusqu'a sa valeur
-        restante ; le bouclier absorbe ensuite le reste avant les PV. Renvoie les degats a
-        renvoyer a l'attaquant (0 sans renvoi)."""
-        renvoyes = min(self.renvoi, degats)
-        self.renvoi -= renvoyes
-        self._encaisser(degats - renvoyes)
-        return renvoyes
+        """Encaisse une attaque a travers les statuts (leurre, renvoi, bouclier : Statuts.
+        encaisser_attaque). Renvoie les degats a renvoyer a l'attaquant (0 sans renvoi)."""
+        encaissement = self.statuts.encaisser_attaque(degats)
+        self._perdre_pv(encaissement.degats_pv)
+        return encaissement.renvoyes
 
-    def _encaisser(self, degats: int) -> None:
-        """Bouclier d'abord, puis PV."""
-        degats_restants = max(0, degats - self.bouclier)
-        self.bouclier = max(0, self.bouclier - degats)
-        self.pv = max(0, self.pv - degats_restants)
-
-    def ajouter_bouclier(self, valeur: int) -> None:
-        self.bouclier += valeur
-
-    def poser_renvoi(self, valeur: int) -> None:
-        """Non cumulable : un nouveau renvoi remplace l'ancien (decision utilisateur)."""
-        self.renvoi = valeur
-
-    def ajouter_incendie(self, valeur: int) -> None:
-        self.incendie += valeur
+    def _perdre_pv(self, degats: int) -> None:
+        self.pv = max(0, self.pv - degats)
 
     def fin_du_tour_du_joueur(self) -> None:
-        """Ordre decide par l'utilisateur : l'incendie frappe (absorbe par le bouclier, jamais
-        renvoye) puis baisse de 1 ; ensuite le bouclier baisse de 1 ; le renvoi prend fin."""
-        if self.incendie:
-            self._encaisser(self.incendie)
-            self.incendie -= 1
-        self.bouclier = max(0, self.bouclier - 1)
-        self.renvoi = 0
+        """L'incendie frappe puis les statuts s'eteignent (Statuts.fin_de_tour)."""
+        self._perdre_pv(self.statuts.fin_de_tour())
 
     # --- Lecture JSON (format de config/ennemi_new.json) ---
 

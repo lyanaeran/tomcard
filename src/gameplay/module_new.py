@@ -7,20 +7,23 @@ partie.py:EtatModule et module.py:Module, qu'il remplacera tous les trois.
 Une seule classe reunit les trois niveaux d'information d'un module :
 - le MODELE (le type de module, lu dans le JSON : nom, PV de base, cartes...) ;
 - l'EXEMPLAIRE dans la partie (identifiant "M3", emplacement, PV max ameliores...), sauvegarde ;
-- l'ETAT EN COMBAT (PV de combat, bouclier, buffs...), jamais sauvegarde.
+- l'ETAT EN COMBAT (PV de combat, statuts : bouclier, leurre...), jamais sauvegarde.
 
 Le combat travaille sur une COPIE du module (copie_pour_combat), champs de combat remis a zero :
 le module de la partie n'est jamais modifie pendant un combat (un combat abandonne ne touche pas
 la partie), et seuls les PV du principal y sont reportes a la fin (reporter_combat).
 
 Regles de la refonte : les modules secondaires repartent a leur PV max a chaque combat, seuls les
-PV du principal persistent ; le bouclier baisse de 1 par tour (refonte-buffs-debuffs.md 8).
+PV du principal persistent. Bouclier, leurre, incendie... sont des STATUTS (statut_new.py,
+specs/refonte-statuts.md), partages avec EnnemiNew ; ils s'eteignent a la fin du tour ennemi.
 """
 
 import dataclasses
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from src.gameplay.statut_new import Statuts
 
 FICHIER_MODULES_NEW = Path(__file__).resolve().parents[2] / "config" / "module_new.json"
 
@@ -72,12 +75,8 @@ class ModuleNew:
 
     # PV pendant le combat ; None hors combat
     pv_combat: int | None = None
-    # Bouclier pendant le combat : absorbe les degats avant les PV, baisse de 1 par tour
-    bouclier: int = 0
-    # Buffs actifs pendant le combat (format defini avec la refonte des buffs, ex. Destruction)
-    buffs: list = field(default_factory=list)
-    # Leurre actif : la prochaine attaque recue est entierement annulee (carte Leurre)
-    leurre_actif: bool = False
+    # Statuts en cours (bouclier, leurre, incendie...), partages avec les ennemis (statut_new.py)
+    statuts: Statuts = field(default_factory=Statuts)
 
     def __post_init__(self):
         self.cartes = tuple(self.cartes)
@@ -97,14 +96,14 @@ class ModuleNew:
         palier 1, aucun etat de combat."""
         return dataclasses.replace(
             self, exemplaire=exemplaire, emplacement=emplacement, pv_max=self.pv_max_base,
-            pv=self.pv_max_base, niveau_maj=1, pv_combat=None, bouclier=0, buffs=[], leurre_actif=False,
+            pv=self.pv_max_base, niveau_maj=1, pv_combat=None, statuts=Statuts(),
         )
 
     def copie_pour_combat(self) -> "ModuleNew":
         """Copie de ce module pour un combat, champs de combat remis a zero : PV sauvegardes pour
         le principal, PV max pour un secondaire. Le module d'origine n'est pas modifie."""
         return dataclasses.replace(
-            self, pv_combat=self.pv if self.principal else self.pv_max, bouclier=0, buffs=[], leurre_actif=False,
+            self, pv_combat=self.pv if self.principal else self.pv_max, statuts=Statuts(),
         )
 
     def reporter_combat(self, copie_de_combat: "ModuleNew") -> None:
@@ -118,25 +117,23 @@ class ModuleNew:
     def est_detruit(self) -> bool:
         return self.pv_combat is not None and self.pv_combat <= 0
 
-    def subir_degats(self, degats: int) -> None:
-        """Le bouclier absorbe d'abord ; un leurre actif annule toute l'attaque, puis se consomme."""
-        if self.leurre_actif:
-            self.leurre_actif = False
-            return
-        degats_restants = max(0, degats - self.bouclier)
-        self.bouclier = max(0, self.bouclier - degats)
-        self.pv_combat = max(0, self.pv_combat - degats_restants)
+    def subir_degats(self, degats: int) -> int:
+        """Encaisse une attaque a travers les statuts (leurre, renvoi, bouclier : Statuts.
+        encaisser_attaque). Renvoie les degats a renvoyer a l'attaquant (0 sans renvoi)."""
+        encaissement = self.statuts.encaisser_attaque(degats)
+        self._perdre_pv(encaissement.degats_pv)
+        return encaissement.renvoyes
 
-    def ajouter_bouclier(self, valeur: int) -> None:
-        self.bouclier += valeur
+    def _perdre_pv(self, degats: int) -> None:
+        self.pv_combat = max(0, self.pv_combat - degats)
 
     def reparer(self, valeur: int) -> None:
         """Rend des PV de combat, sans depasser le PV max."""
         self.pv_combat = min(self.pv_max, self.pv_combat + valeur)
 
-    def debut_de_tour(self) -> None:
-        """Le bouclier baisse de 1 a chaque tour (decision utilisateur, refonte des buffs)."""
-        self.bouclier = max(0, self.bouclier - 1)
+    def fin_du_tour_ennemi(self) -> None:
+        """L'incendie frappe puis les statuts s'eteignent (Statuts.fin_de_tour)."""
+        self._perdre_pv(self.statuts.fin_de_tour())
 
     # --- Lecture JSON (format de config/module_new.json) ---
 

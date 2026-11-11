@@ -12,6 +12,7 @@ from src.gameplay.ennemi_new import (
     FICHIER_ENNEMIS_NEW, CibleEffetEnnemi, EffetEnnemi, EnnemiNew, NatureEffetEnnemi, ValeurEnnemi,
     charger_ennemis_new,
 )
+from src.gameplay.statut_new import Statut
 
 
 def _entree(id_ennemi: str) -> dict:
@@ -86,9 +87,10 @@ def test_le_modele_n_est_jamais_modifie_par_le_combat():
     modele = charger_ennemis_new()["ENM_PETIT_JEAN"]
     combat = modele.pour_combat(2)
     combat.subir_degats(30)
+    combat.statuts.ajouter(Statut.BOUCLIER, 6)
     combat.avancer_cycle()
 
-    assert (modele.pv, modele.etape, modele.coefficient) == (None, 0, 1)
+    assert (modele.pv, modele.etape, modele.coefficient, modele.statuts.intensites) == (None, 0, 1, {})
 
 
 # --- Cycle d'actions ---
@@ -105,6 +107,12 @@ def test_le_cycle_revient_a_la_premiere_etape():
     assert natures == [[attaque], [attaque], [attaque, bouclier], [attaque]]
 
 
+def test_bouclier_et_renvoi_posent_le_statut_du_meme_nom():
+    assert NatureEffetEnnemi.BOUCLIER.statut_pose == Statut.BOUCLIER
+    assert NatureEffetEnnemi.RENVOI.statut_pose == Statut.RENVOI
+    assert NatureEffetEnnemi.ATTAQUE.statut_pose is None
+
+
 def test_le_nettoyeur_attaque_deux_fois():
     (effet,) = _en_combat("ENM_LE_NETTOYEUR").etape_courante
 
@@ -116,29 +124,29 @@ def test_le_nettoyeur_attaque_deux_fois():
 
 def test_le_bouclier_absorbe_puis_baisse_de_un_a_la_fin_du_tour_du_joueur():
     jean = _en_combat("ENM_PETIT_JEAN")
-    jean.ajouter_bouclier(6)
+    jean.statuts.ajouter(Statut.BOUCLIER, 6)
 
     jean.subir_degats(4)
     jean.fin_du_tour_du_joueur()
 
-    assert (jean.pv, jean.bouclier) == (100, 1)
+    assert (jean.pv, jean.statuts[Statut.BOUCLIER]) == (100, 1)
 
 
 def test_l_incendie_frappe_avant_la_baisse_du_bouclier_et_baisse_de_un():
     pat = _en_combat("ENM_PAT_LE_PIRATE")
-    pat.ajouter_bouclier(3)
-    pat.ajouter_incendie(4)
+    pat.statuts.ajouter(Statut.BOUCLIER, 3)
+    pat.statuts.ajouter(Statut.INCENDIE, 4)
 
     pat.fin_du_tour_du_joueur()
-    assert (pat.pv, pat.bouclier, pat.incendie) == (49, 0, 3)
+    assert (pat.pv, pat.statuts[Statut.BOUCLIER], pat.statuts[Statut.INCENDIE]) == (49, 0, 3)
 
     pat.fin_du_tour_du_joueur()
-    assert (pat.pv, pat.incendie) == (46, 2)
+    assert (pat.pv, pat.statuts[Statut.INCENDIE]) == (46, 2)
 
 
 def test_le_renvoi_renvoie_jusqu_a_sa_valeur_et_le_protege_encaisse_le_reste():
     pat = _en_combat("ENM_PAT_LE_PIRATE")
-    pat.poser_renvoi(5)
+    pat.statuts.ajouter(Statut.RENVOI, 5)
 
     assert pat.subir_degats(3) == 3 and pat.pv == 50
     assert pat.subir_degats(6) == 2 and pat.pv == 46
@@ -147,9 +155,9 @@ def test_le_renvoi_renvoie_jusqu_a_sa_valeur_et_le_protege_encaisse_le_reste():
 
 def test_le_renvoi_ne_se_cumule_pas_et_dure_jusqu_a_la_fin_du_tour_du_joueur():
     pat = _en_combat("ENM_PAT_LE_PIRATE")
-    pat.poser_renvoi(5)
-    pat.poser_renvoi(5)
-    assert pat.renvoi == 5
+    pat.statuts.ajouter(Statut.RENVOI, 5)
+    pat.statuts.ajouter(Statut.RENVOI, 5)
+    assert pat.statuts[Statut.RENVOI] == 5
 
     pat.fin_du_tour_du_joueur()
     assert pat.subir_degats(6) == 0 and pat.pv == 44

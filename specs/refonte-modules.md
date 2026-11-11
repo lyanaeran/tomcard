@@ -310,9 +310,10 @@ bouclier, buffs dont Destruction, leurre, détruit) — même principe que `Cart
 missiles 20 PV, toutes leurs cartes de `config/carte_new.json`, un champ `principal`), tableau
 généré `config/module_new.md`, tests `tests/test_module_new.py`. Méthodes : `nouvel_exemplaire`
 (exemplaire neuf pour une partie), `copie_pour_combat`, `reporter_combat` (PV du principal
-seulement), règles de combat de base (`subir_degats` avec bouclier puis leurre, `ajouter_bouclier`,
-`reparer`, `debut_de_tour` : bouclier −1). Les buffs restent une simple liste, en attendant la
-refonte des buffs. La sauvegarde de l'exemplaire (`EtatModule`) sera adaptée au branchement.
+seulement), règles de combat de base (`subir_degats`, `reparer`, `fin_du_tour_ennemi`). Bouclier,
+leurre, incendie… sont des **statuts** partagés avec les ennemis (`statuts`, voir
+[refonte-statuts.md](refonte-statuts.md)) ; le buff Destruction aura son propre champ. La
+sauvegarde de l'exemplaire (`EtatModule`) sera adaptée au branchement.
 
 ---
 

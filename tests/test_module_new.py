@@ -9,6 +9,7 @@ import pytest
 
 from src.gameplay.carte_new import charger_cartes_new
 from src.gameplay.module_new import FICHIER_MODULES_NEW, ModuleNew, charger_modules_new
+from src.gameplay.statut_new import Statut
 
 
 def _entree(id_module: str) -> dict:
@@ -81,10 +82,10 @@ def test_le_combat_ne_modifie_jamais_le_module_de_la_partie():
     combat = principal.copie_pour_combat()
 
     combat.subir_degats(15)
-    combat.ajouter_bouclier(4)
-    combat.buffs.append("buff de test")
+    combat.statuts.ajouter(Statut.BOUCLIER, 4)
+    combat.statuts.ajouter(Statut.INCENDIE, 2)
 
-    assert principal.pv == 60 and principal.bouclier == 0 and principal.buffs == []
+    assert principal.pv == 60 and principal.statuts.intensites == {}
     assert principal.pv_combat is None
 
 
@@ -104,37 +105,47 @@ def test_fin_de_combat_seuls_les_pv_du_principal_sont_reportes():
 def test_un_etat_de_combat_ne_passe_pas_d_un_combat_a_l_autre():
     principal, _ = _exemplaires()
     premier = principal.copie_pour_combat()
-    premier.ajouter_bouclier(10)
-    premier.leurre_actif = True
+    premier.statuts.ajouter(Statut.BOUCLIER, 10)
+    premier.statuts.ajouter(Statut.LEURRE, 1)
 
     second = principal.copie_pour_combat()
 
-    assert (second.bouclier, second.leurre_actif, second.buffs) == (0, False, [])
+    assert second.statuts.intensites == {}
 
 
 # --- Regles de combat ---
 
 
-def test_le_bouclier_absorbe_avant_les_pv_et_baisse_de_un_par_tour():
+def test_le_bouclier_absorbe_avant_les_pv_et_baisse_de_un_a_la_fin_du_tour_ennemi():
     _, lanceur = _exemplaires()
     combat = lanceur.copie_pour_combat()
-    combat.ajouter_bouclier(5)
+    combat.statuts.ajouter(Statut.BOUCLIER, 5)
 
     combat.subir_degats(7)
-    assert (combat.bouclier, combat.pv_combat) == (0, 18)
+    assert (combat.statuts[Statut.BOUCLIER], combat.pv_combat) == (0, 18)
 
-    combat.ajouter_bouclier(3)
-    combat.debut_de_tour()
-    assert combat.bouclier == 2
+    combat.statuts.ajouter(Statut.BOUCLIER, 3)
+    combat.fin_du_tour_ennemi()
+    assert combat.statuts[Statut.BOUCLIER] == 2
+
+
+def test_l_incendie_frappe_le_module_a_la_fin_du_tour_ennemi():
+    _, lanceur = _exemplaires()
+    combat = lanceur.copie_pour_combat()
+    combat.statuts.ajouter(Statut.INCENDIE, 3)
+
+    combat.fin_du_tour_ennemi()
+
+    assert (combat.pv_combat, combat.statuts[Statut.INCENDIE]) == (17, 2)
 
 
 def test_le_leurre_annule_une_seule_attaque():
     _, lanceur = _exemplaires()
     combat = lanceur.copie_pour_combat()
-    combat.leurre_actif = True
+    combat.statuts.ajouter(Statut.LEURRE, 1)
 
     combat.subir_degats(50)
-    assert combat.pv_combat == 20 and not combat.leurre_actif
+    assert combat.pv_combat == 20 and combat.statuts[Statut.LEURRE] == 0
     combat.subir_degats(25)
     assert combat.est_detruit()
 

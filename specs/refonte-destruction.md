@@ -39,6 +39,9 @@ habituel (valeurs nommées de la carte), dans une liste imbriquée :
 
 ---
 
+Destruction porte des effets, pas un nombre : ce n'est **pas un statut** du dictionnaire de
+[refonte-statuts.md](refonte-statuts.md), il aura son propre champ sur le module.
+
 ## 3. Points à trancher (propositions par défaut)
 
 1. **Ce que vise l'effet déclenché.** La carte vise un module allié, l'effet déclenché vise autre
