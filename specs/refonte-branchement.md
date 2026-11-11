@@ -147,7 +147,8 @@ journal ajoutées par la dernière action.
 
 **Quatre PR successives sur la seule branche `devjeux`** (décision utilisateur, 2026-11-11) : une
 PR ouverte à la fois ; après chaque merge, `devjeux` est remise à jour depuis `main` avant la
-suivante (règle de `CLAUDE.md`). **Le jeu peut être cassé sur `main` entre deux merges**, par
+suivante (règle de `CLAUDE.md`). **Ordre (décision utilisateur) : la version web / iPhone avant la
+version PC.** **Le jeu peut être cassé sur `main` entre deux merges**, par
 exemple l'affichage qui lit encore l'ancien combat après la PR 1 : c'est accepté (décision
 utilisateur). Chaque PR reste testée (`pytest`, et captures ou navigateur pour l'affichage) et
 signale dans sa description ce qui ne fonctionne pas encore.
@@ -164,22 +165,24 @@ signale dans sa description ce qui ne fonctionne pas encore.
 - Simulateur de parties complètes basculé sur le nouveau moteur.
 - Tests : `test_partie.py`, `test_deroulement.py`, conversion d'une ancienne sauvegarde.
 
-Après cette PR, l'affichage PC et web lit encore l'ancien combat : **le jeu est cassé** jusqu'aux
-PR 2 et 3 (accepté). La description de la PR le signale.
+Après cette PR, l'affichage web et PC lit encore l'ancien combat : **le jeu est cassé** jusqu'à la
+PR 2 pour le web et la PR 3 pour le PC (accepté). La description de chaque PR le signale.
 
-### PR 2 — Affichage PC (`src/ui/fenetre.py`, écrans du parcours touchés)
+### PR 2 — Affichage web / iPhone (`web/bridge.py`, `web/app.js`, `web/style.css`)
 
-- Lecture de l'API de `CombatNew` (tableau du §3), éléments du §4.
-- Clic : la case cliquée est passée directement à `jouer_carte` (`_essayer_de_cibler`).
-- Vérification par captures d'écran (méthode de `src/ui/CLAUDE.md`) : début de combat, carte
-  sélectionnée et cases valides, renvoi de Miroir, module détruit et Hors service, victoire,
-  défaite.
+- Lecture de l'API de `CombatNew` (tableau du §3) par `bridge.py`, sérialisée en JSON ; éléments
+  du §4 dans `app.js` / `style.css`.
+- Clic : la case touchée est passée directement à `jouer_carte` (`cliquerCase`). Ce flux sert
+  ensuite de référence au PC (PR 3), qui devra être identique (specs.md §8.3).
+- Vérification dans le navigateur (méthode de `web/CLAUDE.md`), au format iPhone en priorité :
+  début de combat, carte sélectionnée et cases valides, renvoi de Miroir, module détruit et Hors
+  service, victoire, défaite.
 
-### PR 3 — Affichage web (`web/bridge.py`, `web/app.js`, `web/style.css`)
+### PR 3 — Affichage PC (`src/ui/fenetre.py`, écrans du parcours touchés)
 
-- Même contenu que le PC, sérialisé en JSON par `bridge.py` ; `cliquerCase` identique à
-  `_essayer_de_cibler`.
-- Vérification dans le navigateur (méthode de `web/CLAUDE.md`), y compris au format iPhone.
+- Même contenu que le web, lu dans l'API de `CombatNew` ; `_essayer_de_cibler` identique à
+  `cliquerCase` de la PR 2.
+- Vérification par captures d'écran (méthode de `src/ui/CLAUDE.md`).
 
 ### PR 4 — Nettoyage
 
