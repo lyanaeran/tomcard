@@ -9,7 +9,7 @@ import copy
 import random
 from collections import Counter
 
-from src.gameplay.carte_new import CibleCarteNew
+from src.gameplay.carte_new import CarteNew, CibleCarteNew, NatureEffet, PorteeEffet
 from src.gameplay.combat_new import CombatNew, EtatCombatNew
 from src.gameplay.statut_new import Statut
 
@@ -29,6 +29,26 @@ POIDS_LEURRE = 3.0
 # Incendie restant : degats encore a venir (k + k-1 + ... + 1), comptes comme des PV ennemis
 # en moins, la recherche ne voyant que le tour suivant
 POIDS_INCENDIE = 1.0
+
+# Valeur du deck (idee utilisateur, 2026-11-11) : une carte de repetition ne paie que sur les tours
+# suivants, que la recherche ne voit pas. On estime donc ce que rapportent les lancements en plus
+# des cartes du combat : valeur d'un lancement x nombre de fois ou la carte sera encore jouee. Plus
+# le combat est jeune, plus il reste de tours, plus l'amelioration vaut. Les tours restants sont
+# estimes d'apres le numero du tour, jamais d'apres les PV ennemis : sinon le bot gagnerait des
+# points a ne pas frapper (combats enlises constates lors d'un premier essai).
+VALEUR_DECK = True
+DUREE_COMBAT_ESTIMEE = 10  # tours (combats a deux ennemis : 5 a 15 tours en simulation)
+TAUX_DE_JEU_ESTIME = 0.7  # part des cartes piochees qui sont jouees
+# Valeur d'un point d'effet, en unites de la note (PV ennemis : POIDS_PV_ENNEMI)
+VALEUR_PAR_NATURE = {
+    NatureEffet.DEGATS: POIDS_PV_ENNEMI,
+    NatureEffet.INCENDIE: 2 * POIDS_PV_ENNEMI,  # l'incendie frappe plusieurs tours
+    NatureEffet.BOUCLIER: 1.0,
+    NatureEffet.REPARATION: 1.0,
+    NatureEffet.GAIN_ELECTRICITE: 5.0,
+    NatureEffet.PIOCHE: 5.0,
+}
+VALEUR_LEURRE = 8.0
 
 
 def copie_sans_journal(combat: CombatNew) -> CombatNew:
@@ -94,7 +114,43 @@ def evaluer(combat: CombatNew) -> float:
         degats_a_venir = min(ennemi.pv, incendie * (incendie + 1) // 2)
         score -= POIDS_PV_ENNEMI * (ennemi.pv + ennemi.statuts[Statut.BOUCLIER] - POIDS_INCENDIE * degats_a_venir)
         score -= MALUS_ENNEMI_VIVANT
+    if VALEUR_DECK:
+        score += valeur_des_lancements_en_plus(combat)
     return score
+
+
+def valeur_d_un_lancement(carte: CarteNew, ennemis_vivants: int) -> float:
+    """Valeur estimee d'un lancement de la carte : somme de ses effets ; un effet sur tous les
+    ennemis (ou les autres) compte pour chaque ennemi vivant."""
+    valeur = 0.0
+    for effet in carte.effets:
+        if effet.nature == NatureEffet.ANNULATION_PROCHAINE_ATTAQUE:
+            valeur += VALEUR_LEURRE
+            continue
+        par_point = VALEUR_PAR_NATURE.get(effet.nature, 0.0)
+        cibles = 1
+        if carte.cible in (CibleCarteNew.ENNEMI_TOUS, CibleCarteNew.ENNEMI_COLONNE) or effet.portee != PorteeEffet.CIBLE:
+            cibles = max(1, ennemis_vivants - (effet.portee == PorteeEffet.AUTRES_ENNEMIS))
+        valeur += par_point * (carte.valeur_de(effet) or 0) * cibles
+    return valeur
+
+
+def valeur_des_lancements_en_plus(combat: CombatNew) -> float:
+    """Ce que rapporteront, d'ici la fin du combat, les lancements en plus des cartes encore
+    jouables (pioche, main, defausse) : lancements en plus x valeur d'un lancement x nombre de
+    fois ou la carte sera encore jouee (tours restants estimes x chance de la piocher)."""
+    deck = combat.deck
+    actives = deck.pioche + deck.main + deck.defausse
+    if not actives:
+        return 0.0
+    ennemis = combat.flotte.ennemis_vivants()
+    tours_restants = max(1, DUREE_COMBAT_ESTIMEE - combat.tour)
+    jeux_par_carte = tours_restants * min(1.0, 5 / len(actives)) * TAUX_DE_JEU_ESTIME
+    return sum(
+        (carte.lancements_actuels - carte.lancements_base) * valeur_d_un_lancement(carte, len(ennemis)) * jeux_par_carte
+        for carte in actives
+        if carte.lancements_actuels > carte.lancements_base
+    )
 
 
 class BotRecherche:

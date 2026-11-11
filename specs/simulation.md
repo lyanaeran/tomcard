@@ -297,6 +297,10 @@ simulateur, à côté de celui des règles actuelles (§11), qui reste inchangé
 - `outils/simulation/bot_new.py` : bot « recherche » (même faisceau et mêmes poids que §11, plus
   un leurre et l'incendie restant dans l'évaluation) et bot aléatoire, sur l'API de `CombatNew`
   (`jouer_carte(carte, case)`, `finir_tour`). La recherche copie le combat **sans son journal**.
+  **Valeur du deck** (idée utilisateur, 2026-11-11) : l'évaluation ajoute ce que rapporteront les
+  lancements en plus (cartes de répétition) d'ici la fin du combat, d'autant plus que le combat est
+  jeune (tours restants estimés d'après le numéro du tour, jamais d'après les PV ennemis, qui
+  incitaient le bot à ne pas frapper). Sans elle, *Protocole d'urgence* n'était jamais joué.
 - `outils/simulation/combats_new.py` : **combats isolés** seulement (le combat n'est pas encore
   branché au parcours) :
   - **robustesse** : le bot aléatoire joue des milliers de combats et un contrôle vérifie après
