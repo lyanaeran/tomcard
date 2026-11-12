@@ -75,6 +75,15 @@ utilisateur), plus des écrans autonomes non reliés comme les précédents.
   seule a la fois (cf. "un joueur ne peut avoir qu'une seule partie EN_COURS" plus haut : les
   parties `TERMINEE` ne sont pour l'instant pas conservées côté web, contrairement à PC — écart
   volontaire tant qu'aucun écran n'affiche l'historique, voir §9.1)
+- **Format 2 (refonte branchée, PR 1, 2026-11-12)** : `version` vaut 2 ; chaque module du
+  `vaisseau` porte aussi son identifiant d'exemplaire (`{"module_id": "MOD_2", "exemplaire": "M2",
+  "pv": 20, "pv_max": 20, "niveau_maj": 1}`, `pv` ne compte que pour le principal) ; le `deck` est
+  une liste `{"id": "CRT_7", "module": "M1"}` (carte rattachée à un exemplaire de module,
+  `partie.CartePossedee`). **Une partie d'une autre version est abandonnée à la lecture**
+  (décision utilisateur du 2026-11-11 n° 1, aucune conversion) : `partie.lire_partie` renvoie
+  `None`, `partie_en_cours` (PC) efface le fichier ; le profil est gardé (son format ne change
+  pas, `VERSION_PROFIL` = 1). Le web devra faire de même avec `localStorage` (PR 2). Ancien
+  format (version 1) :
 - **Contenu** :
   ```json
   {

@@ -55,11 +55,9 @@ def test_carte_new_json_contient_les_19_cartes_revues():
     assert all(carte.refonte for carte in cartes.values())
 
 
-def test_jouable_suit_le_moteur_actuel():
-    cartes = _cartes()
-
-    assert cartes["Laser"].jouable and cartes["Blindage cible"].jouable
-    assert not cartes["Missiles"].jouable and not cartes["Embrasement"].jouable
+def test_les_19_cartes_revues_sont_jouables():
+    # Decision 5 du branchement (refonte-branchement.md 2) : toutes proposables en recompense
+    assert all(carte.jouable for carte in charger_cartes_new().values())
 
 
 def test_description_affichee_remplace_les_valeurs_nommees():

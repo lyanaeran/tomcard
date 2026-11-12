@@ -242,6 +242,12 @@ python -m outils.simulation combat --variante bouclier_moins_un --parties 2000
 
 ## 11. État d'implémentation (2026-11-07, règles actuelles, pré-refonte)
 
+> **Depuis la PR 1 du branchement (2026-11-12)**, le simulateur de parties complètes
+> (`partie_auto.py`, `etudes.py`, `python -m outils.simulation`) joue le **parcours branché sur le
+> combat de la refonte** avec le bot de `bot_new.py` (§12) ; l'ancien bot (`bot.py`) est supprimé.
+> Les règles décrites ci-dessous restent valables pour la politique hors combat ; les résultats de
+> `analyse_2026-11-07.md` sont ceux de l'ancien moteur.
+
 Implémenté dans `outils/simulation/` (`bot.py`, `partie_auto.py`, `etudes.py`, `rapport.py`,
 `__main__.py`), sur les règles **actuelles** du jeu (aucune variante de refonte, décision
 utilisateur : « on ne mélange pas tout »). Tests : `tests/test_simulation.py`.
@@ -276,7 +282,8 @@ rédigées : `outils/simulation/synthese/analyse_AAAA-MM-JJ.md` (rapports géné
 - **Politique par défaut (§5.1)**, telle qu'implémentée : Prime/Boss en priorité, Station si le
   principal est sous 50 % de ses PV et que l'Argent suffit ; Station : réparer le principal s'il
   lui manque 15 PV, sinon l'améliorer, tant que l'Argent suffit ; Trois lunes : améliorer le
-  principal ; Astéroïdes : traverser avec le secondaire le plus solide, prendre la carte offerte ;
+  principal ; Astéroïdes : traverser (les chocs touchent le principal depuis la refonte), prendre
+  la carte offerte ;
   Police : payer la mise aux normes si possible, sinon confiscation ; cartes (module, récompense) :
   la plus rare.
 - **Séquences internes des Aventures** (deux chocs d'Astéroïdes, Détourner puis choisir de Police)

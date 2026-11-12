@@ -1,8 +1,8 @@
 # Branchement de la refonte — proposition
 
-*Document de travail, hors numérotation (cf. [specs.md](specs.md)). **Plan validé, rien n'est
-encore codé** (décisions du §2 et ordre des PR du §5 tranchés le 2026-11-11 ; l'affichage du §4
-reste une proposition, à valider sur maquette). Décrit comment faire passer le jeu (parcours, sauvegarde, affichage
+*Document de travail, hors numérotation (cf. [specs.md](specs.md)). **Plan validé** (décisions du
+§2 et ordre des PR du §5 tranchés le 2026-11-11 ; l'affichage du §4 reste une proposition, à
+valider sur maquette). **PR 1 (gameplay) codée le 2026-11-12** (§5.1) ; PR 2 à 4 à faire. Décrit comment faire passer le jeu (parcours, sauvegarde, affichage
 PC et web) sur le moteur de la refonte (`CombatNew` et les fichiers `*_new.py`), puis supprimer
 l'ancien moteur. Contexte : [refonte.md](refonte.md) ; règles du nouveau combat :
 [refonte-combat.md](refonte-combat.md).*
@@ -171,6 +171,48 @@ signale dans sa description ce qui ne fonctionne pas encore.
 
 Après cette PR, l'affichage web et PC lit encore l'ancien combat : **le jeu est cassé** jusqu'à la
 PR 2 pour le web et la PR 3 pour le PC (accepté). La description de chaque PR le signale.
+
+### 5.1 PR 1 codée (2026-11-12) : ce qui a été fait, choix faits en codant
+
+Fait, testé par `pytest` (aucun affichage) :
+
+- `partie.py` : modules `ModuleNew` (exemplaires `M1`, `M2`…, `EtatModule` supprimé), deck en
+  `CartePossedee(id, module)`, format de sauvegarde 2 (specs.md §10.3), ancienne sauvegarde
+  abandonnée (`lire_partie`, `SauvegardeObsolete`) ; `combat_depuis_partie` et
+  `combat_aventure_asteroides` renvoient un `CombatNew` ; `reporter_combat` (PV du principal) ;
+  Station (`reparer_principal`) et Aventures adaptées (décisions 2 et 3).
+- `flotte_new.py` : composition des flottes (décision 4) : `flotte_prime`, `flotte_boss`,
+  `flotte_asteroides`, `placer_ennemis` ; le simulateur de combats l'utilise aussi.
+- `parcours.py` et `deroulement.py` : mêmes écrans et transitions, sur `ModuleNew` / `CarteNew` /
+  `CombatNew`. Les cartes proposées (choix du module, récompenses) sont des exemplaires `CarteNew`
+  **déjà rattachés** à l'exemplaire de leur module ; `resoudre_carte_module` et
+  `resoudre_fin_combat` prennent la carte choisie (plus son id).
+- `carte_new.json` : `jouable` à `true` pour les 19 cartes (décision 5), tableau régénéré.
+- Simulateur de parties complètes (`partie_auto.py`, `etudes.py`) sur le nouveau combat et
+  `bot_new.py` ; l'ancien bot `bot.py` est supprimé dès maintenant (il ne pouvait plus jouer un
+  combat du parcours).
+
+Choix faits en codant, **à valider par l'utilisateur** :
+
+- **Carte de récompense rattachée au module qui l'a proposée** (chaque module propose une carte de
+  son pool, §6) ; carte offerte par les Astéroïdes (pool complet, « hors module ») rattachée au
+  principal (refonte-modules.md §3.3).
+- **Argent du Boss : 5 € au lieu de 10 €** : l'Argent se compte par ennemi détruit
+  (`ennemis_detruits()`), le Boss sur deux cases compte pour un (l'ancien moteur comptait ses deux
+  cases). Sans effet en jeu aujourd'hui (la partie s'arrête au Boss).
+- **Mode test (`config_poc.MODE_TEST`) non repris** par le parcours branché (PV gonflés, Laser à
+  20) : il ne sert plus que l'ancien combat de démonstration. À recréer si l'utilisateur en a
+  besoin pour ses essais manuels.
+- **Déplacer le principal** lève une erreur (avant : à la charge de l'écran de ne jamais le
+  demander) ; **ajouter une carte rattachée à un module absent** aussi.
+- **Question ouverte** : les Astéroïdes peuvent mettre le principal à **0 PV** (plancher à 0, règle
+  inchangée) ; le combat suivant commence alors avec un principal détruit et `CombatNew` ne le
+  déclare pas perdu (il ne vérifie la défaite qu'après des dégâts). Le cas existait déjà, il devient
+  plus probable (10 PV par traversée, toujours sur le principal). Options : défaite immédiate, ou
+  chocs plafonnés à 1 PV restant.
+
+Le jeu (PC et web) **ne fonctionne plus** tant que les PR 2 et 3 ne sont pas faites : leurs écrans
+lisent encore l'ancien combat et l'ancien format de partie (accepté, §5).
 
 ### PR 2 — Affichage web / iPhone (`web/bridge.py`, `web/app.js`, `web/style.css`)
 

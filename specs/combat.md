@@ -228,6 +228,13 @@ deux lacunes) — une ligne par Action active au prochain tour, pas seulement la
 
 ### 13.4 Composition des flottes de combat
 
+> **Refonte branchée côté gameplay (PR 1, 2026-11-12, décision utilisateur du 2026-11-11 n° 4)** :
+> mêmes règles, avec les ennemis de la refonte (`config/ennemi_new.json`), coefficient de
+> difficulté 1, dans `src/gameplay/flotte_new.py` (`flotte_prime`, `flotte_boss`,
+> `flotte_asteroides`, `placer_ennemis`) ; le placement préféré (protecteur à l'avant, protégé à
+> l'arrière) vaut aussi pour les Astéroïdes. Le simulateur du combat de la refonte utilise le même
+> placement. La difficulté par niveau sera réglée après le branchement, par simulation.
+
 - **Combat Intermédiaire** (Prime) : 1 ennemi tiré au sort (parmi les ennemis à 1 emplacement)
   jusqu'au niveau 5 inclus, puis 2 ennemis tirés au sort à partir du niveau 6
   (`config_poc.creer_flotte_prime`) — le Boss des pirates (2 emplacements) est exclu de ce tirage

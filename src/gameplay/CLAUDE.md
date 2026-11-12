@@ -12,9 +12,11 @@ elle appartient à `src/ui`. Couvert par pytest (`tests/`, un fichier de test pa
 ## Deux moteurs (refonte en cours)
 
 Les fichiers `*_new.py` (`carte_new`, `module_new`, `ennemi_new`, `statut_new`, `combat_new`,
-`deck_new`, `flotte_new`, `vaisseau_new`) sont le **moteur de la refonte**, codé et testé mais
-**pas encore branché** : le jeu (parcours, sauvegarde, PC, web) utilise toujours l'ancien moteur
-(`carte.py`, `module.py`, `ennemi.py`, `combat.py`...). Vue d'ensemble : `specs/refonte.md`.
+`deck_new`, `flotte_new`, `vaisseau_new`) sont le **moteur de la refonte**. Depuis la PR 1 du
+branchement, le parcours (`partie.py`, `parcours.py`, `deroulement.py`) l'utilise ; l'ancien moteur
+(`carte.py`, `module.py`, `ennemi.py`, `combat.py`...) n'est plus lu que par l'affichage PC et web
+(en attente des PR 2 et 3) et le combat de démonstration (`config_poc.py`), puis sera supprimé
+(PR 4). Vue d'ensemble : `specs/refonte.md`, plan : `specs/refonte-branchement.md`.
 
 - Ne pas mélanger les deux : un fichier `_new` n'importe pas l'ancien moteur, sauf réutilisation
   explicite d'un élément neutre (`position.py`, `RareteCarte`).

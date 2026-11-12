@@ -11,70 +11,55 @@ bas de ce fichier.
 import json
 import random
 import shutil
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from src.gameplay.carte import Carte
-from src.gameplay.combat import Combat
-from src.gameplay.config_poc import (
-    ELECTRICITE_PAR_TOUR,
-    ID_MODULE_PRINCIPAL,
-    MODE_TEST,
-    PV_MODULE_MODE_TEST,
-    appliquer_degats_mode_test,
-    creer_flotte_asteroides,
-    creer_flotte_boss,
-    creer_flotte_prime,
-    ids_deck_module_principal,
-)
-from src.gameplay.deck import Deck
-from src.gameplay.donnees import SpecModule, charger_cartes, charger_ennemis, charger_modules
-from src.gameplay.joueur import Joueur
-from src.gameplay.module import Module
+from src.gameplay.carte_new import CarteNew, charger_cartes_new
+from src.gameplay.combat_new import CombatNew
+from src.gameplay.deck_new import DECK_DE_DEPART
+from src.gameplay.ennemi_new import charger_ennemis_new
+from src.gameplay.flotte_new import FlotteNew, flotte_asteroides, flotte_boss, flotte_prime
+from src.gameplay.module_new import ModuleNew, charger_modules_new
 from src.gameplay.parcours import est_niveau_boss, pool_toutes_cartes, tirer_carte_deck, tirer_carte_recompense
-from src.gameplay.position import Colonne, Position, Rangee
-from src.gameplay.vaisseau import Vaisseau
 
 RACINE = Path(__file__).resolve().parents[2]
 DOSSIER_SAVES = RACINE / "saves"
 
-VERSION_FORMAT = 1
+# Version du format de sauvegarde d'une partie. 2 : moteur de la refonte (modules ModuleNew,
+# cartes rattachees a un exemplaire de module). Une partie d'une autre version est abandonnee a la
+# lecture (refonte-branchement.md 2, decision 1) : aucune conversion.
+VERSION_FORMAT = 2
+# Version du format d'un profil, independante : les profils sont gardes tels quels
+VERSION_PROFIL = 1
 
-# Un etat par emplacement du vaisseau (specs.md 3.1/5) : la base (module principal, toujours
-# equipee) et les 4 emplacements equipables. None = emplacement vide.
+# Un exemplaire de module par emplacement du vaisseau (specs.md 3.1/5) : la base (module
+# principal, toujours equipee) et les 4 emplacements equipables. None = emplacement vide.
 POSITIONS_EQUIPABLES = ("avant_gauche", "avant_droite", "arriere_gauche", "arriere_droite")
 POSITIONS_VAISSEAU = ("base",) + POSITIONS_EQUIPABLES
-
-# Correspondance entre les cles de partie.vaisseau (str) et les Position (Colonne/Rangee) du
-# Vaisseau de combat (src/gameplay/vaisseau.py) - meme ordre que POSITIONS_EQUIPABLES, utilisee
-# par synchroniser_vaisseau_depuis_combat pour reporter les PV de combat sur la partie.
-_POSITIONS_GAMEPLAY_PAR_CLE = {
-    "avant_gauche": Position(Colonne.AVANT, Rangee.GAUCHE),
-    "avant_droite": Position(Colonne.AVANT, Rangee.DROITE),
-    "arriere_gauche": Position(Colonne.ARRIERE, Rangee.GAUCHE),
-    "arriere_droite": Position(Colonne.ARRIERE, Rangee.DROITE),
-}
 
 STATUT_EN_COURS = "EN_COURS"
 STATUT_TERMINEE = "TERMINEE"
 
 
-@dataclass
-class EtatModule:
-    """Etat persistant d'un module equipe (specs.md 2.2) : PV actuels/max et palier de mise a
-    jour (1 a 3), independants du reste (Module, dans src/gameplay/module.py, est l'etat de
-    combat ephemere - recree a chaque combat a partir de cet etat persistant)."""
+class SauvegardeObsolete(ValueError):
+    """Partie sauvegardee par une ancienne version du jeu : elle est abandonnee (decision 1)."""
 
-    module_id: str
-    pv: int
-    pv_max: int
-    niveau_maj: int = 1
+
+@dataclass(frozen=True)
+class CartePossedee:
+    """Une carte du deck possede : l'id de son modele (config/carte_new.json) et l'exemplaire de
+    module auquel elle est rattachee ("M1"...), stable meme si la Station deplace le module
+    (refonte-modules.md 3.3)."""
+
+    id: str
+    module: str
 
 
 @dataclass
 class Partie:
-    """Une sauvegarde de partie, rattachee a un profil (specs.md 10.3)."""
+    """Une sauvegarde de partie, rattachee a un profil (specs.md 10.3). `vaisseau` : exemplaire de
+    module (ModuleNew, partie "exemplaire" seulement) de chaque emplacement."""
 
     id: str
     nom: str
@@ -82,20 +67,22 @@ class Partie:
     graine: int
     niveau: int
     argent: int
-    vaisseau: dict[str, EtatModule | None]
-    deck: list[str]
+    vaisseau: dict[str, ModuleNew | None]
+    deck: list[CartePossedee]
     version: int = VERSION_FORMAT
+
+    @property
+    def principal(self) -> ModuleNew:
+        return self.vaisseau["base"]
 
 
 @dataclass
 class Profil:
-    """Un profil joueur local (specs.md 10.3). Distinct de la classe Joueur de
-    src/gameplay/joueur.py, qui represente l'etat *de combat* (vaisseau + deck + electricite),
-    ephemere et sans rapport avec la persistance entre parties."""
+    """Un profil joueur local (specs.md 10.3), distinct de l'etat de combat."""
 
     id: str
     nom: str
-    version: int = VERSION_FORMAT
+    version: int = VERSION_PROFIL
 
 
 def _horodatage() -> str:
@@ -105,6 +92,25 @@ def _horodatage() -> str:
 
 
 # --- Serialisation (pure, testable sans I/O) ---
+
+
+def _module_vers_dict(module: ModuleNew) -> dict:
+    """Ce qui est sauvegarde d'un exemplaire de module ; l'emplacement est la cle du vaisseau."""
+    return {
+        "module_id": module.id,
+        "exemplaire": module.exemplaire,
+        "pv": module.pv,
+        "pv_max": module.pv_max,
+        "niveau_maj": module.niveau_maj,
+    }
+
+
+def _module_depuis_dict(donnees: dict, emplacement: str, modeles: dict[str, ModuleNew]) -> ModuleNew:
+    module = modeles[donnees["module_id"]].nouvel_exemplaire(donnees["exemplaire"], emplacement)
+    module.pv_max = donnees["pv_max"]
+    module.pv = donnees["pv"]
+    module.niveau_maj = donnees["niveau_maj"]
+    return module
 
 
 def partie_vers_dict(partie: Partie) -> dict:
@@ -117,13 +123,20 @@ def partie_vers_dict(partie: Partie) -> dict:
         "niveau": partie.niveau,
         "argent": partie.argent,
         "vaisseau": {
-            position: (asdict(etat) if etat is not None else None) for position, etat in partie.vaisseau.items()
+            position: (_module_vers_dict(module) if module is not None else None)
+            for position, module in partie.vaisseau.items()
         },
-        "deck": list(partie.deck),
+        "deck": [{"id": carte.id, "module": carte.module} for carte in partie.deck],
     }
 
 
-def partie_depuis_dict(donnees: dict) -> Partie:
+def partie_depuis_dict(donnees: dict, modeles: dict[str, ModuleNew] | None = None) -> Partie:
+    """Partie a partir de sa sauvegarde. Leve SauvegardeObsolete pour une autre version du format
+    (ancienne sauvegarde, decision 1)."""
+    version = donnees.get("version", 1)
+    if version != VERSION_FORMAT:
+        raise SauvegardeObsolete(f"Partie au format {version}, format attendu {VERSION_FORMAT}")
+    modeles = modeles if modeles is not None else charger_modules_new()
     return Partie(
         id=donnees["id"],
         nom=donnees["nom"],
@@ -132,11 +145,11 @@ def partie_depuis_dict(donnees: dict) -> Partie:
         niveau=donnees["niveau"],
         argent=donnees["argent"],
         vaisseau={
-            position: (EtatModule(**etat) if etat is not None else None)
-            for position, etat in donnees["vaisseau"].items()
+            position: (_module_depuis_dict(module, position, modeles) if module is not None else None)
+            for position, module in donnees["vaisseau"].items()
         },
-        deck=list(donnees["deck"]),
-        version=donnees.get("version", VERSION_FORMAT),
+        deck=[CartePossedee(id=carte["id"], module=carte["module"]) for carte in donnees["deck"]],
+        version=version,
     )
 
 
@@ -148,12 +161,21 @@ def partie_depuis_json(texte: str) -> Partie:
     return partie_depuis_dict(json.loads(texte))
 
 
+def lire_partie(texte: str) -> Partie | None:
+    """Partie sauvegardee, ou None si elle vient d'une ancienne version du jeu (abandonnee,
+    decision 1) : a l'appelant de l'effacer (fichier cote PC, localStorage cote web)."""
+    try:
+        return partie_depuis_json(texte)
+    except SauvegardeObsolete:
+        return None
+
+
 def profil_vers_dict(profil: Profil) -> dict:
     return {"version": profil.version, "id": profil.id, "nom": profil.nom}
 
 
 def profil_depuis_dict(donnees: dict) -> Profil:
-    return Profil(id=donnees["id"], nom=donnees["nom"], version=donnees.get("version", VERSION_FORMAT))
+    return Profil(id=donnees["id"], nom=donnees["nom"], version=donnees.get("version", VERSION_PROFIL))
 
 
 def profil_vers_json(profil: Profil) -> str:
@@ -171,34 +193,19 @@ def nouveau_profil(nom: str) -> Profil:
     return Profil(id=f"joueur_{_horodatage()}", nom=nom)
 
 
-def _pv_module_initial(spec: SpecModule) -> int:
-    """PV de depart d'un module tout juste equipe - PV_MODULE_MODE_TEST en mode test (cf.
-    config_poc.py), sinon la valeur normale (config/modules.json). Sert de point de depart
-    seulement : les PV persistent ensuite normalement d'un combat a l'autre (specs.md 2.2), y
-    compris en mode test - cf. combat_depuis_partie."""
-    return PV_MODULE_MODE_TEST if MODE_TEST else spec.points_de_vie
-
-
 ARGENT_DEPART = 7
+# Identifiant d'exemplaire du principal, premier module de toute partie
+EXEMPLAIRE_PRINCIPAL = "M1"
 
 
 def nouvelle_partie(aleatoire: random.Random | None = None) -> Partie:
     """Nouvelle partie au Niveau 1 (specs.md 2.3) : seul le module principal est equipe (le 2e
-    slot est pourvu par le choix de module du Niveau 1, qui n'a pas encore eu lieu a ce stade),
-    avec son deck de depart fixe (config_poc.ids_deck_module_principal). Argent a ARGENT_DEPART
-    (specs.md 2.1/9.1)."""
+    slot est pourvu par le choix de module du Niveau 1), avec le deck de depart
+    (deck_new.DECK_DE_DEPART) rattache au principal. Argent a ARGENT_DEPART (specs.md 2.1/9.1)."""
     aleatoire = aleatoire or random.Random()
-    modules = charger_modules()
-    cartes = charger_cartes()
-    spec_principal = next(spec for spec in modules if spec.id == ID_MODULE_PRINCIPAL)
-    vaisseau: dict[str, EtatModule | None] = {position: None for position in POSITIONS_VAISSEAU}
-    pv_principal = _pv_module_initial(spec_principal)
-    vaisseau["base"] = EtatModule(
-        module_id=spec_principal.id,
-        pv=pv_principal,
-        pv_max=pv_principal,
-        niveau_maj=1,
-    )
+    modele_principal = next(module for module in charger_modules_new().values() if module.principal)
+    vaisseau: dict[str, ModuleNew | None] = {position: None for position in POSITIONS_VAISSEAU}
+    vaisseau["base"] = modele_principal.nouvel_exemplaire(EXEMPLAIRE_PRINCIPAL, "base")
     return Partie(
         id=f"partie_{_horodatage()}",
         nom=f"Partie du {datetime.now():%d/%m/%Y}",
@@ -207,163 +214,108 @@ def nouvelle_partie(aleatoire: random.Random | None = None) -> Partie:
         niveau=1,
         argent=ARGENT_DEPART,
         vaisseau=vaisseau,
-        deck=ids_deck_module_principal(spec_principal, cartes),
+        deck=[
+            CartePossedee(id=id_carte, module=EXEMPLAIRE_PRINCIPAL)
+            for id_carte, nombre in DECK_DE_DEPART.items()
+            for _ in range(nombre)
+        ],
     )
 
 
-def deck_de_la_partie(partie: Partie, cartes: dict[str, Carte] | None = None) -> list[Carte]:
-    """Resout les ids de `partie.deck` en exemplaires Carte independants (copie()) - pour
-    afficher/jouer le deck reel d'une partie sauvegardee (ex. ecran deck en entier)."""
-    cartes = cartes if cartes is not None else charger_cartes()
-    return [cartes[id_carte].copie() for id_carte in partie.deck]
+def modules_de_la_partie(partie: Partie) -> list[ModuleNew]:
+    """Exemplaires de modules equipes, principal en premier (ordre de POSITIONS_VAISSEAU)."""
+    return [partie.vaisseau[position] for position in POSITIONS_VAISSEAU if partie.vaisseau[position] is not None]
 
 
-def _joueur_depuis_partie(partie: Partie, cartes: dict[str, Carte], aleatoire: random.Random) -> Joueur:
-    """Construit le Joueur (vaisseau + deck) d'un combat a partir d'une partie sauvegardee -
-    partage entre combat_depuis_partie (flotte aleatoire standard) et combat_aventure_asteroides
-    (flotte scriptee, specs.md 2.5). Les PV des modules sont repris tels quels depuis la partie
-    (persistance entre combats, specs.md 2.2) - y compris en mode test (MODE_TEST, cf.
-    config_poc.py), ou seule leur valeur de depart est plus elevee (PV_MODULE_MODE_TEST, cf.
-    equiper_module/nouvelle_partie) : la persistance elle-meme reste testable (Reparer/Ameliorer
-    en Station service, degats qui persistent d'un combat a l'autre).
-
-    En mode test, les cartes ATTAQUE de rarete Base du deck reel infligent
-    VALEUR_ATTAQUE_BASE_MODE_TEST degats plutot que leur valeur normale - meme principe que la
-    flotte ennemie (creer_flotte), pour pouvoir enchainer les essais manuels sans y passer
-    plusieurs tours. Rien n'est modifie dans la partie sauvegardee pour autant (aucune ecriture
-    ici)."""
-    specs_par_id = {spec.id: spec for spec in charger_modules()}
-
-    def _module(etat: EtatModule | None) -> Module | None:
-        if etat is None:
-            return None
-        spec = specs_par_id[etat.module_id]
-        module = Module(pv_max=etat.pv_max, nom=spec.nom, image=spec.image)
-        module.pv = etat.pv
-        return module
-
-    base = _module(partie.vaisseau["base"])
-    if base is None:
-        raise ValueError("Partie invalide : le module principal doit toujours etre equipe")
-
-    vaisseau = Vaisseau(
-        base=base,
-        avant_gauche=_module(partie.vaisseau["avant_gauche"]),
-        avant_droite=_module(partie.vaisseau["avant_droite"]),
-        arriere_gauche=_module(partie.vaisseau["arriere_gauche"]),
-        arriere_droite=_module(partie.vaisseau["arriere_droite"]),
-    )
-    deck_cartes = deck_de_la_partie(partie, cartes)
-    if MODE_TEST:
-        appliquer_degats_mode_test(deck_cartes)
-    deck = Deck(cartes=deck_cartes, generateur_aleatoire=aleatoire)
-    return Joueur(vaisseau=vaisseau, deck=deck, electricite_par_tour=ELECTRICITE_PAR_TOUR)
+def deck_de_la_partie(partie: Partie, cartes: dict[str, CarteNew] | None = None) -> list[CarteNew]:
+    """Exemplaires CarteNew independants du deck possede, rattaches a leur module - pour afficher
+    le deck ou le donner a un combat."""
+    cartes = cartes if cartes is not None else charger_cartes_new()
+    return [cartes[carte.id].copie(exemplaire_module=carte.module) for carte in partie.deck]
 
 
-def combat_depuis_partie(partie: Partie, aleatoire: random.Random | None = None) -> Combat:
-    """Construit un Combat a partir d'une partie sauvegardee : vaisseau et deck reels du joueur
-    (_joueur_depuis_partie), flotte ennemie liee au niveau (specs.md 2.1/2.3/13) - composition
-    fixe du Boss (creer_flotte_boss) aux niveaux multiples de 10 (est_niveau_boss), sinon un
-    combat Prime standard (creer_flotte_prime : 1 ennemi jusqu'au Niveau 5, 2 au-dela)."""
+def _combat(partie: Partie, flotte: FlotteNew, aleatoire: random.Random) -> CombatNew:
+    """Combat avec le vaisseau et le deck de la partie : copies de combat des modules (PV
+    sauvegardes pour le principal, PV max pour les secondaires), copies des cartes. La partie
+    n'est pas modifiee (un combat abandonne ne la touche pas)."""
+    modules = [module.copie_pour_combat() for module in modules_de_la_partie(partie)]
+    return CombatNew(modules, deck_de_la_partie(partie), flotte, aleatoire)
+
+
+def combat_depuis_partie(partie: Partie, aleatoire: random.Random | None = None) -> CombatNew:
+    """Combat du niveau courant (specs.md 2.1/2.3/13) : flotte du Boss aux niveaux Boss, sinon
+    flotte Prime (1 ennemi jusqu'au Niveau 5, 2 au-dela), flotte_new.py."""
     aleatoire = aleatoire or random.Random(partie.graine + partie.niveau)
-    cartes = charger_cartes()
-    joueur = _joueur_depuis_partie(partie, cartes, aleatoire)
-    specs_ennemis = charger_ennemis()
-    if est_niveau_boss(partie.niveau):
-        flotte = creer_flotte_boss(specs_ennemis)
-    else:
-        flotte = creer_flotte_prime(specs_ennemis, partie.niveau, aleatoire)
-    return Combat(joueur=joueur, flotte=flotte, aleatoire=aleatoire)
+    modeles = charger_ennemis_new()
+    flotte = flotte_boss(modeles) if est_niveau_boss(partie.niveau) else flotte_prime(modeles, partie.niveau, aleatoire)
+    return _combat(partie, flotte, aleatoire)
 
 
-def combat_aventure_asteroides(partie: Partie, aleatoire: random.Random | None = None) -> Combat:
-    """Combat scripte du choix "Affronter les pirates" (Aventure Asteroides, specs.md 2.5) :
-    meme vaisseau/deck reels que combat_depuis_partie (_joueur_depuis_partie), mais flotte fixee a
-    NOMBRE_ENNEMIS_ASTEROIDES ennemis (creer_flotte_asteroides) plutot que le tirage standard lie
-    au niveau."""
+def combat_aventure_asteroides(partie: Partie, aleatoire: random.Random | None = None) -> CombatNew:
+    """Combat du choix "Affronter les pirates" (Aventure Asteroides, specs.md 2.5) :
+    NOMBRE_ENNEMIS_ASTEROIDES ennemis (flotte_asteroides)."""
     aleatoire = aleatoire or random.Random(partie.graine + partie.niveau)
-    cartes = charger_cartes()
-    joueur = _joueur_depuis_partie(partie, cartes, aleatoire)
-    flotte = creer_flotte_asteroides(charger_ennemis(), aleatoire)
-    return Combat(joueur=joueur, flotte=flotte, aleatoire=aleatoire)
+    return _combat(partie, flotte_asteroides(charger_ennemis_new(), aleatoire), aleatoire)
 
 
-def synchroniser_vaisseau_depuis_combat(partie: Partie, vaisseau: Vaisseau) -> Partie:
-    """Reporte sur la partie sauvegardee les PV du vaisseau tel qu'il ressort d'un combat
-    (degats subis, soins recus) - operation inverse de combat_depuis_partie, indispensable pour
-    que les degats persistent reellement d'un combat a l'autre (specs.md 2.2/3.4). A appeler des
-    qu'un combat se termine (victoire), avant de sauvegarder la partie - `deroulement.conclure_combat`,
-    commun au PC, au web et a la simulation.
-
-    Ne touche qu'aux PV : ni pv_max (ne change que via Ameliorer, Station service), ni le
-    bouclier (mecanique de combat ephemere, non persistee, absente d'EtatModule). Modifie et
-    renvoie `partie`."""
-    partie.vaisseau["base"].pv = vaisseau.base.pv
-    modules_equipes = vaisseau.modules_equipes()
-    for cle, position in _POSITIONS_GAMEPLAY_PAR_CLE.items():
-        etat = partie.vaisseau[cle]
-        module = modules_equipes.get(position)
-        if etat is not None and module is not None:
-            etat.pv = module.pv
+def reporter_combat(partie: Partie, combat: CombatNew) -> Partie:
+    """Fin de combat (victoire ou defaite) : reporte sur la partie ce qui persiste, c'est-a-dire
+    les PV du principal seulement (ModuleNew.reporter_combat ; un secondaire repart plein au
+    combat suivant). A appeler une fois, par deroulement.conclure_combat. Modifie et renvoie
+    `partie`."""
+    for module in modules_de_la_partie(partie):
+        copie = combat.vaisseau.module_d_exemplaire(module.exemplaire)
+        if copie is not None:
+            module.reporter_combat(copie)
     return partie
 
 
 ARGENT_PAR_ENNEMI_TUE = 5
 
 
-def gagner_argent_combat(partie: Partie, combat: Combat) -> Partie:
-    """Recompense en Argent d'une victoire (specs.md 2.1) : ARGENT_PAR_ENNEMI_TUE par ennemi de la
-    flotte affrontee (combat.flotte.positions(), qui compte aussi les ennemis detruits - une
-    victoire suppose que toute la flotte l'est). A appeler uniquement apres une victoire
-    (combat.etat == EtatCombat.VICTOIRE), au meme moment que synchroniser_vaisseau_depuis_combat.
-    Modifie et renvoie `partie`."""
-    partie.argent += ARGENT_PAR_ENNEMI_TUE * len(combat.flotte.positions())
+def gagner_argent_combat(partie: Partie, combat: CombatNew) -> Partie:
+    """Recompense en Argent d'une victoire (specs.md 2.1) : ARGENT_PAR_ENNEMI_TUE par ennemi
+    detruit (le Boss, sur deux cases, compte pour un). Modifie et renvoie `partie`."""
+    partie.argent += ARGENT_PAR_ENNEMI_TUE * len(combat.ennemis_detruits())
     return partie
 
 
-# --- Progression (specs.md 2.4) : fonctions pures utilisees par l'enchainement des ecrans, cote
-# PC (main.py) comme cote web (web/bridge.py) ---
+# --- Progression (specs.md 2.4) : fonctions pures utilisees par l'enchainement des ecrans
+# (deroulement.py) ---
 
 
-def equiper_module(partie: Partie, spec: SpecModule) -> Partie:
-    """Equipe ce module sur le premier emplacement libre du vaisseau (specs.md 2.3/5) - utilise
-    par le choix de module du Niveau 1 (un seul emplacement libre a ce stade). Modifie et renvoie
-    `partie`."""
+def _nouvel_exemplaire(partie: Partie) -> str:
+    """Identifiant d'exemplaire libre : "M" suivi du plus grand numero deja utilise plus un."""
+    numeros = [int(module.exemplaire[1:]) for module in modules_de_la_partie(partie)]
+    return f"M{max(numeros, default=0) + 1}"
+
+
+def equiper_module(partie: Partie, modele: ModuleNew) -> ModuleNew:
+    """Equipe un nouvel exemplaire de ce module sur le premier emplacement libre du vaisseau
+    (specs.md 2.3/5), PV pleins. Modifie `partie` et renvoie l'exemplaire equipe."""
     position = next(p for p in POSITIONS_EQUIPABLES if partie.vaisseau[p] is None)
-    pv = _pv_module_initial(spec)
-    partie.vaisseau[position] = EtatModule(module_id=spec.id, pv=pv, pv_max=pv, niveau_maj=1)
-    return partie
+    module = modele.nouvel_exemplaire(_nouvel_exemplaire(partie), position)
+    partie.vaisseau[position] = module
+    return module
 
 
 def avancer_niveau(partie: Partie) -> Partie:
-    """Fait passer la partie au niveau suivant (specs.md 2.4), une fois l'etape du niveau courant
-    resolue (module choisi, combat gagne, etape de service terminee...). Modifie et renvoie
-    `partie`."""
+    """Fait passer la partie au niveau suivant (specs.md 2.4). Modifie et renvoie `partie`."""
     partie.niveau += 1
     return partie
 
 
-def ajouter_carte(partie: Partie, id_carte: str) -> Partie:
-    """Ajoute une carte au deck possede de la partie (recompense de fin de combat, specs.md 6).
-    Modifie et renvoie `partie`."""
-    partie.deck.append(id_carte)
+def ajouter_carte(partie: Partie, id_carte: str, exemplaire_module: str) -> Partie:
+    """Ajoute une carte au deck possede, rattachee a cet exemplaire de module (recompense de fin
+    de combat, specs.md 6). Modifie et renvoie `partie`."""
+    if exemplaire_module not in {module.exemplaire for module in modules_de_la_partie(partie)}:
+        raise ValueError(f"Carte {id_carte} : module {exemplaire_module} absent du vaisseau")
+    partie.deck.append(CartePossedee(id=id_carte, module=exemplaire_module))
     return partie
 
 
-def specs_utilisees_partie(partie: Partie, specs_par_id: dict[str, SpecModule]) -> list[SpecModule]:
-    """Specs des modules actuellement equipes sur cette partie, module principal en premier
-    (meme ordre que creer_vaisseau/tirer_candidats_recompense, specs.md 6) - pour tirer une
-    recompense de fin de combat a partir d'une partie sauvegardee plutot que d'un vaisseau tire au
-    hasard."""
-    return [
-        specs_par_id[partie.vaisseau[position].module_id]
-        for position in POSITIONS_VAISSEAU
-        if partie.vaisseau[position] is not None
-    ]
-
-
-# --- Station service (garage), specs.md 2.2 : 4 actions couttant chacune COUT_ACTION_STATION_
-# SERVICE en Argent, appliquees a un module equipe de la partie, partagees PC/web ---
+# --- Station service (garage), specs.md 2.2 : 4 actions coutant chacune COUT_ACTION_STATION_
+# SERVICE en Argent, partagees PC/web ---
 
 PV_REPARATION = 20
 PV_AMELIORATION = 10
@@ -373,40 +325,37 @@ COUT_ACTION_STATION_SERVICE = 20
 
 def _payer_action_station_service(partie: Partie) -> bool:
     """Deduit COUT_ACTION_STATION_SERVICE de l'Argent de la partie si elle en a assez (specs.md
-    2.1/2.2). Ne modifie rien et renvoie False si l'Argent est insuffisant - a l'appelant de ne
-    pas appliquer l'effet de l'action dans ce cas."""
+    2.1/2.2). Ne modifie rien et renvoie False si l'Argent est insuffisant."""
     if partie.argent < COUT_ACTION_STATION_SERVICE:
         return False
     partie.argent -= COUT_ACTION_STATION_SERVICE
     return True
 
 
-def reparer_module(partie: Partie, position: str) -> bool:
-    """Restaure PV_REPARATION PV au module de cet emplacement, plafonne a son pv_max (specs.md
-    2.2), contre COUT_ACTION_STATION_SERVICE d'Argent (specs.md 2.1). S'applique au module
-    principal comme aux modules equipes. Modifie `partie` et renvoie True si l'Argent etait
-    suffisant, sinon ne fait rien et renvoie False."""
+def reparer_principal(partie: Partie) -> bool:
+    """Restaure PV_REPARATION PV au module principal, plafonne a son pv_max (specs.md 2.2), contre
+    COUT_ACTION_STATION_SERVICE d'Argent. Seul le principal se repare : un secondaire repart plein
+    a chaque combat (refonte-branchement.md 2, decision 2). Renvoie False, sans rien modifier, si
+    l'Argent est insuffisant."""
     if not _payer_action_station_service(partie):
         return False
-    etat = partie.vaisseau[position]
-    etat.pv = min(etat.pv + PV_REPARATION, etat.pv_max)
+    principal = partie.principal
+    principal.pv = min(principal.pv + PV_REPARATION, principal.pv_max)
     return True
 
 
 def _effet_ameliorer_module(partie: Partie, position: str) -> None:
-    """Coeur de l'effet Ameliorer (specs.md 2.2) : augmente le pv_max du module de cet
-    emplacement de PV_AMELIORATION, et ses PV actuels du meme montant (pas seulement le plafond).
-    Partage entre ameliorer_module (Station service, payant) et ameliorer_module_aventure
-    (specs.md 2.5, gratuit) - pas de cout applique ici, a la charge de l'appelant."""
-    etat = partie.vaisseau[position]
-    etat.pv_max += PV_AMELIORATION
-    etat.pv += PV_AMELIORATION
+    """Coeur de l'effet Ameliorer (specs.md 2.2) : +PV_AMELIORATION au pv_max du module de cet
+    emplacement, et a ses PV du meme montant. Partage entre ameliorer_module (Station service,
+    payant) et ameliorer_module_aventure (specs.md 2.5, gratuit)."""
+    module = partie.vaisseau[position]
+    module.pv_max += PV_AMELIORATION
+    module.pv += PV_AMELIORATION
 
 
 def ameliorer_module(partie: Partie, position: str) -> bool:
-    """Effet Ameliorer (_effet_ameliorer_module) contre COUT_ACTION_STATION_SERVICE d'Argent
-    (specs.md 2.1/2.2). S'applique au module principal comme aux modules equipes. Modifie
-    `partie` et renvoie True si l'Argent etait suffisant, sinon ne fait rien et renvoie False."""
+    """Effet Ameliorer contre COUT_ACTION_STATION_SERVICE d'Argent (specs.md 2.1/2.2), sur tout
+    module equipe. Renvoie False, sans rien modifier, si l'Argent est insuffisant."""
     if not _payer_action_station_service(partie):
         return False
     _effet_ameliorer_module(partie, position)
@@ -415,30 +364,29 @@ def ameliorer_module(partie: Partie, position: str) -> bool:
 
 def mettre_a_jour_module(partie: Partie, position: str) -> bool:
     """Fait progresser d'un palier le niveau de mise a jour du module de cet emplacement (1 a
-    NIVEAU_MAJ_MAX, specs.md 2.2/6) - determine le palier de rarete propose en recompense/a la
-    Planete commerciale - contre COUT_ACTION_STATION_SERVICE d'Argent (specs.md 2.1). S'applique
-    au module principal comme aux modules equipes. Modifie `partie` et renvoie True si l'Argent
-    etait suffisant, sinon ne fait rien et renvoie False."""
+    NIVEAU_MAJ_MAX, specs.md 2.2/6), contre COUT_ACTION_STATION_SERVICE d'Argent. Renvoie False,
+    sans rien modifier, si l'Argent est insuffisant."""
     if not _payer_action_station_service(partie):
         return False
-    etat = partie.vaisseau[position]
-    etat.niveau_maj = min(etat.niveau_maj + 1, NIVEAU_MAJ_MAX)
+    module = partie.vaisseau[position]
+    module.niveau_maj = min(module.niveau_maj + 1, NIVEAU_MAJ_MAX)
     return True
 
 
 def deplacer_module(partie: Partie, position_source: str, position_destination: str) -> bool:
     """Echange les modules de deux emplacements equipables (specs.md 2.2 : vide, le module y est
     simplement deplace ; occupe, les deux modules echangent leur position), contre
-    COUT_ACTION_STATION_SERVICE d'Argent (specs.md 2.1). Ne s'applique jamais au module principal
-    ('base') - a l'appelant (ecran Station service) de ne jamais transmettre cette position.
-    Modifie `partie` et renvoie True si l'Argent etait suffisant, sinon ne fait rien et renvoie
-    False."""
+    COUT_ACTION_STATION_SERVICE d'Argent. Jamais le principal ('base'). Les cartes restent
+    rattachees a leur exemplaire. Renvoie False, sans rien modifier, si l'Argent est insuffisant."""
+    if "base" in (position_source, position_destination):
+        raise ValueError("Le module principal ne se deplace pas")
     if not _payer_action_station_service(partie):
         return False
-    partie.vaisseau[position_source], partie.vaisseau[position_destination] = (
-        partie.vaisseau[position_destination],
-        partie.vaisseau[position_source],
-    )
+    source, destination = partie.vaisseau[position_source], partie.vaisseau[position_destination]
+    partie.vaisseau[position_source], partie.vaisseau[position_destination] = destination, source
+    for position in (position_source, position_destination):
+        if partie.vaisseau[position] is not None:
+            partie.vaisseau[position].emplacement = position
     return True
 
 
@@ -448,27 +396,24 @@ PV_REPARATION_VAISSEAU = 5
 
 
 def reparer_vaisseau(partie: Partie) -> Partie:
-    """Restaure PV_REPARATION_VAISSEAU PV a CHAQUE module equipe (base + equipables), plafonne a
-    son pv_max chacun (specs.md 2.5, Aventure "Trois lunes") - contrairement a reparer_module
-    (§2.2) qui ne cible qu'un seul module choisi. Modifie et renvoie `partie`."""
-    for position in POSITIONS_VAISSEAU:
-        etat = partie.vaisseau[position]
-        if etat is not None:
-            etat.pv = min(etat.pv + PV_REPARATION_VAISSEAU, etat.pv_max)
+    """Aventure "Trois lunes", Reparer le vaisseau (specs.md 2.5) : +PV_REPARATION_VAISSEAU PV au
+    principal, plafonne a son pv_max - seul module dont les PV persistent (decision 3). Modifie et
+    renvoie `partie`."""
+    principal = partie.principal
+    principal.pv = min(principal.pv + PV_REPARATION_VAISSEAU, principal.pv_max)
     return partie
 
 
-def retirer_carte(partie: Partie, id_carte: str) -> Partie:
-    """Retire un exemplaire de cette carte du deck possede de la partie (specs.md 2.5, Aventure
-    "Trois lunes") - operation inverse de ajouter_carte. Modifie et renvoie `partie`."""
-    partie.deck.remove(id_carte)
+def retirer_carte(partie: Partie, carte: CartePossedee) -> Partie:
+    """Retire un exemplaire de cette carte (meme id, meme module) du deck possede (specs.md 2.5,
+    Aventures "Trois lunes" et "Police"). Modifie et renvoie `partie`."""
+    partie.deck.remove(carte)
     return partie
 
 
 def ameliorer_module_aventure(partie: Partie, position: str) -> Partie:
     """Meme effet que ameliorer_module (_effet_ameliorer_module, §2.2), mais gratuit (specs.md
-    2.5, Aventure "Trois lunes") : contrairement a la Station service, aucun cout en Argent.
-    Modifie et renvoie `partie`."""
+    2.5, Aventure "Trois lunes"). Modifie et renvoie `partie`."""
     _effet_ameliorer_module(partie, position)
     return partie
 
@@ -476,25 +421,24 @@ def ameliorer_module_aventure(partie: Partie, position: str) -> Partie:
 DEGATS_ASTEROIDES = 5
 
 
-def subir_degats_module(partie: Partie, position: str, degats: int) -> Partie:
-    """Inflige `degats` PV au module de cet emplacement, plafonne a 0 (specs.md 2.5, Aventure
-    "Asteroides") - operation inverse de reparer_module/reparer_vaisseau, mais hors combat (pas de
-    bouclier ici, EtatModule n'en persiste pas). Modifie et renvoie `partie`."""
-    etat = partie.vaisseau[position]
-    etat.pv = max(etat.pv - degats, 0)
+def subir_degats_principal(partie: Partie, degats: int) -> Partie:
+    """Inflige `degats` PV au principal, plafonne a 0 (specs.md 2.5, Aventure "Asteroides") : les
+    chocs touchent toujours le principal (decision 3). Hors combat, pas de bouclier. Modifie et
+    renvoie `partie`."""
+    principal = partie.principal
+    principal.pv = max(principal.pv - degats, 0)
     return partie
 
 
-def second_choc_asteroides(partie: Partie, position: str, cartes: dict[str, Carte], aleatoire: random.Random) -> Carte | None:
+def second_choc_asteroides(partie: Partie, cartes: dict[str, CarteNew], aleatoire: random.Random) -> CarteNew | None:
     """2e choc du choix "Traverser" de l'Aventure "Asteroides" (specs.md 2.5) : inflige un second
-    DEGATS_ASTEROIDES au meme module puis tire une carte gratuite du pool complet de cartes
-    jouables (tirer_carte_recompense) - None si le pool est vide, auquel cas aucune recompense
-    n'est offerte. Decide seule si une carte est offerte (gameplay commun aux deux interfaces,
-    CLAUDE.md) : PC et web n'ont plus qu'a afficher le resultat, jamais a retirer cette decision
-    eux-memes. `cartes` (charger_cartes()) est recu en parametre plutot que recharge ici, pour
-    rester injectable dans les tests. Modifie `partie`."""
-    subir_degats_module(partie, position, DEGATS_ASTEROIDES)
-    return tirer_carte_recompense(pool_toutes_cartes(cartes), aleatoire)
+    DEGATS_ASTEROIDES au principal puis tire une carte gratuite du pool complet de cartes
+    jouables (tirer_carte_recompense), rattachee au principal (carte obtenue hors module,
+    refonte-modules.md 3.3) - None si le pool est vide. Decide seule si une carte est offerte :
+    PC et web ne font qu'afficher le resultat. Modifie `partie`."""
+    subir_degats_principal(partie, DEGATS_ASTEROIDES)
+    carte = tirer_carte_recompense(pool_toutes_cartes(cartes), aleatoire)
+    return carte.copie(exemplaire_module=partie.principal.exemplaire) if carte else None
 
 
 COUT_METTRE_AUX_NORMES = 10
@@ -502,10 +446,8 @@ COUT_METTRE_AUX_NORMES = 10
 
 def payer_mise_aux_normes(partie: Partie) -> bool:
     """Deduit COUT_METTRE_AUX_NORMES d'Argent si la partie en a assez (Aventure "Police", specs.md
-    2.5, choix "Mettre aux normes" - garde la carte tiree, pas d'effet sur le deck). Remplace le
-    pourcentage du prix de vente en magasin envisage initialement, abandonne : la Planete
-    commerciale n'a pas de prix par carte (specs.md 9.1). Renvoie True si l'Argent etait suffisant
-    (et deduit), sinon ne modifie rien et renvoie False."""
+    2.5, choix "Mettre aux normes" - garde la carte tiree). Renvoie True si l'Argent etait
+    suffisant (et deduit), sinon ne modifie rien et renvoie False."""
     if partie.argent < COUT_METTRE_AUX_NORMES:
         return False
     partie.argent -= COUT_METTRE_AUX_NORMES
@@ -515,28 +457,26 @@ def payer_mise_aux_normes(partie: Partie) -> bool:
 @dataclass
 class EtatAventurePolice:
     """Etat de resolution en cours de l'Aventure "Police" (specs.md 2.5) - local a une Aventure,
-    jamais persiste sur Partie (specs.md 2.5 : le choix "Detourner l'attention" n'est disponible
-    qu'une seule fois par Aventure, pas par run). PC et web gardent chacun une reference a cet
-    objet (comme Combat cote combat) plutot que de suivre `detourner_disponible` dans leur propre
-    etat d'ecran - gameplay commun aux deux interfaces (CLAUDE.md)."""
+    jamais persiste sur Partie. PC et web gardent une reference a cet objet plutot que de suivre
+    `detourner_disponible` eux-memes."""
 
-    id_carte_actuelle: str
+    carte_actuelle: CartePossedee
     detourner_disponible: bool = True
 
 
 def demarrer_aventure_police(partie: Partie, aleatoire: random.Random) -> EtatAventurePolice:
     """Tire la premiere carte du deck reel de la partie (specs.md 2.5) et initialise l'etat de
     resolution de l'Aventure "Police"."""
-    return EtatAventurePolice(id_carte_actuelle=tirer_carte_deck(partie.deck, aleatoire))
+    return EtatAventurePolice(carte_actuelle=tirer_carte_deck(partie.deck, aleatoire))
 
 
 def detourner_aventure_police(etat: EtatAventurePolice, partie: Partie, aleatoire: random.Random) -> bool:
     """Choix "Detourner l'attention" (specs.md 2.5) : tire une nouvelle carte du deck reel de la
     partie. Disponible une seule fois par Aventure - ne fait rien et renvoie False si deja
-    utilise, sinon modifie `etat` (nouvelle carte, plus jamais disponible) et renvoie True."""
+    utilise, sinon modifie `etat` et renvoie True."""
     if not etat.detourner_disponible:
         return False
-    etat.id_carte_actuelle = tirer_carte_deck(partie.deck, aleatoire)
+    etat.carte_actuelle = tirer_carte_deck(partie.deck, aleatoire)
     etat.detourner_disponible = False
     return True
 
@@ -586,13 +526,17 @@ def supprimer_profil(joueur_id: str) -> None:
 
 def partie_en_cours(joueur_id: str) -> Partie | None:
     """La partie EN_COURS de ce joueur, s'il en a une (il ne peut y en avoir qu'une a la fois,
-    garanti par sauvegarder_partie/abandonner_partie ci-dessous)."""
+    garanti par sauvegarder_partie/abandonner_partie ci-dessous). Les parties d'une ancienne
+    version du jeu sont effacees au passage (decision 1), le profil est garde."""
     dossier = _dossier_parties(joueur_id)
     if not dossier.exists():
         return None
     for fichier in dossier.iterdir():
-        partie = partie_depuis_json(fichier.read_text())
-        if partie.statut == STATUT_EN_COURS:
+        partie = lire_partie(fichier.read_text())
+        if partie is None:
+            # Ancienne version du jeu : partie abandonnee et effacee (decision 1)
+            fichier.unlink()
+        elif partie.statut == STATUT_EN_COURS:
             return partie
     return None
 

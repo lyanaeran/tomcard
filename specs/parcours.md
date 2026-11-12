@@ -45,6 +45,15 @@ sections : [specs.md](specs.md).*
 
 Quatre actions indépendantes, appliquées à un module choisi par le joueur (voir écran ci-dessous) :
 
+> **Refonte branchée côté gameplay (PR 1, 2026-11-12, décision utilisateur du 2026-11-11 n° 2,
+> [refonte-branchement.md](refonte-branchement.md) §2)** : seuls les PV du **principal** persistent
+> d'un combat à l'autre, un secondaire repart à ses PV max. **Réparer ne vise plus que le principal**
+> (`partie.reparer_principal`, remplace `reparer_module`) ; Améliorer (+10 PV max, sur tout module),
+> Mettre à jour et Déplacer sont inchangés (Déplacer met aussi à jour l'emplacement de l'exemplaire,
+> ses cartes y restent rattachées). Les modules de la partie sont des `ModuleNew` (`EtatModule`
+> supprimé), les PV de fin de combat sont reportés par `partie.reporter_combat` (remplace
+> `synchroniser_vaisseau_depuis_combat`). Les écrans PC et web ne sont pas encore adaptés (PR 2 et 3).
+
 - **Réparer** : restaure 20 PV au module sélectionné (plafonné à son pv_max)
 - **Améliorer** : augmente le pv_max du module sélectionné de 10, et ses PV actuels du même montant
   (pas seulement le plafond — un module endommagé regagne aussi 10 PV immédiats)

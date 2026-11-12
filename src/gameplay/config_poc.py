@@ -138,7 +138,7 @@ def creer_vaisseau(specs_modules: list[SpecModule], aleatoire: random.Random) ->
     """Place le module principal et tire au sort jusqu'a 4 modules differents parmi les modules
     equipables ; les emplacements en trop restent vides s'il y en a moins."""
     spec_principal = next(spec for spec in specs_modules if spec.id == ID_MODULE_PRINCIPAL)
-    # Meme filtre que parcours.modules_equipables (pas importable ici : parcours importe ce module)
+    # Meme filtre que parcours.modules_equipables (copie : config_poc est l ancien moteur)
     specs_equipables = [spec for spec in specs_modules if spec.id != ID_MODULE_PRINCIPAL and spec.jouable and spec.cartes]
     specs_choisies = aleatoire.sample(specs_equipables, min(NOMBRE_MODULES_EQUIPES, len(specs_equipables)))
 

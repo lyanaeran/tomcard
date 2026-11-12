@@ -5,23 +5,29 @@ Tests unitaires pour src/gameplay/deroulement.py (enchainement des ecrans, specs
 import random
 
 from src.gameplay import deroulement
-from src.gameplay.combat import EtatCombat
+from src.gameplay.carte_new import charger_cartes_new
+from src.gameplay.combat_new import EtatCombatNew
 from src.gameplay.deroulement import Ecran
-from src.gameplay.donnees import charger_modules
+from src.gameplay.module_new import charger_modules_new
 from src.gameplay.parcours import TypeEtape
 from src.gameplay.partie import (
     ARGENT_DEPART,
     STATUT_EN_COURS,
     STATUT_TERMINEE,
+    CartePossedee,
     combat_depuis_partie,
     nouvelle_partie,
 )
 
 
+def _carte(id_carte: str, exemplaire: str):
+    return charger_cartes_new()[id_carte].copie(exemplaire_module=exemplaire)
+
+
 def _partie_au_niveau_2() -> deroulement.Partie:
     partie = nouvelle_partie(random.Random(1))
-    spec = deroulement.candidats_choix_module(partie)[0]
-    deroulement.choisir_module(partie, spec, random.Random(2))
+    modele = deroulement.candidats_choix_module(partie)[0]
+    deroulement.choisir_module(partie, modele, random.Random(2))
     deroulement.resoudre_carte_module(partie, None)
     return partie
 
@@ -36,23 +42,26 @@ def test_ecran_de_reprise_apres_choix_du_module_reprend_au_choix_de_niveau():
 
 def test_choisir_module_equipe_le_module_et_propose_des_cartes_de_son_pool():
     partie = nouvelle_partie(random.Random(1))
-    spec = deroulement.candidats_choix_module(partie)[0]
+    modele = deroulement.candidats_choix_module(partie)[0]
 
-    candidats = deroulement.choisir_module(partie, spec, random.Random(2))
+    candidats = deroulement.choisir_module(partie, modele, random.Random(2))
 
-    assert partie.vaisseau["avant_gauche"].module_id == spec.id
-    assert all(carte.id in spec.cartes for carte in candidats)
+    module = partie.vaisseau["avant_gauche"]
+    assert (module.id, module.exemplaire) == (modele.id, "M2")
+    assert candidats
+    assert all(carte.id in modele.cartes and carte.exemplaire_module == "M2" for carte in candidats)
 
 
 def test_resoudre_carte_module_ajoute_la_carte_et_avance_au_niveau_2():
     partie = nouvelle_partie(random.Random(1))
+    candidats = deroulement.choisir_module(partie, deroulement.candidats_choix_module(partie)[0], random.Random(2))
     taille_deck = len(partie.deck)
 
-    ecran = deroulement.resoudre_carte_module(partie, "CRT_47")
+    ecran = deroulement.resoudre_carte_module(partie, candidats[0])
 
     assert ecran == Ecran.CHOIX_NIVEAU
     assert partie.niveau == 2
-    assert partie.deck[-1] == "CRT_47"
+    assert partie.deck[-1] == CartePossedee(candidats[0].id, "M2")
     assert len(partie.deck) == taille_deck + 1
 
 
@@ -81,21 +90,23 @@ def test_terminer_etape_avance_d_un_niveau():
 def test_conclure_combat_victoire_donne_argent_et_candidats():
     partie = _partie_au_niveau_2()
     combat = combat_depuis_partie(partie, random.Random(4))
-    for ennemi in combat.flotte.positions().values():
+    for ennemi in combat.flotte.ennemis:
         ennemi.pv = 0
-    combat.etat = EtatCombat.VICTOIRE
+    combat.etat = EtatCombatNew.VICTOIRE
 
     candidats = deroulement.conclure_combat(partie, combat, random.Random(5))
 
     assert partie.argent > ARGENT_DEPART
-    assert len(candidats) == 2  # principal + module du niveau 1
+    # Principal + module du niveau 1, chaque carte rattachee a son module
+    assert [module.exemplaire for module, _carte in candidats] == ["M1", "M2"]
+    assert [carte.exemplaire_module for _module, carte in candidats] == ["M1", "M2"]
 
 
 def test_conclure_combat_defaite_reporte_les_pv_sans_argent_ni_candidat():
     partie = _partie_au_niveau_2()
     combat = combat_depuis_partie(partie, random.Random(4))
-    combat.joueur.vaisseau.base.pv = 7
-    combat.etat = EtatCombat.DEFAITE
+    combat.vaisseau.principal.pv_combat = 7
+    combat.etat = EtatCombatNew.DEFAITE
 
     assert deroulement.conclure_combat(partie, combat, random.Random(5)) == []
     assert partie.argent == ARGENT_DEPART
@@ -112,11 +123,11 @@ def test_resoudre_fin_combat_defaite_termine_la_partie():
 def test_resoudre_fin_combat_victoire_ajoute_la_carte_et_avance():
     partie = _partie_au_niveau_2()
 
-    ecran = deroulement.resoudre_fin_combat(partie, True, "CRT_47")
+    ecran = deroulement.resoudre_fin_combat(partie, True, _carte("CRT_9", "M2"))
 
     assert ecran == Ecran.CHOIX_NIVEAU
     assert partie.niveau == 3
-    assert partie.deck[-1] == "CRT_47"
+    assert partie.deck[-1] == CartePossedee("CRT_9", "M2")
     assert partie.statut == STATUT_EN_COURS
 
 
@@ -136,8 +147,8 @@ def test_terminer_victoire_finale_termine_la_partie():
 
 
 def test_candidats_choix_module_parmi_les_modules_equipables():
-    ids_equipables = {spec.id for spec in charger_modules() if spec.id != "MOD_1" and spec.cartes}
+    ids_equipables = {module.id for module in charger_modules_new().values() if not module.principal and module.cartes}
 
     candidats = deroulement.candidats_choix_module(nouvelle_partie(random.Random(1)))
 
-    assert candidats and {spec.id for spec in candidats} <= ids_equipables
+    assert candidats and {module.id for module in candidats} <= ids_equipables

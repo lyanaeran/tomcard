@@ -32,7 +32,8 @@ Un deckbuilder roguelike inspiré de Slay the Spire, où le joueur incarne un va
 
 ## Documents de travail (hors numérotation)
 
-Une **refonte** est en cours : nouveau moteur codé à côté de l'ancien, pas encore branché.
+Une **refonte** est en cours : nouveau moteur codé à côté de l'ancien, branché au parcours
+(gameplay) mais pas encore à l'affichage.
 **Commencer par [refonte.md](refonte.md).** Les sections numérotées ci-dessus décrivent le jeu
 actuel (ancien moteur), sauf mention contraire.
 
@@ -45,7 +46,7 @@ actuel (ancien moteur), sauf mention contraire.
 | [refonte-statuts.md](refonte-statuts.md) | Statuts (bouclier, incendie, renvoi, leurre…) gérés ensemble pour modules et ennemis : règles de cumul et d'extinction, déroulement ; codé (`statut_new.py`), pas encore branché au combat |
 | [refonte-ennemis.md](refonte-ennemis.md) | Brouillon de refonte des ennemis : cycle d'actions, valeurs nommées qui augmentent, coefficient de difficulté ; modèle codé (`EnnemiNew`, `config/ennemi_new.json`), pas encore branché au combat |
 | [refonte-combat.md](refonte-combat.md) | Spécification du combat de la refonte (`combat_new`) : entrées, déroulement du tour, jeu d'une carte, tour ennemi, destruction, fin de combat (gameplay seulement) ; codé (`combat_new.py`), pas encore branché |
-| [refonte-branchement.md](refonte-branchement.md) | **Plan validé** (pas encore codé) pour brancher la refonte au jeu : décisions, correspondance ancien / nouveau combat pour l'affichage, maquette des nouveautés, plan en 4 PR |
+| [refonte-branchement.md](refonte-branchement.md) | **Plan validé** pour brancher la refonte au jeu : décisions, correspondance ancien / nouveau combat pour l'affichage, maquette des nouveautés, plan en 4 PR ; **PR 1 (gameplay) codée**, choix à valider au §5.1 |
 | [simulation.md](simulation.md) | Conception des simulateurs d'équilibrage (`outils/simulation/`) : ancien moteur (§11) et combat de la refonte (§12) |
 
 ## Quel fichier lire selon la tâche
