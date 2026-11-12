@@ -61,7 +61,9 @@ pirates de l'espace, vous n'avez plus le choix : vaincre ou périr ! À moins qu
 
 > **Refonte branchée côté gameplay (PR 1, 2026-11-12, décision utilisateur du 2026-11-11 n° 3)** :
 > les deux chocs de « Traverser » touchent **toujours le principal** (`subir_degats_principal`,
-> `second_choc_asteroides(partie, cartes, aleatoire)`), le choix du module disparaît ; la carte
+> `second_choc_asteroides(partie, cartes, aleatoire)`), le choix du module disparaît, et ils lui
+> **laissent toujours au moins 1 PV** (`PV_MIN_APRES_ASTEROIDES`, décision utilisateur du
+> 2026-11-12 : un combat ne commence jamais avec un principal détruit) ; la carte
 > offerte est rattachée au principal. « Affronter les pirates » : 3 ennemis de la refonte placés
 > selon leur préférence (`flotte_new.flotte_asteroides`). Écrans PC et web à adapter (PR 2 et 3).
 - Choix 1, *Traverser le champ d'astéroïdes* : séquence en 3 temps sur le même écran, chaque étape

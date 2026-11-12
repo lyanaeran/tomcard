@@ -409,13 +409,15 @@ def test_retirer_carte_retire_un_seul_exemplaire_de_ce_module():
     assert sum(carte.id == "CRT_7" for carte in partie.deck) == nombre_lasers - 1
 
 
-def test_subir_degats_principal_plafonne_a_0():
+def test_les_asteroides_laissent_toujours_1_pv_au_principal():
+    """Decision utilisateur (2026-11-12) : un combat ne commence jamais avec un principal detruit."""
     partie = _partie_avec_lanceur()
     partie.principal.pv = 3
 
     subir_degats_principal(partie, DEGATS_ASTEROIDES)
-
-    assert partie.principal.pv == 0
+    assert partie.principal.pv == 1
+    second_choc_asteroides(partie, charger_cartes_new(), random.Random(1))
+    assert partie.principal.pv == 1
     assert partie.vaisseau["avant_gauche"].pv == partie.vaisseau["avant_gauche"].pv_max
 
 

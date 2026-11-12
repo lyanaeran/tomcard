@@ -6,25 +6,18 @@ import dataclasses
 import random
 
 from src.gameplay import config_poc as config_poc_module
-from src.gameplay.carte import RareteCarte, TypeCarte
 from src.gameplay.combat import EtatCombat
 from src.gameplay.config_poc import (
     CARTES_PAR_MODULE_EQUIPE,
     ELECTRICITE_PAR_TOUR,
     ID_MODULE_PRINCIPAL,
-    MODE_TEST,
     NIVEAU_PRIME_DEUX_ENNEMIS,
     NOMBRE_ENNEMIS_ASTEROIDES,
-    NOMBRE_ENNEMIS_MODE_TEST,
     NOMBRE_ENNEMIS_PRIME_NIVEAU_ELEVE,
     NOMBRE_ENNEMIS_PRIME_NIVEAU_FAIBLE,
     NOMBRE_MODULES_EQUIPES,
-    PV_ENNEMI_MODE_TEST,
-    PV_MODULE_MODE_TEST,
-    VALEUR_ATTAQUE_BASE_MODE_TEST,
     creer_combat_poc,
     creer_deck,
-    creer_deck_mode_test,
     creer_flotte,
     creer_flotte_asteroides,
     creer_flotte_boss,
@@ -122,8 +115,6 @@ def test_creer_vaisseau_est_deterministe_pour_une_meme_graine():
 
 
 def test_creer_flotte_remplit_les_6_cases():
-    """Hors mode test (MODE_TEST est desormais False en production, cf. sa docstring)."""
-    assert MODE_TEST is False
     specs = charger_ennemis()
     aleatoire = random.Random(1)
 
@@ -136,22 +127,8 @@ def test_creer_flotte_remplit_les_6_cases():
         assert ennemi.nom in noms_connus
 
 
-def test_creer_flotte_en_mode_test_ne_remplit_que_2_cases(monkeypatch):
-    """MODE_TEST reste utilisable pour accelerer les essais manuels (cf. sa docstring), meme
-    si desactive par defaut en production."""
-    monkeypatch.setattr(config_poc_module, "MODE_TEST", True)
-    specs = charger_ennemis()
-    aleatoire = random.Random(1)
-
-    flotte = creer_flotte(specs, aleatoire)
-
-    assert len(flotte.positions()) == NOMBRE_ENNEMIS_MODE_TEST
-    assert len(flotte.ennemis_vivants()) == NOMBRE_ENNEMIS_MODE_TEST
-
-
 def test_creer_flotte_asteroides_remplit_3_cases():
-    """Aventure Asteroides (specs.md 2.5) : nombre fixe d'ennemis, independant de MODE_TEST
-    (contrairement a creer_flotte) - seul leur PV depend de MODE_TEST via _ennemi_depuis_spec."""
+    """Aventure Asteroides (specs.md 2.5) : nombre fixe d'ennemis."""
     specs = charger_ennemis()
     aleatoire = random.Random(1)
 
@@ -276,12 +253,12 @@ def test_creer_combat_poc_initialise_un_combat_complet():
     assert combat.etat == EtatCombat.EN_COURS
     assert combat.joueur.vaisseau.base.nom == "Principal"
     assert len(combat.joueur.vaisseau.modules_equipes()) == 1  # seul le Lanceur de missiles est jouable
-    assert len(combat.flotte.positions()) == 6  # MODE_TEST desactive : les 6 cases sont peuplees
+    assert len(combat.flotte.positions()) == 6
     assert combat.joueur.electricite == ELECTRICITE_PAR_TOUR
     assert len(combat.joueur.deck.main) == 5
 
 
-def test_creer_combat_poc_utilise_le_deck_reel_quand_mode_test_desactive():
+def test_creer_combat_poc_utilise_le_deck_reel():
     combat = creer_combat_poc(random.Random(4))
 
     total = len(combat.joueur.deck.pioche) + len(combat.joueur.deck.main) + len(combat.joueur.deck.defausse)
@@ -296,61 +273,3 @@ def test_deux_combats_successifs_ont_des_ennemis_independants():
     combat_1.flotte.ennemis_vivants()[0].subir_degats(1000)
 
     assert combat_2.flotte.ennemis_vivants()[0].pv > 0
-
-
-# --- Mode test (bascule manuelle, desactivee par defaut - cf. MODE_TEST) ---
-
-
-def test_creer_deck_mode_test_contient_un_exemplaire_de_chaque_carte_jouable():
-    cartes = charger_cartes()
-    aleatoire = random.Random(3)
-
-    deck = creer_deck_mode_test(cartes, aleatoire)
-
-    toutes = deck.pioche + deck.main + deck.defausse
-    assert len(toutes) == len(cartes)
-    assert sorted(carte.nom for carte in toutes) == sorted(carte.nom for carte in cartes.values())
-
-
-def test_mode_test_actif_donne_200_pv_aux_modules_et_aux_ennemis(monkeypatch):
-    """MODE_TEST est la variable de bascule pour les tests manuels (cf. sa docstring),
-    desactivee par defaut en production (MODE_TEST is False) - ce test verifie son effet
-    quand elle est reactivee explicitement."""
-    monkeypatch.setattr(config_poc_module, "MODE_TEST", True)
-    specs_modules = charger_modules()
-    specs_ennemis = charger_ennemis()
-
-    vaisseau, _specs = creer_vaisseau(specs_modules, random.Random(3))
-    flotte = creer_flotte(specs_ennemis, random.Random(3))
-
-    assert vaisseau.base.pv_max == PV_MODULE_MODE_TEST
-    assert all(module.pv_max == PV_MODULE_MODE_TEST for module in vaisseau.modules_equipes().values())
-    assert all(ennemi.pv_max == PV_ENNEMI_MODE_TEST for ennemi in flotte.ennemis_vivants())
-
-
-def test_creer_deck_mode_test_donne_20_degats_aux_cartes_attaque_de_base():
-    """Les cartes ATTAQUE de rarete Base (Laser, Laser percant) tuent un ennemi en
-    un coup en mode test (PV_ENNEMI_MODE_TEST), les autres cartes gardent leur valeur normale."""
-    cartes = charger_cartes()
-    aleatoire = random.Random(3)
-
-    deck = creer_deck_mode_test(cartes, aleatoire)
-
-    toutes = deck.pioche + deck.main + deck.defausse
-    attaques_base = [c for c in toutes if c.rarete == RareteCarte.BASE and c.type == TypeCarte.ATTAQUE]
-    autres = [c for c in toutes if c.rarete != RareteCarte.BASE or c.type != TypeCarte.ATTAQUE]
-
-    assert attaques_base  # au moins Laser/Laser percant
-    assert all(carte.valeur == VALEUR_ATTAQUE_BASE_MODE_TEST for carte in attaques_base)
-    assert VALEUR_ATTAQUE_BASE_MODE_TEST >= PV_ENNEMI_MODE_TEST
-    for carte in autres:
-        carte_originale = cartes[next(id_carte for id_carte, c in cartes.items() if c.nom == carte.nom)]
-        assert carte.valeur == carte_originale.valeur
-
-
-def test_creer_combat_poc_utilise_le_deck_mode_test_quand_actif(monkeypatch):
-    monkeypatch.setattr(config_poc_module, "MODE_TEST", True)
-    combat = creer_combat_poc(random.Random(4))
-
-    total = len(combat.joueur.deck.pioche) + len(combat.joueur.deck.main) + len(combat.joueur.deck.defausse)
-    assert total == len(charger_cartes())

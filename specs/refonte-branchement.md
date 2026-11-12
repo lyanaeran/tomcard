@@ -200,16 +200,13 @@ Choix faits en codant, **à valider par l'utilisateur** :
 - **Argent du Boss : 5 € au lieu de 10 €** : l'Argent se compte par ennemi détruit
   (`ennemis_detruits()`), le Boss sur deux cases compte pour un (l'ancien moteur comptait ses deux
   cases). Sans effet en jeu aujourd'hui (la partie s'arrête au Boss).
-- **Mode test (`config_poc.MODE_TEST`) non repris** par le parcours branché (PV gonflés, Laser à
-  20) : il ne sert plus que l'ancien combat de démonstration. À recréer si l'utilisateur en a
-  besoin pour ses essais manuels.
+- **Mode test supprimé** (décision utilisateur, 2026-11-12) : `config_poc.MODE_TEST` (PV gonflés,
+  Laser à 20) n'est pas repris par le parcours branché et a été retiré de l'ancien moteur.
 - **Déplacer le principal** lève une erreur (avant : à la charge de l'écran de ne jamais le
   demander) ; **ajouter une carte rattachée à un module absent** aussi.
-- **Question ouverte** : les Astéroïdes peuvent mettre le principal à **0 PV** (plancher à 0, règle
-  inchangée) ; le combat suivant commence alors avec un principal détruit et `CombatNew` ne le
-  déclare pas perdu (il ne vérifie la défaite qu'après des dégâts). Le cas existait déjà, il devient
-  plus probable (10 PV par traversée, toujours sur le principal). Options : défaite immédiate, ou
-  chocs plafonnés à 1 PV restant.
+- **Astéroïdes : le principal garde toujours au moins 1 PV** (décision utilisateur, 2026-11-12).
+  Avant, les chocs pouvaient le mettre à 0 et le combat suivant commençait avec un principal
+  détruit, sans que `CombatNew` déclare la défaite.
 
 Le jeu (PC et web) **ne fonctionne plus** tant que les PR 2 et 3 ne sont pas faites : leurs écrans
 lisent encore l'ancien combat et l'ancien format de partie (accepté, §5).

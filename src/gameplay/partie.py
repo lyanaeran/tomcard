@@ -419,14 +419,17 @@ def ameliorer_module_aventure(partie: Partie, position: str) -> Partie:
 
 
 DEGATS_ASTEROIDES = 5
+# Les chocs d'Asteroides laissent toujours au moins ce nombre de PV au principal (decision
+# utilisateur, 2026-11-12) : un combat ne commence jamais avec un principal detruit
+PV_MIN_APRES_ASTEROIDES = 1
 
 
 def subir_degats_principal(partie: Partie, degats: int) -> Partie:
-    """Inflige `degats` PV au principal, plafonne a 0 (specs.md 2.5, Aventure "Asteroides") : les
-    chocs touchent toujours le principal (decision 3). Hors combat, pas de bouclier. Modifie et
-    renvoie `partie`."""
+    """Inflige `degats` PV au principal sans descendre sous PV_MIN_APRES_ASTEROIDES (specs.md 2.5,
+    Aventure "Asteroides") : les chocs touchent toujours le principal (decision 3). Hors combat,
+    pas de bouclier. Modifie et renvoie `partie`."""
     principal = partie.principal
-    principal.pv = max(principal.pv - degats, 0)
+    principal.pv = max(principal.pv - degats, min(principal.pv, PV_MIN_APRES_ASTEROIDES))
     return partie
 
 

@@ -248,5 +248,6 @@ deux lacunes) — une ligne par Action active au prochain tour, pas seulement la
 ### 13.5 Points de vie des modules (fin du mode test)
 
 Le combat ne tourne plus en "mode test" (PV artificiellement gonflés) : les PV définis dans
-`config/modules.json` s'appliquent réellement. Valeurs actuelles (inventées faute de spec précise,
+`config/modules.json` s'appliquent réellement. Le mode test (`config_poc.MODE_TEST`) a été
+**supprimé** le 2026-11-12 (décision utilisateur). Valeurs actuelles (inventées faute de spec précise,
 à ajuster) : **50 PV** pour le module principal, **30 PV** pour chaque module secondaire.
