@@ -4,8 +4,8 @@
 comprendre l'état du projet : une refonte des cartes, des modules, des ennemis, des statuts et du
 combat est en cours, avec un **nouveau moteur codé à côté de l'ancien**. **Branchement en cours** :
 le gameplay du parcours (partie, sauvegarde, déroulement, Station, Aventures, simulateur de parties)
-utilise le nouveau moteur depuis la PR 1 (2026-11-12) ; l'affichage PC et web lit encore l'ancien
-combat, **le jeu ne fonctionne donc plus** jusqu'aux PR 2 (web) et 3 (PC). Mis à jour le
+utilise le nouveau moteur depuis la PR 1 (2026-11-12), la version web depuis la PR 2 ; l'affichage
+PC lit encore l'ancien combat, **la version PC ne démarre donc plus** jusqu'à la PR 3. Mis à jour le
 2026-11-12.*
 
 ---
@@ -87,8 +87,8 @@ quatre PR, web avant PC) :
 1. ~~Gameplay : sauvegarde (`ModuleNew`, cartes rattachées), flottes, `CombatNew` dans le parcours,
    Station et Aventures, simulateur de parties~~ : **fait (PR 1, 2026-11-12)**, choix à valider dans
    refonte-branchement.md §5.1.
-2. Affichage web (`web/bridge.py`, `web/app.js`), maquette d'abord, puis effacement d'une
-   ancienne sauvegarde dans `localStorage`.
+2. ~~Affichage web (`web/bridge.py`, `web/app.js`)~~ : **fait (PR 2, 2026-11-12)**, maquette à
+   valider (refonte-branchement.md §5.2).
 3. Affichage PC (`src/ui/`, `main.py`) : il lit tout dans l'API de `CombatNew` (`combat.deck`,
    `cibles_possibles`, `intentions`, `journal`), jamais dans le deck de la partie.
 4. Suppression de l'ancien moteur et des anciens `config/*.json`.

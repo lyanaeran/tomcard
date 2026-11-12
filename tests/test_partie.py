@@ -119,6 +119,14 @@ def test_une_ancienne_sauvegarde_est_abandonnee():
     assert lire_partie(partie_vers_json(nouvelle_partie(random.Random(1)))) is not None
 
 
+def test_ancienne_partie_a_effacer_seulement_si_en_cours():
+    ancienne = {"version": 1, "id": "p", "statut": STATUT_EN_COURS}
+
+    assert partie_module.ancienne_partie_a_effacer(json.dumps(ancienne))
+    assert not partie_module.ancienne_partie_a_effacer(json.dumps({**ancienne, "statut": "TERMINEE"}))
+    assert not partie_module.ancienne_partie_a_effacer(partie_vers_json(nouvelle_partie(random.Random(1))))
+
+
 def test_profil_vers_json_puis_depuis_json_roundtrip():
     profil = nouveau_profil("Alice")
 

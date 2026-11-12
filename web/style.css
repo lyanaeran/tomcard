@@ -555,6 +555,104 @@ body {
     border-radius: 8px;
 }
 
+/* Statuts de la refonte (specs/refonte-branchement.md 4.2/4.3) : les pastilles d'une case sont
+   alignees de droite a gauche dans un conteneur (PV, Bouclier, puis Incendie, Renvoi, Leurre
+   seulement s'ils sont actifs), au-dessus de la case comme avant. */
+.pastilles-case {
+    position: absolute;
+    top: calc(var(--taille-pastille) * -0.55);
+    right: 3px;
+    display: flex;
+    flex-direction: row-reverse;
+    gap: 3px;
+    z-index: 4;
+}
+
+.pastilles-case .pastille {
+    position: static;
+}
+
+.pastille-incendie {
+    background: #e8590c;
+}
+
+.pastille-renvoi {
+    background: #9c36b5;
+}
+
+.pastille-leurre {
+    background: #5ac8d2;
+}
+
+/* Module vise par une attaque ennemie au prochain tour */
+.pastille-cible {
+    background: #2b0b0b;
+    border-color: #ff6b6b;
+}
+
+/* Intention de l'ennemi pour son prochain tour (4.3), courte ("⚔7×2"), en bas de sa case ; le
+   module vise porte une pastille .pastille-cible, le detail est dans l'infobulle */
+.intention {
+    position: absolute;
+    left: 50%;
+    bottom: 1px;
+    transform: translateX(-50%);
+    padding: 1px 5px;
+    border-radius: 6px;
+    background: rgba(10, 14, 30, 0.9);
+    border: 1px solid #ff6b6b;
+    color: #ffe3e3;
+    font-size: calc(var(--taille-pastille) * 0.46);
+    font-weight: bold;
+    line-height: 1.25;
+    text-align: center;
+    white-space: nowrap;
+    z-index: 6;
+    pointer-events: none;
+}
+
+/* Case ou la carte armee peut etre confirmee (cases decidees par le gameplay) */
+.case.case-valide {
+    outline: 3px solid #51cf66;
+    outline-offset: 1px;
+    border-radius: 8px;
+}
+
+.vaisseau-base.case-valide {
+    outline-offset: -4px;
+}
+
+.hors-service-case {
+    display: block;
+    font-size: calc(var(--taille-pastille) * 0.34);
+    color: #ffc078;
+}
+
+.etiquette-detruite {
+    flex-direction: column;
+    font-size: calc(var(--taille-pastille) * 0.38);
+    font-weight: bold;
+    line-height: 1.1;
+    text-align: center;
+}
+
+.infobulle-titre-cycle {
+    margin-top: 0.2rem;
+    font-size: 0.75rem;
+    opacity: 0.8;
+}
+
+.infobulle-etape {
+    font-size: 0.75rem;
+    opacity: 0.75;
+}
+
+.infobulle-etape-courante {
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: #ffd8a8;
+}
+
 /* Popups +/-N sur une cible touchee, affiches 2 secondes */
 .popup {
     position: absolute;
@@ -565,7 +663,8 @@ body {
     font-size: 1.1rem;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
     pointer-events: none;
-    animation: popup-flottement 2s ease-out forwards;
+    /* both : invisible pendant le delai d'un popup decale (plusieurs popups sur une case) */
+    animation: popup-flottement 2s ease-out both;
     z-index: 5;
 }
 
@@ -648,6 +747,56 @@ body {
 .carte.selectionnee {
     border-color: #4c6ef5;
     background: #26305c;
+}
+
+/* Carte qu'on ne peut pas jouer maintenant (electricite, aucune cible) : grisee, toujours
+   selectionnable pour lire sa description */
+.carte.injouable img {
+    filter: grayscale(0.85) brightness(0.6);
+}
+
+/* Lancements (4.1) : "×2" si la carte est lancee plus d'une fois, en bas a gauche */
+.pastille-lancements {
+    top: auto;
+    bottom: 3px;
+    left: 3px;
+    right: auto;
+    background: #e8590c;
+}
+
+.bandeau-persistante {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 38%;
+    background: rgba(156, 54, 181, 0.85);
+    color: white;
+    font-size: calc(var(--taille-pastille) * 0.32);
+    font-weight: bold;
+    letter-spacing: 0.04em;
+    text-align: center;
+    z-index: 3;
+}
+
+/* Nom de la carte, lisible sous l'illustration (les illustrations n'ont aucun texte) */
+.nom-carte-main {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 1px 2px calc(var(--taille-pastille) * 1.05);
+    background: linear-gradient(transparent, rgba(10, 14, 30, 0.9) 45%);
+    color: white;
+    font-size: calc(var(--taille-pastille) * 0.34);
+    font-weight: bold;
+    line-height: 1.1;
+    text-align: center;
+    z-index: 2;
+}
+
+.info-carte-detail {
+    font-size: 0.75rem;
+    opacity: 0.85;
 }
 
 /* Panneau d'infobulle flottant, centre a l'ecran : partage par #info-carte

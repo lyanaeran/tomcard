@@ -178,6 +178,12 @@ def lire_partie(texte: str) -> Partie | None:
         return None
 
 
+def ancienne_partie_a_effacer(texte: str) -> bool:
+    """True pour une partie EN_COURS d'une ancienne version du jeu : elle est abandonnee et
+    effacee (decision 1). Une ancienne partie TERMINEE est gardee (futures statistiques)."""
+    return lire_partie(texte) is None and json.loads(texte).get("statut") == STATUT_EN_COURS
+
+
 def profil_vers_dict(profil: Profil) -> dict:
     return {"version": profil.version, "id": profil.id, "nom": profil.nom}
 
@@ -554,9 +560,8 @@ def partie_en_cours(joueur_id: str) -> Partie | None:
         texte = fichier.read_text()
         partie = lire_partie(texte)
         if partie is None:
-            # Ancienne version du jeu : une partie EN_COURS est abandonnee et effacee (decision 1) ;
-            # une partie TERMINEE est gardee telle quelle (futures statistiques), sans etre relue
-            if json.loads(texte).get("statut") == STATUT_EN_COURS:
+            # Ancienne version du jeu : effacee si EN_COURS, gardee sans etre relue si TERMINEE
+            if ancienne_partie_a_effacer(texte):
                 fichier.unlink()
         elif partie.statut == STATUT_EN_COURS:
             return partie

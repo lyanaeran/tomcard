@@ -1,4 +1,4 @@
-// Prototype web du POC Space Fight (branche web-ui-poc).
+// Version web de Space Fight (navigateur / iPhone).
 // Fait tourner src/gameplay/ tel quel dans le navigateur via Pyodide ; ce fichier
 // ne fait que fetcher les sources Python, les monter dans la FS virtuelle, et
 // dessiner l'etat renvoye par web/bridge.py en HTML/CSS. Popups +/-N, pastilles
@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "76";
+const VERSION_CACHE = "77";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -73,11 +73,8 @@ let pyodide = null;
 let etatCourant = null;
 let indexCarteSelectionnee = null;
 
-// Partie reelle en cours d'orchestration (specs.md 2.4), ou null si les ecrans de parcours sont
-// ouverts en mode demonstration (window.nouveauChoixModule/choixNiveau/nouvelleVictoire/
-// nouvelleDefaite, appeles manuellement depuis la console) - meme distinction que main.py cote
-// PC, qui n'a pas cette ambiguite (toujours une vraie Partie). choisirModule/choisirEtape/
-// choisirRecompense branchent sur cette variable pour ne pas casser le mode demonstration.
+// Partie en cours d'orchestration (specs.md 2.4), null hors parcours (selection et accueil du
+// joueur). Il n'y a plus de mode demonstration : on ne joue que par le parcours.
 let partieActive = null;
 
 async function chargerSansCache(cheminRelatif) {
@@ -208,100 +205,100 @@ function configurerPleinEcran() {
 function appliquerResultat(resultat) {
     etatCourant = resultat.etat;
     indexCarteSelectionnee = null;
+    // Une infobulle ouverte decrit l'etat d'avant l'action : on la ferme
+    clearTimeout(minuteurInfobulle);
+    document.getElementById("info-case").innerHTML = "";
     rendre();
     afficherPopups(resultat.popups);
 }
 
-// Mise en forme du journal de combat (specs.md 8.1) : etatCourant.journal (rempli par
-// Combat.journal cote gameplay, cf. src/gameplay/journal.py/combat.py - seul endroit qui decide
-// quoi journaliser et quand) est une liste d'evenements bruts ; les fonctions ci-dessous ne font
-// que choisir la phrase et les couleurs, jamais le calcul de ce qui s'est produit - meme role que
-// src/ui/journal_combat.py cote PC, duplique ici faute de code partage entre les deux plateformes
-// d'affichage (cf. CLAUDE.md). Phrase invariante "Carte {nom} jouee..." (plutot que
-// "{nom} joue(e)") pour eviter tout probleme d'accord de genre avec le nom de la carte, absent de
-// config/cartes.json.
-const LIBELLES_CIBLE_GENERIQUE_JOURNAL = {
-    ALLIES_MULTIPLES: "tous les modules",
-    ENNEMIS_MULTIPLES: "tous les ennemis",
-    MODULE_PRINCIPAL: "le module principal",
-};
-
+// Journal de combat (specs/refonte-branchement.md 4.5) : etatCourant.journal est la liste des
+// evenements de CombatNew.journal (des faits : qui, sur qui, combien, detail leurre / renvoi /
+// bouclier / PV), serialises par bridge.py:_evenement_json. Les fonctions ci-dessous ne font que
+// les mettre en phrase et en couleur, jamais decider de ce qui s'est produit - meme role que le
+// journal cote PC. Les cartes jouees sans effet propre au journal (CARTE_JOUEE) ne donnent pas de
+// ligne : leurs effets (degats, statut, reparation...) en donnent une chacun.
 function segmentJournal(texte, classe) {
     return `<span class="${classe}">${texte}</span>`;
 }
 
-function construireLigneCarteJouee(evenement) {
-    let ligne = segmentJournal("Carte ", "journal-texte") + segmentJournal(evenement.carte_nom, "journal-carte");
-    if (evenement.cible_camp === null) {
-        const libelle = LIBELLES_CIBLE_GENERIQUE_JOURNAL[evenement.carte_cible];
-        ligne += segmentJournal(libelle ? ` jouee sur ${libelle}.` : " jouee.", "journal-texte");
-    } else if (evenement.cible_camp === "allie") {
-        ligne +=
-            segmentJournal(" jouee sur le module ", "journal-texte") +
-            segmentJournal(evenement.cible_nom, "journal-module") +
-            segmentJournal(".", "journal-texte");
-    } else {
-        ligne +=
-            segmentJournal(" jouee sur ", "journal-texte") +
-            segmentJournal(evenement.cible_nom, "journal-ennemi") +
-            segmentJournal(".", "journal-texte");
+const CLASSES_GENRE_JOURNAL = { carte: "journal-carte", ennemi: "journal-ennemi", module: "journal-module" };
+
+function nomJournal(nom, genre) {
+    return segmentJournal(nom, CLASSES_GENRE_JOURNAL[genre] || "journal-texte");
+}
+
+const NOMS_STATUT_JOURNAL = { BOUCLIER: "bouclier", INCENDIE: "incendie", RENVOI: "renvoi", LEURRE: "leurre" };
+
+// Detail des degats recus : "6 degats, 2 absorbes par le bouclier, 4 PV perdus (46 restants)".
+function detailDegatsJournal(evenement) {
+    const morceaux = [`${evenement.valeur} degats`];
+    if (evenement.annules_leurre) morceaux.push("annules par le leurre");
+    if (evenement.renvoyes) morceaux.push(`${evenement.renvoyes} renvoyes`);
+    if (evenement.absorbes_bouclier) morceaux.push(`${evenement.absorbes_bouclier} absorbes par le bouclier`);
+    if (evenement.pv_perdus || !evenement.annules_leurre) {
+        morceaux.push(`${evenement.pv_perdus} PV perdus (${evenement.pv_restants} restants)`);
     }
-    return ligne;
+    return morceaux.join(", ");
 }
 
-function construireLigneActionEnnemi(evenement) {
-    const classeCible = evenement.cible_camp === "allie" ? "journal-module" : "journal-ennemi";
-    let ligne = segmentJournal(evenement.ennemi_nom, "journal-ennemi");
-    if (evenement.type_evenement === "degats") {
-        ligne += evenement.cible_est_soi
-            ? segmentJournal(` subit ${evenement.valeur} degats (renvoyes).`, "journal-texte")
-            : segmentJournal(" attaque ", "journal-texte") +
-              segmentJournal(evenement.cible_nom, classeCible) +
-              segmentJournal(` : ${evenement.valeur} degats.`, "journal-texte");
-    } else {
-        ligne += evenement.cible_est_soi
-            ? segmentJournal(` se protege (+${evenement.valeur}).`, "journal-texte")
-            : segmentJournal(" pose un effet sur ", "journal-texte") +
-              segmentJournal(evenement.cible_nom, classeCible) +
-              segmentJournal(` (+${evenement.valeur}).`, "journal-texte");
-    }
-    return ligne;
-}
-
-function construireLigneTour(evenement) {
-    return segmentJournal(`--- Tour ${evenement.numero} ---`, "journal-tour");
-}
-
-// Un seul point d'entree (specs.md 8.1) : bascule sur le type d'evenement renvoye par
-// bridge.py:_evenement_json, jamais de decision sur ce qui s'est produit (deja tranche par
-// Combat).
 function construireLigneJournal(evenement) {
-    if (evenement.type === "tour") return construireLigneTour(evenement);
-    if (evenement.type === "carte") return construireLigneCarteJouee(evenement);
-    return construireLigneActionEnnemi(evenement);
+    const source = evenement.source_nom ? nomJournal(evenement.source_nom, evenement.source_genre) : "";
+    const cible = evenement.cible_nom ? nomJournal(evenement.cible_nom, evenement.cible_genre) : "";
+    const texte = (t) => segmentJournal(t, "journal-texte");
+    switch (evenement.nature) {
+        case "DEBUT_TOUR":
+            return segmentJournal(`--- Tour ${evenement.valeur} ---`, "journal-tour");
+        case "ATTAQUE":
+            return `${source}${texte(" → ")}${cible}${texte(` : ${detailDegatsJournal(evenement)}`)}`;
+        case "RENVOI":
+            return `${texte("Renvoi → ")}${cible}${texte(` : ${detailDegatsJournal(evenement)}`)}`;
+        case "INCENDIE":
+            return `${texte("Incendie sur ")}${cible}${texte(` : ${detailDegatsJournal(evenement)}`)}`;
+        case "STATUT_POSE": {
+            const nom = NOMS_STATUT_JOURNAL[evenement.statut] || evenement.statut;
+            const valeur = evenement.statut === "LEURRE" ? "" : ` ${evenement.valeur}`;
+            const debut = source ? `${source}${texte(" → ")}` : "";
+            return `${debut}${cible}${texte(` : ${nom}${valeur}`)}`;
+        }
+        case "REPARATION":
+            return `${source}${texte(" → ")}${cible}${texte(` : +${evenement.valeur} PV (${evenement.pv_restants} restants)`)}`;
+        case "ELECTRICITE":
+            return `${source}${texte(` : +${evenement.valeur} electricite`)}`;
+        case "PIOCHE":
+            return `${source}${texte(` : ${evenement.valeur} carte(s) piochee(s)`)}`;
+        case "REPETITION":
+            return `${source}${texte(` : ${evenement.valeur} carte(s) lancee(s) une fois de plus`)}`;
+        case "MODULE_DETRUIT":
+        case "ENNEMI_DETRUIT":
+            return `${cible}${texte(" detruit")}`;
+        case "CARTES_HORS_SERVICE":
+            return `${cible}${texte(` : ${evenement.valeur} carte(s) hors service`)}`;
+        case "VICTOIRE":
+            return segmentJournal("Victoire", "journal-tour");
+        case "DEFAITE":
+            return segmentJournal("Defaite", "journal-tour");
+        default:
+            return "";
+    }
 }
 
-function nouvelleGraine() {
-    appliquerResultat(appelerBridge("nouveau_combat", null));
-}
-
-function jouerCarte(index, idCible) {
-    appliquerResultat(appelerBridge("jouer_carte", index, idCible));
+function jouerCarte(index, idCase) {
+    appliquerResultat(appelerBridge("jouer_carte", index, idCase));
 }
 
 function finirTour() {
     appliquerResultat(appelerBridge("finir_tour"));
 }
 
-// Ouvert "en survol" par-dessus le Combat en cours (specs.md 8.1), meme principe que
-// ouvrirSurvolDeck/ouvrirSurvolVaisseau ci-dessous : l'ecran de Combat reste ouvert et inchange
-// derriere (.ecran-survol, position:fixed). Lit etatCourant.journal a l'ouverture (instantane du
-// combat en cours, comme EcranJournal cote PC) plutot que d'accumuler sa propre copie au fil des
-// actions : le gameplay est la seule source de verite pour l'historique.
+// Ouvert "en survol" par-dessus le Combat en cours (specs.md 8.1) : lit etatCourant.journal a
+// l'ouverture (instantane du combat en cours), le gameplay est la seule source de verite.
 function ouvrirJournalCombat() {
     const conteneur = document.getElementById("liste-journal-combat");
     conteneur.innerHTML = etatCourant.journal
-        .map((evenement) => `<div class="ligne-journal">${construireLigneJournal(evenement)}</div>`)
+        .map(construireLigneJournal)
+        .filter(Boolean)
+        .map((ligne) => `<div class="ligne-journal">${ligne}</div>`)
         .join("");
     document.getElementById("ecran-journal-combat").classList.remove("cachee");
     conteneur.scrollTop = conteneur.scrollHeight;
@@ -312,50 +309,49 @@ function fermerJournalCombat() {
 }
 
 function quitterCombat() {
-    // Bouton "Quitter" (specs.md 8.1, icone rouge) : ferme le combat en cours sans le
-    // synchroniser ni le sauvegarder (decision utilisateur, meme principe que
-    // FenetreCombat.quitte_demandee cote pc/main.py:_ouvrir_combat) - la partie sauvegardee
-    // (localStorage) reste EN_COURS telle qu'elle etait avant ce combat, qui repartira de zero
-    // (nouveau tirage de flotte) au prochain "Continuer" depuis l'accueil du joueur.
+    // Bouton "Quitter" (specs.md 8.1) : ferme le combat sans le reporter ni le sauvegarder - la
+    // partie sauvegardee reste telle qu'elle etait avant ce combat (CombatNew travaille sur des
+    // copies), qui repartira de zero au prochain "Continuer".
     partieActive = null;
     joueurCourant = null;
     afficherSelectionJoueur();
 }
 
 function afficherPopups(popups) {
-    popups.forEach((popup) => {
+    popups.forEach((popup, rang) => {
         const element = document.querySelector(`.case.${popup.camp}[data-id="${popup.id}"]`);
         if (!element) return;
         const bulle = document.createElement("div");
         bulle.className = `popup popup-${popup.couleur}`;
+        // Plusieurs popups sur la meme case (tour ennemi) : decales dans le temps pour rester lisibles
+        bulle.style.animationDelay = `${Math.min(rang, 6) * 0.25}s`;
         bulle.textContent = popup.texte;
         element.appendChild(bulle);
-        setTimeout(() => bulle.remove(), DUREE_POPUP_MS);
+        setTimeout(() => bulle.remove(), DUREE_POPUP_MS + Math.min(rang, 6) * 250);
     });
 }
 
-// Un tap sur une carte l'arme et affiche son infobulle (#info-carte) ; il faut
-// ensuite taper une case pour la jouer, meme pour les cartes "sans clic"
-// (ALLIES_MULTIPLES/ENNEMIS_MULTIPLES) qui se resolvaient avant instantanement -
-// desormais n'importe quel module (bouclier/soin) ou ennemi (attaque multi-
-// cible) confirme le jeu de la carte, cf. cliquerCase.
+// Un tap sur une carte l'arme et affiche son infobulle (#info-carte) ; il faut ensuite taper une
+// case valide pour la jouer, meme pour une carte qui touche un ensemble fixe (tous les ennemis,
+// le principal...) : jamais de resolution automatique (specs.md 8.3, flux identique au PC).
 function selectionnerCarte(carte) {
     if (etatCourant.etat !== "EN_COURS") return;
     indexCarteSelectionnee = indexCarteSelectionnee === carte.index ? null : carte.index;
     rendre();
 }
 
-const CIBLES_ALLIEES = new Set(["ALLIE_UNIQUE", "ALLIES_MULTIPLES", "MODULE_PRINCIPAL", "COLONNE_AVANT_ALLIEE"]);
+function carteSelectionnee() {
+    if (indexCarteSelectionnee === null) return null;
+    return etatCourant.main.find((c) => c.index === indexCarteSelectionnee) ?? null;
+}
 
+// Confirme la carte armee sur la case touchee, si c'est une de ses cases valides : ces cases sont
+// decidees par le gameplay (CombatNew.cibles_possibles, via bridge.py), jamais en JS.
 function cliquerCase(idCase, typeCase) {
-    if (indexCarteSelectionnee === null) return;
-    const carte = etatCourant.main.find((c) => c.index === indexCarteSelectionnee);
+    const carte = carteSelectionnee();
     if (!carte) return;
-    const campAttendu = CIBLES_ALLIEES.has(carte.cible) ? "allie" : "ennemi";
-    if (typeCase !== campAttendu) return;
-    // Pour les cartes sans clic, la cible precise ne compte pas (bridge.py
-    // l'ignore) : n'importe quelle case du bon camp confirme le jeu de la carte.
-    jouerCarte(carte.index, carte.sans_clic ? null : idCase);
+    if (typeCase !== carte.camp || !carte.cases.includes(idCase)) return;
+    jouerCarte(carte.index, idCase);
 }
 
 function trouverObjetCase(idCase, typeCase) {
@@ -366,69 +362,78 @@ function trouverObjetCase(idCase, typeCase) {
     return etatCourant.ennemis.find((e) => e && e.id === idCase) ?? null;
 }
 
+// Texte d'un effet d'ennemi (intention ou etape de son cycle) : "⚔ 7 ×2 → Lanceur de missiles",
+// "🛡 10", "↩ 5 → un allie". La cible prevue vient du gameplay (CombatNew.intentions).
+function texteEffetEnnemi(effet) {
+    const repetitions = effet.repetitions > 1 ? ` ×${effet.repetitions}` : "";
+    const symbole = { ATTAQUE: "⚔", BOUCLIER: "🛡", RENVOI: "↩" }[effet.nature] || "?";
+    let cible = "";
+    if (effet.cible === "TOUS") cible = " → tous";
+    else if (effet.cible === "ALLIE") cible = " → un allie";
+    else if (effet.cible === "MODULE") cible = effet.cible_nom ? ` → ${effet.cible_nom}` : " → module le plus proche";
+    return `${symbole} ${effet.valeur}${repetitions}${cible}`;
+}
+
+// Version courte, dans la case de l'ennemi : "⚔7×2", "🛡10", "↩5", "⚔5 tous". Le module vise
+// par une attaque porte une pastille 🎯 (cf. pastillesStatuts) ; le detail est dans l'infobulle.
+function texteEffetEnnemiCourt(effet) {
+    const repetitions = effet.repetitions > 1 ? `×${effet.repetitions}` : "";
+    const symbole = { ATTAQUE: "⚔", BOUCLIER: "🛡", RENVOI: "↩" }[effet.nature] || "?";
+    return `${symbole}${effet.valeur}${repetitions}${effet.cible === "TOUS" ? " tous" : ""}`;
+}
+
+// Statuts d'un module ou d'un ennemi, en clair, pour son infobulle (uniquement les actifs).
+function lignesStatuts(objet) {
+    const lignes = [];
+    if (objet.bouclier) lignes.push(`🛡 Bouclier ${objet.bouclier}`);
+    if (objet.incendie) lignes.push(`🔥 Incendie ${objet.incendie}`);
+    if (objet.renvoi) lignes.push(`↩ Renvoi ${objet.renvoi}`);
+    if (objet.leurre) lignes.push("🎭 Leurre : annule la prochaine attaque");
+    return lignes;
+}
+
 let minuteurInfobulle = null;
 
-// Toutes les infobulles (module, ennemi, base) partagent le meme panneau
-// flottant centre a l'ecran que #info-carte (memes coordonnees en CSS),
-// plutot que d'etre ancrees sur la case tapee.
+// Infobulle d'une case tapee sans carte armee (equivalent tactile du survol PC), dans le meme
+// panneau flottant centre que #info-carte. Ennemi : son cycle complet, etape courante en gras,
+// valeurs du tour en cours, pour anticiper (refonte-branchement.md 4.3).
 function afficherInfobulle(idCase, typeCase) {
     const objet = trouverObjetCase(idCase, typeCase);
     if (!objet) return;
     clearTimeout(minuteurInfobulle);
     const lignes = [`<div class="infobulle-nom">${objet.nom}</div>`, `<div>❤️ ${objet.pv}/${objet.pv_max}</div>`];
+    lignesStatuts(objet).forEach((ligne) => lignes.push(`<div>${ligne}</div>`));
     if (typeCase === "allie") {
-        lignes.push(`<div>🔵 ${objet.bouclier}</div>`);
-        // Groupes separes (jamais melanges), meme separation que les deux pastilles de
-        // buffs (cf. rendrePastillesBuffs) : buffs a duree limitee, puis persistants. Pas
-        // d'en-tete "Persistants" : chaque ligne de buff persistant se termine deja par
-        // "(illimite)" (cf. libelleEffetActif), suffisant pour les distinguer.
-        const buffsDuree = objet.buffs.filter((buff) => buff.tours_restants !== null);
-        const buffsPersistants = objet.buffs.filter((buff) => buff.tours_restants === null);
-        for (const buff of buffsDuree) {
-            lignes.push(`<div>${libelleEffetActif(buff)}</div>`);
+        if (objet.detruit && objet.hors_service) {
+            lignes.push(`<div>${objet.hors_service} carte(s) hors service</div>`);
         }
-        for (const buff of buffsPersistants) {
-            lignes.push(`<div>${libelleEffetActif(buff)}</div>`);
+        if (objet.menaces.length > 0) {
+            lignes.push(`<div class="infobulle-titre-cycle">Vise au prochain tour par :</div>`);
+            objet.menaces.forEach((menace) => {
+                const repetitions = menace.repetitions > 1 ? ` ×${menace.repetitions}` : "";
+                lignes.push(`<div class="infobulle-etape-courante">${menace.ennemi} : ⚔ ${menace.valeur}${repetitions}</div>`);
+            });
         }
-        if (objet.leurre_actif) {
-            lignes.push(`<div>Leurre actif (annule la prochaine attaque)</div>`);
+    } else if (!objet.detruit) {
+        if (objet.intention.length > 0) {
+            lignes.push(`<div class="infobulle-titre-cycle">Prochain tour :</div>`);
+            lignes.push(`<div class="infobulle-etape-courante">${objet.intention.map(texteEffetEnnemi).join(" + ")}</div>`);
         }
-    } else {
-        lignes.push(`<div>🔵 ${objet.bouclier}</div>`);
-        // Une ligne par Action active au prochain tour (specs.md 13, bridge.py:_intentions_json) -
-        // plusieurs peuvent l'etre le meme tour (ex. le Boss des pirates, qui attaque ET pose un
-        // buff). Tir allie actif (specs.md 12.6) : la cible reelle (un autre ennemi) n'est tiree
-        // au hasard qu'a la resolution du tour, jamais ici, pour rester deterministe au tap/
-        // redessin. "x{repetitions}" (ex. Le nettoyeur) : l'action se declenche plusieurs fois
-        // dans le meme tour, sans quoi l'infobulle laisserait croire a un seul coup/pose.
-        for (const intention of objet.intentions) {
-            const repetition = intention.repetitions > 1 ? ` x${intention.repetitions}` : "";
-            if (intention.type === "POSE_BUFF") {
-                const texteBuff = texteTypeBuff(intention.action_buff, intention.valeur);
-                const cibleTexte = intention.soi_meme ? "sur lui-meme" : "sur un allie au hasard";
-                lignes.push(`<div>🛡️ Va poser ${texteBuff} (${cibleTexte})${repetition}</div>`);
-            } else if (intention.cible_type === "REDIRECTION") {
-                lignes.push(`<div>🎯 Vise un allie au hasard${repetition}</div>`);
-            } else if (intention.cible_type === "TOUS") {
-                lignes.push(`<div>🎯 Tous les modules (-${intention.degats}${repetition})</div>`);
-            } else {
-                lignes.push(`<div>🎯 ${intention.module_nom} (-${intention.degats}${repetition})</div>`);
-            }
-        }
-        for (const debuff of objet.debuffs) {
-            lignes.push(`<div>${libelleEffetActif(debuff)}</div>`);
-        }
+        lignes.push(`<div class="infobulle-titre-cycle">Cycle :</div>`);
+        objet.cycle.forEach((etape, index) => {
+            const texte = `${index + 1}. ${etape.map(texteEffetEnnemi).join(" + ")}`;
+            const classe = index === objet.etape ? "infobulle-etape-courante" : "infobulle-etape";
+            lignes.push(`<div class="${classe}">${texte}</div>`);
+        });
     }
     const panneau = document.getElementById("info-case");
     panneau.innerHTML = lignes.join("");
     minuteurInfobulle = setTimeout(() => {
         panneau.innerHTML = "";
-    }, DUREE_INFOBULLE_MS);
+    }, DUREE_INFOBULLE_MS + 1500);
 }
 
-// Tap sur une case : si aucune carte n'est selectionnee, affiche son infobulle
-// (equivalent tactile du survol souris) ; sinon, cible la carte
-// selectionnee normalement.
+// Tap sur une case : sans carte armee, affiche son infobulle ; sinon, confirme la carte armee.
 function attacherPressionCase(element, idCase, typeCase) {
     element.addEventListener("click", (evenement) => {
         evenement.stopPropagation();
@@ -440,64 +445,64 @@ function attacherPressionCase(element, idCase, typeCase) {
     });
 }
 
-// Pastilles du nombre de buffs actifs sur un module (specs.md 12.3/12.5) : une doree pour
-// les buffs a duree limitee, une distincte pour les buffs persistants (qui durent tout le
-// combat, tours_restants null) - comptes separes, jamais additionnes dans une seule
-// pastille. Chacune absente si son compte est a 0. Une derniere pastille signale un leurre
-// actif (specs.md 12.6), different d'un buff : pas de compte (present ou absent), se
-// consomme a la prochaine attaque recue plutot qu'a l'expiration d'une duree.
-function rendrePastillesBuffs(module) {
-    const duree = module.buffs.filter((buff) => buff.tours_restants !== null).length;
-    const persistants = module.buffs.filter((buff) => buff.tours_restants === null).length;
-    const badgeDuree = duree > 0 ? `<span class="pastille pastille-buffs">${duree}</span>` : "";
-    const badgePersistants =
-        persistants > 0 ? `<span class="pastille pastille-buffs-persistants">${persistants}</span>` : "";
-    const badgeLeurre = module.leurre_actif ? `<span class="pastille pastille-leurre">1</span>` : "";
-    return `${badgeDuree}${badgePersistants}${badgeLeurre}`;
+// Pastilles d'une case (refonte-branchement.md 4.2/4.3), de droite a gauche : PV (rouge),
+// Bouclier (bleu), puis Incendie (orange), Renvoi (violet), Leurre (cyan) seulement s'ils sont
+// actifs. Masquees si detruit (le bandeau "Detruit" les remplace).
+function pastillesStatuts(objet) {
+    const pastilles = [
+        `<span class="pastille pastille-pv">${objet.pv}</span>`,
+        `<span class="pastille pastille-bouclier">${objet.bouclier}</span>`,
+    ];
+    if (objet.incendie) pastilles.push(`<span class="pastille pastille-incendie">🔥${objet.incendie}</span>`);
+    if (objet.renvoi) pastilles.push(`<span class="pastille pastille-renvoi">↩${objet.renvoi}</span>`);
+    if (objet.leurre) pastilles.push(`<span class="pastille pastille-leurre">🎭</span>`);
+    if (objet.menaces && objet.menaces.length > 0) pastilles.push(`<span class="pastille pastille-cible">🎯</span>`);
+    return pastilles.join("");
 }
 
-// Pastilles PV (rouge) / Bouclier (bleu, les ennemis peuvent desormais en avoir aussi,
-// specs.md 13) : memes couleurs que COULEUR_PASTILLE_PV/COULEUR_PASTILLE_BOUCLIER dans
-// src/ui/fenetre.py. Masquees si detruit, comme sur pc (le bandeau "Detruit" les remplace).
-function rendrePastilles(objet, typeCase) {
+function rendrePastilles(objet) {
     if (objet.detruit) return "";
-    const bouclier = `<span class="pastille pastille-bouclier">${objet.bouclier}</span>`;
-    // Pastille orange du nombre de buffs/debuffs actifs sur cet ennemi ; absente si aucun
-    // n'est actif.
-    const debuffs =
-        typeCase === "ennemi" && objet.debuffs.length > 0
-            ? `<span class="pastille pastille-debuffs">${objet.debuffs.length}</span>`
-            : "";
-    const buffs = typeCase === "allie" ? rendrePastillesBuffs(objet) : "";
-    return `${bouclier}${debuffs}${buffs}<span class="pastille pastille-pv">${objet.pv}</span>`;
+    return `<div class="pastilles-case">${pastillesStatuts(objet)}</div>`;
 }
 
-// Pastilles du module de base : centrees en haut de l'image du vaisseau
-// (equivalent du repere pare-brise de src/ui/fenetre.py), pas dans un coin
-// comme les autres cases.
+// Pastilles du module principal : a droite du nez du vaisseau, en colonne (PV en haut).
 function rendrePastillesBase(base) {
     if (base.detruit) return "";
-    const buffs = rendrePastillesBuffs(base);
-    return `
-        <div class="pastilles-base">
-            ${buffs}
-            <span class="pastille pastille-bouclier">${base.bouclier}</span>
-            <span class="pastille pastille-pv">${base.pv}</span>
-        </div>`;
+    return `<div class="pastilles-base">${pastillesStatuts(base)}</div>`;
+}
+
+function etiquetteDetruit(objet) {
+    if (!objet.detruit) return "";
+    const horsService = objet.hors_service ? `<span class="hors-service-case">${objet.hors_service} HS</span>` : "";
+    return `<div class="etiquette-detruite">DÉTRUIT${horsService}</div>`;
+}
+
+function classesCase(objet, typeCase, base) {
+    const classes = [...base];
+    if (objet.detruit) classes.push("detruit");
+    const carte = carteSelectionnee();
+    if (carte && carte.camp === typeCase && carte.cases.includes(objet.id)) classes.push("case-valide");
+    return classes;
+}
+
+// Intention de l'ennemi pour son prochain tour (refonte-branchement.md 4.3), sous son image.
+function rendreIntention(objet) {
+    if (objet.detruit || objet.intention.length === 0) return "";
+    return `<div class="intention">${objet.intention.map(texteEffetEnnemiCourt).join(" ")}</div>`;
 }
 
 function rendreCaseEnnemi(objet, style) {
     if (objet === null) {
         return `<div class="case case-vide" style="${style}"></div>`;
     }
-    const classes = ["case", "ennemi"];
-    if (objet.detruit) classes.push("detruit");
+    const classes = classesCase(objet, "ennemi", ["case", "ennemi"]);
     if (objet.fusionne) classes.push("case-fusionnee");
     return `
         <div class="${classes.join(" ")}" style="${style}" data-id="${objet.id}" data-type="ennemi">
             <img src="${objet.image}" alt="${objet.nom}">
-            ${rendrePastilles(objet, "ennemi")}
-            ${objet.detruit ? '<div class="etiquette-detruite">Detruit</div>' : ""}
+            ${rendrePastilles(objet)}
+            ${rendreIntention(objet)}
+            ${etiquetteDetruit(objet)}
         </div>`;
 }
 
@@ -509,38 +514,31 @@ function rendreGrilleJoueur() {
         .map(([id, rect]) => {
             const module = parIndex[id];
             if (!module) return "";
-            const classes = ["case", "allie", "emplacement-module"];
-            if (module.detruit) classes.push("detruit");
+            const classes = classesCase(module, "allie", ["case", "allie", "emplacement-module"]);
             const style = `left:${rect.left}%; top:${rect.top}%; width:${rect.width}%; height:${rect.height}%;`;
             return `
                 <div class="${classes.join(" ")}" style="${style}" data-id="${module.id}" data-type="allie">
                     <img src="${module.image}" alt="${module.nom}">
-                    ${rendrePastilles(module, "allie")}
-                    ${module.detruit ? '<div class="etiquette-detruite">Detruit</div>' : ""}
+                    ${rendrePastilles(module)}
+                    ${etiquetteDetruit(module)}
                 </div>`;
         })
         .join("");
 
-    const classesBase = ["case", "allie", "vaisseau-base"];
-    if (base.detruit) classesBase.push("detruit");
+    const classesBase = classesCase(base, "allie", ["case", "allie", "vaisseau-base"]);
     return `
         <div class="grille grille-joueur">
             <div class="${classesBase.join(" ")}" data-id="base" data-type="allie">
                 <img class="image-vaisseau" src="${base.image}" alt="${base.nom}">
                 ${emplacements}
                 ${rendrePastillesBase(base)}
-                ${base.detruit ? '<div class="etiquette-detruite">Detruit</div>' : ""}
+                ${etiquetteDetruit(base)}
             </div>
         </div>`;
 }
 
-// Une paire (Avant, Arriere) par rangee, avec son numero de ligne CSS (1 colonne = 1 case,
-// cf. .grille.grille-ennemis dans style.css : grid-template-columns: repeat(2, ...)). Un
-// ennemi fusionne (specs.md 3.2, occupe les 2 colonnes de sa rangee, ex. le Boss des pirates)
-// est place explicitement (grid-row/grid-column) plutot que de compter sur l'ordre du DOM :
-// sa case Arriere n'est pas rendue du tout (bridge.py:_ennemis_json la laisse a null), donc
-// une place explicite evite que le flux automatique de la grille ne decale les rangees
-// suivantes.
+// Une paire (Avant, Arriere) par rangee. Un ennemi sur les deux cases de sa rangee (le Boss) est
+// place explicitement sur les 2 colonnes : sa case Arriere n'est pas publiee par bridge.py.
 const RANGEES_GRILLE_ENNEMIS = [
     ["AV_G", "AR_G", 1],
     ["AV_M", "AR_M", 2],
@@ -566,8 +564,7 @@ function rendreGrilleEnnemis() {
         </div>`;
 }
 
-// Couleur de l'etoile de rarete (specs.md paragraphe 8.2), meme mapping que fenetre.py
-// (COULEUR_ETOILE_RARETE).
+// Couleur de l'etoile de rarete (specs.md 8.2), meme mapping que le PC.
 const CLASSE_ETOILE_RARETE = {
     BASE: "etoile-base",
     COMMUNE: "etoile-commune",
@@ -575,147 +572,94 @@ const CLASSE_ETOILE_RARETE = {
     LEGENDAIRE: "etoile-legendaire",
 };
 
+// Munitions "restantes/de depart" (refonte-branchement.md 4.1), rien pour une carte illimitee.
+function texteMunitions(carte) {
+    if (carte.munitions_base === null) return "";
+    const restantes = carte.munitions_restantes ?? carte.munitions_base;
+    return `${restantes}/${carte.munitions_base}`;
+}
+
+// Carte en main (refonte-branchement.md 4.1) : illustration, rarete, cout, munitions, "×2" si
+// elle est lancee plus d'une fois, bandeau Persistante ; grisee si elle n'est pas jouable
+// maintenant (decide par le gameplay : CombatNew.peut_jouer).
 function rendreMain() {
     return etatCourant.main
         .map((carte) => {
             const classes = ["carte"];
             if (carte.index === indexCarteSelectionnee) classes.push("selectionnee");
-            const munitions =
-                carte.munitions_restantes !== null
-                    ? `<span class="pastille pastille-munition">${carte.munitions_restantes}</span>`
-                    : "";
+            if (!carte.jouable) classes.push("injouable");
+            const munitions = texteMunitions(carte);
             return `
             <button class="${classes.join(" ")}" data-index="${carte.index}" title="${carte.nom}">
                 <img src="${carte.image}" alt="${carte.nom}">
                 <span class="etoile-rarete ${CLASSE_ETOILE_RARETE[carte.rarete]}">★</span>
                 <span class="pastille pastille-cout">⚡${carte.cout}</span>
-                ${munitions}
+                ${munitions ? `<span class="pastille pastille-munition">${munitions}</span>` : ""}
+                ${carte.lancements > 1 ? `<span class="pastille pastille-lancements">×${carte.lancements}</span>` : ""}
+                ${carte.persistante ? '<span class="bandeau-persistante">PERSISTANTE</span>' : ""}
+                <span class="nom-carte-main">${carte.nom}</span>
             </button>`;
         })
         .join("");
 }
 
-// Description generee a partir des donnees deja connues de la carte (type,
-// cible, valeur - config/cartes.json), pas d'un texte fige duplique : reste
-// coherent si les valeurs changent, comme les popups de fenetre.py.
-const LIBELLES_CIBLE = {
-    ENNEMI_UNIQUE: "un ennemi",
-    ENNEMIS_MULTIPLES: "tous les ennemis",
-    LIGNE_ENNEMIE: "la rangee ennemie visee (avant + arriere)",
-    ALLIE_UNIQUE: "un module",
-    ALLIES_MULTIPLES: "tous les modules",
-    MODULE_PRINCIPAL: "le module principal",
-    COLONNE_AVANT_ENNEMIE: "la ligne avant ennemie",
-    COLONNE_ARRIERE_ENNEMIE: "la ligne arriere ennemie",
-    COLONNE_AVANT_ALLIEE: "la ligne avant alliee",
-};
-
-const LIBELLES_ACTION_OUTILS = {
-    GAIN_ELECTRICITE: (carte) => `Gagne ${carte.valeur} ⚡.`,
-    GAIN_ELECTRICITE_PAR_MODULE: (carte) => `Gagne ${carte.valeur} ⚡ par module actif.`,
-    PIOCHE_SUPPLEMENTAIRE: (carte) => `Pioche ${carte.valeur} cartes supplementaires.`,
-};
-
-const LIBELLES_ACTION_DEBUFF = {
-    REDUCTION_DEGATS: (carte, cible) => `Diminue les degats infliges par ${cible} de ${carte.valeur}, pendant ${carte.duree} tour(s).`,
-    VULNERABILITE: (carte, cible) => `Augmente les degats subis par ${cible} de ${carte.valeur}%, pendant ${carte.duree} tour(s).`,
-    REDIRECTION_CIBLE: (carte, cible) => `Detourne l'attaque de ${cible} vers un autre ennemi tire au hasard, pendant ${carte.duree} tour(s).`,
-};
-
-const LIBELLES_ACTION_BUFF = {
-    BOUCLIER_PAR_TOUR: (carte, cible) => {
-        const duree = carte.duree ? ` pendant ${carte.duree} tour(s)` : "";
-        return `${cible} gagne ${carte.valeur} bouclier a chaque tour${duree}.`;
-    },
-};
-
-// Libelle d'un buff/debuff actif sur un module ou un ennemi (specs.md 12.1/12.3/12.4/
-// 12.5/13 - meme modele des deux cotes, cf. bridge.py:_buffs_json/_debuffs_json), affiche
-// dans son infobulle. Chaque instance est independante : la valeur affichee est la sienne,
-// jamais une somme, plusieurs buffs/debuffs du meme type pouvant coexister.
-const LIBELLES_ACTION_ACTIF = {
-    BOUCLIER_PAR_TOUR: (buff) => `+${buff.valeur} bouclier/tour`,
-    BOUCLIER_MIROIR: (buff) => `Bouclier miroir ${buff.valeur}`,
-    REDUCTION_DEGATS: (buff) => `Degats reduits -${buff.valeur}`,
-    AUGMENTATION_DEGATS: (buff) => `Degats augmentes +${buff.valeur}`,
-    VULNERABILITE: (buff) => `Vulnerabilite +${buff.valeur}%`,
-    REDIRECTION_CIBLE: () => `Tir detourne`,
-};
-
-// Texte d'un buff/debuff par son seul type (sans duree), reutilise par libelleEffetActif
-// (buff deja actif) et par l'intention POSE_BUFF d'un ennemi (pas encore active, cf.
-// afficherInfobulle) - repli generique si jamais un type sans libelle dedie apparaissait,
-// pour ne jamais planter (contrairement a un acces direct LIBELLES_ACTION_ACTIF[action](...)).
-function texteTypeBuff(action, valeur) {
-    const fabrique = LIBELLES_ACTION_ACTIF[action];
-    return fabrique ? fabrique({ valeur }) : `Buff +${valeur}`;
-}
-
-function libelleEffetActif(buff) {
-    // Bouclier miroir (specs.md 13, ennemi Miroir) : precise le module du joueur qui recevra
-    // les degats renvoyes (cible_reflet_nom, tire une bonne fois pour toutes a la pose du
-    // buff, cf. bridge.py:_debuffs_json) - le joueur doit pouvoir l'anticiper avant d'attaquer
-    // l'ennemi protege.
-    let texte = texteTypeBuff(buff.action, buff.valeur);
-    if (buff.action === "BOUCLIER_MIROIR" && buff.cible_reflet_nom) {
-        texte += ` -> ${buff.cible_reflet_nom}`;
-    }
-    if (buff.tours_restants === null) return `${texte} (illimite)`;
-    const tour = buff.tours_restants === 1 ? "tour" : "tours";
-    return `${texte} (${buff.tours_restants} ${tour})`;
-}
-
+// Texte d'une carte, partout (combat, recompenses, deck, Aventures) : la description de
+// config/carte_new.json avec ses valeurs actuelles, fournie par le gameplay (description_affichee).
 function texteEffetCarte(carte) {
-    const cible = LIBELLES_CIBLE[carte.cible];
-    if (carte.type === "ATTAQUE") return `Inflige ${carte.valeur} degats a ${cible}.`;
-    if (carte.type === "DEFENSE") {
-        if (carte.action === "BOUCLIER_POURCENTAGE_PV") return `Bouclier de ${carte.valeur}% des PV de ${cible}.`;
-        if (carte.action === "ANNULATION_PROCHAINE_ATTAQUE") return `Annule la prochaine attaque sur ${cible}.`;
-        return `Bouclier de ${carte.valeur} a ${cible}.`;
-    }
-    if (carte.type === "REPARATION") return `Repare ${carte.valeur} PV a ${cible}.`;
-    if (carte.type === "OUTILS") return LIBELLES_ACTION_OUTILS[carte.action](carte);
-    if (carte.type === "DEBUFF") return LIBELLES_ACTION_DEBUFF[carte.action](carte, cible);
-    if (carte.type === "BUFF") return LIBELLES_ACTION_BUFF[carte.action](carte, cible);
-    return `Effet de ${carte.valeur} a ${cible}.`;
+    return carte.description;
 }
 
-// Infobulle de la carte selectionnee (#info-carte), affichee au centre de
-// l'ecran : agrandit son image et explicite son effet (le texte imprime sur
-// la carte est trop petit pour etre lu confortablement sur iPhone). N'occupe
-// pas les evenements tactiles (cf. pointer-events dans le CSS) pour ne pas
-// bloquer le tap sur une case qui suit pour jouer la carte.
+// Details d'une carte sous sa description : munitions, lancements, Persistante, module.
+function detailsCarte(carte) {
+    const lignes = [];
+    const munitions = texteMunitions(carte);
+    if (munitions) lignes.push(`🔋 Munitions ${munitions}`);
+    if (carte.lancements > 1) lignes.push(`Lancee ${carte.lancements} fois`);
+    if (carte.persistante) lignes.push("Persistante : reste jouable si son module est detruit");
+    if (carte.module_nom) lignes.push(`Module : ${carte.module_nom}`);
+    return lignes.map((ligne) => `<div class="info-carte-detail">${ligne}</div>`).join("");
+}
+
+// Infobulle de la carte armee (#info-carte), au centre de l'ecran. pointer-events:none (CSS) pour
+// ne pas bloquer le tap sur la case qui suit.
 function rendreInfoCarte() {
-    const carte = etatCourant.main.find((c) => c.index === indexCarteSelectionnee);
+    const carte = carteSelectionnee();
     if (!carte) return "";
-    const munitions =
-        carte.munitions_restantes !== null ? `<div class="info-carte-munitions">🔋 ${carte.munitions_restantes}</div>` : "";
+    const injouable = carte.jouable ? "" : '<div class="info-carte-detail">Pas jouable maintenant</div>';
     return `
         <img src="${carte.image}" alt="${carte.nom}">
         <div class="info-carte-nom">${carte.nom}</div>
         <div class="info-carte-effet">${texteEffetCarte(carte)}</div>
         <div class="info-carte-cout">⚡ ${carte.cout}</div>
-        ${munitions}`;
+        ${detailsCarte(carte)}
+        ${injouable}`;
 }
 
 function rendreBanniereFin() {
     if (etatCourant.etat === "EN_COURS") return "";
     const texte = etatCourant.etat === "VICTOIRE" ? "Victoire !" : "Defaite";
-    // Pour une partie reelle, ce bouton enchaine sur le reste du parcours (fin de combat, cf.
-    // terminerCombatPartie) plutot que de relancer un combat de demonstration.
-    const libelleBouton = partieActive ? "Continuer" : "Rejouer";
     return `
         <div class="banniere-fin ${etatCourant.etat.toLowerCase()}">
             <span>${texte}</span>
-            <button id="bouton-rejouer">${libelleBouton}</button>
+            <button id="bouton-rejouer">Continuer</button>
         </div>`;
+}
+
+// Compteurs des piles (refonte-branchement.md 4.4) ; Hors service seulement si elle n'est pas vide.
+function texteCompteursDeck() {
+    const morceaux = [
+        `Pioche ${etatCourant.pioche}`,
+        `Defausse ${etatCourant.defausse}`,
+        `Epuisees ${etatCourant.epuisees}`,
+    ];
+    if (etatCourant.hors_service) morceaux.push(`Hors service ${etatCourant.hors_service}`);
+    return `Tour ${etatCourant.tour} · ${morceaux.join(" · ")}`;
 }
 
 function rendre() {
     document.getElementById("electricite").textContent =
         `⚡ ${etatCourant.electricite}/${etatCourant.electricite_max}`;
-    document.getElementById("compteurs-deck").textContent =
-        `Pioche : ${etatCourant.pioche} - Defausse : ${etatCourant.defausse}`;
+    document.getElementById("compteurs-deck").textContent = texteCompteursDeck();
     document.getElementById("grille-joueur-conteneur").innerHTML = rendreGrilleJoueur();
     document.getElementById("grille-ennemis-conteneur").innerHTML = rendreGrilleEnnemis();
     document.getElementById("main").innerHTML = rendreMain();
@@ -735,7 +679,7 @@ function rendre() {
         element.addEventListener("click", () => selectionnerCarte(carte));
     });
     const boutonRejouer = document.getElementById("bouton-rejouer");
-    if (boutonRejouer) boutonRejouer.addEventListener("click", partieActive ? terminerCombatPartie : nouvelleGraine);
+    if (boutonRejouer) boutonRejouer.addEventListener("click", terminerCombatPartie);
 }
 
 // Ecran de choix de module (parcours, Niveau 1 - specs.md 2.3). Pas encore reliee a une
@@ -757,10 +701,6 @@ function afficherChoixModule(candidats) {
 }
 
 function choisirModule(candidat) {
-    if (!partieActive) {
-        console.log("Module choisi :", candidat.nom);
-        return;
-    }
     // Equipe le module et tire jusqu'a 3 cartes de son pool (src/gameplay/deroulement.py) : le
     // joueur en choisit une a ajouter a son deck, ou passe - meme logique que le PC.
     const resultat = appelerBridge("choisir_module_partie_web", JSON.stringify(partieActive), candidat.id);
@@ -797,7 +737,7 @@ function afficherChoixCarteModule(nomModule, candidats) {
 }
 
 function choisirCarteModule(candidat) {
-    resoudreCarteModule(candidat.id_carte);
+    resoudreCarteModule(candidat);
 }
 
 // Bouton "Passer" de l'ecran de choix de carte de module (specs.md 8.3, point 7 utilisateur).
@@ -805,9 +745,17 @@ function passerCarteModule() {
     resoudreCarteModule(null);
 }
 
-// Ajoute la carte choisie (ou aucune, bouton Passer) au deck puis avance au niveau suivant.
-function resoudreCarteModule(idCarte) {
-    allerA(appelerBridge("resoudre_carte_module_web", JSON.stringify(partieActive), idCarte));
+// Ajoute la carte choisie (ou aucune, bouton Passer) au deck puis avance au niveau suivant. La
+// carte est renvoyee avec son module de rattachement, decide par le gameplay (bridge.py).
+function resoudreCarteModule(candidat) {
+    allerA(
+        appelerBridge(
+            "resoudre_carte_module_web",
+            JSON.stringify(partieActive),
+            candidat ? candidat.id_carte : null,
+            candidat ? candidat.module : null
+        )
+    );
 }
 
 // Aiguillage vers l'ecran decide par src/gameplay/deroulement.py (via bridge.py, resultat
@@ -843,12 +791,6 @@ function ouvrirCombatPartie(partie) {
     appliquerResultat(appelerBridge("continuer_partie_web", JSON.stringify(partie)));
 }
 
-function nouveauChoixModule(graine = null) {
-    afficherChoixModule(appelerBridge("nouveau_choix_module", graine));
-}
-
-window.nouveauChoixModule = nouveauChoixModule;
-
 // Ouvre le choix de module (Niveau 1) pour une partie reelle - appelee a la creation d'une
 // partie et par la reprise du bouton "Continuer" (cf. continuerPartie), sur decision de
 // src/gameplay/deroulement.py (cf. allerA).
@@ -880,8 +822,10 @@ const ACTIONS_STATION_SERVICE = [
     ["mettre_a_jour", "assets/station_service/avec_texte/mettre_a_jour.png"],
     ["deplacer", "assets/station_service/avec_texte/deplacer.png"],
 ];
+// Reparer ne vise que le principal (decision 2, specs/refonte-branchement.md) : sa fonction ne
+// prend pas d'emplacement (cf. cliquerActionStation).
 const FONCTIONS_ACTION_STATION_SERVICE = {
-    reparer: "reparer_module_web",
+    reparer: "reparer_principal_web",
     ameliorer: "ameliorer_module_web",
     mettre_a_jour: "mettre_a_jour_module_web",
 };
@@ -901,7 +845,7 @@ function ouvrirStationServicePartie(partie) {
     positionSelectionneeStation = null;
     modeDeplacementStation = false;
     if (coutActionStationService === null) {
-        coutActionStationService = appelerBridge("cout_action_station_service_web");
+        coutActionStationService = appelerBridge("constantes_station_service_web").cout;
     }
     masquerTousLesEcrans();
     document.getElementById("ecran-station-service").classList.remove("cachee");
@@ -910,7 +854,9 @@ function ouvrirStationServicePartie(partie) {
 
 function instructionStationService() {
     if (modeDeplacementStation) return "Cliquez l'emplacement de destination (ou recliquez le module pour annuler).";
-    if (positionSelectionneeStation === null) return "Selectionnez un module, puis une action.";
+    if (positionSelectionneeStation === null) {
+        return "Selectionnez un module, puis une action (Réparer soigne toujours le principal).";
+    }
     return "Selectionnez une action pour ce module.";
 }
 
@@ -1000,6 +946,8 @@ function afficherPopupStation(position, texte, classeCouleur) {
 }
 
 function cliquerActionStation(action) {
+    // Reparer s'applique toujours au principal, sans selection (decision 2)
+    if (action === "reparer") positionSelectionneeStation = "base";
     if (positionSelectionneeStation === null) return;
     if (action === "deplacer") {
         if (POSITIONS_DEPLACABLES_STATION.includes(positionSelectionneeStation)) {
@@ -1013,7 +961,10 @@ function cliquerActionStation(action) {
     // reparer_module_web/ameliorer_module_web/mettre_a_jour_module_web (bridge.py) verifient et
     // deduisent l'Argent elles-memes - leur champ "succes" est la seule source de verite, jamais
     // reverifie ici (cf. CLAUDE.md, gameplay commun aux deux interfaces).
-    const resultat = appelerBridge(FONCTIONS_ACTION_STATION_SERVICE[action], JSON.stringify(partieActive), position);
+    const resultat =
+        action === "reparer"
+            ? appelerBridge(FONCTIONS_ACTION_STATION_SERVICE[action], JSON.stringify(partieActive))
+            : appelerBridge(FONCTIONS_ACTION_STATION_SERVICE[action], JSON.stringify(partieActive), position);
     // Deselectionne dans tous les cas (demande utilisateur) : le popup ci-dessous suffit a
     // confirmer l'effet ou l'echec, pas besoin de garder le module arme pour reessayer.
     positionSelectionneeStation = null;
@@ -1113,7 +1064,7 @@ function rendreAventureTroisLunes() {
         description.textContent = DESCRIPTION_TROIS_LUNES;
         const { pv_reparation_vaisseau, pv_amelioration } = constantesAventureTroisLunes;
         const options = [
-            ["reparer", ICONE_REPARER, "Reparer le vaisseau", `Chaque module regagne ${pv_reparation_vaisseau} PV.`],
+            ["reparer", ICONE_REPARER, "Reparer le vaisseau", `Le module principal regagne ${pv_reparation_vaisseau} PV.`],
             ["ameliorer", ICONE_AMELIORER, "Ameliorer un module", `+${pv_amelioration} PV max sur le module de votre choix.`],
             ["bricoler", ICONE_BRICOLER, "Bricoler", "Retirez une carte de votre deck."],
         ];
@@ -1144,11 +1095,11 @@ function rendreAventureTroisLunes() {
         });
     } else if (etapeAventureTroisLunes === "choix_carte") {
         instruction.textContent = "Choisissez une carte a retirer de votre deck.";
-        groupesDeckAventureTroisLunes = appelerBridge("deck_groupe_par_id_partie_web", JSON.stringify(partieActive));
+        groupesDeckAventureTroisLunes = appelerBridge("deck_partie_web", JSON.stringify(partieActive));
         deck.innerHTML = groupesDeckAventureTroisLunes
             .map(
-                (carte) => `
-            <div class="carte-deck" data-id="${carte.id_carte}">
+                (carte, index) => `
+            <div class="carte-deck" data-index="${index}">
                 <span class="etoile-${carte.rarete.toLowerCase()}">★</span>
                 ${carte.quantite > 1 ? `<span class="carte-deck-quantite">×${carte.quantite}</span>` : ""}
                 <img src="${carte.image}" alt="${carte.nom}">
@@ -1158,7 +1109,7 @@ function rendreAventureTroisLunes() {
             )
             .join("");
         document.querySelectorAll("#deck-aventure-trois-lunes .carte-deck").forEach((element) => {
-            element.addEventListener("click", () => cliquerCarteTroisLunes(element.dataset.id));
+            element.addEventListener("click", () => cliquerCarteTroisLunes(Number(element.dataset.index)));
         });
     } else {
         messageResolu.textContent = messageResoluAventureTroisLunes;
@@ -1170,7 +1121,7 @@ function cliquerChoixTroisLunes(identifiant) {
     const { pv_reparation_vaisseau } = constantesAventureTroisLunes;
     if (identifiant === "reparer") {
         partieActive = appelerBridge("reparer_vaisseau_aventure_web", JSON.stringify(partieActive));
-        messageResoluAventureTroisLunes = `Chaque module regagne ${pv_reparation_vaisseau} PV !`;
+        messageResoluAventureTroisLunes = `Le module principal regagne ${pv_reparation_vaisseau} PV !`;
         etapeAventureTroisLunes = "resolu";
     } else if (identifiant === "ameliorer") {
         etapeAventureTroisLunes = "choix_module";
@@ -1189,9 +1140,10 @@ function cliquerModuleTroisLunes(position) {
     rendreAventureTroisLunes();
 }
 
-function cliquerCarteTroisLunes(idCarte) {
-    const carte = groupesDeckAventureTroisLunes.find((c) => c.id_carte === idCarte);
-    partieActive = appelerBridge("retirer_carte_aventure_web", JSON.stringify(partieActive), idCarte);
+function cliquerCarteTroisLunes(index) {
+    // Une entree par carte et par module de rattachement (bridge.py) : on retire celle-ci
+    const carte = groupesDeckAventureTroisLunes[index];
+    partieActive = appelerBridge("retirer_carte_aventure_web", JSON.stringify(partieActive), carte.id_carte, carte.module);
     messageResoluAventureTroisLunes = `Carte retiree : ${carte.nom}.`;
     etapeAventureTroisLunes = "resolu";
     rendreAventureTroisLunes();
@@ -1219,22 +1171,21 @@ const ICONE_AFFRONTER = "assets/prochain_niveau/prime.png";
 const ICONE_TRAVERSER = "assets/aventure/traverser.png";
 
 const CHOIX_ASTEROIDES = [
-    ["traverser", ICONE_TRAVERSER, "Traverser le champ d'asteroides", "Un module au choix va en subir les consequences..."],
+    ["traverser", ICONE_TRAVERSER, "Traverser le champ d'asteroides", "Le module principal va en subir les consequences..."],
     ["affronter", ICONE_AFFRONTER, "Affronter les pirates", "Lance un combat contre 3 ennemis."],
 ];
 
 let constantesAventureAsteroides = null;
-// "choix" (2 choix) -> "choix_module" (module cible des degats) -> "sequence_2" (2e coup, apres
-// le 1er deja applique au clic du module) -> "sequence_3" (carte offerte, si trouvee) -> "resolu".
+// "choix" (2 choix) -> "sequence_2" (2e coup, apres le 1er deja applique au choix "Traverser") ->
+// "sequence_3" (carte offerte, si trouvee) -> "resolu". Les chocs touchent toujours le principal
+// (decision 3, specs/refonte-branchement.md) : plus de choix de module.
 let etapeAventureAsteroides = "choix";
-let positionCibleeAsteroides = null;
 let carteOfferteAsteroides = null;
 let messageAsteroides = "";
 
 function ouvrirAventureAsteroidesPartie(partie) {
     partieActive = partie;
     etapeAventureAsteroides = "choix";
-    positionCibleeAsteroides = null;
     carteOfferteAsteroides = null;
     if (constantesAventureAsteroides === null) {
         constantesAventureAsteroides = appelerBridge("constantes_aventure_asteroides_web");
@@ -1258,8 +1209,8 @@ function rendreAventureAsteroides() {
 
     description.classList.toggle("cachee", etapeAventureAsteroides !== "choix");
     choix.classList.toggle("cachee", etapeAventureAsteroides !== "choix");
-    instruction.classList.toggle("cachee", etapeAventureAsteroides !== "choix_module");
-    modules.classList.toggle("cachee", etapeAventureAsteroides !== "choix_module");
+    instruction.classList.add("cachee");
+    modules.classList.add("cachee");
     message.classList.toggle("cachee", !["sequence_2", "sequence_3", "resolu"].includes(etapeAventureAsteroides));
     carteOfferte.classList.toggle("cachee", etapeAventureAsteroides !== "sequence_3");
     boutonsCarteOfferte.classList.toggle("cachee", etapeAventureAsteroides !== "sequence_3");
@@ -1272,25 +1223,6 @@ function rendreAventureAsteroides() {
         ).join("");
         document.querySelectorAll("#choix-aventure-asteroides .choix-aventure").forEach((element) => {
             element.addEventListener("click", () => cliquerChoixAsteroides(element.dataset.choix));
-        });
-    } else if (etapeAventureAsteroides === "choix_module") {
-        instruction.textContent = "Choisissez le module qui essuiera les degats.";
-        const vaisseau = appelerBridge("infos_vaisseau_web", JSON.stringify(partieActive));
-        modules.innerHTML = Object.entries(vaisseau)
-            .map(([position, etat]) => {
-                if (!etat) {
-                    return `<div class="module-station module-station-vide" data-position="${position}">Emplacement vide</div>`;
-                }
-                return `
-                <div class="module-station" data-position="${position}">
-                    <img src="${etat.image}" alt="${etat.nom}">
-                    <div class="module-station-nom">${etat.nom}</div>
-                    <div class="module-station-pv">${etat.pv} / ${etat.pv_max} PV</div>
-                </div>`;
-            })
-            .join("");
-        document.querySelectorAll("#modules-aventure-asteroides .module-station:not(.module-station-vide)").forEach((element) => {
-            element.addEventListener("click", () => cliquerModuleAsteroides(element.dataset.position));
         });
     } else {
         message.textContent = messageAsteroides;
@@ -1311,8 +1243,7 @@ function rendreAventureAsteroides() {
 
 function cliquerChoixAsteroides(identifiant) {
     if (identifiant === "traverser") {
-        etapeAventureAsteroides = "choix_module";
-        rendreAventureAsteroides();
+        traverserAsteroides();
     } else if (identifiant === "affronter") {
         masquerTousLesEcrans();
         document.getElementById("app").classList.remove("cachee");
@@ -1320,35 +1251,33 @@ function cliquerChoixAsteroides(identifiant) {
     }
 }
 
-function cliquerModuleAsteroides(position) {
+function nomPrincipal() {
+    return appelerBridge("infos_vaisseau_web", JSON.stringify(partieActive)).base.nom;
+}
+
+function traverserAsteroides() {
     const { degats_asteroides } = constantesAventureAsteroides;
-    positionCibleeAsteroides = position;
-    const nom = appelerBridge("infos_vaisseau_web", JSON.stringify(partieActive))[position].nom;
-    partieActive = appelerBridge("subir_degats_module_asteroides_web", JSON.stringify(partieActive), position);
-    messageAsteroides = `Vous traversez le champ d'asteroides : ${nom} perd ${degats_asteroides} PV.`;
+    partieActive = appelerBridge("premier_choc_asteroides_web", JSON.stringify(partieActive));
+    messageAsteroides = `Vous traversez le champ d'asteroides : ${nomPrincipal()} perd ${degats_asteroides} PV.`;
     etapeAventureAsteroides = "sequence_2";
     rendreAventureAsteroides();
 }
 
 function continuerSequence2Asteroides() {
     const { degats_asteroides } = constantesAventureAsteroides;
-    const nom = appelerBridge("infos_vaisseau_web", JSON.stringify(partieActive))[positionCibleeAsteroides].nom;
+    const nom = nomPrincipal();
     // Degats et tirage de la carte offerte (ou non) decides en un seul appel gameplay
-    // (second_choc_asteroides_web/src/gameplay/partie.py:second_choc_asteroides) - jamais
-    // recalcule ici (cf. CLAUDE.md, gameplay commun aux deux interfaces).
-    const resultat = appelerBridge("second_choc_asteroides_web", JSON.stringify(partieActive), positionCibleeAsteroides);
+    // (second_choc_asteroides) - jamais recalcule ici (CLAUDE.md).
+    const resultat = appelerBridge("second_choc_asteroides_web", JSON.stringify(partieActive));
     partieActive = resultat.partie;
     carteOfferteAsteroides = resultat.carte;
+    const choc = `Ces asteroides n'en finissent plus : ${nom} perd encore ${degats_asteroides} PV. `;
     if (carteOfferteAsteroides === null) {
         etapeAventureAsteroides = "resolu";
-        messageAsteroides =
-            `Ces asteroides n'en finissent plus : ${nom} perd encore ${degats_asteroides} PV. ` +
-            "Vous parvenez finalement a vous degager.";
+        messageAsteroides = choc + "Vous parvenez finalement a vous degager.";
     } else {
         etapeAventureAsteroides = "sequence_3";
-        messageAsteroides =
-            `Ces asteroides n'en finissent plus : ${nom} perd encore ${degats_asteroides} PV. ` +
-            "Pres de la sortie, vous reperez des debris...";
+        messageAsteroides = choc + "Pres de la sortie, vous reperez des debris...";
     }
     rendreAventureAsteroides();
 }
@@ -1357,7 +1286,8 @@ function prendreCarteAsteroides() {
     partieActive = appelerBridge(
         "prendre_carte_offerte_asteroides_web",
         JSON.stringify(partieActive),
-        carteOfferteAsteroides.id_carte
+        carteOfferteAsteroides.id_carte,
+        carteOfferteAsteroides.module
     );
     messageAsteroides = `Vous recuperez : ${carteOfferteAsteroides.nom}.`;
     etapeAventureAsteroides = "resolu";
@@ -1553,24 +1483,11 @@ function afficherChoixNiveau(resultat) {
 // Etape choisie : l'ecran a ouvrir (combat, Station, Aventure tiree...) est decide par
 // src/gameplay/deroulement.py (bridge.py:ecran_pour_etape_web).
 function choisirEtape(type) {
-    if (!partieActive) {
-        console.log("Etape choisie :", type);
-        return;
-    }
     allerA({ partie: partieActive, ecran: appelerBridge("ecran_pour_etape_web", type) });
 }
 
-function choixNiveau(partieJson) {
-    afficherChoixNiveau(appelerBridge("choix_niveau_web", partieJson));
-}
-
-window.choixNiveau = choixNiveau;
-
-// Ecran de fin de combat (parcours, specs.md 2.1/6). Meme situation que l'ecran de choix de
-// module : pas encore reliee a une orchestration de parcours, exposee sur window pour test
-// manuel en attendant. nouvelleDefaite() n'a besoin d'aucune donnee (texte fixe) ;
-// nouvelleVictoire(graine) tire les candidats de recompense via bridge.py (un par module d'un
-// vaisseau tire au sort - demo, pas un vrai combat termine pour l'instant).
+// Ecran de fin de combat (parcours, specs.md 2.1/6) : un candidat de recompense par module, deja
+// rattache a ce module par le gameplay (deroulement.conclure_combat).
 function afficherFinCombat(victoire, candidats) {
     const titre = document.getElementById("titre-fin-combat");
     titre.textContent = victoire ? "VICTOIRE" : "DEFAITE";
@@ -1594,8 +1511,8 @@ function afficherFinCombat(victoire, candidats) {
                 <span class="etoile-${candidat.rarete.toLowerCase()}">★</span>
                 <span>${candidat.module_nom}</span>
             </div>
-            <img src="${candidat.image}" alt="${candidat.carte_nom}">
-            <div class="candidat-recompense-nom">${candidat.carte_nom}</div>
+            <img src="${candidat.image}" alt="${candidat.nom}">
+            <div class="candidat-recompense-nom">${candidat.nom}</div>
             <div class="candidat-recompense-cout">⚡ ${candidat.cout}</div>
             <div class="candidat-recompense-description">${texteEffetCarte(candidat)}</div>
         </div>`
@@ -1612,23 +1529,8 @@ function afficherFinCombat(victoire, candidats) {
 }
 
 function choisirRecompense(candidat) {
-    if (!partieActive) {
-        console.log("Carte choisie :", candidat.carte_nom);
-        return;
-    }
-    finaliserVictoirePartie(candidat.carte_id);
+    finaliserVictoirePartie(candidat);
 }
-
-function nouvelleVictoire(graine = null) {
-    afficherFinCombat(true, appelerBridge("fin_combat_victoire", graine));
-}
-
-function nouvelleDefaite() {
-    afficherFinCombat(false, []);
-}
-
-window.nouvelleVictoire = nouvelleVictoire;
-window.nouvelleDefaite = nouvelleDefaite;
 
 // Fin d'un combat reel (specs.md 2.4) : appelee une seule fois depuis la banniere de fin de
 // combat (#app, cf. rendreBanniereFin) quand une partie reelle est en cours. PV, Argent et
@@ -1642,8 +1544,16 @@ function terminerCombatPartie() {
 
 // Ajoute la carte choisie (ou aucune) au deck de la partie ; l'ecran suivant (niveau suivant ou
 // victoire finale apres le Boss) est decide par deroulement.resoudre_fin_combat.
-function finaliserVictoirePartie(idCarte) {
-    allerA(appelerBridge("resoudre_fin_combat_web", JSON.stringify(partieActive), true, idCarte));
+function finaliserVictoirePartie(candidat) {
+    allerA(
+        appelerBridge(
+            "resoudre_fin_combat_web",
+            JSON.stringify(partieActive),
+            true,
+            candidat ? candidat.id_carte : null,
+            candidat ? candidat.module : null
+        )
+    );
 }
 
 // Bouton "Continuer" de l'ecran de fin de combat (defaite, ou victoire sans aucun candidat de
@@ -1652,7 +1562,7 @@ function finaliserVictoirePartie(idCarte) {
 function continuerApresFinCombat() {
     if (!partieActive) return;
     if (etatCourant.etat === "DEFAITE") {
-        allerA(appelerBridge("resoudre_fin_combat_web", JSON.stringify(partieActive), false, null));
+        allerA(appelerBridge("resoudre_fin_combat_web", JSON.stringify(partieActive), false, null, null));
     } else {
         finaliserVictoirePartie(null);
     }
@@ -1751,11 +1661,6 @@ function afficherInfoCarteDeck(carte) {
         <div class="info-carte-cout">⚡ ${carte.cout}</div>`;
 }
 
-function voirDeck(graine = null) {
-    afficherDeck(appelerBridge("etat_deck", graine));
-}
-
-window.voirDeck = voirDeck;
 
 // Selection/creation de profil joueur, puis accueil de ce joueur (specs.md 10.3) : nouveau point
 // d'entree reel de l'app (appele par demarrer() ci-dessus, plus besoin de window.xxx() pour
@@ -1781,9 +1686,15 @@ function ajouterJoueurLocal(profil) {
     localStorage.setItem(CLE_JOUEURS, JSON.stringify(joueurs));
 }
 
+// Partie sauvegardee du joueur, relue par le gameplay : une partie d'une ancienne version du jeu
+// est ignoree, et effacee si elle etait en cours (decision 1, specs/refonte-branchement.md - le
+// gameplay decide, cf. bridge.py:lire_partie_web).
 function partieLocale(joueurId) {
     const brut = localStorage.getItem(clePartie(joueurId));
-    return brut ? JSON.parse(brut) : null;
+    if (!brut) return null;
+    const lecture = appelerBridge("lire_partie_web", brut);
+    if (lecture.effacer) localStorage.removeItem(clePartie(joueurId));
+    return lecture.partie;
 }
 
 function sauvegarderPartieLocale(joueurId, partie) {
@@ -1852,8 +1763,7 @@ function choisirJoueur(profil) {
 }
 
 function afficherAccueilJoueur() {
-    // Retour a l'accueil = plus aucune orchestration de parcours en cours (specs.md 2.4) :
-    // remet le mode demonstration par defaut pour les ecrans window.xxx() appeles manuellement.
+    // Retour a l'accueil = plus aucune orchestration de parcours en cours (specs.md 2.4)
     partieActive = null;
     const partie = partieLocale(joueurCourant.id);
     const enCours = partie !== null && partie.statut === "EN_COURS";
@@ -1929,15 +1839,13 @@ function actualiserBarreLaterale(enCombat = false) {
     const barre = document.getElementById("barre-laterale");
     const controlesCombat = document.getElementById("controles-combat");
     // #controles-combat (Electricite/tour suivant/Quitter) reste affiche en Combat meme quand la
-    // barre elle-meme ne l'est pas (mode demonstration ci-dessous, portrait, ecran trop etroit ou
+    // barre elle-meme ne l'est pas (sans partie ci-dessous, portrait, ecran trop etroit ou
     // chevauchement plus bas) : contrairement a Niveau/Argent/Deck/Vaisseau, mettre fin a son tour
     // reste une action essentielle (cf. commentaire CSS de #controles-combat, style.css).
     controlesCombat.classList.toggle("cachee", !enCombat);
     if (!partieActive) {
-        // Mode demonstration (window.nouveauChoixModule/choixNiveau/...) : pas de vraie Partie,
-        // rien a afficher sur la barre elle-meme (meme situation que src/ui/fenetre.py:self.partie
-        // en mode POC) - "Quitter" reste utilisable (revient simplement a la selection du joueur,
-        // cf. quitterCombat()).
+        // Pas de partie en cours : rien a afficher sur la barre elle-meme - "Quitter" reste
+        // utilisable (revient simplement a la selection du joueur, cf. quitterCombat()).
         barre.classList.add("cachee");
         controlesCombat.classList.add("controles-combat-sans-barre");
         return;
