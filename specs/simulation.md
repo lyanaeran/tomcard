@@ -320,8 +320,8 @@ simulateur, à côté de celui des règles actuelles (§11), qui reste inchangé
     principal reportés, sans soin hors combat).
 - Lancement : `caffeinate -i python -m outils.simulation.combats_new --graines 30 --robustesse 2000
   --enchainements 300` (environ 3 minutes sur 8 cœurs). Tests : `tests/test_simulation_combats_new.py`.
-- La **composition des flottes** (placement préféré) est reprise de `config_poc` dans l'outil, en
-  attendant celle de la refonte.
+- La **composition des flottes** (placement préféré, Boss) est celle du jeu :
+  `flotte_new.placer_ennemis` et `flotte_boss` (depuis la PR 1 du branchement).
 - Première synthèse : `outils/simulation/synthese/analyse_2026-11-11_combat_new.md`.
 - **Essais limités** : `construire_combat(..., valeurs_cartes={"CRT_10": {"bouclier": 4}})` change
   la valeur d'une carte pour un essai, sans toucher à `config/carte_new.json`. Premier essai :

@@ -85,7 +85,7 @@ pirates de l'espace, vous n'avez plus le choix : vaincre ou périr ! À moins qu
      était vide (`second_choc_asteroides` renvoie `None`), l'étape `sequence_3` est sautée
      directement vers `resolu`
 - Choix 2, *Affronter les pirates* : lance un combat scripté contre `NOMBRE_ENNEMIS_ASTEROIDES` (3)
-  ennemis (`combat_aventure_asteroides`/`creer_flotte_asteroides`) — approximation décidée en
+  ennemis (`combat_aventure_asteroides`/`flotte_new.flotte_asteroides`) — approximation décidée en
   attendant la taille S/M/L par ennemi (absente de `config/ennemis.json`, cf. §3.2/§9.1/§10.3) :
   ennemis tirés du pool existant sur les 3 premières cases de la grille (colonne Avant), plutôt que
   le tirage standard d'un combat Prime (grille complète, `combat_depuis_partie`). Délègue
@@ -96,7 +96,7 @@ pirates de l'espace, vous n'avez plus le choix : vaincre ou périr ! À moins qu
   inchangé)
 - Pas de 3ᵉ choix (binaire assumé)
 
-`src/gameplay/config_poc.py` (`NOMBRE_ENNEMIS_ASTEROIDES`, `creer_flotte_asteroides`) ;
+`src/gameplay/flotte_new.py` (`NOMBRE_ENNEMIS_ASTEROIDES`, `flotte_asteroides`) ;
 `src/gameplay/partie.py` (`DEGATS_ASTEROIDES`, `subir_degats_module`, **`second_choc_asteroides`**
 — 2e choc + tirage de la carte offerte en un seul appel, `cartes` reçu en paramètre plutôt que
 rechargé en interne ; l'id de la carte offerte est lu directement sur `Carte.id` (§6) —,

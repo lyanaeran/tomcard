@@ -180,7 +180,7 @@ remplace les pistes encore ouvertes en §2 pour la Station service et la cadence
   - Reste (5/6) **Prime** (combat)
 - **Nombre d'ennemis en Prime** : 1 seul ennemi jusqu'au niveau 5, puis 2 à partir du niveau 6 —
   s'ajoute au système de tailles S/M/L existant (§3.2, deux axes de difficulté indépendants), ne le
-  remplace pas. **Implémenté** (`config_poc.creer_flotte_prime`/`nombre_ennemis_prime`, §13.4), de
+  remplace pas. **Implémenté** (`flotte_new.flotte_prime`/`nombre_ennemis_prime`, §13.4), de
   même que la composition fixe du Boss (§13.4). Progression au-delà de 2 (après le niveau 10 ?)
   pas encore définie
 - **Doublons de modules autorisés** (remplace la piste "interdire les doublons" de §5) : posséder

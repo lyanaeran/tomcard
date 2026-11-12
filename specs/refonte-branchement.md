@@ -219,6 +219,9 @@ lisent encore l'ancien combat et l'ancien format de partie (accepté, §5).
 
 ### PR 2 — Affichage web / iPhone (`web/bridge.py`, `web/app.js`, `web/style.css`)
 
+- **En premier** : retirer de `web/bridge.py` les imports de l'ancien gameplay supprimé
+  (`config_poc`, `EtatModule`, `reparer_module`…) et le mode démo, pour que le web se recharge.
+
 - **D'abord une maquette** des éléments du §4 (captures d'un combat au format iPhone), validée par
   l'utilisateur (décision 6), puis le reste de l'affichage.
 - Lecture de l'API de `CombatNew` (tableau du §3) par `bridge.py`, sérialisée en JSON ; éléments
@@ -231,6 +234,10 @@ lisent encore l'ancien combat et l'ancien format de partie (accepté, §5).
   service, victoire, défaite.
 
 ### PR 3 — Affichage PC (`src/ui/fenetre.py`, écrans du parcours touchés)
+
+- **En premier** : retirer de `src/ui/` les imports de l'ancien gameplay supprimé (`config_poc`
+  dans `fenetre.py`, `EtatModule` dans les écrans…) et le mode démo, pour que `python main.py`
+  redémarre.
 
 - Même contenu que le web, lu dans l'API de `CombatNew` ; `_essayer_de_cibler` identique à
   `cliquerCase` de la PR 2.
