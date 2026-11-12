@@ -15,8 +15,8 @@ Les fichiers `*_new.py` (`carte_new`, `module_new`, `ennemi_new`, `statut_new`, 
 `deck_new`, `flotte_new`, `vaisseau_new`) sont le **moteur de la refonte**. Depuis la PR 1 du
 branchement, le parcours (`partie.py`, `parcours.py`, `deroulement.py`) l'utilise ; l'ancien moteur
 (`carte.py`, `module.py`, `ennemi.py`, `combat.py`...) n'est plus lu que par l'affichage PC et web
-(en attente des PR 2 et 3) et le combat de démonstration (`config_poc.py`), puis sera supprimé
-(PR 4). Vue d'ensemble : `specs/refonte.md`, plan : `specs/refonte-branchement.md`.
+(en attente des PR 2 et 3), puis sera supprimé (PR 4). Le combat de démonstration
+(`config_poc.py`) est supprimé : le jeu ne se joue que par le parcours. Vue d'ensemble : `specs/refonte.md`, plan : `specs/refonte-branchement.md`.
 
 - Ne pas mélanger les deux : un fichier `_new` n'importe pas l'ancien moteur, sauf réutilisation
   explicite d'un élément neutre (`position.py`, `RareteCarte`).

@@ -200,6 +200,12 @@ Choix faits en codant, **à valider par l'utilisateur** :
 - **Argent du Boss : 5 € au lieu de 10 €** : l'Argent se compte par ennemi détruit
   (`ennemis_detruits()`), le Boss sur deux cases compte pour un (l'ancien moteur comptait ses deux
   cases). Sans effet en jeu aujourd'hui (la partie s'arrête au Boss).
+- **Combat de démonstration supprimé** (décision utilisateur, 2026-11-12 : « on ne se sert que du
+  parcours ») : `config_poc.py` (combat au hasard sans partie, anciennes flottes, ancien deck de
+  départ) et ses tests sont retirés ; ses flottes sont remplacées par `flotte_new.py`. Les PR 2
+  et 3 retirent le mode démo de l'affichage : `nouveau_combat`, `fin_combat_victoire` et la
+  branche démo d'`etat_deck` dans `web/bridge.py`, les `window.*` de démonstration de
+  `web/app.js`, le `creer_combat_poc()` par défaut de `src/ui/fenetre.py`.
 - **Mode test supprimé** (décision utilisateur, 2026-11-12) : `config_poc.MODE_TEST` (PV gonflés,
   Laser à 20) n'est pas repris par le parcours branché et a été retiré de l'ancien moteur.
 - **Déplacer le principal** lève une erreur (avant : à la charge de l'écran de ne jamais le
@@ -233,7 +239,7 @@ lisent encore l'ancien combat et l'ancien format de partie (accepté, §5).
 ### PR 4 — Nettoyage
 
 - Suppression de l'ancien moteur (`carte.py`, `module.py`, `ennemi.py`, `combat.py`, `deck.py`,
-  `flotte.py`, `vaisseau.py`, `joueur.py`, `ciblage.py`, une partie de `config_poc.py` et
+  `flotte.py`, `vaisseau.py`, `joueur.py`, `ciblage.py`, une partie de
   `donnees.py`), des anciens `config/cartes.json`, `modules.json`, `ennemis.json` et de leurs
   tests. (Le simulateur est déjà passé sur le nouveau moteur à la PR 1 et l'ancien bot supprimé :
   il ne reste plus d'ancien simulateur à retirer.)

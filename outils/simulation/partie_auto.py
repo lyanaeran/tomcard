@@ -25,7 +25,6 @@ from src.gameplay.partie import (
     ajouter_carte,
     ameliorer_module,
     ameliorer_module_aventure,
-    combat_aventure_asteroides,
     combat_depuis_partie,
     demarrer_aventure_police,
     nouvelle_partie,

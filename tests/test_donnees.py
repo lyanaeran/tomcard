@@ -60,7 +60,7 @@ def test_charger_ennemis_renvoie_6_ennemis_avec_images_existantes():
 
 def test_charger_ennemis_le_boss_des_pirates_occupe_2_emplacements():
     """specs.md 3.2 : le Boss des pirates est le seul ennemi a occuper 2 emplacements pour
-    l'instant (une case Avant + une Arriere de la meme rangee, cf. config_poc.creer_flotte_boss).
+    l'instant (une case Avant + une Arriere de la meme rangee, cf. flotte_new.flotte_boss).
     Les autres ennemis restent a 1 emplacement (valeur par defaut, absente de leur config)."""
     ennemis = charger_ennemis()
     par_id = {spec.id: spec for spec in ennemis}

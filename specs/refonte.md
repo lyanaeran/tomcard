@@ -14,8 +14,8 @@ combat, **le jeu ne fonctionne donc plus** jusqu'aux PR 2 (web) et 3 (PC). Mis �
 
 | | Ancien moteur (le jeu actuel) | Moteur de la refonte (`_new`) |
 |---|---|---|
-| **Utilisé par** | l'affichage PC (`main.py`, `src/ui/`) et web (`web/`), en attente des PR 2 et 3 ; le combat de démonstration (`config_poc.creer_combat_poc`) | le parcours (`deroulement.py`, `partie.py`, `parcours.py`, `flotte_new.py`), le simulateur de parties (`partie_auto.py`, `etudes.py`) et celui des combats (`bot_new.py`, `combats_new.py`) |
-| **Code** | `carte.py`, `module.py`, `ennemi.py`, `combat.py`, `deck.py`, `flotte.py`, `vaisseau.py`, `joueur.py`, `ciblage.py`, `config_poc.py`, `donnees.py` | `carte_new.py`, `module_new.py`, `ennemi_new.py`, `statut_new.py`, `combat_new.py`, `deck_new.py`, `flotte_new.py`, `vaisseau_new.py` |
+| **Utilisé par** | l'affichage PC (`main.py`, `src/ui/`) et web (`web/`), en attente des PR 2 et 3 | le parcours (`deroulement.py`, `partie.py`, `parcours.py`, `flotte_new.py`), le simulateur de parties (`partie_auto.py`, `etudes.py`) et celui des combats (`bot_new.py`, `combats_new.py`) |
+| **Code** | `carte.py`, `module.py`, `ennemi.py`, `combat.py`, `deck.py`, `flotte.py`, `vaisseau.py`, `joueur.py`, `ciblage.py`, `donnees.py` | `carte_new.py`, `module_new.py`, `ennemi_new.py`, `statut_new.py`, `combat_new.py`, `deck_new.py`, `flotte_new.py`, `vaisseau_new.py` |
 | **Données** | `config/cartes.json`, `config/modules.json`, `config/ennemis.json` | `config/carte_new.json`, `config/module_new.json`, `config/ennemi_new.json` (**sources de vérité**), avec leurs tableaux générés `.md` |
 | **Spec** | `combat.md`, `modules-cartes.md`, `interface.md`… (§2 à §13) | les brouillons `refonte-*.md` (§3 ci-dessous) |
 
@@ -23,8 +23,8 @@ combat, **le jeu ne fonctionne donc plus** jusqu'aux PR 2 (web) et 3 (PC). Mis �
   sauvegarde et l'affichage, puis supprimera l'ancien. Le parcours est branché (PR 1) ; l'affichage
   ne l'est pas encore, le jeu ne fonctionne pas entre deux PR (accepté par l'utilisateur).
 - **Une valeur de carte se change dans `config/carte_new.json` seulement** : depuis la PR 1, le
-  parcours ne lit plus `config/cartes.json` (encore lu par l'ancien affichage et le combat de
-  démonstration, supprimé à la PR 4).
+  parcours ne lit plus `config/cartes.json` (encore lu par l'ancien affichage, supprimé à la PR
+  4).
 - Les fichiers `_new` sont déjà montés côté web (`FICHIERS_A_MONTER` de `web/app.js`, exigé par
   `tests/test_architecture.py`) même s'ils ne sont pas utilisés.
 - Seuls **deux modules sont jouables** dans les deux moteurs : le module **principal** (`MOD_1`)

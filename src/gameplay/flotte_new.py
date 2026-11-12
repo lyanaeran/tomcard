@@ -3,7 +3,7 @@ Flotte de la refonte (FlotteNew) : les ennemis en combat (copies d'EnnemiNew) pl
 ennemie (specs/refonte-combat.md 2.2, 5.1). Remplace flotte.py:Flotte. La classe recoit les
 ennemis deja places ; la composition des flottes du parcours (quels ennemis selon le niveau, et
 leur placement) est faite par les fonctions en bas de ce fichier (refonte-branchement.md 2,
-decision 4 : memes regles que l'ancien moteur, config_poc.py, avec les ennemis de la refonte).
+decision 4 : memes regles que l'ancien moteur, avec les ennemis de la refonte).
 
 Un ennemi sur plusieurs cases (Boss des pirates) est le meme objet range a plusieurs cases : il
 n'est compte, touche et joue qu'une fois.
@@ -115,7 +115,7 @@ def ennemis_standard(modeles: dict[str, EnnemiNew]) -> list[EnnemiNew]:
 
 def placer_ennemis(ennemis: list[EnnemiNew], aleatoire: random.Random) -> FlotteNew:
     """Place des ennemis d'une case selon leur preference (specs.md 13, comme
-    config_poc._placer_specs_avec_preference) : les protecteurs d'abord a l'avant, puis les
+    l'ancien moteur) : les protecteurs d'abord a l'avant, puis les
     proteges a l'arriere, puis les autres a l'avant, sinon a l'arriere ; cases tirees au hasard
     dans chaque colonne. Au plus 6 ennemis."""
     if len(ennemis) > len(CASES_AVANT) + len(CASES_ARRIERE):
