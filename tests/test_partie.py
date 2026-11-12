@@ -177,6 +177,14 @@ def test_equiper_module_cree_un_exemplaire_sur_le_premier_emplacement_libre():
     assert LANCEUR.exemplaire is None  # le modele n'est pas modifie
 
 
+def test_un_numero_d_exemplaire_encore_present_dans_le_deck_n_est_jamais_reutilise():
+    """Si un module quitte un jour le vaisseau, ses cartes ne doivent pas passer au nouveau."""
+    partie = _partie_avec_lanceur()
+    partie.vaisseau["avant_gauche"] = None  # M2 retire, sa carte CRT_9 reste rattachee a M2
+
+    assert equiper_module(partie, LANCEUR).exemplaire == "M3"
+
+
 def test_ajouter_carte_refuse_un_module_absent():
     partie = nouvelle_partie(random.Random(1))
 
@@ -218,6 +226,16 @@ def test_combat_depuis_partie_reprend_le_vaisseau_et_le_deck_de_la_partie():
     assert len(combat.deck.toutes_les_cartes()) == len(partie.deck)
     # Copies : la partie n'est pas touchee par le combat
     assert combat.vaisseau.principal is not partie.principal
+
+
+def test_aucun_combat_ne_commence_avec_un_principal_detruit():
+    partie = _partie_avec_lanceur()
+    partie.principal.pv = 0
+
+    with pytest.raises(ValueError, match="principal est detruit"):
+        combat_depuis_partie(partie, random.Random(1))
+    with pytest.raises(ValueError, match="principal est detruit"):
+        combat_aventure_asteroides(partie, random.Random(1))
 
 
 @pytest.mark.parametrize("niveau, nombre", [(2, 1), (5, 1), (6, 2), (9, 2)])
@@ -535,6 +553,19 @@ def test_partie_en_cours_efface_une_ancienne_sauvegarde_et_garde_le_profil(dossi
     assert partie_en_cours(profil.id) is None
     assert not ancienne.exists()
     assert [p.nom for p in lister_profils()] == ["Alice"]
+
+
+def test_partie_en_cours_garde_une_ancienne_partie_terminee(dossier_saves_isole):
+    """Decision 1 : seules les parties EN_COURS d'une ancienne version sont abandonnees ; les
+    TERMINEE sont gardees pour de futures statistiques."""
+    profil = creer_profil("Alice")
+    dossier = dossier_saves_isole / profil.id / "parties"
+    dossier.mkdir(parents=True)
+    terminee = dossier / "partie_finie.json"
+    terminee.write_text(json.dumps({"version": 1, "id": "partie_finie", "statut": "TERMINEE"}))
+
+    assert partie_en_cours(profil.id) is None
+    assert terminee.exists()
 
 
 def test_abandonner_partie_la_marque_terminee(dossier_saves_isole):

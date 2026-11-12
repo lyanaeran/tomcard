@@ -66,8 +66,10 @@ pirates de l'espace, vous n'avez plus le choix : vaincre ou périr ! À moins qu
 > 2026-11-12 : un combat ne commence jamais avec un principal détruit) ; la carte
 > offerte est rattachée au principal. « Affronter les pirates » : 3 ennemis de la refonte placés
 > selon leur préférence (`flotte_new.flotte_asteroides`). Écrans PC et web à adapter (PR 2 et 3).
-- Choix 1, *Traverser le champ d'astéroïdes* : séquence en 3 temps sur le même écran, chaque étape
-  validée par un bouton "Continuer" :
+- Choix 1, *Traverser le champ d'astéroïdes* (**ancienne règle, remplacée par la note ci-dessus**
+  pour le module touché, la fonction et le plancher de PV ; la séquence d'écrans reste à adapter
+  aux PR 2 et 3) : séquence en 3 temps sur le même écran, chaque étape validée par un bouton
+  "Continuer" :
   1. Le joueur clique un module (`_dessiner_choix_module`/`choix_module`) : -`DEGATS_ASTEROIDES` (5)
      PV appliqués immédiatement (`subir_degats_module`, dégâts hors combat, plafonnés à 0,
      opération inverse de `reparer_module`/`reparer_vaisseau`), puis affichage d'un message de

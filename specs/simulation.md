@@ -248,9 +248,10 @@ python -m outils.simulation combat --variante bouclier_moins_un --parties 2000
 > Les règles décrites ci-dessous restent valables pour la politique hors combat ; les résultats de
 > `analyse_2026-11-07.md` sont ceux de l'ancien moteur.
 
-Implémenté dans `outils/simulation/` (`bot.py`, `partie_auto.py`, `etudes.py`, `rapport.py`,
-`__main__.py`), sur les règles **actuelles** du jeu (aucune variante de refonte, décision
-utilisateur : « on ne mélange pas tout »). Tests : `tests/test_simulation.py`.
+Implémenté dans `outils/simulation/` (`partie_auto.py`, `etudes.py`, `rapport.py`, `__main__.py`,
+et à l'origine `bot.py`, supprimé à la PR 1 du branchement au profit de `bot_new.py`), sur les
+règles du jeu (aucune variante de règles, décision utilisateur : « on ne mélange pas tout »), celles
+du moteur de la refonte depuis la PR 1. Tests : `tests/test_simulation.py`.
 
 **Lancement** : `python -m outils.simulation --budget 500 --parties-par-module 40 --validation 30`
 écrit les résultats bruts (JSON) et leurs tableaux (Markdown) dans `outils/simulation/resultats/`

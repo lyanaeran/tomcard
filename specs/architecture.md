@@ -81,7 +81,8 @@ utilisateur), plus des écrans autonomes non reliés comme les précédents.
   une liste `{"id": "CRT_7", "module": "M1"}` (carte rattachée à un exemplaire de module,
   `partie.CartePossedee`). **Une partie d'une autre version est abandonnée à la lecture**
   (décision utilisateur du 2026-11-11 n° 1, aucune conversion) : `partie.lire_partie` renvoie
-  `None`, `partie_en_cours` (PC) efface le fichier ; le profil est gardé (son format ne change
+  `None`, `partie_en_cours` (PC) efface le fichier **si la partie était EN_COURS** ; une ancienne
+  partie TERMINEE est gardée telle quelle (futures statistiques), mais n'est plus relue ; le profil est gardé (son format ne change
   pas, `VERSION_PROFIL` = 1). Le web devra faire de même avec `localStorage` (PR 2). Ancien
   format (version 1) :
 - **Contenu** :

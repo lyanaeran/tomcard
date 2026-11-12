@@ -179,7 +179,7 @@ Fait, testé par `pytest` (aucun affichage) :
 - `partie.py` : modules `ModuleNew` (exemplaires `M1`, `M2`…, `EtatModule` supprimé), deck en
   `CartePossedee(id, module)`, format de sauvegarde 2 (specs.md §10.3), ancienne sauvegarde
   abandonnée (`lire_partie`, `SauvegardeObsolete`) ; `combat_depuis_partie` et
-  `combat_aventure_asteroides` renvoient un `CombatNew` ; `reporter_combat` (PV du principal) ;
+  `combat_aventure_asteroides` renvoient un `CombatNew` (refusé si le principal est à 0 PV, garde-fou) ; `reporter_combat` (PV du principal) ;
   Station (`reparer_principal`) et Aventures adaptées (décisions 2 et 3).
 - `flotte_new.py` : composition des flottes (décision 4) : `flotte_prime`, `flotte_boss`,
   `flotte_asteroides`, `placer_ennemis` ; le simulateur de combats l'utilise aussi.
@@ -234,8 +234,9 @@ lisent encore l'ancien combat et l'ancien format de partie (accepté, §5).
 
 - Suppression de l'ancien moteur (`carte.py`, `module.py`, `ennemi.py`, `combat.py`, `deck.py`,
   `flotte.py`, `vaisseau.py`, `joueur.py`, `ciblage.py`, une partie de `config_poc.py` et
-  `donnees.py`), des anciens `config/cartes.json`, `modules.json`, `ennemis.json`, de l'ancien
-  simulateur et de leurs tests.
+  `donnees.py`), des anciens `config/cartes.json`, `modules.json`, `ennemis.json` et de leurs
+  tests. (Le simulateur est déjà passé sur le nouveau moteur à la PR 1 et l'ancien bot supprimé :
+  il ne reste plus d'ancien simulateur à retirer.)
 - Renommage éventuel des `*_new` (à décider : garder les noms, ou `CarteNew` → `Carte`…).
 - Migration des brouillons `refonte-*.md` dans les sections numérotées (`combat.md`,
   `modules-cartes.md`…), mise à jour de `CLAUDE.md` et de `specs/refonte.md`.

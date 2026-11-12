@@ -27,7 +27,7 @@ from src.gameplay.carte_new import RareteCarte, charger_cartes_new
 from src.gameplay.combat_new import CombatNew, EtatCombatNew, NatureEvenement
 from src.gameplay.deck_new import TAILLE_MAIN_MAX, deck_de_depart
 from src.gameplay.ennemi_new import NatureEffetEnnemi, charger_ennemis_new
-from src.gameplay.flotte_new import FlotteNew, flotte_boss, placer_ennemis
+from src.gameplay.flotte_new import ID_BOSS, FlotteNew, flotte_boss, placer_ennemis
 from src.gameplay.module_new import charger_modules_new
 
 from outils.simulation.bot_new import BotAleatoire, BotRecherche, jouer_combat
@@ -40,7 +40,6 @@ DOSSIER_RESULTATS = Path(__file__).parent / "resultats"
 # emplacement libre, comme au choix du module du Niveau 1)
 EMPLACEMENT_LANCEUR = "avant_gauche"
 ENNEMIS_STANDARD = ["ENM_PAT_LE_PIRATE", "ENM_LE_NETTOYEUR", "ENM_PETIT_JEAN", "ENM_LE_PUZZLE", "ENM_MIROIR"]
-ID_BOSS = "ENM_BOSS_PIRATES"
 # Cartes ajoutees au deck de depart pour le deck "etoffe" (milieu de partie)
 CARTES_AJOUTEES_ETOFFE = 5
 DEGATS = (NatureEvenement.ATTAQUE, NatureEvenement.RENVOI, NatureEvenement.INCENDIE)

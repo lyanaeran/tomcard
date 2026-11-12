@@ -8,6 +8,7 @@ fichier (PC uniquement, cf. web/bridge.py + web/app.js pour localStorage cote we
 bas de ce fichier.
 """
 
+import functools
 import json
 import random
 import shutil
@@ -130,13 +131,20 @@ def partie_vers_dict(partie: Partie) -> dict:
     }
 
 
+@functools.cache
+def _modeles_modules() -> dict[str, ModuleNew]:
+    """Modeles de modules lus une seule fois (config/module_new.json) : la partie est relue a
+    chaque action cote web. Jamais modifies : un exemplaire est une copie (nouvel_exemplaire)."""
+    return charger_modules_new()
+
+
 def partie_depuis_dict(donnees: dict, modeles: dict[str, ModuleNew] | None = None) -> Partie:
     """Partie a partir de sa sauvegarde. Leve SauvegardeObsolete pour une autre version du format
     (ancienne sauvegarde, decision 1)."""
     version = donnees.get("version", 1)
     if version != VERSION_FORMAT:
         raise SauvegardeObsolete(f"Partie au format {version}, format attendu {VERSION_FORMAT}")
-    modeles = modeles if modeles is not None else charger_modules_new()
+    modeles = modeles if modeles is not None else _modeles_modules()
     return Partie(
         id=donnees["id"],
         nom=donnees["nom"],
@@ -238,6 +246,10 @@ def _combat(partie: Partie, flotte: FlotteNew, aleatoire: random.Random) -> Comb
     """Combat avec le vaisseau et le deck de la partie : copies de combat des modules (PV
     sauvegardes pour le principal, PV max pour les secondaires), copies des cartes. La partie
     n'est pas modifiee (un combat abandonne ne la touche pas)."""
+    if partie.principal.pv <= 0:
+        # Garde-fou : CombatNew ne declare la defaite que sur un nouveau coup, un combat commence
+        # avec un principal deja detruit ne se terminerait jamais
+        raise ValueError("Le principal est detruit : aucun combat ne peut commencer")
     modules = [module.copie_pour_combat() for module in modules_de_la_partie(partie)]
     return CombatNew(modules, deck_de_la_partie(partie), flotte, aleatoire)
 
@@ -285,8 +297,11 @@ def gagner_argent_combat(partie: Partie, combat: CombatNew) -> Partie:
 
 
 def _nouvel_exemplaire(partie: Partie) -> str:
-    """Identifiant d'exemplaire libre : "M" suivi du plus grand numero deja utilise plus un."""
-    numeros = [int(module.exemplaire[1:]) for module in modules_de_la_partie(partie)]
+    """Identifiant d'exemplaire jamais utilise dans la partie : "M" suivi du plus grand numero vu
+    (modules equipes et cartes du deck, pour ne jamais rattacher d'anciennes cartes a un nouveau
+    module si un module quitte un jour le vaisseau) plus un."""
+    exemplaires = [module.exemplaire for module in modules_de_la_partie(partie)] + [carte.module for carte in partie.deck]
+    numeros = [int(exemplaire[1:]) for exemplaire in exemplaires]
     return f"M{max(numeros, default=0) + 1}"
 
 
@@ -529,16 +544,20 @@ def supprimer_profil(joueur_id: str) -> None:
 
 def partie_en_cours(joueur_id: str) -> Partie | None:
     """La partie EN_COURS de ce joueur, s'il en a une (il ne peut y en avoir qu'une a la fois,
-    garanti par sauvegarder_partie/abandonner_partie ci-dessous). Les parties d'une ancienne
-    version du jeu sont effacees au passage (decision 1), le profil est garde."""
+    garanti par sauvegarder_partie/abandonner_partie ci-dessous). Une partie EN_COURS d'une
+    ancienne version du jeu est effacee au passage (decision 1) ; les parties TERMINEE et le
+    profil sont gardes."""
     dossier = _dossier_parties(joueur_id)
     if not dossier.exists():
         return None
     for fichier in dossier.iterdir():
-        partie = lire_partie(fichier.read_text())
+        texte = fichier.read_text()
+        partie = lire_partie(texte)
         if partie is None:
-            # Ancienne version du jeu : partie abandonnee et effacee (decision 1)
-            fichier.unlink()
+            # Ancienne version du jeu : une partie EN_COURS est abandonnee et effacee (decision 1) ;
+            # une partie TERMINEE est gardee telle quelle (futures statistiques), sans etre relue
+            if json.loads(texte).get("statut") == STATUT_EN_COURS:
+                fichier.unlink()
         elif partie.statut == STATUT_EN_COURS:
             return partie
     return None

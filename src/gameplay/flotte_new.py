@@ -118,6 +118,10 @@ def placer_ennemis(ennemis: list[EnnemiNew], aleatoire: random.Random) -> Flotte
     config_poc._placer_specs_avec_preference) : les protecteurs d'abord a l'avant, puis les
     proteges a l'arriere, puis les autres a l'avant, sinon a l'arriere ; cases tirees au hasard
     dans chaque colonne. Au plus 6 ennemis."""
+    if len(ennemis) > len(CASES_AVANT) + len(CASES_ARRIERE):
+        raise ValueError(f"{len(ennemis)} ennemis pour {len(CASES_AVANT) + len(CASES_ARRIERE)} cases")
+    if any(ennemi.emplacements != 1 for ennemi in ennemis):
+        raise ValueError("placer_ennemis ne place que des ennemis d'une case")
     avant, arriere = list(CASES_AVANT), list(CASES_ARRIERE)
     aleatoire.shuffle(avant)
     aleatoire.shuffle(arriere)
