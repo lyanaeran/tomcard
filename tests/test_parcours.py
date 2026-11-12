@@ -5,9 +5,8 @@ Tests unitaires pour la logique du parcours (src/gameplay/parcours.py).
 import dataclasses
 import random
 
-from src.gameplay.carte import Carte, CibleCarte, RareteCarte, TypeCarte
-from src.gameplay.config_poc import ID_MODULE_PRINCIPAL, creer_vaisseau
-from src.gameplay.donnees import charger_cartes, charger_modules
+from src.gameplay.carte_new import RareteCarte, charger_cartes_new
+from src.gameplay.module_new import charger_modules_new
 from src.gameplay.parcours import (
     TypeAventure,
     TypeEtape,
@@ -26,9 +25,6 @@ from src.gameplay.parcours import (
     tirer_type_aventure,
     tirer_type_etape,
 )
-
-IMG = "test.png"
-
 
 class _AleatoireFixe:
     """Stub deterministe : random() renvoie toujours la meme valeur, choice() prend toujours
@@ -50,64 +46,54 @@ class _AleatoireFixe:
         return self._index
 
 
-def _specs_tous_jouables():
-    """Modules de config/modules.json, tous marques jouables : pour tester le tirage parmi
-    plusieurs modules quel que soit le nombre de modules jouables du moment."""
-    return [dataclasses.replace(spec, jouable=True) for spec in charger_modules()]
+def _modules_fictifs(nombre: int = 4):
+    """Modeles de modules : le principal, le Lanceur, et `nombre` copies jouables du Lanceur sous
+    d'autres ids, pour tester le tirage parmi plusieurs modules (un seul secondaire jouable pour
+    l'instant)."""
+    modeles = charger_modules_new()
+    lanceur = modeles["MOD_2"]
+    fictifs = [dataclasses.replace(lanceur, id=f"MOD_TEST_{i}") for i in range(nombre)]
+    sans_cartes = dataclasses.replace(lanceur, id="MOD_SANS_CARTE", cartes=())
+    non_jouable = dataclasses.replace(lanceur, id="MOD_NON_JOUABLE", jouable=False)
+    return [*modeles.values(), *fictifs, sans_cartes, non_jouable]
 
 
-def test_modules_equipables_exclut_les_modules_non_jouables():
-    """Decision utilisateur : seul le Lanceur de missiles est jouable pendant la refonte."""
-    assert [spec.id for spec in modules_equipables(charger_modules())] == ["MOD_2"]
+def test_modules_equipables_seul_le_lanceur_est_jouable_pendant_la_refonte():
+    assert [module.id for module in modules_equipables(charger_modules_new().values())] == ["MOD_2"]
 
 
-def test_modules_equipables_exclut_le_module_principal_et_les_modules_sans_cartes():
-    """4 des 10 modules (Canon lourd/Controle/Atelier/Radar) ont une liste de cartes vide (pas
-    encore concues) : exclus aussi, en plus du module principal, pour ne jamais etre tires dans
-    un deck (specs.md 5)."""
-    specs = _specs_tous_jouables()
+def test_modules_equipables_exclut_le_principal_les_non_jouables_et_les_modules_sans_cartes():
+    equipables = modules_equipables(_modules_fictifs())
 
-    equipables = modules_equipables(specs)
-
-    assert all(spec.id != ID_MODULE_PRINCIPAL for spec in equipables)
-    assert all(spec.cartes for spec in equipables)
-    assert len(equipables) == len([s for s in specs if s.id != ID_MODULE_PRINCIPAL and s.cartes])
+    assert [module.id for module in equipables] == ["MOD_2", "MOD_TEST_0", "MOD_TEST_1", "MOD_TEST_2", "MOD_TEST_3"]
 
 
 def test_tirer_candidats_module_renvoie_3_modules_differents():
-    specs = _specs_tous_jouables()
-    pool = modules_equipables(specs)
-    aleatoire = random.Random(1)
+    pool = modules_equipables(_modules_fictifs())
 
-    candidats = tirer_candidats_module(pool, aleatoire)
+    candidats = tirer_candidats_module(pool, random.Random(1))
 
     assert len(candidats) == 3
-    assert len(set(candidat.id for candidat in candidats)) == 3
+    assert len({candidat.id for candidat in candidats}) == 3
     assert all(candidat in pool for candidat in candidats)
 
 
 def test_tirer_candidats_module_est_deterministe_pour_une_meme_graine():
-    specs = charger_modules()
-    pool = modules_equipables(specs)
+    pool = modules_equipables(_modules_fictifs())
 
-    candidats_1 = tirer_candidats_module(pool, random.Random(7))
-    candidats_2 = tirer_candidats_module(pool, random.Random(7))
-
-    assert [c.id for c in candidats_1] == [c.id for c in candidats_2]
+    assert [c.id for c in tirer_candidats_module(pool, random.Random(7))] == [
+        c.id for c in tirer_candidats_module(pool, random.Random(7))
+    ]
 
 
 def test_tirer_candidats_module_moins_de_candidats_si_la_pool_est_petite():
-    candidats = tirer_candidats_module(modules_equipables(charger_modules()), random.Random(1))
+    candidats = tirer_candidats_module(modules_equipables(charger_modules_new().values()), random.Random(1))
 
     assert [candidat.id for candidat in candidats] == ["MOD_2"]
 
 
 def test_tirer_candidats_module_respecte_la_quantite_demandee():
-    specs = _specs_tous_jouables()
-    pool = modules_equipables(specs)
-    aleatoire = random.Random(2)
-
-    candidats = tirer_candidats_module(pool, aleatoire, quantite=2)
+    candidats = tirer_candidats_module(modules_equipables(_modules_fictifs()), random.Random(2), quantite=2)
 
     assert len(candidats) == 2
 
@@ -124,16 +110,16 @@ def test_tirer_rarete_recompense_respecte_les_bornes():
     assert tirer_rarete_recompense(_AleatoireFixe(0.999)) == RareteCarte.COMMUNE
 
 
-CARTE_COMMUNE = Carte(id="TEST_C", nom="C", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMI_UNIQUE, cout=1, valeur=1, rarete=RareteCarte.COMMUNE)
-CARTE_RARE = Carte(id="TEST_R", nom="R", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMI_UNIQUE, cout=1, valeur=1, rarete=RareteCarte.RARE)
-CARTE_BASE = Carte(id="TEST_B", nom="B", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMI_UNIQUE, cout=1, valeur=1, rarete=RareteCarte.BASE)
+_MODELES = charger_cartes_new()
+CARTE_COMMUNE = dataclasses.replace(_MODELES["CRT_8"], id="TEST_C")
+CARTE_RARE = dataclasses.replace(_MODELES["CRT_15"], id="TEST_R")
+CARTE_BASE = dataclasses.replace(_MODELES["CRT_7"], id="TEST_B")
+CARTE_NON_JOUABLE = dataclasses.replace(_MODELES["CRT_8"], id="TEST_NJ", jouable=False)
 
 
 def test_tirer_carte_recompense_retombe_sur_le_palier_inferieur_si_vide():
     """Pool sans Legendaire : un tirage Legendaire doit retomber sur Rare (palier suivant)."""
-    pool = [CARTE_COMMUNE, CARTE_RARE]
-
-    resultat = tirer_carte_recompense(pool, _AleatoireFixe(0.0))  # vise Legendaire
+    resultat = tirer_carte_recompense([CARTE_COMMUNE, CARTE_RARE], _AleatoireFixe(0.0))  # vise Legendaire
 
     assert resultat is CARTE_RARE
 
@@ -142,77 +128,60 @@ def test_tirer_carte_recompense_renvoie_none_si_pool_vide():
     assert tirer_carte_recompense([], random.Random(1)) is None
 
 
-def test_pool_module_exclut_les_cartes_base():
-    cartes = {"CRT_B": CARTE_BASE, "CRT_C": CARTE_COMMUNE}
-    spec = next(s for s in charger_modules() if s.id != ID_MODULE_PRINCIPAL)
-    spec_test = dataclasses.replace(spec, cartes=("CRT_B", "CRT_C"))
-
-    pool = pool_module(spec_test, cartes)
-
-    assert pool == [CARTE_COMMUNE]
+def _lanceur_avec_cartes(*ids: str):
+    return dataclasses.replace(charger_modules_new()["MOD_2"], cartes=ids)
 
 
-def test_pool_toutes_cartes_exclut_les_cartes_base():
-    cartes = {"CRT_B": CARTE_BASE, "CRT_C": CARTE_COMMUNE, "CRT_R": CARTE_RARE}
+def test_pool_module_exclut_les_cartes_base_et_non_jouables():
+    cartes = {"B": CARTE_BASE, "C": CARTE_COMMUNE, "NJ": CARTE_NON_JOUABLE}
 
-    pool = pool_toutes_cartes(cartes)
-
-    assert set(pool) == {CARTE_COMMUNE, CARTE_RARE}
+    assert pool_module(_lanceur_avec_cartes("B", "C", "NJ"), cartes) == [CARTE_COMMUNE]
 
 
-def test_tirer_candidats_recompense_un_par_module_chacun_pioche_dans_son_propre_pool():
-    """Le module principal pioche desormais dans son propre pool (pool_module), comme chaque
-    module equipe - jamais dans le pool entier du jeu (bug corrige, cf. CLAUDE.md)."""
-    specs_modules = _specs_tous_jouables()
-    cartes = charger_cartes()
-    _vaisseau, specs_utilisees = creer_vaisseau(specs_modules, random.Random(5))
+def test_pool_toutes_cartes_exclut_les_cartes_base_et_non_jouables():
+    cartes = {"B": CARTE_BASE, "C": CARTE_COMMUNE, "R": CARTE_RARE, "NJ": CARTE_NON_JOUABLE}
 
-    candidats = tirer_candidats_recompense(specs_utilisees, cartes, random.Random(5))
-
-    assert len(candidats) == len(specs_utilisees) == 5
-    assert candidats[0][0].id == ID_MODULE_PRINCIPAL
-    for spec, carte in candidats:
-        assert carte is not None
-        assert carte.rarete != RareteCarte.BASE
-        assert carte in pool_module(spec, cartes)
+    assert pool_toutes_cartes(cartes) == [CARTE_COMMUNE, CARTE_RARE]
 
 
-def test_tirer_candidats_recompense_module_principal_ne_pioche_jamais_une_carte_d_un_autre_module():
-    """Regression : le module principal piochait auparavant dans pool_toutes_cartes (toutes les
-    cartes du jeu), pouvant proposer une carte d'un autre module - corrige pour piocher
-    uniquement dans son propre pool_module, meme si celui-ci est plus restreint."""
-    specs_modules = charger_modules()
-    cartes = charger_cartes()
-    spec_principal = next(spec for spec in specs_modules if spec.id == ID_MODULE_PRINCIPAL)
-    pool_principal = pool_module(spec_principal, cartes)
+def _exemplaires_principal_et_lanceur():
+    modeles = charger_modules_new()
+    return [modeles["MOD_1"].nouvel_exemplaire("M1", "base"), modeles["MOD_2"].nouvel_exemplaire("M2", "avant_gauche")]
+
+
+def test_tirer_candidats_recompense_un_par_module_rattache_a_son_exemplaire():
+    cartes = charger_cartes_new()
+    modules = _exemplaires_principal_et_lanceur()
 
     for graine in range(20):
-        _, carte = tirer_candidats_recompense([spec_principal], cartes, random.Random(graine))[0]
-        assert carte is None or carte in pool_principal
+        candidats = tirer_candidats_recompense(modules, cartes, random.Random(graine))
+
+        assert [module for module, _carte in candidats] == modules
+        for module, carte in candidats:
+            assert carte.rarete != RareteCarte.BASE
+            # Chaque module pioche dans son propre pool, jamais dans celui d'un autre module
+            assert carte.id in module.cartes
+            assert carte.exemplaire_module == module.exemplaire
+            # Un nouvel exemplaire, pas le modele partage
+            assert carte is not cartes[carte.id]
 
 
 # --- Choix de carte du module fraichement equipe (specs.md 2.3, point 6) ---
 
 
 def test_tirer_candidats_carte_module_renvoie_3_cartes_distinctes_du_pool_module():
-    specs_modules = charger_modules()
-    cartes = charger_cartes()
-    spec = next(s for s in modules_equipables(specs_modules) if len(pool_module(s, cartes)) >= 3)
+    cartes = charger_cartes_new()
+    lanceur = charger_modules_new()["MOD_2"]
 
-    candidats = tirer_candidats_carte_module(spec, cartes, random.Random(1))
+    candidats = tirer_candidats_carte_module(lanceur, cartes, random.Random(1))
 
     assert len(candidats) == 3
-    assert len(set(carte.nom for carte in candidats)) == 3
-    for carte in candidats:
-        assert carte in pool_module(spec, cartes)
+    assert len({carte.id for carte in candidats}) == 3
+    assert all(carte in pool_module(lanceur, cartes) for carte in candidats)
 
 
 def test_tirer_candidats_carte_module_respecte_la_quantite_demandee():
-    specs_modules = charger_modules()
-    cartes = charger_cartes()
-    spec = next(s for s in modules_equipables(specs_modules) if len(pool_module(s, cartes)) >= 2)
-
-    candidats = tirer_candidats_carte_module(spec, cartes, random.Random(1), quantite=2)
+    candidats = tirer_candidats_carte_module(charger_modules_new()["MOD_2"], charger_cartes_new(), random.Random(1), quantite=2)
 
     assert len(candidats) == 2
 
@@ -220,22 +189,15 @@ def test_tirer_candidats_carte_module_respecte_la_quantite_demandee():
 def test_tirer_candidats_carte_module_moins_de_candidats_si_pool_plus_petit():
     """Un module au pool plus restreint que `quantite` ne renvoie que ce qu'il a (jamais de
     doublon pour completer)."""
-    cartes = {"CRT_C": CARTE_COMMUNE, "CRT_R": CARTE_RARE}
-    spec = next(s for s in charger_modules() if s.id != ID_MODULE_PRINCIPAL)
-    spec_test = dataclasses.replace(spec, cartes=("CRT_C", "CRT_R"))
+    cartes = {"C": CARTE_COMMUNE, "R": CARTE_RARE}
 
-    candidats = tirer_candidats_carte_module(spec_test, cartes, random.Random(1), quantite=5)
+    candidats = tirer_candidats_carte_module(_lanceur_avec_cartes("C", "R"), cartes, random.Random(1), quantite=5)
 
-    assert len(candidats) == 2
-    assert set(candidats) == {CARTE_COMMUNE, CARTE_RARE}
+    assert sorted(carte.id for carte in candidats) == ["TEST_C", "TEST_R"]
 
 
 def test_tirer_candidats_carte_module_pool_vide_renvoie_liste_vide():
-    cartes = {"CRT_C": CARTE_COMMUNE}
-    spec = next(s for s in charger_modules() if s.id != ID_MODULE_PRINCIPAL)
-    spec_test = dataclasses.replace(spec, cartes=())
-
-    assert tirer_candidats_carte_module(spec_test, cartes, random.Random(1)) == []
+    assert tirer_candidats_carte_module(_lanceur_avec_cartes(), {"C": CARTE_COMMUNE}, random.Random(1)) == []
 
 
 # --- Choix du prochain niveau (specs.md 2.3/2.4) ---

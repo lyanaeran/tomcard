@@ -5,9 +5,11 @@ et le **parcours** (boucle de run) s'enchaîne écran par écran jusqu'au Boss d
 (specs.md §2.4), sur les deux versions : `main.py` côté PC, `web/app.js` côté web.
 
 **Une refonte est en cours** (cartes, modules, ennemis, statuts, combat) : un **nouveau moteur**
-(fichiers `*_new.py`, `config/*_new.json`) est codé et testé **à côté de l'ancien**, mais pas
-encore branché au jeu, qui utilise toujours l'ancien. **Lire `specs/refonte.md` en premier** : état
-des lieux, où est quoi, ce qui reste à faire.
+(fichiers `*_new.py`, `config/*_new.json`) est codé et testé **à côté de l'ancien**. Son
+**branchement** se fait en 4 PR (`specs/refonte-branchement.md`) : le gameplay du parcours
+(partie, sauvegarde, déroulement, simulateur) l'utilise depuis la PR 1, mais l'affichage PC et web
+lit encore l'ancien combat, **le jeu ne fonctionne donc plus** jusqu'aux PR 2 (web) et 3 (PC).
+**Lire `specs/refonte.md` en premier** : état des lieux, où est quoi, ce qui reste à faire.
 
 ## Langue
 
@@ -54,10 +56,9 @@ L'utilisateur conçoit le jeu ; l'agent propose, documente et code. Préférence
     C'est là qu'on modifie une carte, puis on régénère `config/carte_new.md` (tableau lisible,
     **toujours généré**, jamais modifié à la main) avec `python -m outils.tableau_cartes` ;
     `tests/test_tableau_cartes.py` échoue tant que le tableau n'est pas à jour.
-  - `config/cartes.json` est l'ancien format, **encore lu par le moteur actuel** jusqu'au
-    branchement de `CarteNew`, puis supprimé. D'ici là, une valeur changée dans `carte_new.json`
-    pour une carte jouable doit être reportée à la main dans `cartes.json`, sinon le jeu ne la
-    voit pas.
+  - `config/cartes.json` est l'ancien format, lu seulement par l'ancien affichage jusqu'à la PR 4
+    du branchement, puis supprimé. Le parcours ne le lit plus : une
+    valeur de carte se change dans `carte_new.json` seulement.
   - **Modules, même principe** : `config/module_new.json` (`src/gameplay/module_new.py:ModuleNew`)
     est la source de vérité des modules de la refonte (pour l'instant les deux modules jouables),
     avec son tableau **généré** `config/module_new.md` (`python -m outils.tableau_modules`,

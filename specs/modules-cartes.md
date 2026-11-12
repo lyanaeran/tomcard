@@ -21,8 +21,8 @@ principal et du Lanceur de missiles ont été revues (19 cartes, `config/carte_n
 source de vérité des cartes ; valeurs reportées dans `config/cartes.json`, encore lu par le moteur
 actuel ; l'ancien registre `specs/cartes.xlsx` est archivé en `specs/cartes_legacy.xlsx`). Pendant la refonte, **seuls ces deux modules sont jouables** :
 champ `jouable` de `config/modules.json` (`SpecModule.jouable`), les autres ne sont jamais
-proposés ni équipés (`modules_equipables`, et le mode démonstration `config_poc.creer_vaisseau`
-laisse vides les emplacements qu'il ne peut pas pourvoir). Le choix de module du Niveau 1 ne
+proposés ni équipés (`parcours.modules_equipables` ; depuis la PR 1 du branchement, le champ lu
+est celui de `config/module_new.json`). Le choix de module du Niveau 1 ne
 propose donc que le Lanceur de missiles. Changements principaux :
 - **Deck de départ** (10 cartes) : Laser x4, Bouclier x4, Protéger le vaisseau x1, Réparation x1.
   *Réparation* revient dans le pool du module principal ; *Laser perçant* devient Commune (plus dans
@@ -142,7 +142,7 @@ restent le plan cible pour les 4 nouveaux modules, à concevoir dans une passe d
   tirage lors d'un prochain choix de module — détail en §2.3
 - Un module dont le deck de cartes n'est pas encore conçu (`cartes` vide dans `config/modules.json`,
   §4) ou marqué `"jouable": false` (refonte des cartes en cours, §4) n'est **jamais proposé** au
-  tirage (`modules_equipables`/`config_poc.creer_vaisseau` l'excluent) : le proposer planterait le
+  tirage (`parcours.modules_equipables` l'exclut) : le proposer planterait le
   tirage du deck (`Deck`/`tirer_cartes` sur une pool vide)
 
 ---

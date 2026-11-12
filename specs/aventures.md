@@ -58,8 +58,18 @@ usage propre (Station service, Choix du prochain niveau).
 
 **Astéroïdes** — **implémentée** (fond `assets/aventure/champ_asteroides.png`) — "Poursuivi par des
 pirates de l'espace, vous n'avez plus le choix : vaincre ou périr ! À moins que..."
-- Choix 1, *Traverser le champ d'astéroïdes* : séquence en 3 temps sur le même écran, chaque étape
-  validée par un bouton "Continuer" :
+
+> **Refonte branchée côté gameplay (PR 1, 2026-11-12, décision utilisateur du 2026-11-11 n° 3)** :
+> les deux chocs de « Traverser » touchent **toujours le principal** (`subir_degats_principal`,
+> `second_choc_asteroides(partie, cartes, aleatoire)`), le choix du module disparaît, et ils lui
+> **laissent toujours au moins 1 PV** (`PV_MIN_APRES_ASTEROIDES`, décision utilisateur du
+> 2026-11-12 : un combat ne commence jamais avec un principal détruit) ; la carte
+> offerte est rattachée au principal. « Affronter les pirates » : 3 ennemis de la refonte placés
+> selon leur préférence (`flotte_new.flotte_asteroides`). Écrans PC et web à adapter (PR 2 et 3).
+- Choix 1, *Traverser le champ d'astéroïdes* (**ancienne règle, remplacée par la note ci-dessus**
+  pour le module touché, la fonction et le plancher de PV ; la séquence d'écrans reste à adapter
+  aux PR 2 et 3) : séquence en 3 temps sur le même écran, chaque étape validée par un bouton
+  "Continuer" :
   1. Le joueur clique un module (`_dessiner_choix_module`/`choix_module`) : -`DEGATS_ASTEROIDES` (5)
      PV appliqués immédiatement (`subir_degats_module`, dégâts hors combat, plafonnés à 0,
      opération inverse de `reparer_module`/`reparer_vaisseau`), puis affichage d'un message de
@@ -75,7 +85,7 @@ pirates de l'espace, vous n'avez plus le choix : vaincre ou périr ! À moins qu
      était vide (`second_choc_asteroides` renvoie `None`), l'étape `sequence_3` est sautée
      directement vers `resolu`
 - Choix 2, *Affronter les pirates* : lance un combat scripté contre `NOMBRE_ENNEMIS_ASTEROIDES` (3)
-  ennemis (`combat_aventure_asteroides`/`creer_flotte_asteroides`) — approximation décidée en
+  ennemis (`combat_aventure_asteroides`/`flotte_new.flotte_asteroides`) — approximation décidée en
   attendant la taille S/M/L par ennemi (absente de `config/ennemis.json`, cf. §3.2/§9.1/§10.3) :
   ennemis tirés du pool existant sur les 3 premières cases de la grille (colonne Avant), plutôt que
   le tirage standard d'un combat Prime (grille complète, `combat_depuis_partie`). Délègue
@@ -86,7 +96,7 @@ pirates de l'espace, vous n'avez plus le choix : vaincre ou périr ! À moins qu
   inchangé)
 - Pas de 3ᵉ choix (binaire assumé)
 
-`src/gameplay/config_poc.py` (`NOMBRE_ENNEMIS_ASTEROIDES`, `creer_flotte_asteroides`) ;
+`src/gameplay/flotte_new.py` (`NOMBRE_ENNEMIS_ASTEROIDES`, `flotte_asteroides`) ;
 `src/gameplay/partie.py` (`DEGATS_ASTEROIDES`, `subir_degats_module`, **`second_choc_asteroides`**
 — 2e choc + tirage de la carte offerte en un seul appel, `cartes` reçu en paramètre plutôt que
 rechargé en interne ; l'id de la carte offerte est lu directement sur `Carte.id` (§6) —,
@@ -105,7 +115,9 @@ associées)
 **Trois lunes** — **implémentée** (fond `assets/aventure/trois_lunes.png`) — "Un havre de paix au
 milieu de la galaxie [...]. Il est temps de faire une pause." Trois choix, chacun résolu
 immédiatement (pas de séquence), retour direct au Choix du prochain niveau (bouton "Continuer") :
-- *Réparer le vaisseau* : +`PV_REPARATION_VAISSEAU` (5) PV à **chaque** module équipé, plafonné à
+- *Réparer le vaisseau* (**refonte branchée, PR 1** : soigne **le principal seul**, seul module dont
+  les PV persistent, décision n° 3 du 2026-11-11 ; ancienne règle ci-après) :
+  +`PV_REPARATION_VAISSEAU` (5) PV à **chaque** module équipé, plafonné à
   son pv_max chacun (`reparer_vaisseau`, nouveau côté moteur : soin groupé, distinct de
   `reparer_module`, §2.2, qui ne cible qu'un seul module choisi)
 - *Améliorer* : même effet que `ameliorer_module` (+`PV_AMELIORATION`, §2.2) mais **gratuit**

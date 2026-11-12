@@ -30,8 +30,8 @@ sections : [specs.md](specs.md).*
   pirates a été donné comme taille M avec 2 emplacements, ce qui contredisait la règle précédente
   M=1/L=2 — plutôt que de le reclasser en L, la règle a été assouplie).
 - Un ennemi à plusieurs emplacements est le même objet `Ennemi` rangé à plusieurs `Position` dans
-  `Flotte` (§13.4) : réservé aux flottes scriptées (`creer_flotte_boss`), jamais tiré au hasard dans
-  un combat Prime/démonstration/Astéroïdes (`config_poc._pool_ennemis_standard` l'exclut du pool)
+  `Flotte` (§13.4) : réservé aux flottes scriptées (`flotte_new.flotte_boss`), jamais tiré au hasard
+  dans un combat Prime/Astéroïdes (`flotte_new.ennemis_standard` l'exclut du pool)
 
 ### 3.3 Ressource et main de cartes
 - **Électricité** = ressource commune à tout le vaisseau (pas un pool par module)
@@ -200,7 +200,7 @@ composition, pas un attribut de l'`Ennemi` en combat) :
 - Les 3 autres (Pat le Pirate, Le puzzle, Miroir) : aucune préférence — placés dans les emplacements
   restants, colonne avant en priorité puis arrière (choix par défaut, pas de spec précise)
 - Le Boss des pirates n'a pas de préférence de placement au sens de `SpecEnnemi.placement` : sa
-  position (Avant + Arrière de la rangée du milieu) est câblée en dur dans `creer_flotte_boss`
+  position (Avant + Arrière de la rangée du milieu) est câblée en dur dans `flotte_new.flotte_boss`
   (§13.4), puisqu'il n'est jamais mélangé avec d'autres ennemis dans une même flotte
 
 **Intention affichée au survol/tap** (décision utilisateur, suite au Boss des pirates qui a révélé
@@ -228,18 +228,31 @@ deux lacunes) — une ligne par Action active au prochain tour, pas seulement la
 
 ### 13.4 Composition des flottes de combat
 
+> **Refonte branchée côté gameplay (PR 1, 2026-11-12, décision utilisateur du 2026-11-11 n° 4)** :
+> mêmes règles, avec les ennemis de la refonte (`config/ennemi_new.json`), coefficient de
+> difficulté 1, dans `src/gameplay/flotte_new.py` (`flotte_prime`, `flotte_boss`,
+> `flotte_asteroides`, `placer_ennemis`) ; le placement préféré (protecteur à l'avant, protégé à
+> l'arrière) vaut aussi pour les Astéroïdes. Le simulateur du combat de la refonte utilise le même
+> placement. La difficulté par niveau sera réglée après le branchement, par simulation.
+
 - **Combat Intermédiaire** (Prime) : 1 ennemi tiré au sort (parmi les ennemis à 1 emplacement)
   jusqu'au niveau 5 inclus, puis 2 ennemis tirés au sort à partir du niveau 6
-  (`config_poc.creer_flotte_prime`) — le Boss des pirates (2 emplacements) est exclu de ce tirage
-  (`_pool_ennemis_standard`, §3.2)
+  (`flotte_new.flotte_prime`) — le Boss des pirates (2 emplacements) est exclu de ce tirage
+  (`flotte_new.ennemis_standard`, §3.2)
 - **Combat de Boss** : composition fixe (pas de tirage) — le Boss des pirates seul, occupant à la
-  fois la case Avant et la case Arrière de la rangée du milieu (`config_poc.creer_flotte_boss`).
+  fois la case Avant et la case Arrière de la rangée du milieu (`flotte_new.flotte_boss`).
   Remplace l'ancienne composition (2x Petit Jean en colonne avant, Le nettoyeur et Le puzzle en
   colonne arrière) — un seul boss pour l'instant, utilisé à tous les niveaux Boss (multiples de 10) ;
   l'utilisateur prévoit plusieurs boss avec un tirage au sort entre eux à terme, pas encore implémenté
 
 ### 13.5 Points de vie des modules (fin du mode test)
 
+> **Refonte branchée (PR 1, 2026-11-12)** : le parcours lit les PV dans `config/module_new.json` :
+> **60 PV** pour le principal, **20 PV** pour le Lanceur de missiles (valeurs provisoires de la
+> refonte, à régler par simulation). Un secondaire repart à ses PV max à chaque combat. Le
+> paragraphe suivant décrit l'ancien moteur.
+
 Le combat ne tourne plus en "mode test" (PV artificiellement gonflés) : les PV définis dans
-`config/modules.json` s'appliquent réellement. Valeurs actuelles (inventées faute de spec précise,
+`config/modules.json` s'appliquent réellement. Le mode test (ancien `MODE_TEST`) a été
+**supprimé** le 2026-11-12 (décision utilisateur), avec le combat de démonstration. Valeurs actuelles (inventées faute de spec précise,
 à ajuster) : **50 PV** pour le module principal, **30 PV** pour chaque module secondaire.

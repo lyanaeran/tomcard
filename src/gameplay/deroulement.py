@@ -12,9 +12,9 @@ Tout tirage passe par un random.Random injecte (CLAUDE.md).
 import random
 from enum import Enum, auto
 
-from src.gameplay.carte import Carte
-from src.gameplay.combat import Combat, EtatCombat
-from src.gameplay.donnees import SpecModule, charger_cartes, charger_modules
+from src.gameplay.carte_new import CarteNew, charger_cartes_new
+from src.gameplay.combat_new import CombatNew, EtatCombatNew
+from src.gameplay.module_new import ModuleNew, charger_modules_new
 from src.gameplay.parcours import (
     TypeAventure,
     TypeEtape,
@@ -34,8 +34,8 @@ from src.gameplay.partie import (
     equiper_module,
     gagner_argent_combat,
     marquer_terminee,
-    specs_utilisees_partie,
-    synchroniser_vaisseau_depuis_combat,
+    modules_de_la_partie,
+    reporter_combat,
 )
 
 
@@ -70,24 +70,32 @@ def ecran_de_reprise(partie: Partie) -> Ecran:
     return Ecran.CHOIX_NIVEAU
 
 
-def candidats_choix_module(partie: Partie) -> list[SpecModule]:
-    """Modules proposes au Niveau 1 (specs.md 2.3), tires a partir de la graine de la partie."""
-    return tirer_candidats_module(modules_equipables(charger_modules()), random.Random(partie.graine))
+def candidats_choix_module(partie: Partie) -> list[ModuleNew]:
+    """Modeles de modules proposes au Niveau 1 (specs.md 2.3), tires a partir de la graine de la
+    partie."""
+    return tirer_candidats_module(modules_equipables(charger_modules_new().values()), random.Random(partie.graine))
 
 
-def choisir_module(partie: Partie, spec: SpecModule, aleatoire: random.Random) -> list[Carte]:
-    """Equipe le module choisi et renvoie les cartes proposees pour lui (ecran de choix de carte,
-    enchaine directement apres le choix du module).
-    Liste vide si son pool n'a rien a proposer : appeler alors directement resoudre_carte_module
-    avec None, sans afficher l'ecran."""
-    equiper_module(partie, spec)
-    return tirer_candidats_carte_module(spec, charger_cartes(), aleatoire)
+def choisir_module(partie: Partie, modele: ModuleNew, aleatoire: random.Random) -> list[CarteNew]:
+    """Equipe un exemplaire du module choisi et renvoie les cartes proposees pour lui (ecran de
+    choix de carte, enchaine directement apres le choix du module), deja rattachees au nouvel
+    exemplaire. Liste vide si son pool n'a rien a proposer : appeler alors directement
+    resoudre_carte_module avec None, sans afficher l'ecran."""
+    module = equiper_module(partie, modele)
+    candidats = tirer_candidats_carte_module(module, charger_cartes_new(), aleatoire)
+    return [carte.copie(exemplaire_module=module.exemplaire) for carte in candidats]
 
 
-def resoudre_carte_module(partie: Partie, id_carte: str | None) -> Ecran:
-    """Ajoute la carte choisie (None = Passer) et passe au niveau suivant."""
-    if id_carte is not None:
-        ajouter_carte(partie, id_carte)
+def _ajouter(partie: Partie, carte: CarteNew | None) -> None:
+    """Ajoute au deck une carte proposee (deja rattachee a son module), rien pour None."""
+    if carte is not None:
+        ajouter_carte(partie, carte.id, carte.exemplaire_module)
+
+
+def resoudre_carte_module(partie: Partie, carte: CarteNew | None) -> Ecran:
+    """Ajoute la carte choisie parmi celles de choisir_module (None = Passer) et passe au niveau
+    suivant."""
+    _ajouter(partie, carte)
     avancer_niveau(partie)
     return Ecran.CHOIX_NIVEAU
 
@@ -116,28 +124,28 @@ def terminer_etape(partie: Partie) -> Ecran:
 
 
 def conclure_combat(
-    partie: Partie, combat: Combat, aleatoire: random.Random
-) -> list[tuple[SpecModule, Carte | None]]:
-    """A appeler une seule fois, des que le combat se termine : reporte les PV du combat sur la
-    partie (specs.md 2.2/3.4), et en cas de victoire ajoute l'Argent gagne (specs.md 2.1) et
-    renvoie les candidats de recompense (specs.md 6, vide en cas de defaite)."""
-    synchroniser_vaisseau_depuis_combat(partie, combat.joueur.vaisseau)
-    if combat.etat != EtatCombat.VICTOIRE:
+    partie: Partie, combat: CombatNew, aleatoire: random.Random
+) -> list[tuple[ModuleNew, CarteNew | None]]:
+    """A appeler une seule fois, des que le combat se termine : reporte les PV du principal sur la
+    partie (reporter_combat), et en cas de victoire ajoute l'Argent gagne (specs.md 2.1) et
+    renvoie les candidats de recompense (specs.md 6, vide en cas de defaite) : un par module
+    equipe, la carte deja rattachee a ce module."""
+    reporter_combat(partie, combat)
+    if combat.etat != EtatCombatNew.VICTOIRE:
         return []
     gagner_argent_combat(partie, combat)
-    specs_par_id = {spec.id: spec for spec in charger_modules()}
-    return tirer_candidats_recompense(specs_utilisees_partie(partie, specs_par_id), charger_cartes(), aleatoire)
+    return tirer_candidats_recompense(modules_de_la_partie(partie), charger_cartes_new(), aleatoire)
 
 
-def resoudre_fin_combat(partie: Partie, victoire: bool, id_carte: str | None) -> Ecran:
+def resoudre_fin_combat(partie: Partie, victoire: bool, carte: CarteNew | None) -> Ecran:
     """Ecran de fin de combat ferme : une defaite termine la partie ; une victoire ajoute la carte
-    choisie (None = aucune ou Passer), puis mene a la victoire finale apres le Boss (le run
-    s'arrete au Niveau 10, specs.md 2) ou au niveau suivant."""
+    choisie parmi les candidats de conclure_combat (None = aucune ou Passer), puis mene a la
+    victoire finale apres le Boss (le run s'arrete au Niveau 10, specs.md 2) ou au niveau
+    suivant."""
     if not victoire:
         marquer_terminee(partie)
         return Ecran.ACCUEIL
-    if id_carte is not None:
-        ajouter_carte(partie, id_carte)
+    _ajouter(partie, carte)
     if est_niveau_boss(partie.niveau):
         return Ecran.VICTOIRE_FINALE
     avancer_niveau(partie)

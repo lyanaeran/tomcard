@@ -43,7 +43,6 @@ const FICHIERS_A_MONTER = [
     "src/gameplay/ciblage.py",
     "src/gameplay/combat.py",
     "src/gameplay/combat_new.py",
-    "src/gameplay/config_poc.py",
     "src/gameplay/deck.py",
     "src/gameplay/deck_new.py",
     "src/gameplay/deroulement.py",

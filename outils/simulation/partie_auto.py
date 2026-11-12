@@ -1,7 +1,7 @@
 """
 Partie complete jouee automatiquement (specs/simulation.md 5) : suit l'enchainement decide par
-src/gameplay/deroulement.py, le bot de recherche pour les combats, et une politique par defaut
-simple pour les decisions hors combat (5.1).
+src/gameplay/deroulement.py, le bot de recherche du combat de la refonte (bot_new.py) pour les
+combats, et une politique par defaut simple pour les decisions hors combat (5.1).
 
 Tout le hasard derive de la graine de la partie, du niveau et de l'usage (_aleatoire) : rejouer
 une graine avec les memes choix imposes redonne exactement la meme partie. C'est ce qui permet de
@@ -12,31 +12,30 @@ import random
 from dataclasses import dataclass, field
 
 from src.gameplay import deroulement
-from src.gameplay.combat import EtatCombat
+from src.gameplay.carte_new import charger_cartes_new
+from src.gameplay.combat_new import EtatCombatNew
 from src.gameplay.deroulement import Ecran
-from src.gameplay.donnees import charger_cartes, charger_modules
+from src.gameplay.module_new import charger_modules_new
 from src.gameplay.parcours import TypeEtape
 from src.gameplay.partie import (
     COUT_ACTION_STATION_SERVICE,
     COUT_METTRE_AUX_NORMES,
     DEGATS_ASTEROIDES,
-    POSITIONS_EQUIPABLES,
     Partie,
     ajouter_carte,
     ameliorer_module,
     ameliorer_module_aventure,
-    combat_aventure_asteroides,
     combat_depuis_partie,
     demarrer_aventure_police,
     nouvelle_partie,
     payer_mise_aux_normes,
-    reparer_module,
+    reparer_principal,
     retirer_carte,
     second_choc_asteroides,
-    subir_degats_module,
+    subir_degats_principal,
 )
 
-from outils.simulation.bot import BotRecherche, jouer_combat
+from outils.simulation.bot_new import BotRecherche, jouer_combat
 
 # Garde-fou : etapes au-dela desquelles une partie est arretee
 ETAPES_MAX = 40
@@ -92,19 +91,17 @@ def _station_service(partie: Partie) -> None:
     while partie.argent >= COUT_ACTION_STATION_SERVICE:
         base = partie.vaisseau["base"]
         if base.pv_max - base.pv >= MANQUE_PV_REPARATION:
-            reparer_module(partie, "base")
+            reparer_principal(partie)
         else:
             ameliorer_module(partie, "base")
 
 
 def _aventure_asteroides(partie: Partie) -> Ecran:
-    """Traverse le champ d'asteroides avec le secondaire le plus solide (le principal sinon)."""
-    equipes = [position for position in POSITIONS_EQUIPABLES if partie.vaisseau[position] is not None]
-    position = max(equipes, key=lambda p: partie.vaisseau[p].pv) if equipes else "base"
-    subir_degats_module(partie, position, DEGATS_ASTEROIDES)
-    carte = second_choc_asteroides(partie, position, charger_cartes(), _aleatoire(partie, "asteroides"))
+    """Traverse le champ d'asteroides (les chocs touchent le principal) et prend la carte offerte."""
+    subir_degats_principal(partie, DEGATS_ASTEROIDES)
+    carte = second_choc_asteroides(partie, charger_cartes_new(), _aleatoire(partie, "asteroides"))
     if carte is not None:
-        ajouter_carte(partie, carte.id)
+        ajouter_carte(partie, carte.id, carte.exemplaire_module)
     return deroulement.terminer_etape(partie)
 
 
@@ -112,18 +109,19 @@ def _aventure_police(partie: Partie) -> Ecran:
     """Paie la mise aux normes si possible, sinon laisse confisquer la carte tiree."""
     etat = demarrer_aventure_police(partie, _aleatoire(partie, "police"))
     if partie.argent < COUT_METTRE_AUX_NORMES or not payer_mise_aux_normes(partie):
-        retirer_carte(partie, etat.id_carte_actuelle)
+        retirer_carte(partie, etat.carte_actuelle)
     return deroulement.terminer_etape(partie)
 
 
 def _combat(partie: Partie, resultat: ResultatPartie, combat, type_combat: str) -> Ecran:
+    ennemis = [ennemi.nom for ennemi in combat.flotte.ennemis]
     stats = jouer_combat(combat, BotRecherche(_aleatoire(partie, "bot")))
-    stats.update({"niveau": partie.niveau, "type": type_combat})
+    stats.update({"niveau": partie.niveau, "type": type_combat, "ennemis": ennemis})
     resultat.combats.append(stats)
     candidats = deroulement.conclure_combat(partie, combat, _aleatoire(partie, "recompense"))
-    carte = _la_plus_rare([carte for _spec, carte in candidats if carte is not None])
-    victoire = combat.etat == EtatCombat.VICTOIRE
-    return deroulement.resoudre_fin_combat(partie, victoire, carte.id if carte else None)
+    carte = _la_plus_rare([carte for _module, carte in candidats if carte is not None])
+    victoire = combat.etat == EtatCombatNew.VICTOIRE
+    return deroulement.resoudre_fin_combat(partie, victoire, carte)
 
 
 def jouer_partie(
@@ -132,16 +130,15 @@ def jouer_partie(
     """Joue une partie complete. `module_force` : id du module du Niveau 1 (5.3) ;
     `choix_imposes` : {index de decision: TypeEtape.name} impose au choix du prochain niveau (5.2)."""
     choix_imposes = choix_imposes or {}
-    specs_par_id = {spec.id: spec for spec in charger_modules()}
+    modeles = charger_modules_new()
     partie = nouvelle_partie(random.Random(graine))
 
     # Niveau 1 : choix du module (force, sinon tire) puis de sa carte
     candidats = deroulement.candidats_choix_module(partie)
-    spec = specs_par_id[module_force] if module_force else _aleatoire(partie, "module").choice(candidats)
-    cartes_module = deroulement.choisir_module(partie, spec, _aleatoire(partie, "carte_module"))
-    carte = _la_plus_rare(cartes_module)
-    ecran = deroulement.resoudre_carte_module(partie, carte.id if carte else None)
-    resultat = ResultatPartie(graine=graine, module_id=spec.id)
+    modele = modeles[module_force] if module_force else _aleatoire(partie, "module").choice(candidats)
+    cartes_module = deroulement.choisir_module(partie, modele, _aleatoire(partie, "carte_module"))
+    ecran = deroulement.resoudre_carte_module(partie, _la_plus_rare(cartes_module))
+    resultat = ResultatPartie(graine=graine, module_id=modele.id)
 
     index_decision = 0
     for _etape in range(ETAPES_MAX):
@@ -183,5 +180,5 @@ def jouer_partie(
     resultat.pv_principal_fin = base.pv
     resultat.pv_principal_max_fin = base.pv_max
     resultat.argent_fin = partie.argent
-    resultat.deck_fin = list(partie.deck)
+    resultat.deck_fin = [carte.id for carte in partie.deck]
     return resultat

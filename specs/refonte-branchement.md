@@ -1,8 +1,8 @@
 # Branchement de la refonte — proposition
 
-*Document de travail, hors numérotation (cf. [specs.md](specs.md)). **Plan validé, rien n'est
-encore codé** (décisions du §2 et ordre des PR du §5 tranchés le 2026-11-11 ; l'affichage du §4
-reste une proposition, à valider sur maquette). Décrit comment faire passer le jeu (parcours, sauvegarde, affichage
+*Document de travail, hors numérotation (cf. [specs.md](specs.md)). **Plan validé** (décisions du
+§2 et ordre des PR du §5 tranchés le 2026-11-11 ; l'affichage du §4 reste une proposition, à
+valider sur maquette). **PR 1 (gameplay) codée le 2026-11-12** (§5.1) ; PR 2 à 4 à faire. Décrit comment faire passer le jeu (parcours, sauvegarde, affichage
 PC et web) sur le moteur de la refonte (`CombatNew` et les fichiers `*_new.py`), puis supprimer
 l'ancien moteur. Contexte : [refonte.md](refonte.md) ; règles du nouveau combat :
 [refonte-combat.md](refonte-combat.md).*
@@ -172,7 +172,55 @@ signale dans sa description ce qui ne fonctionne pas encore.
 Après cette PR, l'affichage web et PC lit encore l'ancien combat : **le jeu est cassé** jusqu'à la
 PR 2 pour le web et la PR 3 pour le PC (accepté). La description de chaque PR le signale.
 
+### 5.1 PR 1 codée (2026-11-12) : ce qui a été fait, choix faits en codant
+
+Fait, testé par `pytest` (aucun affichage) :
+
+- `partie.py` : modules `ModuleNew` (exemplaires `M1`, `M2`…, `EtatModule` supprimé), deck en
+  `CartePossedee(id, module)`, format de sauvegarde 2 (specs.md §10.3), ancienne sauvegarde
+  abandonnée (`lire_partie`, `SauvegardeObsolete`) ; `combat_depuis_partie` et
+  `combat_aventure_asteroides` renvoient un `CombatNew` (refusé si le principal est à 0 PV, garde-fou) ; `reporter_combat` (PV du principal) ;
+  Station (`reparer_principal`) et Aventures adaptées (décisions 2 et 3).
+- `flotte_new.py` : composition des flottes (décision 4) : `flotte_prime`, `flotte_boss`,
+  `flotte_asteroides`, `placer_ennemis` ; le simulateur de combats l'utilise aussi.
+- `parcours.py` et `deroulement.py` : mêmes écrans et transitions, sur `ModuleNew` / `CarteNew` /
+  `CombatNew`. Les cartes proposées (choix du module, récompenses) sont des exemplaires `CarteNew`
+  **déjà rattachés** à l'exemplaire de leur module ; `resoudre_carte_module` et
+  `resoudre_fin_combat` prennent la carte choisie (plus son id).
+- `carte_new.json` : `jouable` à `true` pour les 19 cartes (décision 5), tableau régénéré.
+- Simulateur de parties complètes (`partie_auto.py`, `etudes.py`) sur le nouveau combat et
+  `bot_new.py` ; l'ancien bot `bot.py` est supprimé dès maintenant (il ne pouvait plus jouer un
+  combat du parcours).
+
+Choix faits en codant, **à valider par l'utilisateur** :
+
+- **Carte de récompense rattachée au module qui l'a proposée** (chaque module propose une carte de
+  son pool, §6) ; carte offerte par les Astéroïdes (pool complet, « hors module ») rattachée au
+  principal (refonte-modules.md §3.3).
+- **Argent du Boss : 5 € au lieu de 10 €** : l'Argent se compte par ennemi détruit
+  (`ennemis_detruits()`), le Boss sur deux cases compte pour un (l'ancien moteur comptait ses deux
+  cases). Sans effet en jeu aujourd'hui (la partie s'arrête au Boss).
+- **Combat de démonstration supprimé** (décision utilisateur, 2026-11-12 : « on ne se sert que du
+  parcours ») : `config_poc.py` (combat au hasard sans partie, anciennes flottes, ancien deck de
+  départ) et ses tests sont retirés ; ses flottes sont remplacées par `flotte_new.py`. Les PR 2
+  et 3 retirent le mode démo de l'affichage : `nouveau_combat`, `fin_combat_victoire` et la
+  branche démo d'`etat_deck` dans `web/bridge.py`, les `window.*` de démonstration de
+  `web/app.js`, le `creer_combat_poc()` par défaut de `src/ui/fenetre.py`.
+- **Mode test supprimé** (décision utilisateur, 2026-11-12) : `config_poc.MODE_TEST` (PV gonflés,
+  Laser à 20) n'est pas repris par le parcours branché et a été retiré de l'ancien moteur.
+- **Déplacer le principal** lève une erreur (avant : à la charge de l'écran de ne jamais le
+  demander) ; **ajouter une carte rattachée à un module absent** aussi.
+- **Astéroïdes : le principal garde toujours au moins 1 PV** (décision utilisateur, 2026-11-12).
+  Avant, les chocs pouvaient le mettre à 0 et le combat suivant commençait avec un principal
+  détruit, sans que `CombatNew` déclare la défaite.
+
+Le jeu (PC et web) **ne fonctionne plus** tant que les PR 2 et 3 ne sont pas faites : leurs écrans
+lisent encore l'ancien combat et l'ancien format de partie (accepté, §5).
+
 ### PR 2 — Affichage web / iPhone (`web/bridge.py`, `web/app.js`, `web/style.css`)
+
+- **En premier** : retirer de `web/bridge.py` les imports de l'ancien gameplay supprimé
+  (`config_poc`, `EtatModule`, `reparer_module`…) et le mode démo, pour que le web se recharge.
 
 - **D'abord une maquette** des éléments du §4 (captures d'un combat au format iPhone), validée par
   l'utilisateur (décision 6), puis le reste de l'affichage.
@@ -187,6 +235,10 @@ PR 2 pour le web et la PR 3 pour le PC (accepté). La description de chaque PR l
 
 ### PR 3 — Affichage PC (`src/ui/fenetre.py`, écrans du parcours touchés)
 
+- **En premier** : retirer de `src/ui/` les imports de l'ancien gameplay supprimé (`config_poc`
+  dans `fenetre.py`, `EtatModule` dans les écrans…) et le mode démo, pour que `python main.py`
+  redémarre.
+
 - Même contenu que le web, lu dans l'API de `CombatNew` ; `_essayer_de_cibler` identique à
   `cliquerCase` de la PR 2.
 - Vérification par captures d'écran (méthode de `src/ui/CLAUDE.md`).
@@ -194,9 +246,10 @@ PR 2 pour le web et la PR 3 pour le PC (accepté). La description de chaque PR l
 ### PR 4 — Nettoyage
 
 - Suppression de l'ancien moteur (`carte.py`, `module.py`, `ennemi.py`, `combat.py`, `deck.py`,
-  `flotte.py`, `vaisseau.py`, `joueur.py`, `ciblage.py`, une partie de `config_poc.py` et
-  `donnees.py`), des anciens `config/cartes.json`, `modules.json`, `ennemis.json`, de l'ancien
-  simulateur et de leurs tests.
+  `flotte.py`, `vaisseau.py`, `joueur.py`, `ciblage.py`, une partie de
+  `donnees.py`), des anciens `config/cartes.json`, `modules.json`, `ennemis.json` et de leurs
+  tests. (Le simulateur est déjà passé sur le nouveau moteur à la PR 1 et l'ancien bot supprimé :
+  il ne reste plus d'ancien simulateur à retirer.)
 - Renommage éventuel des `*_new` (à décider : garder les noms, ou `CarteNew` → `Carte`…).
 - Migration des brouillons `refonte-*.md` dans les sections numérotées (`combat.md`,
   `modules-cartes.md`…), mise à jour de `CLAUDE.md` et de `specs/refonte.md`.

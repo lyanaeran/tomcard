@@ -19,7 +19,7 @@ from src.gameplay.position import Colonne, Position
 from src.gameplay.statut_new import Encaissement, Statut, Statuts
 from src.gameplay.vaisseau_new import VaisseauNew
 
-# Valeur inchangee par rapport au moteur actuel (config_poc.ELECTRICITE_PAR_TOUR, combat.md 3.3)
+# Valeur inchangee par rapport a l'ancien moteur (combat.md 3.3)
 ELECTRICITE_PAR_TOUR = 3
 
 # Natures d'effet de carte laissees pour plus tard (refonte-combat.md 1.2) : une carte qui en porte

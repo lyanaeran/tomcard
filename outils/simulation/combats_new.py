@@ -26,10 +26,9 @@ from pathlib import Path
 from src.gameplay.carte_new import RareteCarte, charger_cartes_new
 from src.gameplay.combat_new import CombatNew, EtatCombatNew, NatureEvenement
 from src.gameplay.deck_new import TAILLE_MAIN_MAX, deck_de_depart
-from src.gameplay.ennemi_new import NatureEffetEnnemi, PlacementEnnemi, charger_ennemis_new
-from src.gameplay.flotte_new import FlotteNew
+from src.gameplay.ennemi_new import NatureEffetEnnemi, charger_ennemis_new
+from src.gameplay.flotte_new import ID_BOSS, FlotteNew, flotte_boss, placer_ennemis
 from src.gameplay.module_new import charger_modules_new
-from src.gameplay.position import Colonne, Position, Rangee
 
 from outils.simulation.bot_new import BotAleatoire, BotRecherche, jouer_combat
 from outils.simulation.format import moyenne as _moy
@@ -41,13 +40,9 @@ DOSSIER_RESULTATS = Path(__file__).parent / "resultats"
 # emplacement libre, comme au choix du module du Niveau 1)
 EMPLACEMENT_LANCEUR = "avant_gauche"
 ENNEMIS_STANDARD = ["ENM_PAT_LE_PIRATE", "ENM_LE_NETTOYEUR", "ENM_PETIT_JEAN", "ENM_LE_PUZZLE", "ENM_MIROIR"]
-ID_BOSS = "ENM_BOSS_PIRATES"
 # Cartes ajoutees au deck de depart pour le deck "etoffe" (milieu de partie)
 CARTES_AJOUTEES_ETOFFE = 5
 DEGATS = (NatureEvenement.ATTAQUE, NatureEvenement.RENVOI, NatureEvenement.INCENDIE)
-
-POSITIONS_AVANT = [Position(Colonne.AVANT, rangee) for rangee in Rangee]
-POSITIONS_ARRIERE = [Position(Colonne.ARRIERE, rangee) for rangee in Rangee]
 
 
 # --- Mise en place d'un combat ---
@@ -75,25 +70,11 @@ def construire_deck(variante: str, aleatoire: random.Random) -> list:
 
 
 def construire_flotte(ids_ennemis: tuple[str, ...], aleatoire: random.Random) -> FlotteNew:
-    """Place les ennemis comme le jeu actuel (config_poc._placer_specs_avec_preference) :
-    protecteurs a l'avant, proteges a l'arriere, les autres a l'avant puis a l'arriere ; le Boss
-    sur la rangee du milieu, avant et arriere. Provisoire : la composition des flottes de la
-    refonte n'est pas encore faite."""
+    """Flotte de ces ennemis, placee comme dans le jeu (flotte_new.placer_ennemis, flotte_boss)."""
     modeles = charger_ennemis_new()
-    ennemis = [modeles[id_ennemi].pour_combat(1) for id_ennemi in ids_ennemis]
     if ids_ennemis == (ID_BOSS,):
-        return FlotteNew({Position(Colonne.AVANT, Rangee.MID): ennemis[0], Position(Colonne.ARRIERE, Rangee.MID): ennemis[0]})
-    avant, arriere = POSITIONS_AVANT[:], POSITIONS_ARRIERE[:]
-    aleatoire.shuffle(avant)
-    aleatoire.shuffle(arriere)
-    places = {}
-    ordre = sorted(ennemis, key=lambda e: {PlacementEnnemi.PROTECTEUR_AVANT: 0, PlacementEnnemi.PROTEGE_ARRIERE: 1}.get(e.placement, 2))
-    for ennemi in ordre:
-        if ennemi.placement == PlacementEnnemi.PROTEGE_ARRIERE and arriere:
-            places[arriere.pop(0)] = ennemi
-        else:
-            places[(avant or arriere).pop(0)] = ennemi
-    return FlotteNew(places)
+        return flotte_boss(modeles)
+    return placer_ennemis([modeles[id_ennemi].pour_combat(1) for id_ennemi in ids_ennemis], aleatoire)
 
 
 def construire_combat(

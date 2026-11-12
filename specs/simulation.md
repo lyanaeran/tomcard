@@ -242,9 +242,16 @@ python -m outils.simulation combat --variante bouclier_moins_un --parties 2000
 
 ## 11. État d'implémentation (2026-11-07, règles actuelles, pré-refonte)
 
-Implémenté dans `outils/simulation/` (`bot.py`, `partie_auto.py`, `etudes.py`, `rapport.py`,
-`__main__.py`), sur les règles **actuelles** du jeu (aucune variante de refonte, décision
-utilisateur : « on ne mélange pas tout »). Tests : `tests/test_simulation.py`.
+> **Depuis la PR 1 du branchement (2026-11-12)**, le simulateur de parties complètes
+> (`partie_auto.py`, `etudes.py`, `python -m outils.simulation`) joue le **parcours branché sur le
+> combat de la refonte** avec le bot de `bot_new.py` (§12) ; l'ancien bot (`bot.py`) est supprimé.
+> Les règles décrites ci-dessous restent valables pour la politique hors combat ; les résultats de
+> `analyse_2026-11-07.md` sont ceux de l'ancien moteur.
+
+Implémenté dans `outils/simulation/` (`partie_auto.py`, `etudes.py`, `rapport.py`, `__main__.py`,
+et à l'origine `bot.py`, supprimé à la PR 1 du branchement au profit de `bot_new.py`), sur les
+règles du jeu (aucune variante de règles, décision utilisateur : « on ne mélange pas tout »), celles
+du moteur de la refonte depuis la PR 1. Tests : `tests/test_simulation.py`.
 
 **Lancement** : `python -m outils.simulation --budget 500 --parties-par-module 40 --validation 30`
 écrit les résultats bruts (JSON) et leurs tableaux (Markdown) dans `outils/simulation/resultats/`
@@ -276,7 +283,8 @@ rédigées : `outils/simulation/synthese/analyse_AAAA-MM-JJ.md` (rapports géné
 - **Politique par défaut (§5.1)**, telle qu'implémentée : Prime/Boss en priorité, Station si le
   principal est sous 50 % de ses PV et que l'Argent suffit ; Station : réparer le principal s'il
   lui manque 15 PV, sinon l'améliorer, tant que l'Argent suffit ; Trois lunes : améliorer le
-  principal ; Astéroïdes : traverser avec le secondaire le plus solide, prendre la carte offerte ;
+  principal ; Astéroïdes : traverser (les chocs touchent le principal depuis la refonte), prendre
+  la carte offerte ;
   Police : payer la mise aux normes si possible, sinon confiscation ; cartes (module, récompense) :
   la plus rare.
 - **Séquences internes des Aventures** (deux chocs d'Astéroïdes, Détourner puis choisir de Police)
@@ -312,8 +320,8 @@ simulateur, à côté de celui des règles actuelles (§11), qui reste inchangé
     principal reportés, sans soin hors combat).
 - Lancement : `caffeinate -i python -m outils.simulation.combats_new --graines 30 --robustesse 2000
   --enchainements 300` (environ 3 minutes sur 8 cœurs). Tests : `tests/test_simulation_combats_new.py`.
-- La **composition des flottes** (placement préféré) est reprise de `config_poc` dans l'outil, en
-  attendant celle de la refonte.
+- La **composition des flottes** (placement préféré, Boss) est celle du jeu :
+  `flotte_new.placer_ennemis` et `flotte_boss` (depuis la PR 1 du branchement).
 - Première synthèse : `outils/simulation/synthese/analyse_2026-11-11_combat_new.md`.
 - **Essais limités** : `construire_combat(..., valeurs_cartes={"CRT_10": {"bouclier": 4}})` change
   la valeur d'une carte pour un essai, sans toucher à `config/carte_new.json`. Premier essai :
