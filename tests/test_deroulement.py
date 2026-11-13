@@ -4,6 +4,8 @@ Tests unitaires pour src/gameplay/deroulement.py (enchainement des ecrans, specs
 
 import random
 
+import pytest
+
 from src.gameplay import deroulement
 from src.gameplay.carte_new import charger_cartes_new
 from src.gameplay.combat_new import EtatCombatNew
@@ -111,6 +113,38 @@ def test_conclure_combat_defaite_reporte_les_pv_sans_argent_ni_candidat():
     assert deroulement.conclure_combat(partie, combat, random.Random(5)) == []
     assert partie.argent == ARGENT_DEPART
     assert partie.vaisseau["base"].pv == 7
+    # La partie est terminee tout de suite : la quitter sur l'ecran de defaite ne la bloque pas
+    assert partie.statut == STATUT_TERMINEE and partie.recompense is None
+
+
+def test_un_combat_en_cours_ne_se_conclut_pas():
+    partie = _partie_au_niveau_2()
+    combat = combat_depuis_partie(partie, random.Random(4))
+
+    with pytest.raises(ValueError, match="pas termine"):
+        deroulement.conclure_combat(partie, combat, random.Random(5))
+
+
+def test_une_partie_quittee_sur_la_recompense_reprend_a_la_recompense():
+    """Sinon le niveau deja gagne se rejouait, et l'Argent etait gagne deux fois."""
+    partie = _partie_au_niveau_2()
+    combat = combat_depuis_partie(partie, random.Random(4))
+    for ennemi in combat.flotte.ennemis:
+        ennemi.pv = 0
+    combat.etat = EtatCombatNew.VICTOIRE
+    candidats = deroulement.conclure_combat(partie, combat, random.Random(5))
+
+    assert deroulement.ecran_de_reprise(partie) == Ecran.RECOMPENSE
+    en_attente = deroulement.recompense_en_attente(partie)
+    assert [(m.exemplaire, c.id, c.exemplaire_module) for m, c in en_attente] == [
+        (m.exemplaire, c.id, c.exemplaire_module) for m, c in candidats
+    ]
+
+    with pytest.raises(ValueError, match="pas parmi"):
+        deroulement.resoudre_fin_combat(partie, True, _carte("CRT_7", "M1"))
+    assert deroulement.resoudre_fin_combat(partie, True, en_attente[0][1]) == Ecran.CHOIX_NIVEAU
+    assert partie.recompense is None and partie.niveau == 3
+    assert deroulement.ecran_de_reprise(partie) == Ecran.CHOIX_NIVEAU
 
 
 def test_resoudre_fin_combat_defaite_termine_la_partie():
@@ -137,6 +171,8 @@ def test_resoudre_fin_combat_victoire_au_boss_mene_a_la_victoire_finale_sans_ava
 
     assert deroulement.resoudre_fin_combat(partie, True, None) == Ecran.VICTOIRE_FINALE
     assert partie.niveau == 10
+    # Partie terminee des la victoire sur le Boss : on ne peut pas le rejouer
+    assert partie.statut == STATUT_TERMINEE
 
 
 def test_terminer_victoire_finale_termine_la_partie():

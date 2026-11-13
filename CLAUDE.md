@@ -129,6 +129,8 @@ Séparation stricte (specs.md §10) :
   des combats et des parties sans affichage en appelant `src/gameplay` : un pour l'ancien moteur,
   un pour le combat de la refonte
 - `outils/tableau_*.py` — génèrent les tableaux lisibles `config/*_new.md` à partir des JSON
+- `outils/test_web/essais.js` — essais de la version web dans Chromium (cf. `web/CLAUDE.md`) ;
+  `.github/workflows/tests.yml` lance `pytest` et la syntaxe du web à chaque PR
 - `index.html` + `web/` — version web ; `web/bridge.py` importe `src/gameplay/` sans le modifier
 - `config/*.json` — contenu déclaratif (modules, ennemis, cartes), chargé par
   `src/gameplay/donnees.py` (PC) et fetché directement par `web/app.js` (web)

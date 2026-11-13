@@ -6,7 +6,7 @@ Deux objectifs (demande utilisateur, 2026-11-11) :
    bot de recherche ;
 2. equilibre : reperer les problemes flagrants par ennemi, paire d'ennemis et Boss.
 
-Pas de partie complete : le combat de la refonte n'est pas encore branche au parcours.
+Combats isoles seulement : les parties completes sont jouees par partie_auto.py / etudes.py.
 
     caffeinate -i python -m outils.simulation.combats_new --graines 10
 """

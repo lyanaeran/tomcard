@@ -348,3 +348,13 @@ def test_effet_invalide_refuse():
 def test_chaque_portee_declare_le_camp_qu_elle_touche():
     assert PorteeEffet.CIBLE.camp is None
     assert all(portee.camp == Camp.ENNEMI for portee in PorteeEffet if portee != PorteeEffet.CIBLE)
+
+
+def test_un_id_de_carte_en_double_est_refuse(tmp_path):
+    donnees = json.loads(FICHIER_CARTES_NEW.read_text(encoding="utf-8"))
+    donnees["cartes"].append(donnees["cartes"][0])
+    fichier = tmp_path / "carte_new.json"
+    fichier.write_text(json.dumps(donnees), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="en double"):
+        charger_cartes_new(fichier)

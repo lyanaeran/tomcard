@@ -277,6 +277,34 @@ le moment » ; textes affichés accentués, journal compris, à sa demande) :
 Non vérifié en capture : la pastille Leurre et le bandeau Persistante (aucune carte actuelle n'est
 Persistante). Le PC (`python main.py`) ne démarre toujours pas : PR 3.
 
+### 5.3 Corrections après relecture du code (2026-11-13)
+
+Relecture complète demandée par l'utilisateur ; corrections faites dans une PR à part, avant la PR 3.
+
+- **Fin de combat enregistrée en une fois** (deux bugs : partie bloquée après une défaite si on
+  quittait avant « Continuer » ; Argent gagné deux fois en rechargeant sur l'écran de récompense).
+  `deroulement.conclure_combat` termine la partie dès la défaite, et note les cartes proposées
+  dans `partie.recompense` ; `ecran_de_reprise` renvoie le nouvel écran `Ecran.RECOMPENSE` tant
+  que le choix n'est pas fait (`recompense_en_attente`). La victoire sur le Boss termine la partie
+  dès `resoudre_fin_combat` (on ne peut pas le rejouer). **La PR 3 doit gérer `Ecran.RECOMPENSE`
+  dans `main.py:_aller_a`.**
+- **Station** : paliers de mise à jour appliqués (décision utilisateur) et actions sans effet
+  refusées sans payer (proposition), cf. specs.md §2.2.
+- **Sauvegarde** : une carte ou un module disparu de `config/`, ou une sauvegarde abîmée (texte
+  illisible, champ manquant), fait abandonner la partie au lieu de planter (proposition :
+  effacée, sauf si on peut y lire qu'elle était TERMINEE) ; deux cartes de même id sont refusées
+  au chargement.
+- **Web** : accents sur tous les écrans, nom de joueur jamais interprété comme du HTML.
+- **Outils** : `outils/test_web/essais.js` (essais dans Chromium, cf. `web/CLAUDE.md`) et tests
+  lancés par GitHub à chaque PR (`.github/workflows/tests.yml` : `pytest`, syntaxe du web).
+
+Laissé de côté, **à décider par l'utilisateur** :
+
+- **Combat en cours non sauvegardé sur le web** : « Quitter » ou un rechargement fait recommencer
+  le combat avec un nouveau tirage d'ennemis (on peut relancer jusqu'à un adversaire facile).
+- **Police avec un deck vide** (possible après plusieurs « Bricoler » ou confiscations) : le tirage
+  de la carte plante. Il faut une règle : ne pas proposer la Police, ou interdire de vider le deck.
+
 ### PR 3 — Affichage PC (`src/ui/fenetre.py`, écrans du parcours touchés)
 
 - **En premier** : retirer de `src/ui/` les imports de l'ancien gameplay supprimé (`config_poc`

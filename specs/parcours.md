@@ -53,6 +53,17 @@ Quatre actions indépendantes, appliquées à un module choisi par le joueur (vo
 > ses cartes y restent rattachées). Les modules de la partie sont des `ModuleNew` (`EtatModule`
 > supprimé), les PV de fin de combat sont reportés par `partie.reporter_combat` (remplace
 > `synchroniser_vaisseau_depuis_combat`). Les écrans PC et web ne sont pas encore adaptés (PR 2 et 3).
+>
+> **Corrections du 2026-11-13** (après relecture du code) :
+> - **Mettre à jour a enfin un effet** (décision utilisateur, 2026-11-13 : la règle ci-dessous est
+>   appliquée) : un module ne propose en récompense, et au choix de carte du Niveau 1, que les
+>   raretés ouvertes par son palier (`parcours.RARETES_PAR_NIVEAU_MAJ` : 1 Commune, 2 + Rare,
+>   3 + Légendaire). Avant, le palier était sauvegardé mais jamais lu : l'action coûtait 20 € pour
+>   rien. La carte offerte par les Astéroïdes n'a pas de palier (toutes raretés).
+> - **Une action sans effet est refusée sans payer** (proposition) : Réparer quand le principal a
+>   tous ses PV, Mettre à jour au palier 3. Les actions renvoient un `partie.ResultatStation` (OK,
+>   ARGENT_INSUFFISANT, INUTILE) ; l'écran affiche « Argent insuffisant ! » ou « Déjà au maximum ! »
+>   d'après cette raison, sans revérifier la condition.
 
 - **Réparer** : restaure 20 PV au module sélectionné (plafonné à son pv_max)
 - **Améliorer** : augmente le pv_max du module sélectionné de 10, et ses PV actuels du même montant
@@ -208,7 +219,7 @@ applique les règles de chaque transition :
 
 | Fonction | Rôle |
 |---|---|
-| `ecran_de_reprise` | « Continuer » ou nouvelle partie : choix de module au Niveau 1 sans 2e module, sinon choix du niveau |
+| `ecran_de_reprise` | « Continuer » ou nouvelle partie : choix de module au Niveau 1 sans 2e module ; écran de récompense (`Ecran.RECOMPENSE`) si un combat gagné attend encore le choix de sa carte (2026-11-13) ; sinon choix du niveau |
 | `candidats_choix_module` / `choisir_module` / `resoudre_carte_module` | Niveau 1 : modules proposés, équipement + cartes proposées, carte ajoutée (ou Passer) puis niveau suivant |
 | `propositions_niveau` / `ecran_pour_etape` | Étapes proposées (déterministes par graine et niveau), écran ouvert par l'étape choisie (tirage de l'Aventure) |
 | `terminer_etape` | Fin d'une étape hors combat (Station, Aventure, Planète commerciale) : niveau suivant |

@@ -1,7 +1,7 @@
 """
 Deck de combat de la refonte (DeckNew) : les cinq piles de cartes d'un combat (pioche, main,
 defausse, epuisees, Hors service) et le deck de depart (specs/refonte-combat.md 2.3, 3, 6 ;
-specs/refonte-modules.md 3.4). Pas encore branche au moteur : remplacera deck.py:Deck.
+specs/refonte-modules.md 3.4). deck.py:Deck est l'ancien moteur, supprime a la PR 4 du branchement.
 """
 
 import random

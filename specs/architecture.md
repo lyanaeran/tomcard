@@ -83,7 +83,13 @@ utilisateur), plus des écrans autonomes non reliés comme les précédents.
   (décision utilisateur du 2026-11-11 n° 1, aucune conversion) : `partie.lire_partie` renvoie
   `None`, `partie_en_cours` (PC) efface le fichier **si la partie était EN_COURS** ; une ancienne
   partie TERMINEE est gardée telle quelle (futures statistiques), mais n'est plus relue ; le profil est gardé (son format ne change
-  pas, `VERSION_PROFIL` = 1). Le web devra faire de même avec `localStorage` (PR 2). Ancien
+  pas, `VERSION_PROFIL` = 1). Le web fait de même avec `localStorage` (`partie.lire_sauvegarde`,
+  règle commune). **Ajouts du 2026-11-13**, sans changer de version : champ `recompense`
+  (`null`, ou la liste `{"id", "module"}` des cartes proposées après un combat gagné, tant que le
+  joueur n'a pas choisi : une partie quittée sur l'écran de récompense y revient, cf. parcours
+  §2.4 / `deroulement.ecran_de_reprise`) ; une sauvegarde qui cite une carte ou un module absent
+  de `config/`, ou une sauvegarde abîmée, est abandonnée comme une ancienne version
+  (proposition), au lieu de planter. Ancien
   format (version 1) :
 - **Contenu** :
   ```json

@@ -3,7 +3,8 @@ Combat de la refonte (CombatNew) : fait jouer ensemble CarteNew, ModuleNew, Enne
 statuts (specs/refonte-combat.md, seule reference de ce fichier). Gameplay seulement : aucune
 dependance d'affichage, une API d'actions (jouer_carte, finir_tour) et de consultations (etat,
 cibles_possibles, intentions, journal), utilisee par les tests, puis le simulateur et l'affichage
-au branchement. Pas encore branche au moteur : remplacera combat.py:Combat.
+au branchement. Utilise par le parcours (partie.py) et la version web ; combat.py:Combat est
+l'ancien moteur, supprime a la PR 4 du branchement.
 """
 
 import random
