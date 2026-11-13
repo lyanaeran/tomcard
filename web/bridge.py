@@ -83,6 +83,10 @@ IDS_ENNEMIS = {
 }
 _PAIRES_CASES_ENNEMIES = (("AV_G", "AR_G"), ("AV_M", "AR_M"), ("AV_D", "AR_D"))
 
+# Version du contrat entre bridge.py et web/app.js : doit etre egale a VERSION_CACHE (app.js),
+# verifie au demarrage par app.js (versionsAccordees) et par tests/test_architecture.py
+VERSION_WEB = "82"
+
 combat = None
 # Taille du journal deja transmise : les popups d'une action sont calcules a partir des seules
 # entrees ajoutees depuis (combat.journal[n:])
@@ -456,6 +460,10 @@ def etat_deck_combat() -> str:
 
 # --- Profils et parties (specs.md 10.3) : la persistance (localStorage) est geree cote JS ;
 # ces fonctions ne font que (de)serialiser et appliquer les fonctions de src/gameplay ---
+
+
+def version_web() -> str:
+    return json.dumps(VERSION_WEB)
 
 
 def _transition_json(partie, ecran) -> str:

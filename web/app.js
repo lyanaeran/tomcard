@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "81";
+const VERSION_CACHE = "82";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -149,6 +149,10 @@ async function demarrer() {
         pyodide = await loadPyodide();
         statut.textContent = "Montage du code du jeu...";
         await monterDepot(pyodide);
+        if (!versionsAccordees()) {
+            recharger(statut);
+            return;
+        }
         statut.remove();
         afficherSelectionJoueur();
         tenterVerrouillagePaysage();
@@ -157,6 +161,49 @@ async function demarrer() {
         statut.textContent = `Erreur de chargement : ${erreur.message}`;
         console.error(erreur);
     }
+}
+
+// Juste apres une mise en ligne, le telephone peut encore garder en cache l'ancien index.html /
+// app.js (GitHub Pages autorise 10 minutes) alors que bridge.py, recharge sans cache, est deja
+// le nouveau : les deux ne se comprennent plus (bug constate sur iPhone, 2026-11-13). bridge.py
+// annonce donc sa version (VERSION_WEB), qui doit etre egale a VERSION_CACHE.
+function versionsAccordees() {
+    try {
+        return appelerBridgeSansAlerte("version_web") === VERSION_CACHE;
+    } catch {
+        // Un bridge.py trop ancien n'a pas version_web : versions differentes
+        return false;
+    }
+}
+
+function appelerBridgeSansAlerte(nomFonction) {
+    const fonctionPython = pyodide.globals.get(nomFonction);
+    if (!fonctionPython) throw new Error(`${nomFonction} absente`);
+    try {
+        return JSON.parse(fonctionPython());
+    } finally {
+        fonctionPython.destroy();
+    }
+}
+
+// Recharge la page en contournant le cache (adresse differente), deux fois au plus par session
+// pour ne jamais boucler ; ensuite, un message demande de reessayer plus tard.
+const CLE_RECHARGEMENTS_VERSION = "space_fight_rechargements_version";
+
+function recharger(statut) {
+    let essais = 0;
+    try {
+        essais = Number(sessionStorage.getItem(CLE_RECHARGEMENTS_VERSION) || "0");
+        sessionStorage.setItem(CLE_RECHARGEMENTS_VERSION, String(essais + 1));
+    } catch {
+        essais = 2;
+    }
+    if (essais >= 2) {
+        statut.textContent = "Mise à jour du jeu en cours : ferme l'app et réessaie dans quelques minutes.";
+        return;
+    }
+    statut.textContent = "Mise à jour du jeu...";
+    location.replace(`${location.pathname}?maj=${Date.now()}`);
 }
 
 function tenterVerrouillagePaysage() {
@@ -377,7 +424,7 @@ function texteEffetEnnemi(effet) {
     const symbole = { ATTAQUE: "⚔", BOUCLIER: "🛡", RENVOI: "↩" }[effet.nature] || "?";
     let cible = "";
     if (effet.cible === "TOUS") cible = " → tous";
-    else if (effet.cible === "ALLIE") cible = " → un allie";
+    else if (effet.cible === "ALLIE") cible = " → un allié";
     else if (effet.cible === "MODULE") cible = effet.cible_nom ? ` → ${effet.cible_nom}` : " → module le plus proche";
     return `${symbole} ${effet.valeur}${repetitions}${cible}`;
 }
@@ -418,7 +465,7 @@ function afficherInfobulle(idCase, typeCase) {
             lignes.push(`<div>${objet.hors_service} carte(s) hors service</div>`);
         }
         if (objet.menaces.length > 0) {
-            lignes.push(`<div class="infobulle-titre-cycle">Vise au prochain tour par :</div>`);
+            lignes.push(`<div class="infobulle-titre-cycle">Visé au prochain tour par :</div>`);
             objet.menaces.forEach((menace) => {
                 const repetitions = menace.repetitions > 1 ? ` ×${menace.repetitions}` : "";
                 lignes.push(`<div class="infobulle-etape-courante">${menace.ennemi} : ⚔ ${menace.valeur}${repetitions}</div>`);
@@ -618,7 +665,7 @@ function detailsCarte(carte) {
     const lignes = [];
     const munitions = texteMunitions(carte);
     if (munitions) lignes.push(`🔋 Munitions ${munitions}`);
-    if (carte.lancements > 1) lignes.push(`Lancee ${carte.lancements} fois`);
+    if (carte.lancements > 1) lignes.push(`Lancée ${carte.lancements} fois`);
     if (carte.persistante) lignes.push("Persistante");
     if (carte.module_nom) lignes.push(`Module : ${carte.module_nom}`);
     return lignes.map((ligne) => `<div class="info-carte-detail">${ligne}</div>`).join("");

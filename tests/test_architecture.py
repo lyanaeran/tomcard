@@ -81,3 +81,16 @@ def test_tous_les_fichiers_src_gameplay_sont_montes_par_web_app_js():
     }
     manquants = fichiers_reels - fichiers_montes
     assert not manquants, f"Fichiers de src/gameplay absents de FICHIERS_A_MONTER (web/app.js) : {manquants}"
+
+
+def test_versions_web_accordees():
+    """VERSION_WEB (bridge.py), VERSION_CACHE (app.js) et le ?v= d'app.js (index.html) doivent etre
+    egaux : app.js recharge la page s'il ne trouve pas la meme version que bridge.py (cf.
+    versionsAccordees), il faut donc les incrementer ensemble (web/CLAUDE.md)."""
+    bridge = (RACINE / "web" / "bridge.py").read_text()
+    app_js = (RACINE / "web" / "app.js").read_text()
+    index = (RACINE / "index.html").read_text()
+    version_bridge = re.search(r'^VERSION_WEB = "(\d+)"', bridge, re.M).group(1)
+    version_app = re.search(r'const VERSION_CACHE = "(\d+)";', app_js).group(1)
+    version_index = re.search(r'web/app\.js\?v=(\d+)', index).group(1)
+    assert version_bridge == version_app == version_index
