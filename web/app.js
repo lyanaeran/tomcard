@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "78";
+const VERSION_CACHE = "79";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -369,8 +369,9 @@ function trouverObjetCase(idCase, typeCase) {
     return etatCourant.ennemis.find((e) => e && e.id === idCase) ?? null;
 }
 
-// Texte d'un effet d'ennemi (intention ou etape de son cycle) : "⚔ 7 ×2 → Lanceur de missiles",
-// "🛡 10", "↩ 5 → un allie". La cible prevue vient du gameplay (CombatNew.intentions).
+// Texte d'un effet d'ennemi (intention ou etape de son cycle) : symbole d'attaque 7 x2 -> Lanceur
+// de missiles, symbole de bouclier 10, symbole de renvoi 5 -> un allie. La cible prevue vient du
+// gameplay (CombatNew.intentions).
 function texteEffetEnnemi(effet) {
     const repetitions = effet.repetitions > 1 ? ` ×${effet.repetitions}` : "";
     const symbole = { ATTAQUE: "⚔", BOUCLIER: "🛡", RENVOI: "↩" }[effet.nature] || "?";
@@ -381,8 +382,9 @@ function texteEffetEnnemi(effet) {
     return `${symbole} ${effet.valeur}${repetitions}${cible}`;
 }
 
-// Version courte, dans la case de l'ennemi : "⚔7×2", "🛡10", "↩5", "⚔5 tous". Le module vise
-// par une attaque porte une pastille 🎯 (cf. pastillesStatuts) ; le detail est dans l'infobulle.
+// Version courte, dans la case de l'ennemi : symbole et valeur, "x2" si repetee, "tous" pour une
+// attaque de tous les modules. Le module vise par une attaque porte une pastille cible (cf.
+// pastillesStatuts) ; le detail est dans l'infobulle.
 function texteEffetEnnemiCourt(effet) {
     const repetitions = effet.repetitions > 1 ? `×${effet.repetitions}` : "";
     const symbole = { ATTAQUE: "⚔", BOUCLIER: "🛡", RENVOI: "↩" }[effet.nature] || "?";
@@ -586,7 +588,7 @@ function texteMunitions(carte) {
     return `${restantes}/${carte.munitions_base}`;
 }
 
-// Carte en main (refonte-branchement.md 4.1) : illustration, rarete, cout, munitions, "×2" si
+// Carte en main (refonte-branchement.md 4.1) : illustration, rarete, cout, munitions, "x2" si
 // elle est lancee plus d'une fois, bandeau Persistante ; grisee si elle n'est pas jouable
 // maintenant (decide par le gameplay : CombatNew.peut_jouer).
 function rendreMain() {
@@ -1182,7 +1184,6 @@ const CHOIX_ASTEROIDES = [
     ["affronter", ICONE_AFFRONTER, "Affronter les pirates", "Lance un combat contre 3 ennemis."],
 ];
 
-let constantesAventureAsteroides = null;
 // "choix" (2 choix) -> "sequence_2" (2e coup, apres le 1er deja applique au choix "Traverser") ->
 // "sequence_3" (carte offerte, si trouvee) -> "resolu". Les chocs touchent toujours le principal
 // (decision 3, specs/refonte-branchement.md) : plus de choix de module.
@@ -1194,9 +1195,6 @@ function ouvrirAventureAsteroidesPartie(partie) {
     partieActive = partie;
     etapeAventureAsteroides = "choix";
     carteOfferteAsteroides = null;
-    if (constantesAventureAsteroides === null) {
-        constantesAventureAsteroides = appelerBridge("constantes_aventure_asteroides_web");
-    }
     masquerTousLesEcrans();
     document.getElementById("ecran-aventure-asteroides").classList.remove("cachee");
     rendreAventureAsteroides();
@@ -1262,23 +1260,29 @@ function nomPrincipal() {
     return appelerBridge("infos_vaisseau_web", JSON.stringify(partieActive)).base.nom;
 }
 
+// PV reellement perdus par le principal sur un choc : difference avant / apres, decidee par le
+// gameplay (les chocs laissent toujours au moins 1 PV, la constante de degats ne suffit pas).
+function pvPrincipal() {
+    return partieActive.vaisseau.base.pv;
+}
+
 function traverserAsteroides() {
-    const { degats_asteroides } = constantesAventureAsteroides;
+    const pvAvant = pvPrincipal();
     partieActive = appelerBridge("premier_choc_asteroides_web", JSON.stringify(partieActive));
-    messageAsteroides = `Vous traversez le champ d'asteroides : ${nomPrincipal()} perd ${degats_asteroides} PV.`;
+    messageAsteroides = `Vous traversez le champ d'asteroides : ${nomPrincipal()} perd ${pvAvant - pvPrincipal()} PV.`;
     etapeAventureAsteroides = "sequence_2";
     rendreAventureAsteroides();
 }
 
 function continuerSequence2Asteroides() {
-    const { degats_asteroides } = constantesAventureAsteroides;
     const nom = nomPrincipal();
+    const pvAvant = pvPrincipal();
     // Degats et tirage de la carte offerte (ou non) decides en un seul appel gameplay
     // (second_choc_asteroides) - jamais recalcule ici (CLAUDE.md).
     const resultat = appelerBridge("second_choc_asteroides_web", JSON.stringify(partieActive));
     partieActive = resultat.partie;
     carteOfferteAsteroides = resultat.carte;
-    const choc = `Ces asteroides n'en finissent plus : ${nom} perd encore ${degats_asteroides} PV. `;
+    const choc = `Ces asteroides n'en finissent plus : ${nom} perd encore ${pvAvant - pvPrincipal()} PV. `;
     if (carteOfferteAsteroides === null) {
         etapeAventureAsteroides = "resolu";
         messageAsteroides = choc + "Vous parvenez finalement a vous degager.";

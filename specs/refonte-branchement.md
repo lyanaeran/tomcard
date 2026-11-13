@@ -242,7 +242,7 @@ supprimé ; `web/app.js` / `style.css` : éléments du §4, cases valides lues d
 (`cibles_possibles`), textes de carte lus dans `carte_new.json` (`description_affichee`), Station
 (Réparer = principal, sans sélection), Astéroïdes (plus de choix de module), Trois lunes, Police,
 récompenses rattachées à leur module, ancienne sauvegarde effacée de `localStorage` si elle était
-en cours (`partie.ancienne_partie_a_effacer`, même règle que le PC).
+en cours (`partie.lire_sauvegarde`, même règle que le PC).
 
 **Écarts avec la proposition du §4, choisis en voyant les captures (propositions à valider)** :
 

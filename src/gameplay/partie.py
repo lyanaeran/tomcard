@@ -178,10 +178,16 @@ def lire_partie(texte: str) -> Partie | None:
         return None
 
 
-def ancienne_partie_a_effacer(texte: str) -> bool:
-    """True pour une partie EN_COURS d'une ancienne version du jeu : elle est abandonnee et
-    effacee (decision 1). Une ancienne partie TERMINEE est gardee (futures statistiques)."""
-    return lire_partie(texte) is None and json.loads(texte).get("statut") == STATUT_EN_COURS
+def lire_sauvegarde(texte: str) -> tuple[Partie | None, bool]:
+    """Partie sauvegardee lue une seule fois : (partie, a_effacer). Pour une ancienne version du
+    jeu, partie vaut None et a_effacer dit si elle etait EN_COURS : elle est alors abandonnee et
+    effacee (decision 1) ; une ancienne partie TERMINEE est gardee (futures statistiques). Regle
+    commune au PC (partie_en_cours) et au web (localStorage)."""
+    donnees = json.loads(texte)
+    try:
+        return partie_depuis_dict(donnees), False
+    except SauvegardeObsolete:
+        return None, donnees.get("statut") == STATUT_EN_COURS
 
 
 def profil_vers_dict(profil: Profil) -> dict:
@@ -433,7 +439,7 @@ def retirer_carte(partie: Partie, carte: CartePossedee) -> Partie:
 
 
 def ameliorer_module_aventure(partie: Partie, position: str) -> Partie:
-    """Meme effet que ameliorer_module (_effet_ameliorer_module, §2.2), mais gratuit (specs.md
+    """Meme effet que ameliorer_module (_effet_ameliorer_module, 2.2), mais gratuit (specs.md
     2.5, Aventure "Trois lunes"). Modifie et renvoie `partie`."""
     _effet_ameliorer_module(partie, position)
     return partie
@@ -557,13 +563,10 @@ def partie_en_cours(joueur_id: str) -> Partie | None:
     if not dossier.exists():
         return None
     for fichier in dossier.iterdir():
-        texte = fichier.read_text()
-        partie = lire_partie(texte)
-        if partie is None:
-            # Ancienne version du jeu : effacee si EN_COURS, gardee sans etre relue si TERMINEE
-            if ancienne_partie_a_effacer(texte):
-                fichier.unlink()
-        elif partie.statut == STATUT_EN_COURS:
+        partie, a_effacer = lire_sauvegarde(fichier.read_text())
+        if a_effacer:
+            fichier.unlink()
+        elif partie is not None and partie.statut == STATUT_EN_COURS:
             return partie
     return None
 

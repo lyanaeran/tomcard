@@ -9,6 +9,7 @@ PR 1 (specs/refonte-branchement.md). Le combat de demonstration n'existe plus : 
 le parcours (decision utilisateur, 2026-11-12).
 """
 
+import functools
 import json
 import random
 import sys
@@ -29,7 +30,6 @@ from src.gameplay.partie import (
     PV_REPARATION,
     PV_REPARATION_VAISSEAU,
     CartePossedee,
-    ancienne_partie_a_effacer,
     ajouter_carte,
     ameliorer_module,
     ameliorer_module_aventure,
@@ -39,7 +39,7 @@ from src.gameplay.partie import (
     demarrer_aventure_police,
     deplacer_module,
     detourner_aventure_police,
-    lire_partie,
+    lire_sauvegarde,
     marquer_terminee,
     mettre_a_jour_module,
     modules_de_la_partie,
@@ -91,7 +91,10 @@ taille_journal_transmise = 0
 etat_aventure_police = None
 
 
+@functools.cache
 def _modeles_cartes() -> dict[str, CarteNew]:
+    """Modeles de cartes lus une seule fois (config/carte_new.json). Jamais modifies : chaque
+    carte affichee ou ajoutee est une copie (CarteNew.copie)."""
     return charger_cartes_new()
 
 
@@ -297,12 +300,12 @@ def _ennemi_json(ennemi: EnnemiNew | None, id_case: str, intentions: dict, fusio
     }
 
 
-def _ennemis_json() -> list:
+def _ennemis_json(intentions_du_tour: list) -> list:
     """Un objet par case de la grille ennemie (ordre de IDS_ENNEMIS), None si vide. Un ennemi sur
     les deux cases d'une rangee (le Boss) n'est publie qu'une fois, sur sa case Avant
     (fusionne=True)."""
     flotte = combat.flotte
-    intentions = {id(intention.ennemi): intention for intention in combat.intentions()}
+    intentions = {id(intention.ennemi): intention for intention in intentions_du_tour}
     # Ennemi de chaque case, detruit compris (ennemi_en ne renvoie que les vivants)
     par_case = {case: ennemi for ennemi in flotte.ennemis for case in flotte.cases_de(ennemi)}
     resultat = {}
@@ -363,7 +366,9 @@ def _etat_dict() -> dict:
     vaisseau = combat.vaisseau
     deck = combat.deck
     par_id = {_id_case_module(module): module for module in vaisseau.modules}
-    menaces = _menaces(combat.intentions()) if combat.en_cours else {}
+    # Intentions calculees une fois pour les ennemis et pour les modules vises
+    intentions = combat.intentions()
+    menaces = _menaces(intentions) if combat.en_cours else {}
     return {
         "etat": combat.etat.name,
         "tour": combat.tour,
@@ -373,7 +378,7 @@ def _etat_dict() -> dict:
             "base": _module_json(vaisseau.principal, "base", menaces),
             "modules": [_module_json(par_id.get(id_case), id_case, menaces) for id_case in IDS_MODULES],
         },
-        "ennemis": _ennemis_json(),
+        "ennemis": _ennemis_json(intentions),
         "main": [_carte_en_main_json(carte, index) for index, carte in enumerate(deck.main)],
         "pioche": len(deck.pioche),
         "defausse": len(deck.defausse),
@@ -477,11 +482,8 @@ def lire_partie_web(partie_json) -> str:
     """Partie sauvegardee relue : {"partie": ..., "effacer": bool}. partie vaut None pour une
     ancienne version du jeu, effacer dit si web/app.js doit la retirer de localStorage (EN_COURS,
     decision 1, meme regle que partie_en_cours cote PC) ; le profil est garde."""
-    partie = lire_partie(partie_json)
-    return json.dumps({
-        "partie": None if partie is None else _partie_json(partie),
-        "effacer": ancienne_partie_a_effacer(partie_json),
-    })
+    partie, effacer = lire_sauvegarde(partie_json)
+    return json.dumps({"partie": None if partie is None else _partie_json(partie), "effacer": effacer})
 
 
 def nouvelle_partie_web() -> str:
@@ -660,10 +662,6 @@ def retirer_carte_aventure_web(partie_json, id_carte, exemplaire_module) -> str:
 
 # --- Aventure "Asteroides" (specs.md 2.5) : "Traverser" (deux chocs sur le principal, puis une
 # carte offerte ou non) ou "Affronter les pirates" (combat a 3 ennemis) ---
-
-
-def constantes_aventure_asteroides_web() -> str:
-    return json.dumps({"degats_asteroides": DEGATS_ASTEROIDES})
 
 
 def premier_choc_asteroides_web(partie_json) -> str:

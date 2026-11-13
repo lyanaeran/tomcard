@@ -21,7 +21,8 @@ HAUTEUR_FENETRE = 800
 
 # Cibles de camp allie parmi celles de CIBLES_SANS_CLIC (specs.md 7.2/8.3) : determine
 # quel camp (allie/ennemi) doit etre touche par le clic de confirmation d'une carte sans
-# clic de ciblage precis, meme principe que CIBLES_ALLIEES dans web/app.js.
+# clic de ciblage precis (le web lit desormais les cases valides dans le gameplay, cf.
+# cliquerCase dans web/app.js ; ecran a reprendre a la PR 3 du branchement).
 CIBLES_CAMP_ALLIE = (CibleCarte.ALLIE_UNIQUE, CibleCarte.ALLIES_MULTIPLES, CibleCarte.MODULE_PRINCIPAL)
 
 # Cases de la flotte ennemie, cf. specs.md paragraphe 8.1. Agrandies (etaient 110x90, decision
@@ -1007,7 +1008,7 @@ class FenetreCombat(pyglet.window.Window):
         if carte.cible in CIBLES_SANS_CLIC:
             # La cible precise ne compte pas pour l'effet (jouer_carte l'ignore), mais un
             # clic de confirmation sur une case du bon camp reste necessaire (comme sur le
-            # web, cf. CIBLES_ALLIEES/cliquerCase dans app.js) : n'importe quel module vivant
+            # web, cf. cliquerCase dans app.js) : n'importe quel module vivant
             # confirme une carte de camp allie, n'importe quel ennemi vivant une carte de
             # camp ennemi.
             camp_allie = carte.cible in CIBLES_CAMP_ALLIE
