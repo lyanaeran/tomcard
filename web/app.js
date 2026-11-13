@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "79";
+const VERSION_CACHE = "80";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -369,7 +369,7 @@ function trouverObjetCase(idCase, typeCase) {
     return etatCourant.ennemis.find((e) => e && e.id === idCase) ?? null;
 }
 
-// Texte d'un effet d'ennemi (intention ou etape de son cycle) : symbole d'attaque 7 x2 -> Lanceur
+// Texte d'un effet d'ennemi (son prochain tour) : symbole d'attaque 7 x2 -> Lanceur
 // de missiles, symbole de bouclier 10, symbole de renvoi 5 -> un allie. La cible prevue vient du
 // gameplay (CombatNew.intentions).
 function texteEffetEnnemi(effet) {
@@ -404,8 +404,8 @@ function lignesStatuts(objet) {
 let minuteurInfobulle = null;
 
 // Infobulle d'une case tapee sans carte armee (equivalent tactile du survol PC), dans le meme
-// panneau flottant centre que #info-carte. Ennemi : son cycle complet, etape courante en gras,
-// valeurs du tour en cours, pour anticiper (refonte-branchement.md 4.3).
+// panneau flottant centre que #info-carte. Ennemi : seulement son prochain tour, pas son cycle
+// complet (decision utilisateur, 2026-11-13, refonte-branchement.md 4.3).
 function afficherInfobulle(idCase, typeCase) {
     const objet = trouverObjetCase(idCase, typeCase);
     if (!objet) return;
@@ -428,12 +428,6 @@ function afficherInfobulle(idCase, typeCase) {
             lignes.push(`<div class="infobulle-titre-cycle">Prochain tour :</div>`);
             lignes.push(`<div class="infobulle-etape-courante">${objet.intention.map(texteEffetEnnemi).join(" + ")}</div>`);
         }
-        lignes.push(`<div class="infobulle-titre-cycle">Cycle :</div>`);
-        objet.cycle.forEach((etape, index) => {
-            const texte = `${index + 1}. ${etape.map(texteEffetEnnemi).join(" + ")}`;
-            const classe = index === objet.etape ? "infobulle-etape-courante" : "infobulle-etape";
-            lignes.push(`<div class="${classe}">${texte}</div>`);
-        });
     }
     const panneau = document.getElementById("info-case");
     panneau.innerHTML = lignes.join("");

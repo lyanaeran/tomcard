@@ -116,8 +116,9 @@ de dégâts, journal dans la barre latérale.
 ↩ 5 → un allié       renvoi posé sur un allié (cible tirée au moment de jouer)
 ```
 
-- Infobulle de l'ennemi : son **cycle complet** (« ① attaque ② attaque ③ attaque + bouclier »,
-  étape courante en gras) et ses valeurs au tour en cours, pour que le joueur anticipe.
+- Infobulle de l'ennemi : **seulement son prochain tour** (« Prochain tour : ⚔ 2 → Principal + 🛡
+  6 »), **pas son cycle complet** (décision utilisateur, 2026-11-13, après essai sur iPhone ; la
+  proposition initiale affichait tout le cycle).
 
 ### 4.4 Piles et électricité
 
@@ -250,7 +251,8 @@ en cours (`partie.lire_sauvegarde`, même règle que le PC).
   lieu de « ⚔ 7 ×2 → Lanceur » : la version longue débordait sur la rangée suivante et sur les
   pastilles du vaisseau, en iPhone paysage. Le **module visé** porte à la place une pastille 🎯, et
   l'infobulle (tap) donne le détail : « Visé au prochain tour par : Le nettoyeur : ⚔ 7 ×2 » côté
-  module, « Prochain tour : ⚔ 7 ×2 → Lanceur de missiles » et le cycle complet côté ennemi.
+  module, « Prochain tour : ⚔ 7 ×2 → Lanceur de missiles » côté ennemi (sans le cycle complet,
+  décision utilisateur du 2026-11-13).
 - **Infobulles de statut sobres** : « 🛡 Bouclier 6 », « 🔥 Incendie 3 », « ↩ Renvoi 5 », « 🎭
   Leurre », et « Persistante » pour une carte ; aucune règle n'est écrite (ni l'extinction « −1 à
   la fin du tour ennemi », ni l'effet du leurre ou de Persistante), pour ne pas recopier une règle

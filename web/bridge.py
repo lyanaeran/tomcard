@@ -250,7 +250,7 @@ def _module_json(module: ModuleNew | None, id_case: str, menaces: dict | None = 
 def _effet_ennemi_json(effet, valeur: int, ennemi: EnnemiNew, cible_prevue=None) -> dict:
     """Un effet d'etape ennemie avec sa valeur au tour en cours. `cible` : "MODULE" (module prevu,
     nom et case), "TOUS" (tous les modules), "SOI" (l'ennemi lui-meme), "ALLIE" (un allie tire au
-    moment de jouer) ; None pour un module qui n'est pas encore connu (cycle complet)."""
+    moment de jouer) ; cible_nom / cible_id renseignes seulement pour un module prevu."""
     if effet.cible == CibleEffetEnnemi.TOUS_MODULES:
         cible = "TOUS"
     elif effet.cible == CibleEffetEnnemi.SOI_MEME:
@@ -277,10 +277,6 @@ def _ennemi_json(ennemi: EnnemiNew | None, id_case: str, intentions: dict, fusio
     if ennemi is None:
         return None
     intention = intentions.get(id(ennemi))
-    cycle = [
-        [_effet_ennemi_json(effet, ennemi.valeur(effet.valeur, combat.tour), ennemi) for effet in etape]
-        for etape in ennemi.actions
-    ]
     return {
         "id": id_case,
         "nom": ennemi.nom,
@@ -294,9 +290,6 @@ def _ennemi_json(ennemi: EnnemiNew | None, id_case: str, intentions: dict, fusio
         "intention": [
             _effet_ennemi_json(effet.effet, effet.valeur, ennemi, effet.cible_prevue) for effet in intention.effets
         ] if intention else [],
-        # Cycle complet, valeurs au tour en cours, et etape courante
-        "cycle": cycle,
-        "etape": ennemi.etape,
     }
 
 
