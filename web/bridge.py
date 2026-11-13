@@ -57,6 +57,7 @@ from src.gameplay.partie import (
 )
 from src.gameplay.position import Colonne, Position, Rangee
 from src.gameplay.statut_new import Statut
+from src.gameplay.vaisseau_new import CASES_PAR_EMPLACEMENT
 
 # Image du principal recadree pour une case de la taille des autres modules (Station service,
 # accueil joueur) ; dans le combat, le principal garde son image entiere (le vaisseau)
@@ -159,10 +160,21 @@ def _id_case_entite(entite) -> tuple[str | None, str]:
     return _id_case_ennemi(entite), "ennemi"
 
 
-def _position_case(id_case: str, camp: str) -> Position:
+def _position_case(id_case: str, camp: str, carte: CarteNew) -> Position:
+    """Position a passer a CombatNew.jouer_carte pour la case touchee. Une entite sur deux cases
+    (principal, Boss) n'a qu'un id de case cote affichage : on prend celle de ses cases que le
+    gameplay accepte pour cette carte (cibles_possibles ; ex. Ligne arriere sur le Boss = sa case
+    Arriere), sinon sa case affichee."""
     if camp == "allie":
-        return CASE_PRINCIPAL if id_case == "base" else IDS_MODULES[id_case]
-    return IDS_ENNEMIS[id_case]
+        affichee = CASE_PRINCIPAL if id_case == "base" else IDS_MODULES[id_case]
+        module = combat.vaisseau.module_en(affichee)
+        cases = list(CASES_PAR_EMPLACEMENT[module.emplacement]) if module else [affichee]
+    else:
+        affichee = IDS_ENNEMIS[id_case]
+        ennemi = combat.flotte.ennemi_en(affichee)
+        cases = combat.flotte.cases_de(ennemi) if ennemi else [affichee]
+    valides = combat.cibles_possibles(carte)
+    return next((case for case in cases if case in valides), affichee)
 
 
 def _ids_cases(positions: list[Position], camp: Camp) -> list[str]:
@@ -396,6 +408,8 @@ def _popup_evenement(evenement) -> dict | None:
         texte, couleur = f"+{evenement.valeur}", "soin"
     elif evenement.annules_leurre and not evenement.pv_perdus and not evenement.absorbes_bouclier:
         texte, couleur = "annulé", "bouclier"
+    elif evenement.absorbes_bouclier and not evenement.pv_perdus and not evenement.renvoyes:
+        texte, couleur = f"bloqué 🛡{evenement.absorbes_bouclier}", "bouclier"
     elif evenement.renvoyes and not evenement.pv_perdus and not evenement.absorbes_bouclier:
         texte, couleur = f"↩ {evenement.renvoyes}", "debuff"
     else:
@@ -426,7 +440,7 @@ def jouer_carte(index_carte: int, id_case: str) -> str:
     """Joue la carte en main a cet index sur la case touchee (refonte-combat.md 4)."""
     carte = combat.deck.main[index_carte]
     camp = "allie" if carte.cible.camp == Camp.JOUEUR else "ennemi"
-    combat.jouer_carte(carte, _position_case(id_case, camp))
+    combat.jouer_carte(carte, _position_case(id_case, camp, carte))
     return _resultat_combat()
 
 
@@ -487,7 +501,7 @@ def infos_vaisseau_web(partie_json) -> str:
             "module_id": module.id,
             "exemplaire": module.exemplaire,
             "principal": module.principal,
-            "pv": module.pv if module.principal else module.pv_max,
+            "pv": module.pv_au_prochain_combat,
             "pv_max": module.pv_max,
             "niveau_maj": module.niveau_maj,
             "nom": module.nom,

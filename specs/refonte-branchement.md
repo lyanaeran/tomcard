@@ -252,8 +252,9 @@ en cours (`partie.ancienne_partie_a_effacer`, même règle que le PC).
   l'infobulle (tap) donne le détail : « Visé au prochain tour par : Le nettoyeur : ⚔ 7 ×2 » côté
   module, « Prochain tour : ⚔ 7 ×2 → Lanceur de missiles » et le cycle complet côté ennemi.
 - **Infobulles de statut sobres** : « 🛡 Bouclier 6 », « 🔥 Incendie 3 », « ↩ Renvoi 5 », « 🎭
-  Leurre » ; la règle d'extinction (« −1 à la fin du tour ennemi ») n'est pas écrite, pour ne pas
-  recopier une règle de jeu dans l'affichage.
+  Leurre », et « Persistante » pour une carte ; aucune règle n'est écrite (ni l'extinction « −1 à
+  la fin du tour ennemi », ni l'effet du leurre ou de Persistante), pour ne pas recopier une règle
+  de jeu dans l'affichage.
 - **Carte en main** : illustration, nom en bas, coût, munitions « 2/2 », « ×2 » si lancée plus
   d'une fois, bandeau PERSISTANTE ; grisée si elle n'est pas jouable maintenant. Description
   complète dans le panneau qui s'ouvre quand on la sélectionne (avec munitions, lancements, module).
@@ -261,9 +262,13 @@ en cours (`partie.ancienne_partie_a_effacer`, même règle que le PC).
 - **Compteurs** sous la forme « Tour 2 · Pioche 6 · Défausse 0 · Épuisées 0 · Hors service 2 ».
 - **Journal** : une ligne par effet (la ligne « Carte X jouée » n'est plus affichée, ses effets le
   sont) ; phrases du §4.5.
-- **Popups** : « −4 », « −1 (🛡4) » (PV perdus et part absorbée par le bouclier), « +4 🛡 », « ↩ 5 »
-  (tout renvoyé), « annulé » (leurre), « +8 » (réparation), décalés dans le temps quand plusieurs
-  touchent la même case.
+- **Popups** : « −4 », « −1 (🛡4) » (PV perdus et part absorbée par le bouclier), « bloqué 🛡4 »
+  (tout absorbé), « +4 🛡 », « ↩ 5 » (tout renvoyé), « annulé » (leurre), « +8 » (réparation) ;
+  plusieurs popups sur la même case sont décalés dans le temps (0,3 s), sans retarder les autres
+  cases.
+- **PV hors combat** (accueil, Station, Aventures) : ceux du prochain combat, donnés par le
+  gameplay (`ModuleNew.pv_au_prochain_combat` : PV sauvegardés pour le principal, PV max pour un
+  secondaire).
 
 Non vérifié en capture : la pastille Leurre et le bandeau Persistante (aucune carte actuelle n'est
 Persistante). Le PC (`python main.py`) ne démarre toujours pas : PR 3.

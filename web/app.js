@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "77";
+const VERSION_CACHE = "78";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -317,17 +317,24 @@ function quitterCombat() {
     afficherSelectionJoueur();
 }
 
+// Plusieurs popups sur la meme case (tour ennemi, attaque repetee) : decales dans le temps, rang
+// compte par case, pour rester lisibles sans retarder ceux des autres cases.
+const DECALAGE_POPUP_MS = 300;
+
 function afficherPopups(popups) {
-    popups.forEach((popup, rang) => {
+    const rangParCase = {};
+    popups.forEach((popup) => {
         const element = document.querySelector(`.case.${popup.camp}[data-id="${popup.id}"]`);
         if (!element) return;
+        const cle = `${popup.camp}:${popup.id}`;
+        const rang = rangParCase[cle] ?? 0;
+        rangParCase[cle] = rang + 1;
         const bulle = document.createElement("div");
         bulle.className = `popup popup-${popup.couleur}`;
-        // Plusieurs popups sur la meme case (tour ennemi) : decales dans le temps pour rester lisibles
-        bulle.style.animationDelay = `${Math.min(rang, 6) * 0.25}s`;
+        bulle.style.animationDelay = `${rang * DECALAGE_POPUP_MS}ms`;
         bulle.textContent = popup.texte;
         element.appendChild(bulle);
-        setTimeout(() => bulle.remove(), DUREE_POPUP_MS + Math.min(rang, 6) * 250);
+        setTimeout(() => bulle.remove(), DUREE_POPUP_MS + rang * DECALAGE_POPUP_MS);
     });
 }
 
@@ -388,7 +395,7 @@ function lignesStatuts(objet) {
     if (objet.bouclier) lignes.push(`🛡 Bouclier ${objet.bouclier}`);
     if (objet.incendie) lignes.push(`🔥 Incendie ${objet.incendie}`);
     if (objet.renvoi) lignes.push(`↩ Renvoi ${objet.renvoi}`);
-    if (objet.leurre) lignes.push("🎭 Leurre : annule la prochaine attaque");
+    if (objet.leurre) lignes.push("🎭 Leurre");
     return lignes;
 }
 
@@ -615,7 +622,7 @@ function detailsCarte(carte) {
     const munitions = texteMunitions(carte);
     if (munitions) lignes.push(`🔋 Munitions ${munitions}`);
     if (carte.lancements > 1) lignes.push(`Lancee ${carte.lancements} fois`);
-    if (carte.persistante) lignes.push("Persistante : reste jouable si son module est detruit");
+    if (carte.persistante) lignes.push("Persistante");
     if (carte.module_nom) lignes.push(`Module : ${carte.module_nom}`);
     return lignes.map((ligne) => `<div class="info-carte-detail">${ligne}</div>`).join("");
 }
@@ -649,8 +656,8 @@ function rendreBanniereFin() {
 function texteCompteursDeck() {
     const morceaux = [
         `Pioche ${etatCourant.pioche}`,
-        `Defausse ${etatCourant.defausse}`,
-        `Epuisees ${etatCourant.epuisees}`,
+        `Défausse ${etatCourant.defausse}`,
+        `Épuisées ${etatCourant.epuisees}`,
     ];
     if (etatCourant.hors_service) morceaux.push(`Hors service ${etatCourant.hors_service}`);
     return `Tour ${etatCourant.tour} · ${morceaux.join(" · ")}`;

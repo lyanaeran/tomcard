@@ -52,6 +52,14 @@ def test_chaque_carte_revue_appartient_a_un_module():
 # --- Exemplaires ---
 
 
+def test_pv_au_prochain_combat_principal_sauvegardes_secondaire_plein():
+    principal, lanceur = _exemplaires()
+    principal.pv, lanceur.pv = 35, 3
+
+    assert principal.pv_au_prochain_combat == principal.copie_pour_combat().pv_combat == 35
+    assert lanceur.pv_au_prochain_combat == lanceur.copie_pour_combat().pv_combat == lanceur.pv_max
+
+
 def test_nouvel_exemplaire_part_des_pv_de_base_et_du_palier_1():
     principal, lanceur = _exemplaires()
 
