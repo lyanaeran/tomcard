@@ -38,7 +38,12 @@ testé en navigateur. Méthodes à combiner :
    exposées (`bridge.jouer_carte(index, id_case)`, `bridge.finir_tour()`...) et vérifier le JSON
    produit — c'est le même code que celui exécuté par Pyodide.
 2. **Valider la syntaxe** avec `node --check web/app.js` (si Node est disponible).
-3. Si un navigateur est accessible : DevTools (menu réactif au pouce, paysage, tailles iPhone).
+3. **Essais dans un vrai navigateur** : `python -m http.server 8765` à la racine, puis
+   `node outils/test_web/essais.js [dossier des captures]` (Chromium + Pyodide, iPhone 13 paysage :
+   une partie réelle, des combats préparés, les écrans hors combat, la reprise d'une partie, le
+   rechargement sur versions différentes ; sort en erreur au premier contrôle faux). À compléter
+   quand on ajoute un écran ou un élément d'affichage. Demande Node et Playwright.
+4. Si un navigateur est accessible : DevTools (menu réactif au pouce, paysage, tailles iPhone).
    En session cloud, Chromium + Playwright sont installés et le CDN de Pyodide est en général
    joignable : servir le dépôt (`python -m http.server`), ouvrir `index.html` au format
    `devices['iPhone 13 landscape']`, et préparer un combat précis depuis la page avec

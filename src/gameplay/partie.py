@@ -13,6 +13,7 @@ import json
 import random
 import shutil
 from dataclasses import dataclass
+from enum import Enum, auto
 from datetime import datetime
 from pathlib import Path
 
@@ -44,7 +45,8 @@ STATUT_TERMINEE = "TERMINEE"
 
 
 class SauvegardeObsolete(ValueError):
-    """Partie sauvegardee par une ancienne version du jeu : elle est abandonnee (decision 1)."""
+    """Partie sauvegardee illisible par cette version du jeu (ancien format, ou carte / module
+    qui n'existe plus dans config/) : elle est abandonnee (decision 1)."""
 
 
 @dataclass(frozen=True)
@@ -71,6 +73,10 @@ class Partie:
     vaisseau: dict[str, ModuleNew | None]
     deck: list[CartePossedee]
     version: int = VERSION_FORMAT
+    # Cartes proposees apres un combat gagne, tant que le joueur n'a pas choisi (None : aucun
+    # choix en attente ; liste vide : victoire sans carte a proposer). Sauvegarde, pour reprendre
+    # sur l'ecran de recompense au lieu de rejouer le niveau (deroulement.ecran_de_reprise).
+    recompense: list[CartePossedee] | None = None
 
     @property
     def principal(self) -> ModuleNew:
@@ -127,8 +133,28 @@ def partie_vers_dict(partie: Partie) -> dict:
             position: (_module_vers_dict(module) if module is not None else None)
             for position, module in partie.vaisseau.items()
         },
-        "deck": [{"id": carte.id, "module": carte.module} for carte in partie.deck],
+        "deck": [_carte_vers_dict(carte) for carte in partie.deck],
+        "recompense": None if partie.recompense is None else [_carte_vers_dict(carte) for carte in partie.recompense],
     }
+
+
+def _carte_vers_dict(carte: CartePossedee) -> dict:
+    return {"id": carte.id, "module": carte.module}
+
+
+@functools.cache
+def _ids_cartes() -> frozenset[str]:
+    """Ids des cartes de config/carte_new.json, lus une seule fois."""
+    return frozenset(charger_cartes_new())
+
+
+def _cartes_depuis_dict(entrees: list[dict], exemplaires: set[str]) -> list[CartePossedee]:
+    """Cartes sauvegardees ; refuse une carte qui n'existe plus ou rattachee a un module absent."""
+    cartes = [CartePossedee(id=entree["id"], module=entree["module"]) for entree in entrees]
+    for carte in cartes:
+        if carte.id not in _ids_cartes() or carte.module not in exemplaires:
+            raise SauvegardeObsolete(f"Carte {carte.id} ({carte.module}) inconnue de cette version du jeu")
+    return cartes
 
 
 @functools.cache
@@ -140,11 +166,17 @@ def _modeles_modules() -> dict[str, ModuleNew]:
 
 def partie_depuis_dict(donnees: dict, modeles: dict[str, ModuleNew] | None = None) -> Partie:
     """Partie a partir de sa sauvegarde. Leve SauvegardeObsolete pour une autre version du format
-    (ancienne sauvegarde, decision 1)."""
+    (ancienne sauvegarde, decision 1), ou si elle cite un module ou une carte qui n'existe plus
+    dans config/ (proposition : meme traitement, la partie est abandonnee plutot que de planter)."""
     version = donnees.get("version", 1)
     if version != VERSION_FORMAT:
         raise SauvegardeObsolete(f"Partie au format {version}, format attendu {VERSION_FORMAT}")
     modeles = modeles if modeles is not None else _modeles_modules()
+    for module in donnees["vaisseau"].values():
+        if module is not None and module["module_id"] not in modeles:
+            raise SauvegardeObsolete(f"Module {module['module_id']} inconnu de cette version du jeu")
+    exemplaires = {module["exemplaire"] for module in donnees["vaisseau"].values() if module is not None}
+    recompense = donnees.get("recompense")
     return Partie(
         id=donnees["id"],
         nom=donnees["nom"],
@@ -156,8 +188,9 @@ def partie_depuis_dict(donnees: dict, modeles: dict[str, ModuleNew] | None = Non
             position: (_module_depuis_dict(module, position, modeles) if module is not None else None)
             for position, module in donnees["vaisseau"].items()
         },
-        deck=[CartePossedee(id=carte["id"], module=carte["module"]) for carte in donnees["deck"]],
+        deck=_cartes_depuis_dict(donnees["deck"], exemplaires),
         version=version,
+        recompense=None if recompense is None else _cartes_depuis_dict(recompense, exemplaires),
     )
 
 
@@ -350,25 +383,40 @@ NIVEAU_MAJ_MAX = 3
 COUT_ACTION_STATION_SERVICE = 20
 
 
-def _payer_action_station_service(partie: Partie) -> bool:
-    """Deduit COUT_ACTION_STATION_SERVICE de l'Argent de la partie si elle en a assez (specs.md
-    2.1/2.2). Ne modifie rien et renvoie False si l'Argent est insuffisant."""
+class ResultatStation(Enum):
+    """Resultat d'une action de Station service. Vrai seulement pour OK : dans les autres cas rien
+    n'est modifie ni paye, et l'affichage dit pourquoi (il ne reverifie jamais la condition)."""
+
+    OK = auto()
+    ARGENT_INSUFFISANT = auto()
+    # L'action n'aurait aucun effet (PV deja pleins, palier deja au maximum) : refusee sans payer
+    INUTILE = auto()
+
+    def __bool__(self) -> bool:
+        return self is ResultatStation.OK
+
+
+def _payer_action_station_service(partie: Partie, utile: bool = True) -> ResultatStation:
+    """Deduit COUT_ACTION_STATION_SERVICE de l'Argent de la partie si l'action est utile et si
+    elle en a assez (specs.md 2.1/2.2). Ne modifie rien sinon."""
+    if not utile:
+        return ResultatStation.INUTILE
     if partie.argent < COUT_ACTION_STATION_SERVICE:
-        return False
+        return ResultatStation.ARGENT_INSUFFISANT
     partie.argent -= COUT_ACTION_STATION_SERVICE
-    return True
+    return ResultatStation.OK
 
 
-def reparer_principal(partie: Partie) -> bool:
+def reparer_principal(partie: Partie) -> ResultatStation:
     """Restaure PV_REPARATION PV au module principal, plafonne a son pv_max (specs.md 2.2), contre
     COUT_ACTION_STATION_SERVICE d'Argent. Seul le principal se repare : un secondaire repart plein
-    a chaque combat (refonte-branchement.md 2, decision 2). Renvoie False, sans rien modifier, si
-    l'Argent est insuffisant."""
-    if not _payer_action_station_service(partie):
-        return False
+    a chaque combat (refonte-branchement.md 2, decision 2). Refusee sans payer si ses PV sont deja
+    pleins."""
     principal = partie.principal
-    principal.pv = min(principal.pv + PV_REPARATION, principal.pv_max)
-    return True
+    resultat = _payer_action_station_service(partie, utile=principal.pv < principal.pv_max)
+    if resultat:
+        principal.pv = min(principal.pv + PV_REPARATION, principal.pv_max)
+    return resultat
 
 
 def _effet_ameliorer_module(partie: Partie, position: str) -> None:
@@ -380,41 +428,43 @@ def _effet_ameliorer_module(partie: Partie, position: str) -> None:
     module.pv += PV_AMELIORATION
 
 
-def ameliorer_module(partie: Partie, position: str) -> bool:
+def ameliorer_module(partie: Partie, position: str) -> ResultatStation:
     """Effet Ameliorer contre COUT_ACTION_STATION_SERVICE d'Argent (specs.md 2.1/2.2), sur tout
-    module equipe. Renvoie False, sans rien modifier, si l'Argent est insuffisant."""
-    if not _payer_action_station_service(partie):
-        return False
-    _effet_ameliorer_module(partie, position)
-    return True
+    module equipe."""
+    resultat = _payer_action_station_service(partie)
+    if resultat:
+        _effet_ameliorer_module(partie, position)
+    return resultat
 
 
-def mettre_a_jour_module(partie: Partie, position: str) -> bool:
+def mettre_a_jour_module(partie: Partie, position: str) -> ResultatStation:
     """Fait progresser d'un palier le niveau de mise a jour du module de cet emplacement (1 a
-    NIVEAU_MAJ_MAX, specs.md 2.2/6), contre COUT_ACTION_STATION_SERVICE d'Argent. Renvoie False,
-    sans rien modifier, si l'Argent est insuffisant."""
-    if not _payer_action_station_service(partie):
-        return False
+    NIVEAU_MAJ_MAX), contre COUT_ACTION_STATION_SERVICE d'Argent. Le palier ouvre les raretes que
+    ce module propose en recompense (parcours.RARETES_PAR_NIVEAU_MAJ, specs.md 2.2/6). Refusee
+    sans payer si le palier est deja au maximum."""
     module = partie.vaisseau[position]
-    module.niveau_maj = min(module.niveau_maj + 1, NIVEAU_MAJ_MAX)
-    return True
+    resultat = _payer_action_station_service(partie, utile=module.niveau_maj < NIVEAU_MAJ_MAX)
+    if resultat:
+        module.niveau_maj += 1
+    return resultat
 
 
-def deplacer_module(partie: Partie, position_source: str, position_destination: str) -> bool:
+def deplacer_module(partie: Partie, position_source: str, position_destination: str) -> ResultatStation:
     """Echange les modules de deux emplacements equipables (specs.md 2.2 : vide, le module y est
     simplement deplace ; occupe, les deux modules echangent leur position), contre
     COUT_ACTION_STATION_SERVICE d'Argent. Jamais le principal ('base'). Les cartes restent
-    rattachees a leur exemplaire. Renvoie False, sans rien modifier, si l'Argent est insuffisant."""
+    rattachees a leur exemplaire."""
     if "base" in (position_source, position_destination):
         raise ValueError("Le module principal ne se deplace pas")
-    if not _payer_action_station_service(partie):
-        return False
+    resultat = _payer_action_station_service(partie)
+    if not resultat:
+        return resultat
     source, destination = partie.vaisseau[position_source], partie.vaisseau[position_destination]
     partie.vaisseau[position_source], partie.vaisseau[position_destination] = destination, source
     for position in (position_source, position_destination):
         if partie.vaisseau[position] is not None:
             partie.vaisseau[position].emplacement = position
-    return True
+    return resultat
 
 
 # --- Aventures (specs.md 2.5) : effets appliques a une partie sauvegardee, partages PC/web ---

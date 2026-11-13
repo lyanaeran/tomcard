@@ -77,13 +77,30 @@ def _proposable(carte: CarteNew) -> bool:
     return carte.jouable and carte.rarete != RareteCarte.BASE
 
 
+# Raretes qu'un module propose selon son palier de mise a jour (Station service, specs.md 2.2/6,
+# decision utilisateur du 2026-11-13 : regle de la spec appliquee) : palier 1 Commune seulement,
+# palier 2 + Rare, palier 3 + Legendaire
+RARETES_PAR_NIVEAU_MAJ = {
+    1: (RareteCarte.COMMUNE,),
+    2: (RareteCarte.COMMUNE, RareteCarte.RARE),
+    3: (RareteCarte.COMMUNE, RareteCarte.RARE, RareteCarte.LEGENDAIRE),
+}
+
+
 def pool_module(module: ModuleNew, cartes: dict[str, CarteNew]) -> list[CarteNew]:
-    """Modeles des cartes jouables et non-Base de ce module (specs.md 2.1/6)."""
-    return [cartes[id_carte] for id_carte in module.cartes if id_carte in cartes and _proposable(cartes[id_carte])]
+    """Modeles des cartes que ce module peut proposer (specs.md 2.1/6) : les siennes, jouables,
+    non-Base, d'une rarete ouverte par son palier de mise a jour (RARETES_PAR_NIVEAU_MAJ ; un
+    modele ou un exemplaire neuf est au palier 1)."""
+    raretes = RARETES_PAR_NIVEAU_MAJ[module.niveau_maj]
+    return [
+        cartes[id_carte] for id_carte in module.cartes
+        if id_carte in cartes and _proposable(cartes[id_carte]) and cartes[id_carte].rarete in raretes
+    ]
 
 
 def pool_toutes_cartes(cartes: dict[str, CarteNew]) -> list[CarteNew]:
-    """Toutes les cartes jouables non-Base, tous modules confondus (module principal, specs.md 6)."""
+    """Toutes les cartes jouables non-Base, tous modules et toutes raretes confondus (carte
+    offerte par l'Aventure Asteroides, specs.md 2.5 : pas de palier de mise a jour)."""
     return [carte for carte in cartes.values() if _proposable(carte)]
 
 

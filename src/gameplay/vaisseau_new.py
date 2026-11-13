@@ -1,7 +1,7 @@
 """
 Vaisseau de la refonte (VaisseauNew) : les modules en combat (copies de ModuleNew) places sur la
-grille du joueur (specs/refonte-combat.md 2.2). Pas encore branche au moteur : remplacera
-vaisseau.py:Vaisseau.
+grille du joueur (specs/refonte-combat.md 2.2). vaisseau.py:Vaisseau est l'ancien moteur,
+supprime a la PR 4 du branchement.
 
 Grille 2 colonnes (avant, arriere) x 3 rangees (gauche, milieu, droite). Le principal occupe toute
 la rangee du milieu (les deux colonnes) ; les quatre autres emplacements correspondent chacun a une

@@ -26,6 +26,7 @@ from src.gameplay.partie import (
     PV_REPARATION_VAISSEAU,
     STATUT_EN_COURS,
     CartePossedee,
+    ResultatStation,
     SauvegardeObsolete,
     abandonner_partie,
     ajouter_carte,
@@ -127,6 +128,35 @@ def test_lire_sauvegarde_efface_seulement_une_ancienne_partie_en_cours():
     assert partie_module.lire_sauvegarde(json.dumps({**ancienne, "statut": "TERMINEE"})) == (None, False)
     relue, a_effacer = partie_module.lire_sauvegarde(partie_vers_json(partie))
     assert relue.id == partie.id and not a_effacer
+
+
+def test_une_sauvegarde_qui_cite_une_carte_ou_un_module_disparu_est_abandonnee():
+    """Proposition : une carte ou un module retire de config/ ne fait pas planter le jeu, la
+    partie est abandonnee comme une ancienne sauvegarde."""
+    donnees = partie_vers_dict(_partie_avec_lanceur())
+
+    for modification in (
+        lambda d: d["deck"].append({"id": "CRT_DISPARUE", "module": "M1"}),
+        lambda d: d["deck"].append({"id": "CRT_7", "module": "M9"}),
+        lambda d: d["vaisseau"]["avant_gauche"].update(module_id="MOD_DISPARU"),
+    ):
+        copie = json.loads(json.dumps(donnees))
+        modification(copie)
+        with pytest.raises(SauvegardeObsolete):
+            partie_depuis_dict(copie)
+        assert partie_module.lire_sauvegarde(json.dumps(copie)) == (None, True)
+
+
+def test_la_recompense_en_attente_est_sauvegardee():
+    partie = _partie_avec_lanceur()
+    assert partie_depuis_json(partie_vers_json(partie)).recompense is None
+
+    partie.recompense = [CartePossedee("CRT_9", "M2")]
+    assert partie_depuis_json(partie_vers_json(partie)).recompense == [CartePossedee("CRT_9", "M2")]
+    # Une sauvegarde d'avant ce champ se lit toujours
+    donnees = partie_vers_dict(partie)
+    del donnees["recompense"]
+    assert partie_depuis_dict(donnees).recompense is None
 
 
 def test_profil_vers_json_puis_depuis_json_roundtrip():
@@ -333,7 +363,7 @@ def test_reparer_principal_restaure_les_pv_plafonne_au_max():
     partie.argent = 100
     partie.principal.pv = 10
 
-    assert reparer_principal(partie) is True
+    assert reparer_principal(partie) is ResultatStation.OK
     assert partie.principal.pv == 10 + PV_REPARATION
     assert partie.argent == 100 - COUT_ACTION_STATION_SERVICE
 
@@ -347,10 +377,24 @@ def test_action_station_service_refusee_si_argent_insuffisant():
     partie.argent = COUT_ACTION_STATION_SERVICE - 1
     partie.principal.pv = 10
 
-    assert reparer_principal(partie) is False
-    assert ameliorer_module(partie, "base") is False
+    assert reparer_principal(partie) is ResultatStation.ARGENT_INSUFFISANT
+    assert ameliorer_module(partie, "base") is ResultatStation.ARGENT_INSUFFISANT
+    assert mettre_a_jour_module(partie, "base") is ResultatStation.ARGENT_INSUFFISANT
+    assert not ResultatStation.ARGENT_INSUFFISANT and not ResultatStation.INUTILE and ResultatStation.OK
     assert partie.principal.pv == 10
     assert partie.argent == COUT_ACTION_STATION_SERVICE - 1
+
+
+def test_une_action_de_station_sans_effet_est_refusee_sans_payer():
+    """Reparer a PV pleins, Mettre a jour au palier maximum : rien n'est paye."""
+    partie = _partie_avec_lanceur()
+    partie.argent = 100
+    partie.vaisseau["avant_gauche"].niveau_maj = NIVEAU_MAJ_MAX
+
+    assert reparer_principal(partie) is ResultatStation.INUTILE
+    assert mettre_a_jour_module(partie, "avant_gauche") is ResultatStation.INUTILE
+    assert partie.argent == 100
+    assert partie.vaisseau["avant_gauche"].niveau_maj == NIVEAU_MAJ_MAX
 
 
 def test_ameliorer_module_augmente_pv_max_et_pv_du_principal_comme_d_un_secondaire():
@@ -370,10 +414,11 @@ def test_mettre_a_jour_module_incremente_puis_plafonne():
     partie = _partie_avec_lanceur()
     partie.argent = 1000
 
-    for _ in range(NIVEAU_MAJ_MAX + 1):
-        mettre_a_jour_module(partie, "avant_gauche")
+    resultats = [mettre_a_jour_module(partie, "avant_gauche") for _ in range(NIVEAU_MAJ_MAX)]
 
+    assert resultats == [ResultatStation.OK] * (NIVEAU_MAJ_MAX - 1) + [ResultatStation.INUTILE]
     assert partie.vaisseau["avant_gauche"].niveau_maj == NIVEAU_MAJ_MAX
+    assert partie.argent == 1000 - (NIVEAU_MAJ_MAX - 1) * COUT_ACTION_STATION_SERVICE
 
 
 def test_deplacer_module_met_a_jour_l_emplacement_et_garde_les_cartes_rattachees():

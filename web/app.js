@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "83";
+const VERSION_CACHE = "84";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -233,7 +233,7 @@ function configurerPleinEcran() {
         // Marche sur desktop/Android Chrome ; iOS Safari n'implemente pas
         // l'API Fullscreen pour un element autre qu'une video, ce bouton n'y
         // fera donc rien de visible (branche ci-dessous prise a la place).
-        bouton.textContent = "Plein ecran";
+        bouton.textContent = "Plein écran";
         bouton.addEventListener("click", () => {
             document.documentElement.requestFullscreen().catch(() => {});
         });
@@ -241,9 +241,9 @@ function configurerPleinEcran() {
         bouton.textContent = "Masquer Safari";
         bouton.addEventListener("click", () => {
             alert(
-                "iOS ne permet pas de passer en plein ecran depuis un onglet Safari. " +
+                "iOS ne permet pas de passer en plein écran depuis un onglet Safari. " +
                     "Pour jouer sans les barres Safari : bouton Partager -> " +
-                    "'Sur l'ecran d'accueil', puis relance depuis cette icone."
+                    "'Sur l'écran d'accueil', puis relance depuis cette icône."
             );
         });
     }
@@ -829,6 +829,7 @@ function allerA(resultat) {
         AVENTURE_ASTEROIDES: () => ouvrirAventureAsteroidesPartie(partie),
         AVENTURE_POLICE: () => ouvrirAventurePolicePartie(partie),
         PLANETE_COMMERCIALE: () => ouvrirEtapePlaceholderPartie(partie, "PLANETE_COMMERCIALE"),
+        RECOMPENSE: () => ouvrirRecompensePartie(partie),
         VICTOIRE_FINALE: () => ouvrirVictoireFinalePartie(partie),
     };
     ouvertures[resultat.ecran]();
@@ -906,9 +907,9 @@ function ouvrirStationServicePartie(partie) {
 function instructionStationService() {
     if (modeDeplacementStation) return "Cliquez l'emplacement de destination (ou recliquez le module pour annuler).";
     if (positionSelectionneeStation === null) {
-        return "Selectionnez un module, puis une action (Réparer soigne toujours le principal).";
+        return "Sélectionnez un module, puis une action (Réparer soigne toujours le principal).";
     }
-    return "Selectionnez une action pour ce module.";
+    return "Sélectionnez une action pour ce module.";
 }
 
 function rendreStationService() {
@@ -925,7 +926,7 @@ function rendreStationService() {
                 <img src="${etat.image}" alt="${etat.nom}">
                 <div class="module-station-nom">${etat.nom}</div>
                 <div class="module-station-pv">${etat.pv} / ${etat.pv_max} PV</div>
-                <div class="module-station-niveau">Mise a jour : niveau ${etat.niveau_maj}</div>
+                <div class="module-station-niveau">Mise à jour : niveau ${etat.niveau_maj}</div>
             </div>`;
         })
         .join("");
@@ -967,7 +968,7 @@ function cliquerModuleStation(position, estVide) {
                 partieActive = resultat.partie;
                 sauvegarderPartieLocale(joueurCourant.id, partieActive);
             } else {
-                popupEchec = positionSource;
+                popupEchec = { position: positionSource, raison: resultat.raison };
             }
         }
     } else if (!estVide) {
@@ -977,7 +978,7 @@ function cliquerModuleStation(position, estVide) {
     // rendreStationService plus bas), sans quoi le re-rendu l'effacerait aussitot.
     rendreStationService();
     if (popupEchec !== null) {
-        afficherPopupStation(popupEchec, "Argent insuffisant !", "popup-degats");
+        afficherRefusStation(popupEchec.position, popupEchec.raison);
     }
 }
 
@@ -986,6 +987,17 @@ function cliquerModuleStation(position, estVide) {
 // que sur une case de combat - le texte est calcule a partir de l'etat avant/apres l'action (pas
 // de valeur de reglage dupliquee ici, cf. CLAUDE.md : src/gameplay/partie.py reste la seule
 // source de verite pour PV_AMELIORATION/PV_REPARATION).
+// Texte du refus d'une action de Station, d'apres la raison donnee par le gameplay
+// (partie.ResultatStation, via bridge.py) : jamais de condition reverifiee ici.
+const TEXTES_REFUS_STATION = {
+    ARGENT_INSUFFISANT: "Argent insuffisant !",
+    INUTILE: "Déjà au maximum !",
+};
+
+function afficherRefusStation(position, raison) {
+    afficherPopupStation(position, TEXTES_REFUS_STATION[raison] || "Action impossible", "popup-degats");
+}
+
 function afficherPopupStation(position, texte, classeCouleur) {
     const element = document.querySelector(`.module-station[data-position="${position}"]`);
     if (!element) return;
@@ -1021,7 +1033,7 @@ function cliquerActionStation(action) {
     positionSelectionneeStation = null;
     if (!resultat.succes) {
         rendreStationService();
-        afficherPopupStation(position, "Argent insuffisant !", "popup-degats");
+        afficherRefusStation(position, resultat.raison);
         return;
     }
     partieActive = resultat.partie;
@@ -1069,7 +1081,7 @@ const ICONE_BRICOLER = "assets/aventure/bricoler.png";
 
 const DESCRIPTION_TROIS_LUNES =
     "Un havre de paix au milieu de la galaxie. Aucune forme de vie intelligente, des animaux de " +
-    "taille raisonnable, de l'eau, des fruits et des legumes sauvages partout. Il est temps de " +
+    "taille raisonnable, de l'eau, des fruits et des légumes sauvages partout. Il est temps de " +
     "faire une pause.";
 
 // Constantes reelles du moteur (PV_REPARATION_VAISSEAU/PV_AMELIORATION), recuperees une seule
@@ -1115,8 +1127,8 @@ function rendreAventureTroisLunes() {
         description.textContent = DESCRIPTION_TROIS_LUNES;
         const { pv_reparation_vaisseau, pv_amelioration } = constantesAventureTroisLunes;
         const options = [
-            ["reparer", ICONE_REPARER, "Reparer le vaisseau", `Le module principal regagne ${pv_reparation_vaisseau} PV.`],
-            ["ameliorer", ICONE_AMELIORER, "Ameliorer un module", `+${pv_amelioration} PV max sur le module de votre choix.`],
+            ["reparer", ICONE_REPARER, "Réparer le vaisseau", `Le module principal regagne ${pv_reparation_vaisseau} PV.`],
+            ["ameliorer", ICONE_AMELIORER, "Améliorer un module", `+${pv_amelioration} PV max sur le module de votre choix.`],
             ["bricoler", ICONE_BRICOLER, "Bricoler", "Retirez une carte de votre deck."],
         ];
         choix.innerHTML = options
@@ -1126,7 +1138,7 @@ function rendreAventureTroisLunes() {
             element.addEventListener("click", () => cliquerChoixTroisLunes(element.dataset.choix));
         });
     } else if (etapeAventureTroisLunes === "choix_module") {
-        instruction.textContent = "Choisissez le module a ameliorer.";
+        instruction.textContent = "Choisissez le module à améliorer.";
         const vaisseau = appelerBridge("infos_vaisseau_web", JSON.stringify(partieActive));
         modules.innerHTML = Object.entries(vaisseau)
             .map(([position, etat]) => {
@@ -1145,7 +1157,7 @@ function rendreAventureTroisLunes() {
             element.addEventListener("click", () => cliquerModuleTroisLunes(element.dataset.position));
         });
     } else if (etapeAventureTroisLunes === "choix_carte") {
-        instruction.textContent = "Choisissez une carte a retirer de votre deck.";
+        instruction.textContent = "Choisissez une carte à retirer de votre deck.";
         groupesDeckAventureTroisLunes = appelerBridge("deck_partie_web", JSON.stringify(partieActive));
         deck.innerHTML = groupesDeckAventureTroisLunes
             .map(
@@ -1186,7 +1198,7 @@ function cliquerModuleTroisLunes(position) {
     const { pv_amelioration } = constantesAventureTroisLunes;
     const nom = appelerBridge("infos_vaisseau_web", JSON.stringify(partieActive))[position].nom;
     partieActive = appelerBridge("ameliorer_module_aventure_web", JSON.stringify(partieActive), position);
-    messageResoluAventureTroisLunes = `${nom} ameliore : +${pv_amelioration} PV max !`;
+    messageResoluAventureTroisLunes = `${nom} amélioré : +${pv_amelioration} PV max !`;
     etapeAventureTroisLunes = "resolu";
     rendreAventureTroisLunes();
 }
@@ -1195,7 +1207,7 @@ function cliquerCarteTroisLunes(index) {
     // Une entree par carte et par module de rattachement (bridge.py) : on retire celle-ci
     const carte = groupesDeckAventureTroisLunes[index];
     partieActive = appelerBridge("retirer_carte_aventure_web", JSON.stringify(partieActive), carte.id_carte, carte.module);
-    messageResoluAventureTroisLunes = `Carte retiree : ${carte.nom}.`;
+    messageResoluAventureTroisLunes = `Carte retirée : ${carte.nom}.`;
     etapeAventureTroisLunes = "resolu";
     rendreAventureTroisLunes();
 }
@@ -1210,7 +1222,7 @@ function terminerAventureTroisLunes() {
 // src/ui/ecran_aventure_asteroides.py cote PC - bridge.py n'applique que les fonctions pures de
 // src/gameplay/partie.py, aucune regle dupliquee ici.
 const DESCRIPTION_ASTEROIDES =
-    "Poursuivi par des pirates de l'espace, vous n'avez plus le choix : vaincre ou perir ! A moins que...";
+    "Poursuivi par des pirates de l'espace, vous n'avez plus le choix : vaincre ou périr ! À moins que...";
 
 // Reutilise l'icone de assets/prochain_niveau/prime.png, desormais sans texte incruste (fournie
 // par l'utilisateur) - le titre est de toute facon toujours redessine a cote dans le rectangle de
@@ -1222,7 +1234,7 @@ const ICONE_AFFRONTER = "assets/prochain_niveau/prime.png";
 const ICONE_TRAVERSER = "assets/aventure/traverser.png";
 
 const CHOIX_ASTEROIDES = [
-    ["traverser", ICONE_TRAVERSER, "Traverser le champ d'asteroides", "Le module principal va en subir les consequences..."],
+    ["traverser", ICONE_TRAVERSER, "Traverser le champ d'astéroïdes", "Le module principal va en subir les conséquences..."],
     ["affronter", ICONE_AFFRONTER, "Affronter les pirates", "Lance un combat contre 3 ennemis."],
 ];
 
@@ -1243,7 +1255,7 @@ function ouvrirAventureAsteroidesPartie(partie) {
 }
 
 function rendreAventureAsteroides() {
-    document.getElementById("titre-aventure-asteroides").textContent = "Asteroides";
+    document.getElementById("titre-aventure-asteroides").textContent = "Astéroïdes";
 
     const description = document.getElementById("description-aventure-asteroides");
     const choix = document.getElementById("choix-aventure-asteroides");
@@ -1311,7 +1323,7 @@ function pvPrincipal() {
 function traverserAsteroides() {
     const pvAvant = pvPrincipal();
     partieActive = appelerBridge("premier_choc_asteroides_web", JSON.stringify(partieActive));
-    messageAsteroides = `Vous traversez le champ d'asteroides : ${nomPrincipal()} perd ${pvAvant - pvPrincipal()} PV.`;
+    messageAsteroides = `Vous traversez le champ d'astéroïdes : ${nomPrincipal()} perd ${pvAvant - pvPrincipal()} PV.`;
     etapeAventureAsteroides = "sequence_2";
     rendreAventureAsteroides();
 }
@@ -1324,13 +1336,13 @@ function continuerSequence2Asteroides() {
     const resultat = appelerBridge("second_choc_asteroides_web", JSON.stringify(partieActive));
     partieActive = resultat.partie;
     carteOfferteAsteroides = resultat.carte;
-    const choc = `Ces asteroides n'en finissent plus : ${nom} perd encore ${pvAvant - pvPrincipal()} PV. `;
+    const choc = `Ces astéroïdes n'en finissent plus : ${nom} perd encore ${pvAvant - pvPrincipal()} PV. `;
     if (carteOfferteAsteroides === null) {
         etapeAventureAsteroides = "resolu";
-        messageAsteroides = choc + "Vous parvenez finalement a vous degager.";
+        messageAsteroides = choc + "Vous parvenez finalement à vous dégager.";
     } else {
         etapeAventureAsteroides = "sequence_3";
-        messageAsteroides = choc + "Pres de la sortie, vous reperez des debris...";
+        messageAsteroides = choc + "Près de la sortie, vous repérez des débris...";
     }
     rendreAventureAsteroides();
 }
@@ -1342,13 +1354,13 @@ function prendreCarteAsteroides() {
         carteOfferteAsteroides.id_carte,
         carteOfferteAsteroides.module
     );
-    messageAsteroides = `Vous recuperez : ${carteOfferteAsteroides.nom}.`;
+    messageAsteroides = `Vous récupérez : ${carteOfferteAsteroides.nom}.`;
     etapeAventureAsteroides = "resolu";
     rendreAventureAsteroides();
 }
 
 function passerCarteAsteroides() {
-    messageAsteroides = "Vous laissez les debris derriere vous.";
+    messageAsteroides = "Vous laissez les débris derrière vous.";
     etapeAventureAsteroides = "resolu";
     rendreAventureAsteroides();
 }
@@ -1367,7 +1379,7 @@ function cliquerContinuerAsteroides() {
 // disparait ensuite). Meme regles que src/ui/ecran_aventure_police.py cote PC - bridge.py n'applique
 // que les fonctions pures de src/gameplay/partie.py, aucune regle dupliquee ici.
 const DESCRIPTION_POLICE =
-    "Un vaisseau de patrouille vous somme de vous arreter pour un controle de routine...";
+    "Un vaisseau de patrouille vous somme de vous arrêter pour un contrôle de routine...";
 
 // Reutilise l'icone de assets/station_service/mettre_a_jour.png, desormais sans texte incruste
 // (fournie par l'utilisateur) - le titre est de toute facon toujours redessine a cote dans le
@@ -1435,7 +1447,7 @@ function rendreAventurePolice() {
         const options = [
             ["confiscation", ICONE_CONFISCATION, "Confiscation", "Supprime cette carte de votre deck."],
             ["mettre_aux_normes", ICONE_METTRE_AUX_NORMES, "Mettre aux normes", `Payez ${cout_mettre_aux_normes} € et gardez la carte.`],
-            ["detourner", ICONE_DETOURNER, "Detourner l'attention", "Tire une autre carte (une seule fois)."],
+            ["detourner", ICONE_DETOURNER, "Détourner l'attention", "Tire une autre carte (une seule fois)."],
         ].filter(([identifiant]) => identifiant !== "detourner" || detournerDisponiblePolice);
         choix.innerHTML = options
             .map(([identifiant, image, titre, texte]) => construireLigneChoixHtml(identifiant, image, titre, texte))
@@ -1455,7 +1467,7 @@ function cliquerChoixPolice(identifiant) {
     if (identifiant === "confiscation") {
         const carte = carteActuellePolice;
         partieActive = appelerBridge("confiscation_police_web", JSON.stringify(partieActive));
-        messageResoluPolice = `Carte confisquee : ${carte.nom}.`;
+        messageResoluPolice = `Carte confisquée : ${carte.nom}.`;
         etapeAventurePolice = "resolu";
     } else if (identifiant === "mettre_aux_normes") {
         const resultat = appelerBridge("mettre_aux_normes_police_web", JSON.stringify(partieActive));
@@ -1511,9 +1523,9 @@ const LIBELLES_TYPE_ETAPE = {
         "assets/prochain_niveau/station_service.png", "Station service", "Entretien du vaisseau contre de l'Argent.",
     ],
     PLANETE_COMMERCIALE: [
-        "assets/prochain_niveau/planete_commerciale.png", "Planete commerciale", "Achat de cartes contre de l'Argent.",
+        "assets/prochain_niveau/planete_commerciale.png", "Planète commerciale", "Achat de cartes contre de l'Argent.",
     ],
-    AVENTURE: ["assets/prochain_niveau/aventure.png", "Aventure", "Evenement inconnu."],
+    AVENTURE: ["assets/prochain_niveau/aventure.png", "Aventure", "Événement inconnu."],
     BOSS: ["assets/prochain_niveau/boss.png", "Boss", "Combattre le Boss !"],
 };
 
@@ -1541,9 +1553,14 @@ function choisirEtape(type) {
 
 // Ecran de fin de combat (parcours, specs.md 2.1/6) : un candidat de recompense par module, deja
 // rattache a ce module par le gameplay (deroulement.conclure_combat).
+// True si l'ecran de fin de combat affiche une victoire (decide par le gameplay : etat du combat,
+// ou recompense en attente a la reprise d'une partie), lu par le bouton "Continuer".
+let victoireFinCombat = false;
+
 function afficherFinCombat(victoire, candidats) {
+    victoireFinCombat = victoire;
     const titre = document.getElementById("titre-fin-combat");
-    titre.textContent = victoire ? "VICTOIRE" : "DEFAITE";
+    titre.textContent = victoire ? "VICTOIRE" : "DÉFAITE";
     titre.className = victoire ? "victoire" : "defaite";
     document.getElementById("message-defaite").classList.toggle("cachee", victoire);
     document.getElementById("candidats-recompense").classList.toggle("cachee", !victoire);
@@ -1595,6 +1612,14 @@ function terminerCombatPartie() {
     afficherFinCombat(etatCourant.etat === "VICTOIRE", resultat.candidats);
 }
 
+// Partie quittee sur l'ecran de recompense : on y revient avec les memes cartes, notees dans la
+// partie par le gameplay (deroulement.ecran_de_reprise / recompense_en_attente), sans rejouer le
+// combat deja gagne.
+function ouvrirRecompensePartie(partie) {
+    partieActive = partie;
+    afficherFinCombat(true, appelerBridge("recompense_en_attente_web", JSON.stringify(partie)));
+}
+
 // Ajoute la carte choisie (ou aucune) au deck de la partie ; l'ecran suivant (niveau suivant ou
 // victoire finale apres le Boss) est decide par deroulement.resoudre_fin_combat.
 function finaliserVictoirePartie(candidat) {
@@ -1614,7 +1639,7 @@ function finaliserVictoirePartie(candidat) {
 // src/ui/ecran_fin_combat.py:on_mouse_press cote PC.
 function continuerApresFinCombat() {
     if (!partieActive) return;
-    if (etatCourant.etat === "DEFAITE") {
+    if (!victoireFinCombat) {
         allerA(appelerBridge("resoudre_fin_combat_web", JSON.stringify(partieActive), false, null, null));
     } else {
         finaliserVictoirePartie(null);
@@ -1766,13 +1791,20 @@ function supprimerJoueurLocal(joueurId) {
 
 let joueurCourant = null;
 
+// Un nom de joueur est du texte saisi : jamais interprete comme du HTML.
+function echapperHtml(texte) {
+    const element = document.createElement("span");
+    element.textContent = texte;
+    return element.innerHTML;
+}
+
 function afficherSelectionJoueur() {
     const joueurs = listerJoueursLocal();
     document.getElementById("liste-joueurs").innerHTML = joueurs
         .map(
             (joueur, index) => `
             <div class="ligne-joueur" data-index="${index}">
-                <span class="nom-joueur">${joueur.nom}</span>
+                <span class="nom-joueur">${echapperHtml(joueur.nom)}</span>
                 <button class="bouton-supprimer-joueur" data-index="${index}" title="Supprimer ce joueur" aria-label="Supprimer ce joueur">
                     <img src="assets/interface/quitter.png" alt="">
                 </button>
@@ -1790,7 +1822,7 @@ function afficherSelectionJoueur() {
         element.addEventListener("click", (evenement) => {
             evenement.stopPropagation();
             const joueur = joueurs[Number(element.dataset.index)];
-            if (confirm(`Vous allez detruire le joueur ${joueur.nom}, etes-vous sur ?`)) {
+            if (confirm(`Vous allez détruire le joueur ${joueur.nom}, êtes-vous sûr ?`)) {
                 supprimerJoueurLocal(joueur.id);
                 afficherSelectionJoueur();
             }
@@ -1836,7 +1868,7 @@ function afficherAccueilJoueur() {
                     <img src="${etat.image}" alt="${etat.nom}">
                     <div class="module-accueil-nom">${etat.nom}</div>
                     <div class="module-accueil-pv">${etat.pv} / ${etat.pv_max} PV</div>
-                    <div class="module-accueil-niveau">Mise a jour : niveau ${etat.niveau_maj}</div>
+                    <div class="module-accueil-niveau">Mise à jour : niveau ${etat.niveau_maj}</div>
                 </div>`;
             })
             .join("");
@@ -1961,7 +1993,7 @@ function ouvrirSurvolVaisseau() {
                 <img src="${etat.image}" alt="${etat.nom}">
                 <div class="module-accueil-nom">${etat.nom}</div>
                 <div class="module-accueil-pv">${etat.pv} / ${etat.pv_max} PV</div>
-                <div class="module-accueil-niveau">Mise a jour : niveau ${etat.niveau_maj}</div>
+                <div class="module-accueil-niveau">Mise à jour : niveau ${etat.niveau_maj}</div>
             </div>`;
         })
         .join("");

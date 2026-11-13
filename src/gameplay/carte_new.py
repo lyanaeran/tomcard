@@ -2,8 +2,8 @@
 Carte de la refonte (CarteNew, nom provisoire) : modele de donnees cible de la refonte des cartes
 (specs/refonte-buffs-debuffs.md, specs/refonte-modules.md). Source de verite :
 config/carte_new.json (charger_cartes_new). Relue et validee par l'utilisateur le 2026-11-08.
-Pas encore branchee au moteur : coexiste avec carte.py:Carte (config/cartes.json), qu'elle
-remplacera au branchement de la refonte.
+Utilisee par le parcours et la version web ; carte.py:Carte (config/cartes.json) est l'ancien
+moteur, supprime a la PR 4 du branchement (specs/refonte-branchement.md).
 
 Differences avec Carte :
 - une carte porte des VALEURS NOMMEES (ex. {"degats_cible": 15, "degats_autres": 6}) et une liste
@@ -438,9 +438,16 @@ class CarteNew:
 
 
 def charger_cartes_new(fichier: Path = FICHIER_CARTES_NEW) -> dict[str, CarteNew]:
-    """Charge config/carte_new.json. Renvoie un dict id de carte -> modele de carte."""
+    """Charge config/carte_new.json. Renvoie un dict id de carte -> modele de carte ; un id en
+    double est refuse."""
     donnees = json.loads(fichier.read_text(encoding="utf-8"))
-    return {entree["id"]: CarteNew.depuis_dict(entree) for entree in donnees["cartes"]}
+    cartes = {}
+    for entree in donnees["cartes"]:
+        carte = CarteNew.depuis_dict(entree)
+        if carte.id in cartes:
+            raise ValueError(f"config/carte_new.json : carte {carte.id} en double")
+        cartes[carte.id] = carte
+    return cartes
 
 
 def appliquer_repetition(effet: Effet, supplement: int, cartes: Iterable[CarteNew]) -> int:

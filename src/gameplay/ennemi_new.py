@@ -1,8 +1,8 @@
 """
 Ennemi de la refonte (EnnemiNew, nom provisoire) : modele de donnees cible de la refonte des
 ennemis (specs/refonte-ennemis.md). Source de verite : config/ennemi_new.json
-(charger_ennemis_new). Pas encore branche au moteur : coexiste avec ennemi.py:Ennemi
-(config/ennemis.json), qu'il remplacera au branchement de la refonte.
+(charger_ennemis_new). ennemi.py:Ennemi (config/ennemis.json) est l'ancien moteur, supprime a
+la PR 4 du branchement.
 
 Differences avec Ennemi :
 - un CYCLE D'ACTIONS remplace la frequence et le tour de depart : une etape par tour ennemi, dans

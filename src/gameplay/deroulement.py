@@ -28,6 +28,7 @@ from src.gameplay.parcours import (
     tirer_type_aventure,
 )
 from src.gameplay.partie import (
+    CartePossedee,
     Partie,
     ajouter_carte,
     avancer_niveau,
@@ -51,6 +52,8 @@ class Ecran(Enum):
     AVENTURE_ASTEROIDES = auto()
     AVENTURE_POLICE = auto()
     PLANETE_COMMERCIALE = auto()
+    # Choix de la carte de recompense d'un combat gagne (reprise d'une partie quittee sur cet ecran)
+    RECOMPENSE = auto()
     VICTOIRE_FINALE = auto()
 
 
@@ -63,8 +66,11 @@ ECRAN_PAR_AVENTURE = {
 
 def ecran_de_reprise(partie: Partie) -> Ecran:
     """Ecran ou reprendre une partie en cours ("Continuer") : le Niveau 1 sans 2e module equipe
-    reprend au choix de module, sinon au choix du niveau courant (propositions retirees de facon
-    deterministe, cf. aleatoire_pour_niveau)."""
+    reprend au choix de module ; un combat gagne dont la recompense n'a pas ete choisie reprend a
+    ce choix (jamais au niveau deja gagne) ; sinon au choix du niveau courant (propositions
+    retirees de facon deterministe, cf. aleatoire_pour_niveau)."""
+    if partie.recompense is not None:
+        return Ecran.RECOMPENSE
     if partie.niveau == 1 and partie.vaisseau["avant_gauche"] is None:
         return Ecran.CHOIX_MODULE
     return Ecran.CHOIX_NIVEAU
@@ -127,26 +133,51 @@ def conclure_combat(
     partie: Partie, combat: CombatNew, aleatoire: random.Random
 ) -> list[tuple[ModuleNew, CarteNew | None]]:
     """A appeler une seule fois, des que le combat se termine : reporte les PV du principal sur la
-    partie (reporter_combat), et en cas de victoire ajoute l'Argent gagne (specs.md 2.1) et
-    renvoie les candidats de recompense (specs.md 6, vide en cas de defaite) : un par module
-    equipe, la carte deja rattachee a ce module."""
+    partie (reporter_combat). Defaite : la partie est terminee tout de suite. Victoire : ajoute
+    l'Argent gagne (specs.md 2.1), renvoie les candidats de recompense (specs.md 6) : un par module
+    equipe, la carte deja rattachee a ce module, et les note dans partie.recompense. La partie
+    peut etre sauvegardee telle quelle : la reprendre ne rejoue pas le combat (ecran_de_reprise)."""
+    if combat.en_cours:
+        raise ValueError("Le combat n'est pas termine")
     reporter_combat(partie, combat)
     if combat.etat != EtatCombatNew.VICTOIRE:
+        marquer_terminee(partie)
         return []
     gagner_argent_combat(partie, combat)
-    return tirer_candidats_recompense(modules_de_la_partie(partie), charger_cartes_new(), aleatoire)
+    candidats = tirer_candidats_recompense(modules_de_la_partie(partie), charger_cartes_new(), aleatoire)
+    partie.recompense = [
+        CartePossedee(id=carte.id, module=carte.exemplaire_module) for _module, carte in candidats if carte is not None
+    ]
+    return candidats
+
+
+def recompense_en_attente(partie: Partie) -> list[tuple[ModuleNew, CarteNew]]:
+    """Candidats de recompense notes par conclure_combat et pas encore resolus (reprise sur
+    l'ecran de recompense), sous la meme forme que conclure_combat."""
+    cartes = charger_cartes_new()
+    modules = {module.exemplaire: module for module in modules_de_la_partie(partie)}
+    return [
+        (modules[possedee.module], cartes[possedee.id].copie(exemplaire_module=possedee.module))
+        for possedee in partie.recompense or []
+    ]
 
 
 def resoudre_fin_combat(partie: Partie, victoire: bool, carte: CarteNew | None) -> Ecran:
     """Ecran de fin de combat ferme : une defaite termine la partie ; une victoire ajoute la carte
     choisie parmi les candidats de conclure_combat (None = aucune ou Passer), puis mene a la
-    victoire finale apres le Boss (le run s'arrete au Niveau 10, specs.md 2) ou au niveau
-    suivant."""
+    victoire finale apres le Boss (le run s'arrete au Niveau 10, specs.md 2 : la partie est
+    terminee des maintenant, pour ne pas pouvoir rejouer le Boss) ou au niveau suivant."""
     if not victoire:
         marquer_terminee(partie)
         return Ecran.ACCUEIL
+    if carte is not None and partie.recompense is not None and (
+        CartePossedee(id=carte.id, module=carte.exemplaire_module) not in partie.recompense
+    ):
+        raise ValueError(f"Carte {carte.id} : pas parmi les recompenses proposees")
     _ajouter(partie, carte)
+    partie.recompense = None
     if est_niveau_boss(partie.niveau):
+        marquer_terminee(partie)
         return Ecran.VICTOIRE_FINALE
     avancer_niveau(partie)
     return Ecran.CHOIX_NIVEAU

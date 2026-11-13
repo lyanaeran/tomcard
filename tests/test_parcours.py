@@ -190,10 +190,30 @@ def test_tirer_candidats_carte_module_moins_de_candidats_si_pool_plus_petit():
     """Un module au pool plus restreint que `quantite` ne renvoie que ce qu'il a (jamais de
     doublon pour completer)."""
     cartes = {"C": CARTE_COMMUNE, "R": CARTE_RARE}
+    module = dataclasses.replace(_lanceur_avec_cartes("C", "R"), niveau_maj=2)
 
-    candidats = tirer_candidats_carte_module(_lanceur_avec_cartes("C", "R"), cartes, random.Random(1), quantite=5)
+    candidats = tirer_candidats_carte_module(module, cartes, random.Random(1), quantite=5)
 
     assert sorted(carte.id for carte in candidats) == ["TEST_C", "TEST_R"]
+
+
+def test_le_palier_de_mise_a_jour_ouvre_les_raretes_proposees():
+    """Decision utilisateur (2026-11-13) : palier 1 Commune, palier 2 + Rare, palier 3 +
+    Legendaire (Station service, specs.md 2.2/6)."""
+    cartes = charger_cartes_new()
+    lanceur = charger_modules_new()["MOD_2"]
+    attendu = {
+        1: {RareteCarte.COMMUNE},
+        2: {RareteCarte.COMMUNE, RareteCarte.RARE},
+        3: {RareteCarte.COMMUNE, RareteCarte.RARE, RareteCarte.LEGENDAIRE},
+    }
+
+    for niveau, raretes in attendu.items():
+        module = dataclasses.replace(lanceur, niveau_maj=niveau)
+        assert {carte.rarete for carte in pool_module(module, cartes)} == raretes
+        # Le tirage ne sort jamais du pool, quelle que soit la rarete tiree au sort
+        for graine in range(40):
+            assert tirer_carte_recompense(pool_module(module, cartes), random.Random(graine)).rarete in raretes
 
 
 def test_tirer_candidats_carte_module_pool_vide_renvoie_liste_vide():

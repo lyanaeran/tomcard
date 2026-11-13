@@ -203,7 +203,7 @@
       "persistante": false,
       "jouable": true,
       "refonte": true,
-      "description": "Les cartes de bases sont lancées {repetitions} fois de plus.",
+      "description": "Les cartes de base sont lancées {repetitions} fois de plus.",
       "valeurs": { "repetitions": 1 },
       "effets": [
         { "nature": "REPETITION", "valeur": "repetitions", "filtre": { "rarete": "Base" } }

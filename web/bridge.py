@@ -85,7 +85,7 @@ _PAIRES_CASES_ENNEMIES = (("AV_G", "AR_G"), ("AV_M", "AR_M"), ("AV_D", "AR_D"))
 
 # Version du contrat entre bridge.py et web/app.js : doit etre egale a VERSION_CACHE (app.js),
 # verifie au demarrage par app.js (versionsAccordees) et par tests/test_architecture.py
-VERSION_WEB = "83"
+VERSION_WEB = "84"
 
 combat = None
 # Taille du journal deja transmise : les popups d'une action sont calcules a partir des seules
@@ -583,6 +583,13 @@ def conclure_combat_partie_web(partie_json) -> str:
     })
 
 
+def recompense_en_attente_web(partie_json) -> str:
+    """Cartes de recompense d'un combat gagne, pas encore choisies (reprise d'une partie quittee
+    sur l'ecran de recompense) : meme forme que les candidats de conclure_combat_partie_web."""
+    partie = partie_depuis_json(partie_json)
+    return json.dumps([_carte_json(carte, module.nom) for module, carte in deroulement.recompense_en_attente(partie)])
+
+
 def resoudre_fin_combat_web(partie_json, victoire, id_carte, exemplaire_module) -> str:
     partie = partie_depuis_json(partie_json)
     carte = _carte_proposee(id_carte, exemplaire_module) if id_carte is not None else None
@@ -600,8 +607,8 @@ def terminer_etape_web(partie_json) -> str:
     return _transition_json(partie, deroulement.terminer_etape(partie))
 
 
-# --- Station service (specs.md 2.2) : chaque action renvoie {"partie", "succes"} ; succes=False
-# (Argent insuffisant) laisse la partie inchangee ---
+# --- Station service (specs.md 2.2) : chaque action renvoie {"partie", "succes", "raison"} ; un
+# refus (Argent insuffisant, action sans effet) laisse la partie inchangee ---
 
 
 def constantes_station_service_web() -> str:
@@ -609,8 +616,9 @@ def constantes_station_service_web() -> str:
     return json.dumps({"cout": COUT_ACTION_STATION_SERVICE, "pv_reparation": PV_REPARATION, "pv_amelioration": PV_AMELIORATION})
 
 
-def _resultat_station(partie, succes: bool) -> str:
-    return json.dumps({"partie": _partie_json(partie), "succes": succes})
+def _resultat_station(partie, resultat) -> str:
+    """`raison` : nom du ResultatStation (OK, ARGENT_INSUFFISANT, INUTILE), mis en mots par app.js."""
+    return json.dumps({"partie": _partie_json(partie), "succes": bool(resultat), "raison": resultat.name})
 
 
 def reparer_principal_web(partie_json) -> str:
