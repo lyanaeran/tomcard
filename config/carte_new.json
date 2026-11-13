@@ -13,7 +13,7 @@
       "persistante": false,
       "jouable": true,
       "refonte": true,
-      "description": "Inflige {degats} degats a un ennemi unique",
+      "description": "Inflige {degats} dégâts à un ennemi unique",
       "valeurs": { "degats": 6 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" }
@@ -70,7 +70,7 @@
       "persistante": false,
       "jouable": true,
       "refonte": true,
-      "description": "Repare le module principal pour {reparation}",
+      "description": "Répare le module principal pour {reparation}",
       "valeurs": { "reparation": 8 },
       "effets": [
         { "nature": "REPARATION", "valeur": "reparation" }
@@ -78,7 +78,7 @@
     },
     {
       "id": "CRT_8",
-      "nom": "Laser percant",
+      "nom": "Laser perçant",
       "image": "assets/cartes/attaque_percante.png",
       "rarete": "Commune",
       "categorie": "Attaque",
@@ -89,7 +89,7 @@
       "persistante": false,
       "jouable": true,
       "refonte": true,
-      "description": "Inflige {degats} degats a la colonne ciblee",
+      "description": "Inflige {degats} dégâts à la colonne ciblée",
       "valeurs": { "degats": 8 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" }
@@ -116,7 +116,7 @@
     },
     {
       "id": "CRT_46",
-      "nom": "Blindage cible",
+      "nom": "Blindage ciblé",
       "image": "assets/cartes/champ_electromagnetique.png",
       "rarete": "Commune",
       "categorie": "Defense",
@@ -146,7 +146,7 @@
       "persistante": false,
       "jouable": true,
       "refonte": true,
-      "description": "Inflige {degats} degats a un ennemi unique",
+      "description": "Inflige {degats} dégâts à un ennemi unique",
       "valeurs": { "degats": 12 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" }
@@ -154,7 +154,7 @@
     },
     {
       "id": "CRT_48",
-      "nom": "Bouclier stabilise",
+      "nom": "Bouclier stabilisé",
       "image": "assets/cartes/bouclier.png",
       "rarete": "Rare",
       "categorie": "Buff",
@@ -184,7 +184,7 @@
       "persistante": false,
       "jouable": true,
       "refonte": true,
-      "description": "Les Laser de base sont lances {repetitions} fois de plus.",
+      "description": "Les Laser de base sont lancés {repetitions} fois de plus.",
       "valeurs": { "repetitions": 1 },
       "effets": [
         { "nature": "REPETITION", "valeur": "repetitions", "filtre": { "id": "CRT_7" } }
@@ -203,7 +203,7 @@
       "persistante": false,
       "jouable": true,
       "refonte": true,
-      "description": "Les cartes de bases sont lancees {repetitions} fois de plus.",
+      "description": "Les cartes de bases sont lancées {repetitions} fois de plus.",
       "valeurs": { "repetitions": 1 },
       "effets": [
         { "nature": "REPETITION", "valeur": "repetitions", "filtre": { "rarete": "Base" } }
@@ -222,7 +222,7 @@
       "persistante": false,
       "jouable": true,
       "refonte": true,
-      "description": "Inflige {degats_cible} degats a un ennemi et {degats_autres} a tous les autres",
+      "description": "Inflige {degats_cible} dégâts à un ennemi et {degats_autres} à tous les autres",
       "valeurs": { "degats_cible": 15, "degats_autres": 6 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats_cible" },
@@ -242,7 +242,7 @@
       "persistante": false,
       "jouable": true,
       "refonte": true,
-      "description": "Inflige {degats_avant} degats a la ligne avant et {degats_arriere} a la ligne arriere",
+      "description": "Inflige {degats_avant} dégâts à la ligne avant et {degats_arriere} à la ligne arrière",
       "valeurs": { "degats_avant": 10, "degats_arriere": 8 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats_avant", "portee": "COLONNE_AVANT_ENNEMIE" },
@@ -262,7 +262,7 @@
       "persistante": false,
       "jouable": true,
       "refonte": true,
-      "description": "Inflige {degats} degats a tous les ennemis",
+      "description": "Inflige {degats} dégâts à tous les ennemis",
       "valeurs": { "degats": 6 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" }
@@ -270,7 +270,7 @@
     },
     {
       "id": "CRT_16",
-      "nom": "Ligne arriere",
+      "nom": "Ligne arrière",
       "image": "assets/cartes/tir_groupe.png",
       "rarete": "Commune",
       "categorie": "Attaque",
@@ -281,7 +281,7 @@
       "persistante": false,
       "jouable": true,
       "refonte": true,
-      "description": "Inflige {degats} degats a tous les ennemis de la ligne arriere",
+      "description": "Inflige {degats} dégâts à tous les ennemis de la ligne arrière",
       "valeurs": { "degats": 8 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" }
@@ -300,7 +300,7 @@
       "persistante": false,
       "jouable": true,
       "refonte": true,
-      "description": "Inflige {degats} degats a tous les ennemis",
+      "description": "Inflige {degats} dégâts à tous les ennemis",
       "valeurs": { "degats": 8 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" }
@@ -346,7 +346,7 @@
     },
     {
       "id": "CRT_19",
-      "nom": "Guerre nucleaire",
+      "nom": "Guerre nucléaire",
       "image": "assets/cartes/alerte_generale.png",
       "rarete": "Legendaire",
       "categorie": "Attaque",

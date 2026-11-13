@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "79";
+const VERSION_CACHE = "83";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -149,6 +149,10 @@ async function demarrer() {
         pyodide = await loadPyodide();
         statut.textContent = "Montage du code du jeu...";
         await monterDepot(pyodide);
+        if (!versionsAccordees()) {
+            recharger(statut);
+            return;
+        }
         statut.remove();
         afficherSelectionJoueur();
         tenterVerrouillagePaysage();
@@ -157,6 +161,49 @@ async function demarrer() {
         statut.textContent = `Erreur de chargement : ${erreur.message}`;
         console.error(erreur);
     }
+}
+
+// Juste apres une mise en ligne, le telephone peut encore garder en cache l'ancien index.html /
+// app.js (GitHub Pages autorise 10 minutes) alors que bridge.py, recharge sans cache, est deja
+// le nouveau : les deux ne se comprennent plus (bug constate sur iPhone, 2026-11-13). bridge.py
+// annonce donc sa version (VERSION_WEB), qui doit etre egale a VERSION_CACHE.
+function versionsAccordees() {
+    try {
+        return appelerBridgeSansAlerte("version_web") === VERSION_CACHE;
+    } catch {
+        // Un bridge.py trop ancien n'a pas version_web : versions differentes
+        return false;
+    }
+}
+
+function appelerBridgeSansAlerte(nomFonction) {
+    const fonctionPython = pyodide.globals.get(nomFonction);
+    if (!fonctionPython) throw new Error(`${nomFonction} absente`);
+    try {
+        return JSON.parse(fonctionPython());
+    } finally {
+        fonctionPython.destroy();
+    }
+}
+
+// Recharge la page en contournant le cache (adresse differente), deux fois au plus par session
+// pour ne jamais boucler ; ensuite, un message demande de reessayer plus tard.
+const CLE_RECHARGEMENTS_VERSION = "space_fight_rechargements_version";
+
+function recharger(statut) {
+    let essais = 0;
+    try {
+        essais = Number(sessionStorage.getItem(CLE_RECHARGEMENTS_VERSION) || "0");
+        sessionStorage.setItem(CLE_RECHARGEMENTS_VERSION, String(essais + 1));
+    } catch {
+        essais = 2;
+    }
+    if (essais >= 2) {
+        statut.textContent = "Mise à jour du jeu en cours : ferme l'app et réessaie dans quelques minutes.";
+        return;
+    }
+    statut.textContent = "Mise à jour du jeu...";
+    location.replace(`${location.pathname}?maj=${Date.now()}`);
 }
 
 function tenterVerrouillagePaysage() {
@@ -232,10 +279,10 @@ const NOMS_STATUT_JOURNAL = { BOUCLIER: "bouclier", INCENDIE: "incendie", RENVOI
 
 // Detail des degats recus : "6 degats, 2 absorbes par le bouclier, 4 PV perdus (46 restants)".
 function detailDegatsJournal(evenement) {
-    const morceaux = [`${evenement.valeur} degats`];
-    if (evenement.annules_leurre) morceaux.push("annules par le leurre");
-    if (evenement.renvoyes) morceaux.push(`${evenement.renvoyes} renvoyes`);
-    if (evenement.absorbes_bouclier) morceaux.push(`${evenement.absorbes_bouclier} absorbes par le bouclier`);
+    const morceaux = [`${evenement.valeur} dégâts`];
+    if (evenement.annules_leurre) morceaux.push("annulés par le leurre");
+    if (evenement.renvoyes) morceaux.push(`${evenement.renvoyes} renvoyés`);
+    if (evenement.absorbes_bouclier) morceaux.push(`${evenement.absorbes_bouclier} absorbés par le bouclier`);
     if (evenement.pv_perdus || !evenement.annules_leurre) {
         morceaux.push(`${evenement.pv_perdus} PV perdus (${evenement.pv_restants} restants)`);
     }
@@ -264,20 +311,20 @@ function construireLigneJournal(evenement) {
         case "REPARATION":
             return `${source}${texte(" → ")}${cible}${texte(` : +${evenement.valeur} PV (${evenement.pv_restants} restants)`)}`;
         case "ELECTRICITE":
-            return `${source}${texte(` : +${evenement.valeur} electricite`)}`;
+            return `${source}${texte(` : +${evenement.valeur} électricité`)}`;
         case "PIOCHE":
-            return `${source}${texte(` : ${evenement.valeur} carte(s) piochee(s)`)}`;
+            return `${source}${texte(` : ${evenement.valeur} carte(s) piochée(s)`)}`;
         case "REPETITION":
-            return `${source}${texte(` : ${evenement.valeur} carte(s) lancee(s) une fois de plus`)}`;
+            return `${source}${texte(` : ${evenement.valeur} carte(s) lancée(s) une fois de plus`)}`;
         case "MODULE_DETRUIT":
         case "ENNEMI_DETRUIT":
-            return `${cible}${texte(" detruit")}`;
+            return `${cible}${texte(" détruit")}`;
         case "CARTES_HORS_SERVICE":
             return `${cible}${texte(` : ${evenement.valeur} carte(s) hors service`)}`;
         case "VICTOIRE":
             return segmentJournal("Victoire", "journal-tour");
         case "DEFAITE":
-            return segmentJournal("Defaite", "journal-tour");
+            return segmentJournal("Défaite", "journal-tour");
         default:
             return "";
     }
@@ -369,7 +416,7 @@ function trouverObjetCase(idCase, typeCase) {
     return etatCourant.ennemis.find((e) => e && e.id === idCase) ?? null;
 }
 
-// Texte d'un effet d'ennemi (intention ou etape de son cycle) : symbole d'attaque 7 x2 -> Lanceur
+// Texte d'un effet d'ennemi (son prochain tour) : symbole d'attaque 7 x2 -> Lanceur
 // de missiles, symbole de bouclier 10, symbole de renvoi 5 -> un allie. La cible prevue vient du
 // gameplay (CombatNew.intentions).
 function texteEffetEnnemi(effet) {
@@ -377,7 +424,7 @@ function texteEffetEnnemi(effet) {
     const symbole = { ATTAQUE: "⚔", BOUCLIER: "🛡", RENVOI: "↩" }[effet.nature] || "?";
     let cible = "";
     if (effet.cible === "TOUS") cible = " → tous";
-    else if (effet.cible === "ALLIE") cible = " → un allie";
+    else if (effet.cible === "ALLIE") cible = " → un allié";
     else if (effet.cible === "MODULE") cible = effet.cible_nom ? ` → ${effet.cible_nom}` : " → module le plus proche";
     return `${symbole} ${effet.valeur}${repetitions}${cible}`;
 }
@@ -404,8 +451,9 @@ function lignesStatuts(objet) {
 let minuteurInfobulle = null;
 
 // Infobulle d'une case tapee sans carte armee (equivalent tactile du survol PC), dans le meme
-// panneau flottant centre que #info-carte. Ennemi : son cycle complet, etape courante en gras,
-// valeurs du tour en cours, pour anticiper (refonte-branchement.md 4.3).
+// panneau flottant centre que #info-carte. Ennemi : seulement les actions de son prochain tour, une
+// par ligne, sans titre ni cycle complet (decision utilisateur, 2026-11-13, refonte-branchement.md
+// 4.3).
 function afficherInfobulle(idCase, typeCase) {
     const objet = trouverObjetCase(idCase, typeCase);
     if (!objet) return;
@@ -417,22 +465,16 @@ function afficherInfobulle(idCase, typeCase) {
             lignes.push(`<div>${objet.hors_service} carte(s) hors service</div>`);
         }
         if (objet.menaces.length > 0) {
-            lignes.push(`<div class="infobulle-titre-cycle">Vise au prochain tour par :</div>`);
+            lignes.push(`<div class="infobulle-titre-cycle">Visé au prochain tour par :</div>`);
             objet.menaces.forEach((menace) => {
                 const repetitions = menace.repetitions > 1 ? ` ×${menace.repetitions}` : "";
                 lignes.push(`<div class="infobulle-etape-courante">${menace.ennemi} : ⚔ ${menace.valeur}${repetitions}</div>`);
             });
         }
     } else if (!objet.detruit) {
-        if (objet.intention.length > 0) {
-            lignes.push(`<div class="infobulle-titre-cycle">Prochain tour :</div>`);
-            lignes.push(`<div class="infobulle-etape-courante">${objet.intention.map(texteEffetEnnemi).join(" + ")}</div>`);
-        }
-        lignes.push(`<div class="infobulle-titre-cycle">Cycle :</div>`);
-        objet.cycle.forEach((etape, index) => {
-            const texte = `${index + 1}. ${etape.map(texteEffetEnnemi).join(" + ")}`;
-            const classe = index === objet.etape ? "infobulle-etape-courante" : "infobulle-etape";
-            lignes.push(`<div class="${classe}">${texte}</div>`);
+        // Une action du prochain tour par ligne, sans titre (decision utilisateur, 2026-11-13)
+        objet.intention.forEach((effet) => {
+            lignes.push(`<div class="infobulle-etape-courante">${texteEffetEnnemi(effet)}</div>`);
         });
     }
     const panneau = document.getElementById("info-case");
@@ -623,7 +665,7 @@ function detailsCarte(carte) {
     const lignes = [];
     const munitions = texteMunitions(carte);
     if (munitions) lignes.push(`🔋 Munitions ${munitions}`);
-    if (carte.lancements > 1) lignes.push(`Lancee ${carte.lancements} fois`);
+    if (carte.lancements > 1) lignes.push(`Lancée ${carte.lancements} fois`);
     if (carte.persistante) lignes.push("Persistante");
     if (carte.module_nom) lignes.push(`Module : ${carte.module_nom}`);
     return lignes.map((ligne) => `<div class="info-carte-detail">${ligne}</div>`).join("");
@@ -646,7 +688,7 @@ function rendreInfoCarte() {
 
 function rendreBanniereFin() {
     if (etatCourant.etat === "EN_COURS") return "";
-    const texte = etatCourant.etat === "VICTOIRE" ? "Victoire !" : "Defaite";
+    const texte = etatCourant.etat === "VICTOIRE" ? "Victoire !" : "Défaite";
     return `
         <div class="banniere-fin ${etatCourant.etat.toLowerCase()}">
             <span>${texte}</span>

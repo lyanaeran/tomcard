@@ -116,8 +116,9 @@ de dégâts, journal dans la barre latérale.
 ↩ 5 → un allié       renvoi posé sur un allié (cible tirée au moment de jouer)
 ```
 
-- Infobulle de l'ennemi : son **cycle complet** (« ① attaque ② attaque ③ attaque + bouclier »,
-  étape courante en gras) et ses valeurs au tour en cours, pour que le joueur anticipe.
+- Infobulle de l'ennemi : **seulement les actions de son prochain tour, une par ligne, sans titre**
+  (« ⚔ 2 → Principal », puis « 🛡 6 » sur la ligne suivante), **pas son cycle complet** (décisions
+  utilisateur, 2026-11-13, après essai sur iPhone ; la proposition initiale affichait tout le cycle).
 
 ### 4.4 Piles et électricité
 
@@ -244,13 +245,16 @@ supprimé ; `web/app.js` / `style.css` : éléments du §4, cases valides lues d
 récompenses rattachées à leur module, ancienne sauvegarde effacée de `localStorage` si elle était
 en cours (`partie.lire_sauvegarde`, même règle que le PC).
 
-**Écarts avec la proposition du §4, choisis en voyant les captures (propositions à valider)** :
+**Écarts avec la proposition du §4, choisis en voyant les captures** (intention courte avec
+pastille 🎯 et journal sans « Carte X jouée » **validés par l'utilisateur le 2026-11-13** « pour
+le moment » ; textes affichés accentués, journal compris, à sa demande) :
 
 - **Intention courte dans la case de l'ennemi** (« ⚔7×2 », « ⚔5 tous », « 🛡10 », « ↩5 ») au
   lieu de « ⚔ 7 ×2 → Lanceur » : la version longue débordait sur la rangée suivante et sur les
   pastilles du vaisseau, en iPhone paysage. Le **module visé** porte à la place une pastille 🎯, et
   l'infobulle (tap) donne le détail : « Visé au prochain tour par : Le nettoyeur : ⚔ 7 ×2 » côté
-  module, « Prochain tour : ⚔ 7 ×2 → Lanceur de missiles » et le cycle complet côté ennemi.
+  module, « ⚔ 7 ×2 → Lanceur de missiles » côté ennemi : les actions du prochain tour, une par
+  ligne, sans titre ni cycle complet (décisions utilisateur du 2026-11-13).
 - **Infobulles de statut sobres** : « 🛡 Bouclier 6 », « 🔥 Incendie 3 », « ↩ Renvoi 5 », « 🎭
   Leurre », et « Persistante » pour une carte ; aucune règle n'est écrite (ni l'extinction « −1 à
   la fin du tour ennemi », ni l'effet du leurre ou de Persistante), pour ne pas recopier une règle

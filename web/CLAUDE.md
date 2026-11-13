@@ -17,9 +17,11 @@ Le flux d'interaction doit rester identique au PC (`cliquerCase` ↔ `_essayer_d
 
 ## À chaque modification
 
-- **Incrémenter `VERSION_CACHE`** dans `app.js` et les paramètres `?v=` dans `index.html` à chaque
-  changement de `app.js`/`bridge.py`/`style.css` (cache-busting manuel, cf. commentaire en tête de
-  `app.js`).
+- **Incrémenter `VERSION_CACHE`** dans `app.js`, **`VERSION_WEB`** dans `bridge.py` (même valeur)
+  et les paramètres `?v=` dans `index.html` à chaque changement de `app.js`/`bridge.py`/`style.css`
+  (cache-busting manuel, cf. commentaire en tête de `app.js`). Au démarrage, `app.js` recharge la
+  page si `bridge.py` n'a pas la même version (fichiers de deux mises en ligne mélangés par le
+  cache du téléphone) ; `tests/test_architecture.py` vérifie que les trois valeurs sont égales.
 - Un nouveau fichier dans `src/gameplay/` doit être ajouté à `FICHIERS_A_MONTER` dans `app.js`,
   sinon l'import échoue dans Pyodide et le web ne charge plus (déjà arrivé avec `journal.py`).
 - `app.js` fetche aussi `config/*.json` directement : un changement de format doit y rester lisible.

@@ -83,6 +83,10 @@ IDS_ENNEMIS = {
 }
 _PAIRES_CASES_ENNEMIES = (("AV_G", "AR_G"), ("AV_M", "AR_M"), ("AV_D", "AR_D"))
 
+# Version du contrat entre bridge.py et web/app.js : doit etre egale a VERSION_CACHE (app.js),
+# verifie au demarrage par app.js (versionsAccordees) et par tests/test_architecture.py
+VERSION_WEB = "83"
+
 combat = None
 # Taille du journal deja transmise : les popups d'une action sont calcules a partir des seules
 # entrees ajoutees depuis (combat.journal[n:])
@@ -250,7 +254,7 @@ def _module_json(module: ModuleNew | None, id_case: str, menaces: dict | None = 
 def _effet_ennemi_json(effet, valeur: int, ennemi: EnnemiNew, cible_prevue=None) -> dict:
     """Un effet d'etape ennemie avec sa valeur au tour en cours. `cible` : "MODULE" (module prevu,
     nom et case), "TOUS" (tous les modules), "SOI" (l'ennemi lui-meme), "ALLIE" (un allie tire au
-    moment de jouer) ; None pour un module qui n'est pas encore connu (cycle complet)."""
+    moment de jouer) ; cible_nom / cible_id renseignes seulement pour un module prevu."""
     if effet.cible == CibleEffetEnnemi.TOUS_MODULES:
         cible = "TOUS"
     elif effet.cible == CibleEffetEnnemi.SOI_MEME:
@@ -277,10 +281,6 @@ def _ennemi_json(ennemi: EnnemiNew | None, id_case: str, intentions: dict, fusio
     if ennemi is None:
         return None
     intention = intentions.get(id(ennemi))
-    cycle = [
-        [_effet_ennemi_json(effet, ennemi.valeur(effet.valeur, combat.tour), ennemi) for effet in etape]
-        for etape in ennemi.actions
-    ]
     return {
         "id": id_case,
         "nom": ennemi.nom,
@@ -294,9 +294,6 @@ def _ennemi_json(ennemi: EnnemiNew | None, id_case: str, intentions: dict, fusio
         "intention": [
             _effet_ennemi_json(effet.effet, effet.valeur, ennemi, effet.cible_prevue) for effet in intention.effets
         ] if intention else [],
-        # Cycle complet, valeurs au tour en cours, et etape courante
-        "cycle": cycle,
-        "etape": ennemi.etape,
     }
 
 
@@ -463,6 +460,10 @@ def etat_deck_combat() -> str:
 
 # --- Profils et parties (specs.md 10.3) : la persistance (localStorage) est geree cote JS ;
 # ces fonctions ne font que (de)serialiser et appliquer les fonctions de src/gameplay ---
+
+
+def version_web() -> str:
+    return json.dumps(VERSION_WEB)
 
 
 def _transition_json(partie, ecran) -> str:

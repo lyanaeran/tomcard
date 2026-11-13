@@ -63,9 +63,9 @@ def test_les_19_cartes_revues_sont_jouables():
 def test_description_affichee_remplace_les_valeurs_nommees():
     cartes = _cartes()
 
-    assert cartes["Missiles"].description_affichee() == "Inflige 15 degats a un ennemi et 6 a tous les autres"
-    assert cartes["Torpille"].description_affichee() == "Inflige 10 degats a la ligne avant et 8 a la ligne arriere"
-    assert cartes["Laser"].description_affichee() == "Inflige 6 degats a un ennemi unique"
+    assert cartes["Missiles"].description_affichee() == "Inflige 15 dégâts à un ennemi et 6 à tous les autres"
+    assert cartes["Torpille"].description_affichee() == "Inflige 10 dégâts à la ligne avant et 8 à la ligne arrière"
+    assert cartes["Laser"].description_affichee() == "Inflige 6 dégâts à un ennemi unique"
     assert cartes["Tir incendiaire"].description_affichee() == "Ajoute 4 points d’incendie sur la cible"
     assert cartes["Leurre"].description_affichee() == "Annule la prochaine attaque ciblant le module"
 
@@ -156,7 +156,7 @@ def test_salve_laser_augmente_les_lancements_des_seuls_lasers_de_base_de_toutes_
 
 def test_les_repetitions_se_cumulent_pour_le_combat():
     cartes = _cartes()
-    laser, reparation, laser_percant = cartes["Laser"], cartes["Réparation"], cartes["Laser percant"]
+    laser, reparation, laser_percant = cartes["Laser"], cartes["Réparation"], cartes["Laser perçant"]
     deck = [laser, reparation, laser_percant]
 
     for nom in ("Salve laser", "Protocole d'urgence"):
@@ -168,12 +168,12 @@ def test_les_repetitions_se_cumulent_pour_le_combat():
 
 def test_bouclier_stabilise_double_le_bouclier_de_base():
     cartes = _cartes()
-    stabilise = cartes["Bouclier stabilise"]
+    stabilise = cartes["Bouclier stabilisé"]
 
     effet = stabilise.effets[0]
-    appliquer_repetition(effet, stabilise.valeur_de(effet), [cartes["Bouclier"], cartes["Blindage cible"]])
+    appliquer_repetition(effet, stabilise.valeur_de(effet), [cartes["Bouclier"], cartes["Blindage ciblé"]])
 
-    assert (cartes["Bouclier"].lancements_actuels, cartes["Blindage cible"].lancements_actuels) == (2, 1)
+    assert (cartes["Bouclier"].lancements_actuels, cartes["Blindage ciblé"].lancements_actuels) == (2, 1)
 
 
 def test_seul_un_effet_repetition_modifie_les_lancements():
@@ -220,7 +220,7 @@ def test_valeurs_actuelles_modifiables_sans_toucher_au_modele():
     laser.valeurs_actuelles["degats"] += 2
 
     assert laser.valeur_de(laser.effets[0]) == 8
-    assert laser.description_affichee() == "Inflige 8 degats a un ennemi unique"
+    assert laser.description_affichee() == "Inflige 8 dégâts à un ennemi unique"
     assert laser.valeurs["degats"] == 6
     assert laser.copie().valeur_de(laser.effets[0]) == 6  # un nouvel exemplaire repart du modele
 
