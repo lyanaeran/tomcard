@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "82";
+const VERSION_CACHE = "83";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -279,10 +279,10 @@ const NOMS_STATUT_JOURNAL = { BOUCLIER: "bouclier", INCENDIE: "incendie", RENVOI
 
 // Detail des degats recus : "6 degats, 2 absorbes par le bouclier, 4 PV perdus (46 restants)".
 function detailDegatsJournal(evenement) {
-    const morceaux = [`${evenement.valeur} degats`];
-    if (evenement.annules_leurre) morceaux.push("annules par le leurre");
-    if (evenement.renvoyes) morceaux.push(`${evenement.renvoyes} renvoyes`);
-    if (evenement.absorbes_bouclier) morceaux.push(`${evenement.absorbes_bouclier} absorbes par le bouclier`);
+    const morceaux = [`${evenement.valeur} dégâts`];
+    if (evenement.annules_leurre) morceaux.push("annulés par le leurre");
+    if (evenement.renvoyes) morceaux.push(`${evenement.renvoyes} renvoyés`);
+    if (evenement.absorbes_bouclier) morceaux.push(`${evenement.absorbes_bouclier} absorbés par le bouclier`);
     if (evenement.pv_perdus || !evenement.annules_leurre) {
         morceaux.push(`${evenement.pv_perdus} PV perdus (${evenement.pv_restants} restants)`);
     }
@@ -311,20 +311,20 @@ function construireLigneJournal(evenement) {
         case "REPARATION":
             return `${source}${texte(" → ")}${cible}${texte(` : +${evenement.valeur} PV (${evenement.pv_restants} restants)`)}`;
         case "ELECTRICITE":
-            return `${source}${texte(` : +${evenement.valeur} electricite`)}`;
+            return `${source}${texte(` : +${evenement.valeur} électricité`)}`;
         case "PIOCHE":
-            return `${source}${texte(` : ${evenement.valeur} carte(s) piochee(s)`)}`;
+            return `${source}${texte(` : ${evenement.valeur} carte(s) piochée(s)`)}`;
         case "REPETITION":
-            return `${source}${texte(` : ${evenement.valeur} carte(s) lancee(s) une fois de plus`)}`;
+            return `${source}${texte(` : ${evenement.valeur} carte(s) lancée(s) une fois de plus`)}`;
         case "MODULE_DETRUIT":
         case "ENNEMI_DETRUIT":
-            return `${cible}${texte(" detruit")}`;
+            return `${cible}${texte(" détruit")}`;
         case "CARTES_HORS_SERVICE":
             return `${cible}${texte(` : ${evenement.valeur} carte(s) hors service`)}`;
         case "VICTOIRE":
             return segmentJournal("Victoire", "journal-tour");
         case "DEFAITE":
-            return segmentJournal("Defaite", "journal-tour");
+            return segmentJournal("Défaite", "journal-tour");
         default:
             return "";
     }
@@ -688,7 +688,7 @@ function rendreInfoCarte() {
 
 function rendreBanniereFin() {
     if (etatCourant.etat === "EN_COURS") return "";
-    const texte = etatCourant.etat === "VICTOIRE" ? "Victoire !" : "Defaite";
+    const texte = etatCourant.etat === "VICTOIRE" ? "Victoire !" : "Défaite";
     return `
         <div class="banniere-fin ${etatCourant.etat.toLowerCase()}">
             <span>${texte}</span>

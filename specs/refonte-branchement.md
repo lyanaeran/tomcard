@@ -245,7 +245,9 @@ supprimé ; `web/app.js` / `style.css` : éléments du §4, cases valides lues d
 récompenses rattachées à leur module, ancienne sauvegarde effacée de `localStorage` si elle était
 en cours (`partie.lire_sauvegarde`, même règle que le PC).
 
-**Écarts avec la proposition du §4, choisis en voyant les captures (propositions à valider)** :
+**Écarts avec la proposition du §4, choisis en voyant les captures** (intention courte avec
+pastille 🎯 et journal sans « Carte X jouée » **validés par l'utilisateur le 2026-11-13** « pour
+le moment » ; textes affichés accentués, journal compris, à sa demande) :
 
 - **Intention courte dans la case de l'ennemi** (« ⚔7×2 », « ⚔5 tous », « 🛡10 », « ↩5 ») au
   lieu de « ⚔ 7 ×2 → Lanceur » : la version longue débordait sur la rangée suivante et sur les
