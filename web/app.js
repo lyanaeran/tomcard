@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "80";
+const VERSION_CACHE = "81";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -404,8 +404,9 @@ function lignesStatuts(objet) {
 let minuteurInfobulle = null;
 
 // Infobulle d'une case tapee sans carte armee (equivalent tactile du survol PC), dans le meme
-// panneau flottant centre que #info-carte. Ennemi : seulement son prochain tour, pas son cycle
-// complet (decision utilisateur, 2026-11-13, refonte-branchement.md 4.3).
+// panneau flottant centre que #info-carte. Ennemi : seulement les actions de son prochain tour, une
+// par ligne, sans titre ni cycle complet (decision utilisateur, 2026-11-13, refonte-branchement.md
+// 4.3).
 function afficherInfobulle(idCase, typeCase) {
     const objet = trouverObjetCase(idCase, typeCase);
     if (!objet) return;
@@ -424,10 +425,10 @@ function afficherInfobulle(idCase, typeCase) {
             });
         }
     } else if (!objet.detruit) {
-        if (objet.intention.length > 0) {
-            lignes.push(`<div class="infobulle-titre-cycle">Prochain tour :</div>`);
-            lignes.push(`<div class="infobulle-etape-courante">${objet.intention.map(texteEffetEnnemi).join(" + ")}</div>`);
-        }
+        // Une action du prochain tour par ligne, sans titre (decision utilisateur, 2026-11-13)
+        objet.intention.forEach((effet) => {
+            lignes.push(`<div class="infobulle-etape-courante">${texteEffetEnnemi(effet)}</div>`);
+        });
     }
     const panneau = document.getElementById("info-case");
     panneau.innerHTML = lignes.join("");
