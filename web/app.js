@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "84";
+const VERSION_CACHE = "85";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -1009,6 +1009,9 @@ function afficherPopupStation(position, texte, classeCouleur) {
 }
 
 function cliquerActionStation(action) {
+    // Une autre action annule un Deplacement en attente de destination (sinon le tap suivant
+    // demandait un deplacement sans module de depart)
+    if (action !== "deplacer") modeDeplacementStation = false;
     // Reparer s'applique toujours au principal, sans selection (decision 2)
     if (action === "reparer") positionSelectionneeStation = "base";
     if (positionSelectionneeStation === null) return;

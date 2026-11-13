@@ -88,7 +88,8 @@ utilisateur), plus des écrans autonomes non reliés comme les précédents.
   (`null`, ou la liste `{"id", "module"}` des cartes proposées après un combat gagné, tant que le
   joueur n'a pas choisi : une partie quittée sur l'écran de récompense y revient, cf. parcours
   §2.4 / `deroulement.ecran_de_reprise`) ; une sauvegarde qui cite une carte ou un module absent
-  de `config/` est abandonnée comme une ancienne version (proposition), au lieu de planter. Ancien
+  de `config/`, ou une sauvegarde abîmée, est abandonnée comme une ancienne version
+  (proposition), au lieu de planter. Ancien
   format (version 1) :
 - **Contenu** :
   ```json

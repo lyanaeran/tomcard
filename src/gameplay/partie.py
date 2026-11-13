@@ -214,13 +214,18 @@ def lire_partie(texte: str) -> Partie | None:
 def lire_sauvegarde(texte: str) -> tuple[Partie | None, bool]:
     """Partie sauvegardee lue une seule fois : (partie, a_effacer). Pour une ancienne version du
     jeu, partie vaut None et a_effacer dit si elle etait EN_COURS : elle est alors abandonnee et
-    effacee (decision 1) ; une ancienne partie TERMINEE est gardee (futures statistiques). Regle
-    commune au PC (partie_en_cours) et au web (localStorage)."""
-    donnees = json.loads(texte)
+    effacee (decision 1) ; une ancienne partie TERMINEE est gardee (futures statistiques). Une
+    sauvegarde abimee (texte illisible, champ manquant ou du mauvais type) est traitee de la meme
+    facon, au lieu de planter : effacee, sauf si on peut y lire qu'elle etait TERMINEE
+    (proposition). Regle commune au PC (partie_en_cours) et au web (localStorage)."""
+    donnees = None
     try:
+        donnees = json.loads(texte)
         return partie_depuis_dict(donnees), False
-    except SauvegardeObsolete:
-        return None, donnees.get("statut") == STATUT_EN_COURS
+    except (SauvegardeObsolete, ValueError, KeyError, TypeError, AttributeError):
+        # ValueError couvre aussi json.JSONDecodeError
+        terminee = isinstance(donnees, dict) and donnees.get("statut") == STATUT_TERMINEE
+        return None, not terminee
 
 
 def profil_vers_dict(profil: Profil) -> dict:

@@ -147,6 +147,15 @@ def test_une_sauvegarde_qui_cite_une_carte_ou_un_module_disparu_est_abandonnee()
         assert partie_module.lire_sauvegarde(json.dumps(copie)) == (None, True)
 
 
+@pytest.mark.parametrize("texte", ["", "pas du json", "null", "[]", "{}", '{"version": 2}', '{"version": 2, "statut": "EN_COURS", "vaisseau": 3}'])
+def test_une_sauvegarde_abimee_est_abandonnee_sans_planter(texte):
+    assert partie_module.lire_sauvegarde(texte) == (None, True)
+
+
+def test_une_sauvegarde_abimee_mais_terminee_est_gardee():
+    assert partie_module.lire_sauvegarde('{"version": 2, "statut": "TERMINEE"}') == (None, False)
+
+
 def test_la_recompense_en_attente_est_sauvegardee():
     partie = _partie_avec_lanceur()
     assert partie_depuis_json(partie_vers_json(partie)).recompense is None

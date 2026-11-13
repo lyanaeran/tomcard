@@ -294,6 +294,15 @@ async function essaiEcransHorsCombat() {
     const lanceur = await page.evaluate(() => partieActive.vaisseau.avant_gauche);
     verifier(lanceur.pv_max === 30 && lanceur.niveau_maj === 2, "Station : Lanceur ameliore (30 PV max) et mis a jour (niveau 2)");
     verifier((await page.evaluate(() => partieActive.argent)) === 60, "Station : 2 actions payees");
+    // Reparer pendant un Deplacement en attente : le deplacement est annule, rien ne plante
+    await page.click('.module-station[data-position="avant_gauche"]');
+    await page.click('.action-station[data-action="deplacer"]');
+    await page.click('.action-station[data-action="reparer"]');
+    await page.click('.module-station[data-position="avant_droite"]');
+    verifier(
+        (await page.evaluate(() => partieActive.vaisseau.avant_gauche !== null && partieActive.argent)) === 60,
+        "Station : Reparer annule un Deplacement en attente"
+    );
     await page.click("#bouton-termine-station-service");
 
     // Trois lunes : Bricoler retire une carte

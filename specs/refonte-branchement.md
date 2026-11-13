@@ -290,8 +290,10 @@ Relecture complète demandée par l'utilisateur ; corrections faites dans une PR
   dans `main.py:_aller_a`.**
 - **Station** : paliers de mise à jour appliqués (décision utilisateur) et actions sans effet
   refusées sans payer (proposition), cf. specs.md §2.2.
-- **Sauvegarde** : une carte ou un module disparu de `config/` fait abandonner la partie au lieu
-  de planter (proposition) ; deux cartes de même id sont refusées au chargement.
+- **Sauvegarde** : une carte ou un module disparu de `config/`, ou une sauvegarde abîmée (texte
+  illisible, champ manquant), fait abandonner la partie au lieu de planter (proposition :
+  effacée, sauf si on peut y lire qu'elle était TERMINEE) ; deux cartes de même id sont refusées
+  au chargement.
 - **Web** : accents sur tous les écrans, nom de joueur jamais interprété comme du HTML.
 - **Outils** : `outils/test_web/essais.js` (essais dans Chromium, cf. `web/CLAUDE.md`) et tests
   lancés par GitHub à chaque PR (`.github/workflows/tests.yml` : `pytest`, syntaxe du web).
