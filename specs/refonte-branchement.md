@@ -2,7 +2,8 @@
 
 *Document de travail, hors numérotation (cf. [specs.md](specs.md)). **Plan validé** (décisions du
 §2 et ordre des PR du §5 tranchés le 2026-11-11 ; l'affichage du §4 reste une proposition, à
-valider sur maquette). **PR 1 (gameplay) codée le 2026-11-12** (§5.1) ; PR 2 à 4 à faire. Décrit comment faire passer le jeu (parcours, sauvegarde, affichage
+valider sur maquette). **PR 1 (gameplay) codée le 2026-11-12** (§5.1) ; **PR 2 (web) codée le
+2026-11-12, maquette en attente de validation** (§5.2) ; PR 3 et 4 à faire. Décrit comment faire passer le jeu (parcours, sauvegarde, affichage
 PC et web) sur le moteur de la refonte (`CombatNew` et les fichiers `*_new.py`), puis supprimer
 l'ancien moteur. Contexte : [refonte.md](refonte.md) ; règles du nouveau combat :
 [refonte-combat.md](refonte-combat.md).*
@@ -232,6 +233,45 @@ lisent encore l'ancien combat et l'ancien format de partie (accepté, §5).
 - Vérification dans le navigateur (méthode de `web/CLAUDE.md`), au format iPhone en priorité :
   début de combat, carte sélectionnée et cases valides, renvoi de Miroir, module détruit et Hors
   service, victoire, défaite.
+
+### 5.2 PR 2 codée (2026-11-12) : ce qui a été fait, écarts avec le §4 (à valider)
+
+Fait, testé dans Chromium au format iPhone 13 paysage, avec Pyodide (parcours complet et scénarios
+dédiés) : `web/bridge.py` réécrit sur `CombatNew` et le nouveau format de partie, mode démo
+supprimé ; `web/app.js` / `style.css` : éléments du §4, cases valides lues dans le gameplay
+(`cibles_possibles`), textes de carte lus dans `carte_new.json` (`description_affichee`), Station
+(Réparer = principal, sans sélection), Astéroïdes (plus de choix de module), Trois lunes, Police,
+récompenses rattachées à leur module, ancienne sauvegarde effacée de `localStorage` si elle était
+en cours (`partie.lire_sauvegarde`, même règle que le PC).
+
+**Écarts avec la proposition du §4, choisis en voyant les captures (propositions à valider)** :
+
+- **Intention courte dans la case de l'ennemi** (« ⚔7×2 », « ⚔5 tous », « 🛡10 », « ↩5 ») au
+  lieu de « ⚔ 7 ×2 → Lanceur » : la version longue débordait sur la rangée suivante et sur les
+  pastilles du vaisseau, en iPhone paysage. Le **module visé** porte à la place une pastille 🎯, et
+  l'infobulle (tap) donne le détail : « Visé au prochain tour par : Le nettoyeur : ⚔ 7 ×2 » côté
+  module, « Prochain tour : ⚔ 7 ×2 → Lanceur de missiles » et le cycle complet côté ennemi.
+- **Infobulles de statut sobres** : « 🛡 Bouclier 6 », « 🔥 Incendie 3 », « ↩ Renvoi 5 », « 🎭
+  Leurre », et « Persistante » pour une carte ; aucune règle n'est écrite (ni l'extinction « −1 à
+  la fin du tour ennemi », ni l'effet du leurre ou de Persistante), pour ne pas recopier une règle
+  de jeu dans l'affichage.
+- **Carte en main** : illustration, nom en bas, coût, munitions « 2/2 », « ×2 » si lancée plus
+  d'une fois, bandeau PERSISTANTE ; grisée si elle n'est pas jouable maintenant. Description
+  complète dans le panneau qui s'ouvre quand on la sélectionne (avec munitions, lancements, module).
+- **Cases valides en vert** quand une carte est sélectionnée (cases données par le gameplay).
+- **Compteurs** sous la forme « Tour 2 · Pioche 6 · Défausse 0 · Épuisées 0 · Hors service 2 ».
+- **Journal** : une ligne par effet (la ligne « Carte X jouée » n'est plus affichée, ses effets le
+  sont) ; phrases du §4.5.
+- **Popups** : « −4 », « −1 (🛡4) » (PV perdus et part absorbée par le bouclier), « bloqué 🛡4 »
+  (tout absorbé), « +4 🛡 », « ↩ 5 » (tout renvoyé), « annulé » (leurre), « +8 » (réparation) ;
+  plusieurs popups sur la même case sont décalés dans le temps (0,3 s), sans retarder les autres
+  cases.
+- **PV hors combat** (accueil, Station, Aventures) : ceux du prochain combat, donnés par le
+  gameplay (`ModuleNew.pv_au_prochain_combat` : PV sauvegardés pour le principal, PV max pour un
+  secondaire).
+
+Non vérifié en capture : la pastille Leurre et le bandeau Persistante (aucune carte actuelle n'est
+Persistante). Le PC (`python main.py`) ne démarre toujours pas : PR 3.
 
 ### PR 3 — Affichage PC (`src/ui/fenetre.py`, écrans du parcours touchés)
 

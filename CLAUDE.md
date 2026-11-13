@@ -7,8 +7,9 @@ et le **parcours** (boucle de run) s'enchaîne écran par écran jusqu'au Boss d
 **Une refonte est en cours** (cartes, modules, ennemis, statuts, combat) : un **nouveau moteur**
 (fichiers `*_new.py`, `config/*_new.json`) est codé et testé **à côté de l'ancien**. Son
 **branchement** se fait en 4 PR (`specs/refonte-branchement.md`) : le gameplay du parcours
-(partie, sauvegarde, déroulement, simulateur) l'utilise depuis la PR 1, mais l'affichage PC et web
-lit encore l'ancien combat, **le jeu ne fonctionne donc plus** jusqu'aux PR 2 (web) et 3 (PC).
+(partie, sauvegarde, déroulement, simulateur) l'utilise depuis la PR 1, la version web depuis la
+PR 2 ; l'affichage PC lit encore l'ancien combat, **la version PC ne démarre donc plus** jusqu'à la
+PR 3.
 **Lire `specs/refonte.md` en premier** : état des lieux, où est quoi, ce qui reste à faire.
 
 ## Langue

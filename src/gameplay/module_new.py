@@ -99,12 +99,16 @@ class ModuleNew:
             pv=self.pv_max_base, niveau_maj=1, pv_combat=None, statuts=Statuts(),
         )
 
+    @property
+    def pv_au_prochain_combat(self) -> int:
+        """PV avec lesquels cet exemplaire commencera son prochain combat : PV sauvegardes pour le
+        principal, PV max pour un secondaire (il repart plein). A afficher hors combat."""
+        return self.pv if self.principal else self.pv_max
+
     def copie_pour_combat(self) -> "ModuleNew":
-        """Copie de ce module pour un combat, champs de combat remis a zero : PV sauvegardes pour
-        le principal, PV max pour un secondaire. Le module d'origine n'est pas modifie."""
-        return dataclasses.replace(
-            self, pv_combat=self.pv if self.principal else self.pv_max, statuts=Statuts(),
-        )
+        """Copie de ce module pour un combat, champs de combat remis a zero, PV de depart
+        pv_au_prochain_combat. Le module d'origine n'est pas modifie."""
+        return dataclasses.replace(self, pv_combat=self.pv_au_prochain_combat, statuts=Statuts())
 
     def reporter_combat(self, copie_de_combat: "ModuleNew") -> None:
         """Fin de combat : reporte sur ce module de la partie ce qui doit persister, c'est-a-dire
