@@ -1,7 +1,7 @@
 """
 Ecran "Journal de combat" (specs.md 8.1), ouvert depuis les controles de FenetreCombat (bouton
-journal). Affiche l'historique accumule pendant le combat (cartes jouees, actions ennemies
-resolues, marqueurs de tour) - simple liste de lignes multicolores, defilable a la molette.
+journal). Affiche l'historique accumule pendant le combat (CombatNew.journal, mis en phrases
+par src/ui/textes_combat.py, refonte-branchement.md 4.5) - simple liste de lignes multicolores, defilable a la molette.
 
 Fond de combat reutilise en placeholder (meme principe que les autres ecrans de survol du
 parcours, cf. ecran_deck.py/ecran_vaisseau.py).
@@ -10,8 +10,8 @@ parcours, cf. ecran_deck.py/ecran_vaisseau.py).
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.journal import Evenement
-from src.ui import journal_combat
+from src.gameplay.combat_new import Evenement
+from src.ui import textes_combat
 from src.ui.fenetre import FOND_IMAGE, HAUTEUR_FENETRE, LARGEUR_FENETRE, _sprite_etire
 
 COULEUR_TEXTE = (255, 255, 255)
@@ -44,7 +44,8 @@ class EcranJournal(pyglet.window.Window):
 
     def __init__(self, journal: list[Evenement]):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Journal de combat")
-        self.journal = journal
+        # Une ligne par evenement qui en donne une (textes_combat.ligne_journal)
+        self.journal = [ligne for evenement in journal if (ligne := textes_combat.ligne_journal(evenement))]
         self.termine = False
         self.bouton_survole = False
         self.defilement = 0
@@ -81,9 +82,9 @@ class EcranJournal(pyglet.window.Window):
         fin = len(self.journal) - self.defilement
         debut = max(0, fin - lignes_visibles)
         y = MARGE_BAS + (fin - debut - 1) * HAUTEUR_LIGNE + HAUTEUR_LIGNE / 2
-        for evenement in self.journal[debut:fin]:
+        for ligne in self.journal[debut:fin]:
             cx = X_TEXTE
-            for texte, couleur in journal_combat.ligne_evenement(evenement):
+            for texte, couleur in ligne:
                 label = pyglet.text.Label(
                     texte, x=cx, y=y, anchor_x="left", anchor_y="center",
                     font_size=TAILLE_POLICE, color=(*couleur, 255), batch=lot,

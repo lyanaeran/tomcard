@@ -14,7 +14,7 @@ garde son propre etat de survol/clic.
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.donnees import RACINE
+from src.gameplay.partie import RACINE
 from src.gameplay.partie import Partie
 from src.ui.fenetre import HAUTEUR_FENETRE, _sprite_ajuste
 

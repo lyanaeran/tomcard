@@ -7,6 +7,15 @@ sections : [specs.md](specs.md).*
 
 ## 8. Interface / écran de combat
 
+> **Refonte (PR 2 et PR 3 du branchement, 2026-11-14)** : l'écran de combat des deux versions
+> affiche désormais le moteur de la refonte. Ce qui a changé (cartes en main, pastilles de statut,
+> intentions des ennemis, cases valides, journal, popups) est décrit dans
+> [refonte-branchement.md](refonte-branchement.md) §4, §5.2 (web) et §5.4 (PC), qui **priment** sur
+> le détail de cette section tant qu'elle n'est pas réécrite (PR 4). Restent valables : la
+> disposition générale, le flux « sélectionner une carte puis confirmer sur une case » (§8.3), les
+> boutons de contrôle. Le mode démonstration (combat sans partie) n'existe plus ; côté PC, les
+> textes du journal sont dans `src/ui/textes_combat.py` (`journal_combat.py` est supprimé).
+
 ### 8.1 Disposition générale (wireframe)
 
 ```

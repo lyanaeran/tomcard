@@ -67,6 +67,28 @@ def test_une_attaque_entierement_bloquee_par_le_bouclier_affiche_bloque(bridge):
     assert "-0" not in resultat["popups"][0]["texte"]
 
 
+def test_une_attaque_arretee_par_le_renvoi_et_le_bouclier_n_affiche_pas_moins_zero(bridge):
+    bridge._demarrer_combat(_combat_contre_le_boss(["CRT_7", "CRT_7"]))
+    boss = bridge.combat.flotte.ennemis[0]
+    boss.statuts.ajouter(bridge.Statut.RENVOI, 1)
+    boss.statuts.ajouter(bridge.Statut.BOUCLIER, 50)
+
+    resultat = json.loads(bridge.jouer_carte(0, "AV_M"))
+
+    popup = next(p for p in resultat["popups"] if p["camp"] == "ennemi")
+    assert "-0" not in popup["texte"]
+    assert "↩ 1" in popup["texte"] and "bloqué" in popup["texte"]
+
+
+def test_une_reparation_sans_effet_ne_donne_pas_de_popup(bridge):
+    bridge._demarrer_combat(_combat_contre_le_boss(["CRT_12", "CRT_12"]))
+    assert bridge.combat.vaisseau.principal.pv_combat == bridge.combat.vaisseau.principal.pv_max
+
+    resultat = json.loads(bridge.jouer_carte(0, "base"))
+
+    assert resultat["popups"] == []
+
+
 def test_un_secondaire_s_affiche_avec_ses_pv_du_prochain_combat(bridge):
     partie = json.loads(bridge.nouvelle_partie_web())["partie"]
     partie = json.loads(bridge.choisir_module_partie_web(json.dumps(partie), "MOD_2"))["partie"]

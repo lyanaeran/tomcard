@@ -4,9 +4,9 @@
 comprendre l'état du projet : une refonte des cartes, des modules, des ennemis, des statuts et du
 combat est en cours, avec un **nouveau moteur codé à côté de l'ancien**. **Branchement en cours** :
 le gameplay du parcours (partie, sauvegarde, déroulement, Station, Aventures, simulateur de parties)
-utilise le nouveau moteur depuis la PR 1 (2026-11-12), la version web depuis la PR 2 ; l'affichage
-PC lit encore l'ancien combat, **la version PC ne démarre donc plus** jusqu'à la PR 3. Mis à jour le
-2026-11-12.*
+utilise le nouveau moteur depuis la PR 1 (2026-11-12), la version web depuis la PR 2, la version
+PC depuis la PR 3 (2026-11-14) : **le jeu est de nouveau jouable sur PC et sur le web**. Il reste
+la PR 4 (suppression de l'ancien moteur). Mis à jour le 2026-11-14.*
 
 ---
 
@@ -14,14 +14,14 @@ PC lit encore l'ancien combat, **la version PC ne démarre donc plus** jusqu'à 
 
 | | Ancien moteur (le jeu actuel) | Moteur de la refonte (`_new`) |
 |---|---|---|
-| **Utilisé par** | l'affichage PC (`main.py`, `src/ui/`) et web (`web/`), en attente des PR 2 et 3 | le parcours (`deroulement.py`, `partie.py`, `parcours.py`, `flotte_new.py`), le simulateur de parties (`partie_auto.py`, `etudes.py`) et celui des combats (`bot_new.py`, `combats_new.py`) |
+| **Utilisé par** | plus rien dans le jeu (seulement ses propres tests), supprimé à la PR 4 | le parcours (`deroulement.py`, `partie.py`, `parcours.py`, `flotte_new.py`), l'affichage PC (`main.py`, `src/ui/`) et web (`web/`), le simulateur de parties (`partie_auto.py`, `etudes.py`) et celui des combats (`bot_new.py`, `combats_new.py`) |
 | **Code** | `carte.py`, `module.py`, `ennemi.py`, `combat.py`, `deck.py`, `flotte.py`, `vaisseau.py`, `joueur.py`, `ciblage.py`, `donnees.py` | `carte_new.py`, `module_new.py`, `ennemi_new.py`, `statut_new.py`, `combat_new.py`, `deck_new.py`, `flotte_new.py`, `vaisseau_new.py` |
 | **Données** | `config/cartes.json`, `config/modules.json`, `config/ennemis.json` | `config/carte_new.json`, `config/module_new.json`, `config/ennemi_new.json` (**sources de vérité**), avec leurs tableaux générés `.md` |
 | **Spec** | `combat.md`, `modules-cartes.md`, `interface.md`… (§2 à §13) | les brouillons `refonte-*.md` (§3 ci-dessous) |
 
 - **Le « branchement »** (§5) remplace l'ancien moteur par le nouveau dans le parcours, la
-  sauvegarde et l'affichage, puis supprimera l'ancien. Le parcours est branché (PR 1) ; l'affichage
-  ne l'est pas encore, le jeu ne fonctionne pas entre deux PR (accepté par l'utilisateur).
+  sauvegarde et l'affichage, puis supprimera l'ancien. Le parcours (PR 1), le web (PR 2) et le PC
+  (PR 3) sont branchés ; il reste à supprimer l'ancien moteur (PR 4).
 - **Une valeur de carte se change dans `config/carte_new.json` seulement** : depuis la PR 1, le
   parcours ne lit plus `config/cartes.json` (encore lu par l'ancien affichage, supprimé à la PR
   4).
@@ -89,8 +89,9 @@ quatre PR, web avant PC) :
    refonte-branchement.md §5.1.
 2. ~~Affichage web (`web/bridge.py`, `web/app.js`)~~ : **fait (PR 2, 2026-11-12)**, maquette à
    valider (refonte-branchement.md §5.2).
-3. Affichage PC (`src/ui/`, `main.py`) : il lit tout dans l'API de `CombatNew` (`combat.deck`,
-   `cibles_possibles`, `intentions`, `journal`), jamais dans le deck de la partie.
+3. ~~Affichage PC (`src/ui/`, `main.py`) : il lit tout dans l'API de `CombatNew` (`combat.deck`,
+   `cibles_possibles`, `intentions`, `journal`), jamais dans le deck de la partie~~ : **fait (PR 3,
+   2026-11-14)**, écarts avec le web à valider (refonte-branchement.md §5.4).
 4. Suppression de l'ancien moteur et des anciens `config/*.json`.
 
 **Design encore ouvert** :

@@ -212,6 +212,16 @@ class CombatNew:
             resultat.append(Intention(ennemi, tuple(effets)))
         return resultat
 
+    def modules_vises(self, effet: IntentionEffet) -> list[ModuleNew]:
+        """Modules que toucherait cet effet d'intention si rien ne change : le module prevu d'une
+        attaque PROXIMITE, tous les modules vivants pour TOUS_MODULES, aucun pour un effet qui ne
+        vise pas le joueur. Sert a l'affichage a marquer les modules vises (PC et web)."""
+        if effet.effet.cible == CibleEffetEnnemi.TOUS_MODULES:
+            return self.vaisseau.modules_vivants()
+        if effet.effet.cible == CibleEffetEnnemi.PROXIMITE and effet.cible_prevue is not None:
+            return [effet.cible_prevue]
+        return []
+
     # --- Actions ---
 
     def jouer_carte(self, carte: CarteNew, case: Position) -> None:
