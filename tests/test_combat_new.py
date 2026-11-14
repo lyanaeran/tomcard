@@ -9,7 +9,7 @@ import random
 import pytest
 
 from src.gameplay.carte_new import CarteNew, CategorieCarte, CibleCarteNew, Effet, NatureEffet, charger_cartes_new
-from src.gameplay.carte import RareteCarte
+from src.gameplay.carte_new import RareteCarte
 from src.gameplay.combat_new import CombatNew, EtatCombatNew, NatureEvenement
 from src.gameplay.deck_new import deck_de_depart
 from src.gameplay.ennemi_new import charger_ennemis_new

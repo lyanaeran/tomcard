@@ -1,8 +1,8 @@
 """
 Module de la refonte (ModuleNew, nom provisoire) : modele de donnees cible de la refonte des
 modules (specs/refonte-modules.md, 8). Source de verite : config/module_new.json
-(charger_modules_new). Remplace donnees.py:SpecModule et module.py:Module (ancien moteur,
-supprimes a la PR 4 du branchement) et l'ancien partie.py:EtatModule.
+(charger_modules_new). Seul modele de module du jeu depuis la suppression de l'ancien moteur (PR 4
+du branchement).
 
 Une seule classe reunit les trois niveaux d'information d'un module :
 - le MODELE (le type de module, lu dans le JSON : nom, PV de base, cartes...) ;

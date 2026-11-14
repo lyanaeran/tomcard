@@ -1,7 +1,7 @@
 # outils/simulation — simulateurs d'équilibrage
 
 Chargé automatiquement quand on travaille dans `outils/simulation/`. Règles générales : `CLAUDE.md`
-racine. Conception : `specs/simulation.md` (§11 ancien moteur, §12 refonte).
+racine. Conception : `specs/simulation.md` (§11 parties complètes, conçu sur l'ancien moteur ; §12 combats de la refonte).
 
 ## Accord préalable obligatoire
 

@@ -1,6 +1,6 @@
 """
-Mise en forme des nombres des rapports de simulation, partagee par rapport.py (ancien moteur) et
-combats_new.py (refonte) pour que les deux rapports restent identiques.
+Mise en forme des nombres des rapports de simulation, partagee par rapport.py (parties) et
+combats_new.py (combats) pour que les deux rapports restent identiques.
 """
 
 from collections.abc import Iterable

@@ -2,9 +2,8 @@
 Combat de la refonte (CombatNew) : fait jouer ensemble CarteNew, ModuleNew, EnnemiNew et les
 statuts (specs/refonte-combat.md, seule reference de ce fichier). Gameplay seulement : aucune
 dependance d'affichage, une API d'actions (jouer_carte, finir_tour) et de consultations (etat,
-cibles_possibles, intentions, journal), utilisee par les tests, puis le simulateur et l'affichage
-au branchement. Utilise par le parcours (partie.py) et la version web ; combat.py:Combat est
-l'ancien moteur, supprime a la PR 4 du branchement.
+cibles_possibles, intentions, journal), utilisee par le parcours (partie.py), l'affichage PC et
+web, le simulateur et les tests.
 """
 
 import random
@@ -20,7 +19,7 @@ from src.gameplay.position import Colonne, Position
 from src.gameplay.statut_new import Encaissement, Statut, Statuts
 from src.gameplay.vaisseau_new import VaisseauNew
 
-# Valeur inchangee par rapport a l'ancien moteur (combat.md 3.3)
+# Electricite rendue au debut de chaque tour du joueur (combat.md 3.3)
 ELECTRICITE_PAR_TOUR = 3
 
 # Natures d'effet de carte laissees pour plus tard (refonte-combat.md 1.2) : une carte qui en porte

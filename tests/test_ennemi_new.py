@@ -37,14 +37,6 @@ def test_les_six_ennemis_actuels_sont_dans_le_json():
     assert ennemis["ENM_BOSS_PIRATES"].emplacements == 2
 
 
-def test_les_ids_et_images_sont_ceux_de_l_ancien_format():
-    anciens = {entree["id"]: entree for entree in json.loads((FICHIER_ENNEMIS_NEW.parent / "ennemis.json").read_text(encoding="utf-8"))["ennemis"]}
-
-    for ennemi in charger_ennemis_new().values():
-        assert ennemi.image == anciens[ennemi.id]["image"]
-        assert ennemi.pv_base == anciens[ennemi.id]["points_de_vie"]
-
-
 # --- Valeurs : augmentation et coefficient (specs/refonte-ennemis.md 3.3, 3.4) ---
 
 

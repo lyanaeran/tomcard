@@ -32,10 +32,11 @@ Un deckbuilder roguelike inspiré de Slay the Spire, où le joueur incarne un va
 
 ## Documents de travail (hors numérotation)
 
-Une **refonte** est en cours : nouveau moteur codé à côté de l'ancien, branché au parcours
-(gameplay) mais pas encore à l'affichage.
-**Commencer par [refonte.md](refonte.md).** Les sections numérotées ci-dessus décrivent le jeu
-actuel (ancien moteur), sauf mention contraire.
+Le jeu tourne sur le **moteur de la refonte** ; l'ancien moteur est supprimé (PR 4 du branchement,
+2026-11-14).
+**Commencer par [refonte.md](refonte.md).** Les sections numérotées ci-dessus décrivent encore, par
+endroits, l'ancien moteur : les brouillons `refonte-*.md` **priment** tant que leur contenu n'y est
+pas reporté (migration à faire, cf. refonte.md).
 
 | Fichier | Contenu |
 |---|---|

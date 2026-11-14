@@ -7,7 +7,7 @@ import json
 
 import pytest
 
-from src.gameplay.carte import RareteCarte
+from src.gameplay.carte_new import RareteCarte
 from src.gameplay.carte_new import (
     Camp,
     CarteNew,

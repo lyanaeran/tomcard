@@ -3,7 +3,7 @@
 *Document de travail, hors numérotation (cf. [specs.md](specs.md)). **Plan validé** (décisions du
 §2 et ordre des PR du §5 tranchés le 2026-11-11 ; l'affichage du §4 reste une proposition, à
 valider sur maquette). **PR 1 (gameplay) codée le 2026-11-12** (§5.1) ; **PR 2 (web) codée le
-2026-11-12** (§5.2) ; **PR 3 (PC) codée le 2026-11-14** (§5.4) ; PR 4 à faire. Décrit comment faire passer le jeu (parcours, sauvegarde, affichage
+2026-11-12** (§5.2) ; **PR 3 (PC) codée le 2026-11-14** (§5.4) ; **PR 4 (nettoyage) codée le 2026-11-14** (§5.5). Décrit comment faire passer le jeu (parcours, sauvegarde, affichage
 PC et web) sur le moteur de la refonte (`CombatNew` et les fichiers `*_new.py`), puis supprimer
 l'ancien moteur. Contexte : [refonte.md](refonte.md) ; règles du nouveau combat :
 [refonte-combat.md](refonte-combat.md).*
@@ -380,6 +380,27 @@ les captures), déjà utilisé par le PC avant la refonte.
 - Renommage éventuel des `*_new` (à décider : garder les noms, ou `CarteNew` → `Carte`…).
 - Migration des brouillons `refonte-*.md` dans les sections numérotées (`combat.md`,
   `modules-cartes.md`…), mise à jour de `CLAUDE.md` et de `specs/refonte.md`.
+
+### 5.5 PR 4 codée (2026-11-14) : ce qui a été fait, ce qui reste à décider
+
+- **Supprimés** : `carte.py`, `module.py`, `ennemi.py`, `combat.py`, `deck.py`, `flotte.py`,
+  `vaisseau.py`, `joueur.py`, `ciblage.py`, `journal.py`, `donnees.py` (en entier : plus rien n'en
+  lisait une partie), leurs 9 fichiers de test, et `config/cartes.json`, `modules.json`,
+  `ennemis.json`.
+- `RareteCarte` est maintenant définie dans `carte_new.py`.
+- Le rapport du simulateur de parties (`outils/simulation/rapport.py`) lit les noms des modules et
+  des cartes dans les données de la refonte (il lisait encore les anciennes).
+- La version web ne monte plus les fichiers supprimés (version 89).
+- Un test de `test_ennemi_new.py` comparait les ennemis à l'ancien `ennemis.json` : supprimé avec
+  lui.
+
+**Non fait dans cette PR, à décider par l'utilisateur** :
+
+1. **Renommage des `*_new`** (`CarteNew` → `Carte`, `carte_new.py` → `carte.py`,
+   `config/carte_new.json` → `config/cartes.json`…) : purement mécanique mais touche presque tous
+   les fichiers ; à faire dans une PR à part si souhaité.
+2. **Migration des brouillons `refonte-*.md`** dans les sections numérotées (`combat.md`,
+   `modules-cartes.md`, `interface.md`…), qui décrivent encore l'ancien moteur par endroits.
 
 ---
 

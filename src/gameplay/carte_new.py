@@ -2,10 +2,10 @@
 Carte de la refonte (CarteNew, nom provisoire) : modele de donnees cible de la refonte des cartes
 (specs/refonte-buffs-debuffs.md, specs/refonte-modules.md). Source de verite :
 config/carte_new.json (charger_cartes_new). Relue et validee par l'utilisateur le 2026-11-08.
-Utilisee par le parcours et la version web ; carte.py:Carte (config/cartes.json) est l'ancien
-moteur, supprime a la PR 4 du branchement (specs/refonte-branchement.md).
+Seul modele de carte du jeu depuis la suppression de l'ancien moteur (PR 4 du branchement,
+specs/refonte-branchement.md).
 
-Differences avec Carte :
+Principes :
 - une carte porte des VALEURS NOMMEES (ex. {"degats_cible": 15, "degats_autres": 6}) et une liste
   d'EFFETS qui y renvoient par leur nom : plusieurs valeurs par carte (Missiles : degats sur la
   cible et sur les autres ennemis), et une description qui les cite entre accolades ("Inflige
@@ -30,10 +30,18 @@ from enum import Enum, auto
 from pathlib import Path
 from string import Formatter
 
-from src.gameplay.carte import RareteCarte
 from src.gameplay.statut_new import Statut
 
 FICHIER_CARTES_NEW = Path(__file__).resolve().parents[2] / "config" / "carte_new.json"
+
+
+class RareteCarte(Enum):
+    """Palier de rarete d'une carte, cf. specs.md paragraphe 7.3 et 7.4."""
+
+    BASE = auto()
+    COMMUNE = auto()
+    RARE = auto()
+    LEGENDAIRE = auto()
 
 
 class CategorieCarte(Enum):
@@ -259,11 +267,11 @@ def _noms_cites(description: str) -> set[str]:
 
 @dataclass(eq=False)
 class CarteNew:
-    """Une carte de la refonte. eq=False : deux exemplaires du meme modele sont distincts (comme
-    Carte, chacun a ses propres munitions, lancements, valeurs et module de rattachement).
+    """Une carte de la refonte. eq=False : deux exemplaires du meme modele sont distincts
+    (chacun a ses propres munitions, lancements, valeurs et module de rattachement).
 
     Le type du module n'est pas stocke sur la carte : il se lit sur l'exemplaire de module dans la
-    partie, et les cartes de chaque type de module sont listees dans config/modules.json (une carte
+    partie, et les cartes de chaque type de module sont listees dans config/module_new.json (une carte
     peut etre commune a plusieurs modules)."""
 
     # --- Modele : lu dans config/carte_new.json, identique pour tous les exemplaires sauf `valeurs`

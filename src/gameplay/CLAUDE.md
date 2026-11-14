@@ -9,18 +9,17 @@ Seule source de vérité des règles de jeu, exécutée telle quelle par le PC (
 (Pyodide, via `src/web/bridge.py`). **Zéro dépendance pyglet** : si une fonction a besoin d'affichage,
 elle appartient à `src/ui`. Couvert par pytest (`tests/`, un fichier de test par module).
 
-## Deux moteurs (refonte en cours)
+## Moteur de la refonte
 
 Les fichiers `*_new.py` (`carte_new`, `module_new`, `ennemi_new`, `statut_new`, `combat_new`,
-`deck_new`, `flotte_new`, `vaisseau_new`) sont le **moteur de la refonte**. Depuis la PR 1 du
-branchement, le parcours (`partie.py`, `parcours.py`, `deroulement.py`) l'utilise ; le web depuis la PR 2 et
-le PC depuis la PR 3 ; l'ancien moteur (`carte.py`, `module.py`, `ennemi.py`, `combat.py`...)
-n'est plus lu par le jeu et sera supprimé (PR 4). Le combat de démonstration
-(`config_poc.py`) est supprimé : le jeu ne se joue que par le parcours. Vue d'ensemble : `specs/refonte.md`, plan : `specs/refonte-branchement.md`.
+`deck_new`, `flotte_new`, `vaisseau_new`) sont **le moteur du jeu**, utilisé par le parcours
+(`partie.py`, `parcours.py`, `deroulement.py`), le PC, le web et les simulateurs. L'ancien moteur
+(`carte.py`, `module.py`, `combat.py`, `donnees.py`...) et ses `config/*.json` sont supprimés
+depuis la PR 4 du branchement (2026-11-14) ; le suffixe `_new` reste pour l'instant (renommage à
+décider). Le jeu ne se joue que par le parcours (pas de combat de démonstration). Vue d'ensemble :
+`specs/refonte.md`, plan : `specs/refonte-branchement.md`.
 
-- Ne pas mélanger les deux : un fichier `_new` n'importe pas l'ancien moteur, sauf réutilisation
-  explicite d'un élément neutre (`position.py`, `RareteCarte`).
-- Dans le moteur de la refonte, les objets de la partie (cartes, modules) ne sont **jamais modifiés
+- Les objets de la partie (cartes, modules) ne sont **jamais modifiés
   par un combat** : `CombatNew` travaille sur des copies (`CarteNew.copie`,
   `ModuleNew.copie_pour_combat`, `EnnemiNew.pour_combat`).
 - Les tests ne doivent pas coder en dur une valeur de carte réglable (ex. Bouclier) : la lire dans
@@ -32,8 +31,8 @@ n'est plus lu par le jeu et sera supprimé (PR 4). Le combat de démonstration
   `src/web/bridge.py` utilise.
 - Un **nouveau fichier** ici doit être ajouté à `FICHIERS_A_MONTER` dans `src/web/app.js` (sinon le web
   ne charge plus, cf. `src/web/CLAUDE.md`).
-- Un changement de format de `config/*.json` doit rester chargeable par `donnees.py` **et**
-  interprétable par `src/web/bridge.py`/`src/web/app.js`, qui fetchent ces fichiers directement.
+- Un changement de format de `config/*.json` doit rester chargeable par les fonctions
+  `charger_*_new` ; `src/web/app.js` monte ces fichiers tels quels dans Pyodide.
 
 ## Déterminisme du tirage aléatoire
 

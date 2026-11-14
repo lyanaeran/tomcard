@@ -2,29 +2,28 @@
 
 *Document de travail, hors numérotation (cf. [specs.md](specs.md)). **À lire en premier** pour
 comprendre l'état du projet : une refonte des cartes, des modules, des ennemis, des statuts et du
-combat est en cours, avec un **nouveau moteur codé à côté de l'ancien**. **Branchement en cours** :
+combat a été faite avec un **nouveau moteur codé à côté de l'ancien**, puis branchée au jeu :
 le gameplay du parcours (partie, sauvegarde, déroulement, Station, Aventures, simulateur de parties)
 utilise le nouveau moteur depuis la PR 1 (2026-11-12), la version web depuis la PR 2, la version
-PC depuis la PR 3 (2026-11-14) : **le jeu est de nouveau jouable sur PC et sur le web**. Il reste
-la PR 4 (suppression de l'ancien moteur). Mis à jour le 2026-11-14.*
+PC depuis la PR 3 (2026-11-14) : **le jeu est jouable sur PC et sur le web**. **L'ancien moteur
+est supprimé (PR 4, 2026-11-14).** Mis à jour le 2026-11-14.*
 
 ---
 
-## 1. Deux moteurs coexistent
+## 1. Ancien moteur (supprimé) et moteur de la refonte
 
-| | Ancien moteur (le jeu actuel) | Moteur de la refonte (`_new`) |
+| | Ancien moteur (**supprimé**, PR 4) | Moteur de la refonte (`_new`), le jeu actuel |
 |---|---|---|
-| **Utilisé par** | plus rien dans le jeu (seulement ses propres tests), supprimé à la PR 4 | le parcours (`deroulement.py`, `partie.py`, `parcours.py`, `flotte_new.py`), l'affichage PC (`main.py`, `src/ui/`) et web (`src/web/`), le simulateur de parties (`partie_auto.py`, `etudes.py`) et celui des combats (`bot_new.py`, `combats_new.py`) |
+| **Utilisé par** | plus rien : code, données et tests supprimés | le parcours (`deroulement.py`, `partie.py`, `parcours.py`, `flotte_new.py`), l'affichage PC (`main.py`, `src/ui/`) et web (`src/web/`), le simulateur de parties (`partie_auto.py`, `etudes.py`) et celui des combats (`bot_new.py`, `combats_new.py`) |
 | **Code** | `carte.py`, `module.py`, `ennemi.py`, `combat.py`, `deck.py`, `flotte.py`, `vaisseau.py`, `joueur.py`, `ciblage.py`, `donnees.py` | `carte_new.py`, `module_new.py`, `ennemi_new.py`, `statut_new.py`, `combat_new.py`, `deck_new.py`, `flotte_new.py`, `vaisseau_new.py` |
 | **Données** | `config/cartes.json`, `config/modules.json`, `config/ennemis.json` | `config/carte_new.json`, `config/module_new.json`, `config/ennemi_new.json` (**sources de vérité**), avec leurs tableaux générés `.md` |
 | **Spec** | `combat.md`, `modules-cartes.md`, `interface.md`… (§2 à §13) | les brouillons `refonte-*.md` (§3 ci-dessous) |
 
 - **Le « branchement »** (§5) remplace l'ancien moteur par le nouveau dans le parcours, la
-  sauvegarde et l'affichage, puis supprimera l'ancien. Le parcours (PR 1), le web (PR 2) et le PC
-  (PR 3) sont branchés ; il reste à supprimer l'ancien moteur (PR 4).
-- **Une valeur de carte se change dans `config/carte_new.json` seulement** : depuis la PR 1, le
-  parcours ne lit plus `config/cartes.json` (encore lu par l'ancien affichage, supprimé à la PR
-  4).
+  sauvegarde et l'affichage : parcours (PR 1), web (PR 2), PC (PR 3), puis suppression de l'ancien
+  moteur (PR 4). Les fichiers gardent leur suffixe `_new` (renommage à décider).
+- **Une valeur de carte se change dans `config/carte_new.json` seulement** : `config/cartes.json`,
+  `modules.json` et `ennemis.json` n'existent plus.
 - Les fichiers `_new` sont déjà montés côté web (`FICHIERS_A_MONTER` de `src/web/app.js`, exigé par
   `tests/test_architecture.py`) même s'ils ne sont pas utilisés.
 - Seuls **deux modules sont jouables** dans les deux moteurs : le module **principal** (`MOD_1`)
@@ -92,7 +91,9 @@ quatre PR, web avant PC) :
 3. ~~Affichage PC (`src/ui/`, `main.py`) : il lit tout dans l'API de `CombatNew` (`combat.deck`,
    `cibles_possibles`, `intentions`, `journal`), jamais dans le deck de la partie~~ : **fait (PR 3,
    2026-11-14)**, écarts avec le web à valider (refonte-branchement.md §5.4).
-4. Suppression de l'ancien moteur et des anciens `config/*.json`.
+4. ~~Suppression de l'ancien moteur et des anciens `config/*.json`~~ : **fait (PR 4, 2026-11-14)**.
+   Restent à décider : le renommage des `*_new` et la migration des brouillons `refonte-*.md` dans
+   les sections numérotées (refonte-branchement.md §5.5).
 
 **Design encore ouvert** :
 - Flottes par niveau (les niveaux 2 à 5 sont trop faciles), éventuels nouveaux ennemis
