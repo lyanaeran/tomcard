@@ -28,7 +28,8 @@ config/        → fichiers de donnees JSON (modules, ennemis, cartes)
 src/
   ui/          → tout ce qui concerne l'affichage avec pyglet (PC)
   gameplay/    → logique de jeu, partagee par les deux facons de jouer
-index.html, web/ → affichage web/iPhone (Pyodide), voir README.md
+  web/         → affichage web/iPhone (Pyodide) : app.js, bridge.py, style.css, manifest.json
+index.html     → page de la version web, a la racine (adresse servie par GitHub Pages), voir README.md
 saves/         → sauvegardes de partie (PC uniquement, §10.3), ignore par git
 tests/
 pyproject.toml
@@ -142,7 +143,7 @@ fond dédié.
 - **Sélection/création/suppression de profil** — liste des profils existants (clic pour choisir) +
   création d'un profil par un nom (Entrée/bouton "Créer"). `src/ui/ecran_selection_joueur.py` (PC,
   saisie de texte gérée manuellement via `on_text`/`on_key_press`, pas de widget pyglet dédié) ;
-  `web/app.js` (`afficherSelectionJoueur`/`creerNouveauJoueur`) + `web/bridge.py`
+  `src/web/app.js` (`afficherSelectionJoueur`/`creerNouveauJoueur`) + `src/web/bridge.py`
   (`creer_profil_web`)
   - **Suppression d'un profil** : bouton croix rouge sur chaque ligne (même icône que "Quitter" en
     combat, `assets/interface/quitter.png`, déjà associée dans le jeu à une action destructive) —
@@ -153,12 +154,12 @@ fond dédié.
     `src/gameplay/partie.py:supprimer_profil` (supprime le dossier du profil sous `saves/`, parties
     sauvegardées incluses). Web : `confirm()` natif du navigateur plutôt qu'une boîte de dialogue
     maison (aucune infrastructure de modale ailleurs dans le web du jeu) — `supprimerJoueurLocal`
-    (`web/app.js`) retire le profil de l'index `localStorage` et sa partie sauvegardée éventuelle
+    (`src/web/app.js`) retire le profil de l'index `localStorage` et sa partie sauvegardée éventuelle
 - **Accueil du joueur** — si une partie `EN_COURS` existe : niveau, vaisseau (grille des modules
   équipés avec PV/PV max/niveau de mise à jour, ou "Emplacement vide"), boutons **Continuer** /
   **Abandonner la partie** / **Voir le deck**. Sinon : bouton **Nouvelle partie**.
-  `src/ui/ecran_accueil_joueur.py` (PC) ; `web/app.js` (`afficherAccueilJoueur` et les handlers de
-  chaque bouton) + `web/bridge.py` (`infos_vaisseau_web`, `deck_partie_web`, `abandonner_partie_web`,
+  `src/ui/ecran_accueil_joueur.py` (PC) ; `src/web/app.js` (`afficherAccueilJoueur` et les handlers de
+  chaque bouton) + `src/web/bridge.py` (`infos_vaisseau_web`, `deck_partie_web`, `abandonner_partie_web`,
   `nouvelle_partie_web`, `choix_module_partie_web`, `continuer_partie_web`)
 - **Nouvelle partie** → écran de choix de module du Niveau 1 déjà existant (§2.3), candidats tirés à
   partir de la graine de la partie fraîchement créée
@@ -178,7 +179,7 @@ fond dédié.
 - **Enchaînement complet d'une vraie partie** (§2.4, étapes 2 à 6) : décidé par
   `src/gameplay/deroulement.py` (cf. §2.4), affiché par `main.py` (PC, une fonction `_ouvrir_xxx`
   par écran, transitions détectées via `pyglet.clock.schedule_interval`) ; côté web,
-  `web/app.js` garde une variable `partieActive` (la `Partie` en cours d'orchestration, ou `null`
+  `src/web/app.js` garde une variable `partieActive` (la `Partie` en cours d'orchestration, ou `null`
   en mode démonstration) que `choisirModule`/`choisirEtape`/`choisirRecompense` consultent pour
   choisir entre persistance réelle et comportement de démonstration (`console.log`) inchangé
 
@@ -193,10 +194,10 @@ fond dédié.
     combat éphémère vaisseau + deck + électricité, §3.3) — pas de collision
   - `config_poc.deck_module_principal` factorisé en `ids_deck_module_principal` (renvoie des ids
     plutôt que des `Carte`) pour être réutilisable par `nouvelle_partie` sans dupliquer la règle
-- `web/bridge.py` : les fonctions ci-dessus n'effectuent **aucune I/O** (Pyodide n'a pas de FS
+- `src/web/bridge.py` : les fonctions ci-dessus n'effectuent **aucune I/O** (Pyodide n'a pas de FS
   persistante entre rechargements de page) — elles ne font que (dé)sérialiser et appliquer la
   logique pure de `partie.py` ; la lecture/écriture `localStorage` est entièrement gérée côté
-  `web/app.js`
+  `src/web/app.js`
 - `main.py` : ouvre `EcranSelectionJoueur`, puis `EcranAccueilJoueur`, puis l'écran suivant
   décidé par `src/gameplay/deroulement.py` (§2.4) — chaque écran étant une fenêtre pyglet indépendante, les transitions ferment la
   fenêtre courante et ouvrent la suivante, détectées via `pyglet.clock.schedule_interval` (pas

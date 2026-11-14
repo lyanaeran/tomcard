@@ -20,4 +20,4 @@ jobs:
       - name: pytest
         run: pytest
       - name: Syntaxe de la version web
-        run: node --check web/app.js && node --check outils/test_web/essais.js
+        run: node --check src/web/app.js && node --check outils/test_web/essais.js

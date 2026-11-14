@@ -44,8 +44,8 @@ Toutes tranchées le 2026-11-11.
 
 ## 3. Ce que l'affichage utilise aujourd'hui, et son équivalent
 
-L'affichage PC (`src/ui/fenetre.py`, environ 1 100 lignes) et web (`web/bridge.py` 800 lignes,
-`web/app.js` 2 000 lignes) lisent directement l'ancien combat. Correspondances :
+L'affichage PC (`src/ui/fenetre.py`, environ 1 100 lignes) et web (`src/web/bridge.py` 800 lignes,
+`src/web/app.js` 2 000 lignes) lisent directement l'ancien combat. Correspondances :
 
 | Aujourd'hui (ancien moteur) | Avec `CombatNew` |
 |---|---|
@@ -206,8 +206,8 @@ Choix faits en codant, **à valider par l'utilisateur** :
   parcours ») : `config_poc.py` (combat au hasard sans partie, anciennes flottes, ancien deck de
   départ) et ses tests sont retirés ; ses flottes sont remplacées par `flotte_new.py`. Les PR 2
   et 3 retirent le mode démo de l'affichage : `nouveau_combat`, `fin_combat_victoire` et la
-  branche démo d'`etat_deck` dans `web/bridge.py`, les `window.*` de démonstration de
-  `web/app.js`, le `creer_combat_poc()` par défaut de `src/ui/fenetre.py`.
+  branche démo d'`etat_deck` dans `src/web/bridge.py`, les `window.*` de démonstration de
+  `src/web/app.js`, le `creer_combat_poc()` par défaut de `src/ui/fenetre.py`.
 - **Mode test supprimé** (décision utilisateur, 2026-11-12) : `config_poc.MODE_TEST` (PV gonflés,
   Laser à 20) n'est pas repris par le parcours branché et a été retiré de l'ancien moteur.
 - **Déplacer le principal** lève une erreur (avant : à la charge de l'écran de ne jamais le
@@ -219,9 +219,9 @@ Choix faits en codant, **à valider par l'utilisateur** :
 Le jeu (PC et web) **ne fonctionne plus** tant que les PR 2 et 3 ne sont pas faites : leurs écrans
 lisent encore l'ancien combat et l'ancien format de partie (accepté, §5).
 
-### PR 2 — Affichage web / iPhone (`web/bridge.py`, `web/app.js`, `web/style.css`)
+### PR 2 — Affichage web / iPhone (`src/web/bridge.py`, `src/web/app.js`, `src/web/style.css`)
 
-- **En premier** : retirer de `web/bridge.py` les imports de l'ancien gameplay supprimé
+- **En premier** : retirer de `src/web/bridge.py` les imports de l'ancien gameplay supprimé
   (`config_poc`, `EtatModule`, `reparer_module`…) et le mode démo, pour que le web se recharge.
 
 - **D'abord une maquette** des éléments du §4 (captures d'un combat au format iPhone), validée par
@@ -231,15 +231,15 @@ lisent encore l'ancien combat et l'ancien format de partie (accepté, §5).
 - Clic : la case touchée est passée directement à `jouer_carte` (`cliquerCase`), avec le flux de
   clics actuel, déjà identique au PC (specs.md §8.3) : sélectionner la carte, puis confirmer sur
   une case vivante du bon camp.
-- Vérification dans le navigateur (méthode de `web/CLAUDE.md`), au format iPhone en priorité :
+- Vérification dans le navigateur (méthode de `src/web/CLAUDE.md`), au format iPhone en priorité :
   début de combat, carte sélectionnée et cases valides, renvoi de Miroir, module détruit et Hors
   service, victoire, défaite.
 
 ### 5.2 PR 2 codée (2026-11-12) : ce qui a été fait, écarts avec le §4 (à valider)
 
 Fait, testé dans Chromium au format iPhone 13 paysage, avec Pyodide (parcours complet et scénarios
-dédiés) : `web/bridge.py` réécrit sur `CombatNew` et le nouveau format de partie, mode démo
-supprimé ; `web/app.js` / `style.css` : éléments du §4, cases valides lues dans le gameplay
+dédiés) : `src/web/bridge.py` réécrit sur `CombatNew` et le nouveau format de partie, mode démo
+supprimé ; `src/web/app.js` / `style.css` : éléments du §4, cases valides lues dans le gameplay
 (`cibles_possibles`), textes de carte lus dans `carte_new.json` (`description_affichee`), Station
 (Réparer = principal, sans sélection), Astéroïdes (plus de choix de module), Trois lunes, Police,
 récompenses rattachées à leur module, ancienne sauvegarde effacée de `localStorage` si elle était
@@ -295,7 +295,7 @@ Relecture complète demandée par l'utilisateur ; corrections faites dans une PR
   effacée, sauf si on peut y lire qu'elle était TERMINEE) ; deux cartes de même id sont refusées
   au chargement.
 - **Web** : accents sur tous les écrans, nom de joueur jamais interprété comme du HTML.
-- **Outils** : `outils/test_web/essais.js` (essais dans Chromium, cf. `web/CLAUDE.md`) et tests
+- **Outils** : `outils/test_web/essais.js` (essais dans Chromium, cf. `src/web/CLAUDE.md`) et tests
   lancés par GitHub à chaque PR (`.github/workflows/tests.yml` : `pytest`, syntaxe du web).
 
 Laissé de côté, **à décider par l'utilisateur** :
@@ -344,7 +344,7 @@ Laissé de côté, **à décider par l'utilisateur** :
 - **`Ecran.RECOMPENSE`** géré dans `main.py:_aller_a` ; la partie est sauvegardée dès la fin du
   combat (reprise sur l'écran de récompense, jamais sur le combat déjà joué).
 - **Gameplay** : `CombatNew.modules_vises(effet)` (modules touchés par un effet d'intention),
-  utilisé par le PC et par `web/bridge.py` à la place de leur propre calcul.
+  utilisé par le PC et par `src/web/bridge.py` à la place de leur propre calcul.
 - **Popups (PC et web, revue de la PR 68)** : une attaque qui ne fait perdre aucun PV dit ce qui
   l'a arrêtée, même quand plusieurs protections se la partagent (« renvoi 5 · bloqué (1) » sur PC,
   « ↩ 5 bloqué 🛡1 » sur le web, jamais « -0 ») ; une réparation de 0 PV ne donne pas de popup.

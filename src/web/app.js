@@ -1,7 +1,7 @@
 // Version web de Space Fight (navigateur / iPhone).
 // Fait tourner src/gameplay/ tel quel dans le navigateur via Pyodide ; ce fichier
 // ne fait que fetcher les sources Python, les monter dans la FS virtuelle, et
-// dessiner l'etat renvoye par web/bridge.py en HTML/CSS. Popups +/-N, pastilles
+// dessiner l'etat renvoye par src/web/bridge.py en HTML/CSS. Popups +/-N, pastilles
 // PV/Bouclier flottantes (memes couleurs que RAYON_PASTILLE/COULEUR_PASTILLE_*
 // dans src/ui/fenetre.py), infobulle au tap (equivalent tactile du survol
 // souris), modules positionnes sur l'image du vaisseau
@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "87";
+const VERSION_CACHE = "88";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -92,7 +92,7 @@ async function monterDepot(instancePyodide) {
         instancePyodide.FS.mkdirTree(cheminFs.substring(0, cheminFs.lastIndexOf("/")));
         instancePyodide.FS.writeFile(cheminFs, contenu);
     }
-    const sourceBridge = await chargerSansCache("web/bridge.py");
+    const sourceBridge = await chargerSansCache("src/web/bridge.py");
     instancePyodide.runPython(sourceBridge);
 }
 
@@ -810,7 +810,7 @@ function resoudreCarteModule(candidat) {
 }
 
 // Aiguillage vers l'ecran decide par src/gameplay/deroulement.py (via bridge.py, resultat
-// {partie, ecran}) : web/app.js ne decide jamais lui-meme de l'ecran suivant (CLAUDE.md), il
+// {partie, ecran}) : src/web/app.js ne decide jamais lui-meme de l'ecran suivant (CLAUDE.md), il
 // sauvegarde la partie et affiche l'ecran - meme role que main.py:_aller_a cote PC.
 function allerA(resultat) {
     const partie = resultat.partie;

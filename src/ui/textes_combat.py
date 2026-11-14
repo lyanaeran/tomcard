@@ -2,7 +2,7 @@
 Textes de l'ecran de combat PC (refonte-branchement.md 4) : mise en mots des faits fournis par le
 gameplay (CombatNew.intentions, journal, statuts, cartes). Aucune regle de jeu, aucun pyglet :
 testable sans fenetre (tests/test_textes_combat.py). Meme contenu que la version web
-(web/bridge.py:_popup_evenement, web/app.js:texteEffetEnnemi / construireLigneJournal), mais en
+(src/web/bridge.py:_popup_evenement, src/web/app.js:texteEffetEnnemi / construireLigneJournal), mais en
 mots : ni emoji ni symbole (epees, fleche de renvoi) qui dependent de la police de la machine.
 Seuls le signe de multiplication et la fleche simple, presents dans les polices courantes, sont
 gardes.

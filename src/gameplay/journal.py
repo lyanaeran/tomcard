@@ -2,7 +2,7 @@
 Historique des evenements d'un combat (specs.md 8.1) : quelles cartes ont ete jouees, quelles
 actions ennemies ont ete resolues, et les marqueurs de tour. Alimente uniquement par Combat
 (src/gameplay/combat.py : jouer_carte, finir_tour_joueur) - src/ui/journal_combat.py (PC) et
-web/app.js (web) n'en font que la mise en forme (phrases/couleurs), jamais le calcul de ce qui
+src/web/app.js (web) n'en font que la mise en forme (phrases/couleurs), jamais le calcul de ce qui
 s'est produit ni quand l'enregistrer (cf. CLAUDE.md, gameplay commun aux deux interfaces).
 """
 

@@ -23,12 +23,12 @@ C'est la version de référence : la plus fidèle à `specs/specs.md`.
 
 Aucune installation : `index.html` charge [Pyodide](https://pyodide.org/) (Python compilé en
 WebAssembly) et exécute `src/gameplay/` **tel quel**, sans aucune modification, directement dans le
-navigateur. `web/bridge.py` fait le lien entre ce moteur Python et l'affichage HTML/CSS/JS
-(`web/app.js`, `web/style.css`).
+navigateur. `src/web/bridge.py` fait le lien entre ce moteur Python et l'affichage HTML/CSS/JS
+(`src/web/app.js`, `src/web/style.css`).
 
 - **En local** : servir le dossier à la racine du dépôt avec un serveur HTTP quelconque (ex.
   `python -m http.server`) et ouvrir `index.html`. Un simple `file://` ne fonctionne pas (les
-  `fetch()` de `web/app.js` vers `src/gameplay/*.py` et `config/*.json` ont besoin d'un serveur).
+  `fetch()` de `src/web/app.js` vers `src/gameplay/*.py` et `config/*.json` ont besoin d'un serveur).
 - **En ligne** : publié via GitHub Pages (Settings → Pages → Deploy from a branch → `main` →
   `/ (root)` — nécessite un dépôt public sur un compte gratuit). Le fichier `.nojekyll` à la racine
   est indispensable : sans lui, GitHub Pages traite le site avec Jekyll, qui ignore silencieusement
@@ -36,7 +36,7 @@ navigateur. `web/bridge.py` fait le lien entre ce moteur Python et l'affichage H
   des 404.
 
 Cette version a quelques simplifications visuelles assumées par rapport à `specs/specs.md` (détaillées dans
-les commentaires de `web/app.js`/`web/style.css`) : pas d'infobulle au survol (remplacée par un tap
+les commentaires de `src/web/app.js`/`src/web/style.css`) : pas d'infobulle au survol (remplacée par un tap
 sur une case sans carte sélectionnée), taille des cases pilotée par la hauteur d'écran plutôt que
 mesurée pixel près, etc.
 

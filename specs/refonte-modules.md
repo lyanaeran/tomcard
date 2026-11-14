@@ -111,7 +111,7 @@ Rattachement au moment où la carte entre dans le deck :
 | Aventure, Planète commerciale | **le principal pour l'instant** (décision utilisateur, 2026-11-11), question toujours ouverte, voir ci-dessous |
 
 C'est le plus gros chantier moteur de cette refonte (format de sauvegarde dans
-`src/gameplay/partie.py`, `web/bridge.py`, `web/app.js`), à faire au branchement de la refonte avec
+`src/gameplay/partie.py`, `src/web/bridge.py`, `src/web/app.js`), à faire au branchement de la refonte avec
 la pile Hors service.
 
 **Cartes obtenues hors module (Aventure, Planète commerciale) : à trancher.** Les rattacher toutes
@@ -345,7 +345,7 @@ sauvegarde de l'exemplaire (`EtatModule`) sera adaptée au branchement.
    Hors service et Persistante codées dans le combat de la refonte (2026-11-11).
 2. Trancher le rattachement des cartes obtenues hors module (§3.3 ; au principal pour l'instant),
    puis, au branchement, implémenter le lien carte ↔ exemplaire de module dans la partie (identifiant d'exemplaire, format du deck sauvegardé, `CarteNew`,
-   `web/bridge.py`, `web/app.js`) et choisir les premières cartes Persistantes.
+   `src/web/bridge.py`, `src/web/app.js`) et choisir les premières cartes Persistantes.
 3. Concevoir les premières cartes Destruction (puis trancher
    [refonte-destruction.md](refonte-destruction.md)), de résurrection et de sacrifice.
 4. Simuler pour caler les PV du principal et des secondaires (premières campagnes de combats

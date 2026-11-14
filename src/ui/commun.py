@@ -10,7 +10,7 @@ from src.ui import textes_combat
 
 # Image du principal recadree pour une case de la taille des autres modules (accueil, Station,
 # Aventures, ecran Vaisseau) ; dans le combat, le principal garde son image entiere (le vaisseau).
-# Meme choix que web/bridge.py:IMAGE_CASE_PRINCIPAL.
+# Meme choix que src/web/bridge.py:IMAGE_CASE_PRINCIPAL.
 _IMAGE_CASE_PRINCIPAL = "assets/modules/principal_avant.png"
 
 

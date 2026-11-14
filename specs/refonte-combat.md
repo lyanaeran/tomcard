@@ -261,7 +261,7 @@ aujourd'hui, par l'affichage PC et web au branchement.
 ### 8.2 Consultations
 
 Lectures seules, qui ne modifient rien. Elles sont dans `combat_new` et non dans l'affichage parce
-que **chacune répond à une question de règle** : `src/ui` et `web/` ne doivent jamais recalculer
+que **chacune répond à une question de règle** : `src/ui` et `src/web/` ne doivent jamais recalculer
 une règle (CLAUDE.md), et le simulateur en a besoin aussi.
 
 - **État** : tour, électricité, piles (pioche, main, défausse, épuisées, Hors service), PV et

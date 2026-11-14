@@ -14,7 +14,7 @@ la PR 4 (suppression de l'ancien moteur). Mis à jour le 2026-11-14.*
 
 | | Ancien moteur (le jeu actuel) | Moteur de la refonte (`_new`) |
 |---|---|---|
-| **Utilisé par** | plus rien dans le jeu (seulement ses propres tests), supprimé à la PR 4 | le parcours (`deroulement.py`, `partie.py`, `parcours.py`, `flotte_new.py`), l'affichage PC (`main.py`, `src/ui/`) et web (`web/`), le simulateur de parties (`partie_auto.py`, `etudes.py`) et celui des combats (`bot_new.py`, `combats_new.py`) |
+| **Utilisé par** | plus rien dans le jeu (seulement ses propres tests), supprimé à la PR 4 | le parcours (`deroulement.py`, `partie.py`, `parcours.py`, `flotte_new.py`), l'affichage PC (`main.py`, `src/ui/`) et web (`src/web/`), le simulateur de parties (`partie_auto.py`, `etudes.py`) et celui des combats (`bot_new.py`, `combats_new.py`) |
 | **Code** | `carte.py`, `module.py`, `ennemi.py`, `combat.py`, `deck.py`, `flotte.py`, `vaisseau.py`, `joueur.py`, `ciblage.py`, `donnees.py` | `carte_new.py`, `module_new.py`, `ennemi_new.py`, `statut_new.py`, `combat_new.py`, `deck_new.py`, `flotte_new.py`, `vaisseau_new.py` |
 | **Données** | `config/cartes.json`, `config/modules.json`, `config/ennemis.json` | `config/carte_new.json`, `config/module_new.json`, `config/ennemi_new.json` (**sources de vérité**), avec leurs tableaux générés `.md` |
 | **Spec** | `combat.md`, `modules-cartes.md`, `interface.md`… (§2 à §13) | les brouillons `refonte-*.md` (§3 ci-dessous) |
@@ -25,7 +25,7 @@ la PR 4 (suppression de l'ancien moteur). Mis à jour le 2026-11-14.*
 - **Une valeur de carte se change dans `config/carte_new.json` seulement** : depuis la PR 1, le
   parcours ne lit plus `config/cartes.json` (encore lu par l'ancien affichage, supprimé à la PR
   4).
-- Les fichiers `_new` sont déjà montés côté web (`FICHIERS_A_MONTER` de `web/app.js`, exigé par
+- Les fichiers `_new` sont déjà montés côté web (`FICHIERS_A_MONTER` de `src/web/app.js`, exigé par
   `tests/test_architecture.py`) même s'ils ne sont pas utilisés.
 - Seuls **deux modules sont jouables** dans les deux moteurs : le module **principal** (`MOD_1`)
   et le **Lanceur de missiles** (`MOD_2`). Les autres modules et leurs cartes ne sont pas encore
@@ -87,7 +87,7 @@ quatre PR, web avant PC) :
 1. ~~Gameplay : sauvegarde (`ModuleNew`, cartes rattachées), flottes, `CombatNew` dans le parcours,
    Station et Aventures, simulateur de parties~~ : **fait (PR 1, 2026-11-12)**, choix à valider dans
    refonte-branchement.md §5.1.
-2. ~~Affichage web (`web/bridge.py`, `web/app.js`)~~ : **fait (PR 2, 2026-11-12)**, maquette à
+2. ~~Affichage web (`src/web/bridge.py`, `src/web/app.js`)~~ : **fait (PR 2, 2026-11-12)**, maquette à
    valider (refonte-branchement.md §5.2).
 3. ~~Affichage PC (`src/ui/`, `main.py`) : il lit tout dans l'API de `CombatNew` (`combat.deck`,
    `cibles_possibles`, `intentions`, `journal`), jamais dans le deck de la partie~~ : **fait (PR 3,

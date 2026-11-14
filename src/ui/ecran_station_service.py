@@ -438,7 +438,7 @@ class EcranStationService(pyglet.window.Window):
             self.position_selectionnee = position
 
     def _cliquer_action(self, identifiant: str) -> None:
-        # Meme flux que cliquerActionStation (web/app.js) : une autre action annule un Deplacement
+        # Meme flux que cliquerActionStation (src/web/app.js) : une autre action annule un Deplacement
         # en attente de destination, et Reparer vise toujours le principal, sans selection.
         if identifiant != "deplacer":
             self.mode_deplacement = False

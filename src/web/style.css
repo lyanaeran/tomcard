@@ -38,7 +38,7 @@ body {
        background-attachment:fixed (support tres inegal sur Safari iOS) : le fond
        suit la taille du body, qui couvre deja tout le viewport (#app, min-height:100vh).
        #0b1020 en dessous, au cas ou l'image tarde a charger. */
-    background: #0b1020 url("../assets/fond.PNG") center / 100% 100% no-repeat;
+    background: #0b1020 url("../../assets/fond.PNG") center / 100% 100% no-repeat;
     color: #e8ecff;
 }
 
@@ -48,7 +48,7 @@ body {
 
 /* Ecran de consultation ouvert "par-dessus" l'ecran appelant (Deck/Vaisseau, cf. #barre-laterale
    plus bas) : position:fixed pour couvrir tout le viewport quel que soit l'ecran encore visible
-   derriere (jamais masque par masquerTousLesEcrans() dans ce cas, cf. web/app.js) - meme principe
+   derriere (jamais masque par masquerTousLesEcrans() dans ce cas, cf. src/web/app.js) - meme principe
    que le second fenetre pyglet ouverte par-dessus cote PC (src/ui/barre_laterale.py). Fonctionne
    aussi a l'identique quand ces ecrans sont ouverts "en plein" (masquerTousLesEcrans() a deja tout
    cache) : le rendu final est le meme, fixed ou non, des lors qu'il n'y a rien d'autre a voir. */
@@ -57,7 +57,7 @@ body {
     inset: 0;
     z-index: 30;
     overflow-y: auto;
-    background: #0b1020 url("../assets/fond.PNG") center / 100% 100% no-repeat;
+    background: #0b1020 url("../../assets/fond.PNG") center / 100% 100% no-repeat;
 }
 
 /* Barre laterale persistante de tous les ecrans du parcours, Combat compris (specs.md 2.4/10.3) :
@@ -65,7 +65,7 @@ body {
    #ecran-vaisseau, .ecran-survol ci-dessus) sans quitter l'ecran courant - equivalent de
    src/ui/barre_laterale.py cote PC. En Combat, #controles-combat (plus bas) empile juste en
    dessous ses propres controles (Electricite, tour suivant, Quitter), qui remplacent l'ancien
-   bandeau #entete. Ecrans concernes bascules par actualiserBarreLaterale() dans web/app.js.
+   bandeau #entete. Ecrans concernes bascules par actualiserBarreLaterale() dans src/web/app.js.
    Simplification web : overlay en coin (largeur fixe et etroite, libelles abreges) plutot qu'une
    bande qui reserve de la place (pas de reflow des ecrans existants, deja tous centres/fluides) -
    masquee en portrait (ecran deja tres contraint en largeur, cf. #conseil-rotation) et sous 760px
@@ -101,7 +101,7 @@ body {
    (#entete, Electricite + bouton "Fin de tour" texte) par des icones empilees sous la barre
    laterale (decision utilisateur). Toujours affiches en Combat, meme quand la barre elle-meme ne
    l'est pas (mode demonstration sans vraie Partie, portrait, ecran trop etroit ou chevauchement -
-   cf. #barre-laterale ci-dessus et actualiserBarreLaterale() dans web/app.js) : contrairement a
+   cf. #barre-laterale ci-dessus et actualiserBarreLaterale() dans src/web/app.js) : contrairement a
    Niveau/Argent/Deck/Vaisseau, mettre fin a son tour reste une action essentielle, jamais
    sacrifiee pour gagner de la place. 184px = bas de la barre laterale mesure au Playwright (~170px)
    + marge, cf. .controles-combat-sans-barre pour la position de repli (memes coordonnees que
@@ -883,7 +883,7 @@ body {
 /* Ecran de choix de module (parcours, Niveau 1 - specs.md 2.3). Fond de combat reutilise en
    placeholder (deja applique globalement sur body, cf. le haut de ce fichier) - decision
    utilisateur, a remplacer par un fond dedie. Pas encore reliee a une orchestration de parcours
-   (qui n'existe pas encore), cf. web/app.js. */
+   (qui n'existe pas encore), cf. src/web/app.js. */
 #ecran-choix-module {
     display: flex;
     flex-direction: column;
@@ -908,7 +908,7 @@ body {
 
 /* Ecran "Choix du prochain niveau" (specs.md 2.3/2.4). Fond de combat reutilise en placeholder
    (deja applique globalement sur body) - decision utilisateur, a remplacer par un fond dedie. Pas
-   encore reliee a une orchestration de parcours (qui n'existe pas encore), cf. web/app.js. */
+   encore reliee a une orchestration de parcours (qui n'existe pas encore), cf. src/web/app.js. */
 #ecran-choix-niveau {
     display: flex;
     flex-direction: column;
@@ -1080,7 +1080,7 @@ body {
     min-height: 100vh;
     padding: 2rem 1rem;
     text-align: center;
-    background: #0b1020 url("../assets/aventure/trois_lunes.png") center / 100% 100% no-repeat;
+    background: #0b1020 url("../../assets/aventure/trois_lunes.png") center / 100% 100% no-repeat;
 }
 
 #description-aventure-trois-lunes {
@@ -1182,7 +1182,7 @@ body {
     min-height: 100vh;
     padding: 2rem 1rem;
     text-align: center;
-    background: #0b1020 url("../assets/aventure/champ_asteroides.png") center / 100% 100% no-repeat;
+    background: #0b1020 url("../../assets/aventure/champ_asteroides.png") center / 100% 100% no-repeat;
 }
 
 #description-aventure-asteroides {
@@ -1220,7 +1220,7 @@ body {
     min-height: 100vh;
     padding: 2rem 1rem;
     text-align: center;
-    background: #0b1020 url("../assets/aventure/police.png") center / 100% 100% no-repeat;
+    background: #0b1020 url("../../assets/aventure/police.png") center / 100% 100% no-repeat;
 }
 
 #description-aventure-police {
@@ -1282,7 +1282,7 @@ body {
 
 /* Ecran de fin de combat (parcours, specs.md 2.1/6). Fond de combat reutilise en placeholder
    (deja applique globalement sur body) - decision utilisateur, a remplacer par un fond dedie.
-   Pas encore reliee a une orchestration de parcours, cf. web/app.js. Meme structure generale
+   Pas encore reliee a une orchestration de parcours, cf. src/web/app.js. Meme structure generale
    que #ecran-choix-module (titre, contenu, instruction). */
 #ecran-fin-combat {
     display: flex;
@@ -1428,7 +1428,7 @@ body {
     font-weight: normal;
 }
 
-/* Seul moyen de fermer ces ecrans et de revenir a l'ecran appelant, cf. web/app.js. */
+/* Seul moyen de fermer ces ecrans et de revenir a l'ecran appelant, cf. src/web/app.js. */
 #bouton-retour-deck,
 #bouton-retour-vaisseau,
 #bouton-retour-journal-combat {
@@ -1599,7 +1599,7 @@ body {
 }
 
 /* Selection/creation de profil joueur, puis accueil de ce joueur (specs.md 10.3) - nouveau point
-   d'entree de l'app web (appele par demarrer() dans web/app.js). Fond de combat reutilise en
+   d'entree de l'app web (appele par demarrer() dans src/web/app.js). Fond de combat reutilise en
    placeholder, meme decision que les autres ecrans du parcours. */
 #ecran-selection-joueur,
 #ecran-accueil-joueur {

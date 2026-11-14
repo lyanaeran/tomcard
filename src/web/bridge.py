@@ -83,9 +83,9 @@ IDS_ENNEMIS = {
 }
 _PAIRES_CASES_ENNEMIES = (("AV_G", "AR_G"), ("AV_M", "AR_M"), ("AV_D", "AR_D"))
 
-# Version du contrat entre bridge.py et web/app.js : doit etre egale a VERSION_CACHE (app.js),
+# Version du contrat entre bridge.py et src/web/app.js : doit etre egale a VERSION_CACHE (app.js),
 # verifie au demarrage par app.js (versionsAccordees) et par tests/test_architecture.py
-VERSION_WEB = "87"
+VERSION_WEB = "88"
 
 combat = None
 # Taille du journal deja transmise : les popups d'une action sont calcules a partir des seules
@@ -481,7 +481,7 @@ def creer_profil_web(nom) -> str:
 
 def lire_partie_web(partie_json) -> str:
     """Partie sauvegardee relue : {"partie": ..., "effacer": bool}. partie vaut None pour une
-    ancienne version du jeu, effacer dit si web/app.js doit la retirer de localStorage (EN_COURS,
+    ancienne version du jeu, effacer dit si src/web/app.js doit la retirer de localStorage (EN_COURS,
     decision 1, meme regle que partie_en_cours cote PC) ; le profil est garde."""
     partie, effacer = lire_sauvegarde(partie_json)
     return json.dumps({"partie": None if partie is None else _partie_json(partie), "effacer": effacer})
@@ -535,7 +535,7 @@ def choix_module_partie_web(partie_json) -> str:
 
 def choisir_module_partie_web(partie_json, module_id) -> str:
     """Equipe le module choisi et tire les cartes proposees pour lui, deja rattachees au nouvel
-    exemplaire. `candidats` vide : web/app.js appelle directement resoudre_carte_module_web avec
+    exemplaire. `candidats` vide : src/web/app.js appelle directement resoudre_carte_module_web avec
     None, sans afficher l'ecran (comme le PC)."""
     partie = partie_depuis_json(partie_json)
     modele = charger_modules_new()[module_id]

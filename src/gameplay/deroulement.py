@@ -3,7 +3,7 @@ Enchainement des ecrans d'une partie (specs.md 2.4) : seule source de verite de 
 vient ensuite" et des regles appliquees a chaque transition (equipement du module, avancee de
 niveau, Argent et PV apres un combat, fin de partie...).
 
-Le PC (main.py), le web (web/bridge.py + web/app.js) et la simulation (outils/simulation/) ne font
+Le PC (main.py), le web (src/web/bridge.py + src/web/app.js) et la simulation (outils/simulation/) ne font
 qu'appeler ces fonctions et afficher l'Ecran renvoye. Aucune I/O ici : la sauvegarde de la partie
 apres chaque transition reste a la charge de l'appelant (fichier cote PC, localStorage cote web).
 Tout tirage passe par un random.Random injecte (CLAUDE.md).

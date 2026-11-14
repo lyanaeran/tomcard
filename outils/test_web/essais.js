@@ -1,7 +1,7 @@
 // Essais de la version web dans un vrai navigateur (Chromium + Pyodide), au format iPhone 13
 // paysage : une partie reelle, des combats prepares, les ecrans hors combat, la reprise d'une
 // partie et le rechargement quand les versions different. Aucune regle de jeu ici : le script
-// clique comme un joueur et lit l'etat publie par web/bridge.py.
+// clique comme un joueur et lit l'etat publie par src/web/bridge.py.
 //
 //     python -m http.server 8765        (a la racine du depot, dans un autre terminal)
 //     node outils/test_web/essais.js [dossier des captures] [adresse]
