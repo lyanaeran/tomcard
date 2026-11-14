@@ -1,34 +1,34 @@
 """
-Tests unitaires pour src/gameplay/module_new.py (ModuleNew, module de la refonte) et
-config/module_new.json.
+Tests unitaires pour src/gameplay/module.py (Module, module de la refonte) et
+config/modules.json.
 """
 
 import json
 
 import pytest
 
-from src.gameplay.carte_new import charger_cartes_new
-from src.gameplay.module_new import FICHIER_MODULES_NEW, ModuleNew, charger_modules_new
-from src.gameplay.statut_new import Statut
+from src.gameplay.carte import charger_cartes
+from src.gameplay.module import FICHIER_MODULES, Module, charger_modules
+from src.gameplay.statut import Statut
 
 
 def _entree(id_module: str) -> dict:
-    """Entree brute d'un module dans config/module_new.json (pour fabriquer des variantes)."""
-    entrees = json.loads(FICHIER_MODULES_NEW.read_text(encoding="utf-8"))["modules"]
+    """Entree brute d'un module dans config/modules.json (pour fabriquer des variantes)."""
+    entrees = json.loads(FICHIER_MODULES.read_text(encoding="utf-8"))["modules"]
     return json.loads(json.dumps(next(entree for entree in entrees if entree["id"] == id_module)))
 
 
 def _exemplaires():
     """Principal (M1, base) et Lanceur de missiles (M2, avant gauche), exemplaires neufs."""
-    modules = charger_modules_new()
+    modules = charger_modules()
     return modules["MOD_1"].nouvel_exemplaire("M1", "base"), modules["MOD_2"].nouvel_exemplaire("M2", "avant_gauche")
 
 
-# --- config/module_new.json ---
+# --- config/modules.json ---
 
 
-def test_module_new_json_contient_les_deux_modules_jouables_avec_les_pv_provisoires():
-    modules = charger_modules_new()
+def test_modules_json_contient_les_deux_modules_jouables_avec_les_pv_provisoires():
+    modules = charger_modules()
 
     assert sorted(modules) == ["MOD_1", "MOD_2"]
     assert all(module.jouable and module.refonte for module in modules.values())
@@ -36,17 +36,17 @@ def test_module_new_json_contient_les_deux_modules_jouables_avec_les_pv_provisoi
     assert modules["MOD_1"].principal and not modules["MOD_2"].principal
 
 
-def test_les_cartes_des_modules_existent_dans_carte_new_json():
-    cartes = charger_cartes_new()
+def test_les_cartes_des_modules_existent_dans_cartes_json():
+    cartes = charger_cartes()
 
-    for module in charger_modules_new().values():
+    for module in charger_modules().values():
         assert set(module.cartes) <= cartes.keys(), module.id
 
 
 def test_chaque_carte_revue_appartient_a_un_module():
-    ids_modules = {id_carte for module in charger_modules_new().values() for id_carte in module.cartes}
+    ids_modules = {id_carte for module in charger_modules().values() for id_carte in module.cartes}
 
-    assert ids_modules == charger_cartes_new().keys()
+    assert ids_modules == charger_cartes().keys()
 
 
 # --- Exemplaires ---
@@ -69,7 +69,7 @@ def test_nouvel_exemplaire_part_des_pv_de_base_et_du_palier_1():
 
 
 def test_deux_exemplaires_du_meme_module_sont_distincts():
-    lanceur = charger_modules_new()["MOD_2"]
+    lanceur = charger_modules()["MOD_2"]
 
     assert lanceur.nouvel_exemplaire("M2", "avant_gauche") != lanceur.nouvel_exemplaire("M3", "avant_droite")
 
@@ -176,7 +176,7 @@ def test_une_cle_inconnue_est_refusee():
     entree["pv_maxi"] = 20
 
     with pytest.raises(ValueError, match="^Module MOD_2 : cles inconnues"):
-        ModuleNew.depuis_dict(entree)
+        Module.depuis_dict(entree)
 
 
 def test_une_cle_manquante_est_signalee_avec_l_id_du_module():
@@ -184,17 +184,17 @@ def test_une_cle_manquante_est_signalee_avec_l_id_du_module():
     del entree["pv_max"]
 
     with pytest.raises(ValueError, match="^Module MOD_2 : cle manquante 'pv_max'"):
-        ModuleNew.depuis_dict(entree)
+        Module.depuis_dict(entree)
 
 
 def test_il_faut_exactement_un_module_principal(tmp_path):
     entrees = [_entree("MOD_1"), _entree("MOD_2")]
     entrees[1]["principal"] = True
-    fichier = tmp_path / "module_new.json"
+    fichier = tmp_path / "modules.json"
     fichier.write_text(json.dumps({"modules": entrees}), encoding="utf-8")
 
     with pytest.raises(ValueError, match="exactement un module principal"):
-        charger_modules_new(fichier)
+        charger_modules(fichier)
 
 
 @pytest.mark.parametrize("champs", [{"pv_max_base": 0}, {"niveau_maj": 4}])
@@ -203,7 +203,7 @@ def test_module_invalide_refuse(champs):
     valeurs.update(champs)
 
     with pytest.raises(ValueError):
-        ModuleNew(**valeurs)
+        Module(**valeurs)
 
 
 # --- Corrections de la review de la PR #60 ---
@@ -224,15 +224,15 @@ def test_une_valeur_de_mauvais_type_est_signalee_avec_l_id_du_module():
     entree["pv_max"] = "20"
 
     with pytest.raises(ValueError, match="^Module MOD_2 : "):
-        ModuleNew.depuis_dict(entree)
+        Module.depuis_dict(entree)
 
 
 def test_un_id_de_module_en_double_est_refuse(tmp_path):
-    fichier = tmp_path / "module_new.json"
+    fichier = tmp_path / "modules.json"
     fichier.write_text(json.dumps({"modules": [_entree("MOD_1"), _entree("MOD_2"), _entree("MOD_2")]}), encoding="utf-8")
 
     with pytest.raises(ValueError, match="MOD_2 en double"):
-        charger_modules_new(fichier)
+        charger_modules(fichier)
 
 
 def test_les_methodes_de_combat_refusent_un_module_hors_combat():

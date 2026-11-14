@@ -1,5 +1,5 @@
 """
-Genere config/carte_new.md, tableau lisible des cartes, a partir de config/carte_new.json (seule
+Genere config/cartes.md, tableau lisible des cartes, a partir de config/cartes.json (seule
 source de verite). Ne jamais modifier le tableau a la main : relancer ce script apres chaque
 modification du JSON (tests/test_tableau_cartes.py echoue sinon).
 
@@ -9,15 +9,15 @@ modification du JSON (tests/test_tableau_cartes.py echoue sinon).
 import json
 from pathlib import Path
 
-from src.gameplay.carte_new import CarteNew, charger_cartes_new
+from src.gameplay.carte import Carte, charger_cartes
 
 RACINE = Path(__file__).resolve().parents[1]
-FICHIER_JSON = RACINE / "config" / "carte_new.json"
-FICHIER_TABLEAU = RACINE / "config" / "carte_new.md"
+FICHIER_JSON = RACINE / "config" / "cartes.json"
+FICHIER_TABLEAU = RACINE / "config" / "cartes.md"
 
 ENTETE = """# Cartes (refonte) — tableau généré
 
-> **Fichier généré automatiquement à partir de `config/carte_new.json`, ne pas le modifier à la
+> **Fichier généré automatiquement à partir de `config/cartes.json`, ne pas le modifier à la
 > main** : toute modification se fait dans le JSON, puis `python -m outils.tableau_cartes`
 > régénère ce tableau (un test échoue tant qu'il n'est pas à jour).
 
@@ -42,7 +42,7 @@ def _oui_non(valeur: bool) -> str:
     return "Oui" if valeur else "Non"
 
 
-def _ligne(entree: dict, carte: CarteNew) -> list[str]:
+def _ligne(entree: dict, carte: Carte) -> list[str]:
     return [
         entree["id"],
         entree["nom"],
@@ -62,9 +62,9 @@ def _ligne(entree: dict, carte: CarteNew) -> list[str]:
 
 
 def tableau_markdown(fichier_json: Path = FICHIER_JSON) -> str:
-    """Contenu complet de config/carte_new.md pour ce fichier JSON."""
+    """Contenu complet de config/cartes.md pour ce fichier JSON."""
     entrees = json.loads(fichier_json.read_text(encoding="utf-8"))["cartes"]
-    cartes = charger_cartes_new(fichier_json)
+    cartes = charger_cartes(fichier_json)
     lignes = ["| " + " | ".join(COLONNES) + " |", "|" + "|".join("---" for _ in COLONNES) + "|"]
     for entree in entrees:
         lignes.append("| " + " | ".join(_cellule(c) for c in _ligne(entree, cartes[entree["id"]])) + " |")

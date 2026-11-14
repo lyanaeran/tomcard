@@ -11,8 +11,8 @@ import random
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.carte_new import CarteNew
-from src.gameplay.carte_new import charger_cartes_new
+from src.gameplay.carte import Carte
+from src.gameplay.carte import charger_cartes
 from src.gameplay.partie import (
     DEGATS_ASTEROIDES,
     RACINE,
@@ -126,7 +126,7 @@ class EcranAventureAsteroides(pyglet.window.Window):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.partie = partie
         # Pool de tirage de la carte offerte au 2e choc (second_choc_asteroides).
-        self.cartes = charger_cartes_new()
+        self.cartes = charger_cartes()
         # Instance explicite (jamais le module random global directement, cf. CLAUDE.md
         # "Determinisme du tirage aleatoire") pour le tirage de la carte offerte au 2e choc
         # (_resoudre_sequence_2, second_choc_asteroides) - injectable pour un test reproductible.
@@ -135,7 +135,7 @@ class EcranAventureAsteroides(pyglet.window.Window):
         # Traverser) -> "sequence_3" (carte offerte, si trouvee) -> "resolu". Les chocs touchent
         # toujours le principal (refonte-branchement.md 2, decision 3) : plus de choix de module.
         self.etape: str = "choix"
-        self.carte_offerte: CarteNew | None = None
+        self.carte_offerte: Carte | None = None
         self.message_resolu: str = ""
         self.index_survole: int | None = None
         # Rectangle du bouton actuellement survole ("sequence_2"/"resolu"/"sequence_3" n'ont

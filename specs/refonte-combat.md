@@ -1,9 +1,9 @@
-# Refonte du combat (`combat_new`) — spécification
+# Refonte du combat (`combat`) — spécification
 
-*Document de travail. **Implémenté (2026-11-11), pas encore branché** : `combat_new.py`,
-`vaisseau_new.py`, `flotte_new.py`, `deck_new.py` dans `src/gameplay/`, avec leurs tests. Spécifie
-`src/gameplay/combat_new.py`, le combat de la
-refonte, qui fait jouer ensemble `CarteNew`, `ModuleNew`, `EnnemiNew` et les statuts. **Gameplay
+*Document de travail. **Implémenté (2026-11-11), pas encore branché** : `combat.py`,
+`vaisseau.py`, `flotte.py`, `deck.py` dans `src/gameplay/`, avec leurs tests. Spécifie
+`src/gameplay/combat.py`, le combat de la
+refonte, qui fait jouer ensemble `Carte`, `Module`, `Ennemi` et les statuts. **Gameplay
 seulement** : l'affichage (PC et web), la sauvegarde de la partie et l'enchaînement des écrans
 viendront au branchement (§9). Une fois stabilisé, le contenu ira dans [combat.md](combat.md) et
 ce fichier sera supprimé.*
@@ -20,21 +20,21 @@ Les choix faits en codant, là où la spec ne disait rien, sont listés au §11 
 
 ### 1.1 Inclus
 
-- Les **mécaniques des cartes jouables** de `config/carte_new.json` : dégâts (avec portées
+- Les **mécaniques des cartes jouables** de `config/cartes.json` : dégâts (avec portées
   « autres ennemis », colonnes), bouclier, réparation, leurre.
 - Les **mécaniques déjà modélisées**, même si aucune carte jouable ne les utilise encore :
   incendie, répétition (Salve laser…), munitions, lancements multiples, gain d'électricité,
   pioche.
-- Les **6 ennemis** de `config/ennemi_new.json` : cycle d'actions, valeurs qui montent avec le
+- Les **6 ennemis** de `config/ennemis.json` : cycle d'actions, valeurs qui montent avec le
   tour, coefficient de difficulté, bouclier, renvoi.
 - La **pile Hors service** et le mot-clé **Persistante** (refonte-modules.md §3.3 à §3.5).
-- L'**API** de `combat_new` (§8) : jouer une carte, finir le tour, et les consultations qui
+- L'**API** de `combat` (§8) : jouer une carte, finir le tour, et les consultations qui
   répondent à une question de règle (cibles valides, intentions, journal).
 
 ### 1.2 Exclu, pour plus tard (décision utilisateur)
 
 - Vulnérabilité, Réduction de dégâts, Tir allié (`REDIRECTION_CIBLE`) : aucune carte jouable ne
-  les utilise ; une carte qui en porte ne peut pas être jouée dans `combat_new` (erreur explicite).
+  les utilise ; une carte qui en porte ne peut pas être jouée dans `combat` (erreur explicite).
 - Buff Destruction ([refonte-destruction.md](refonte-destruction.md)), résurrection, sacrifice
   volontaire.
 - Composition des flottes par niveau, nouveaux ennemis ([refonte-ennemis.md](refonte-ennemis.md) §5).
@@ -45,13 +45,13 @@ Les choix faits en codant, là où la spec ne disait rien, sont listés au §11 
 
 ### 2.1 Création d'un combat
 
-`combat_new` reçoit des objets **déjà prêts**, sans rien lire lui-même dans les JSON :
+`combat` reçoit des objets **déjà prêts**, sans rien lire lui-même dans les JSON :
 
 | Entrée | Contenu |
 |---|---|
-| **Modules** | Les copies de combat des modules équipés (`ModuleNew.copie_pour_combat`), chacune à son emplacement : la base (principal) et jusqu'à 4 emplacements |
-| **Deck** | Les cartes de la partie, chacune rattachée à son exemplaire de module (`CarteNew.copie(exemplaire_module=...)`) |
-| **Flotte** | Les ennemis en combat (`EnnemiNew.pour_combat(coefficient)`), chacun à sa ou ses cases |
+| **Modules** | Les copies de combat des modules équipés (`Module.copie_pour_combat`), chacune à son emplacement : la base (principal) et jusqu'à 4 emplacements |
+| **Deck** | Les cartes de la partie, chacune rattachée à son exemplaire de module (`Carte.copie(exemplaire_module=...)`) |
+| **Flotte** | Les ennemis en combat (`Ennemi.pour_combat(coefficient)`), chacun à sa ou ses cases |
 | **Aléatoire** | Un `random.Random` injecté (mélange du deck, cible des effets au hasard), jamais le module `random` global (`src/gameplay/CLAUDE.md`) |
 
 ### 2.2 Grille
@@ -60,7 +60,7 @@ Même grille qu'aujourd'hui (combat.md §3.1) : 2 colonnes (avant, arrière) × 
 milieu, droite), côté joueur comme côté ennemi.
 
 - **Joueur** : la base (principal) occupe la rangée du milieu ; les emplacements `avant_gauche`,
-  `arriere_gauche`, `avant_droite`, `arriere_droite` de `ModuleNew.emplacement` correspondent aux
+  `arriere_gauche`, `avant_droite`, `arriere_droite` de `Module.emplacement` correspondent aux
   cases du même nom.
 - **Ennemis** : un ennemi occupe `emplacements` cases (Boss : une case avant et une case arrière de
   la même rangée), c'est un **seul** ennemi. Placement préféré (`PROTECTEUR_AVANT`,
@@ -75,7 +75,7 @@ l'instant** ; la question reste ouverte (refonte-modules.md §3.3).
 ### 2.4 Sortie
 
 À la fin : **victoire** ou **défaite** (§7), PV de combat des modules (le principal sera reporté
-dans la partie par `ModuleNew.reporter_combat`), ennemis détruits (pour l'Argent gagné, inchangé).
+dans la partie par `Module.reporter_combat`), ennemis détruits (pour l'Argent gagné, inchangé).
 
 ---
 
@@ -83,7 +83,7 @@ dans la partie par `ModuleNew.reporter_combat`), ennemis détruits (pour l'Argen
 
 Le **numéro de tour** est tenu par le combat (décision utilisateur) : 1 au début, puis +1 au
 début de chaque tour du joueur à partir du tour 2. Il sert à lire les valeurs des ennemis
-(`EnnemiNew.valeur(nom, tour)`).
+(`Ennemi.valeur(nom, tour)`).
 
 ### 3.1 Début du combat
 
@@ -98,7 +98,7 @@ début de chaque tour du joueur à partir du tour 2. Il sert à lire les valeurs
 2. **Jeu** : le joueur joue les cartes qu'il veut, dans l'ordre qu'il veut (§4).
 3. **Fin** :
    1. les cartes restant en main sont défaussées ;
-   2. **fin du tour du joueur pour chaque ennemi vivant** (`EnnemiNew.fin_du_tour_du_joueur`) :
+   2. **fin du tour du joueur pour chaque ennemi vivant** (`Ennemi.fin_du_tour_du_joueur`) :
       l'incendie frappe (absorbé par le bouclier), puis bouclier et incendie −1, renvoi retiré ;
    3. si tous les ennemis sont détruits : **victoire**.
 
@@ -108,7 +108,7 @@ début de chaque tour du joueur à partir du tour 2. Il sert à lire les valeurs
    tour en cours, puis avance dans son cycle (`avancer_cycle`).
 2. Après chaque coup : un module à 0 PV est **détruit** (§6) ; si c'est le principal, **défaite**
    immédiate, le tour s'arrête.
-3. **Fin du tour ennemi pour chaque module vivant** (`ModuleNew.fin_du_tour_ennemi`) : incendie,
+3. **Fin du tour ennemi pour chaque module vivant** (`Module.fin_du_tour_ennemi`) : incendie,
    puis bouclier −1. Un module détruit par l'incendie l'est comme au point 2.
 4. Retour au tour du joueur.
 
@@ -125,7 +125,7 @@ une **cible valide** (§4.2). Une carte en pile Hors service ou épuisée n'est 
 explicite). La façon dont le joueur choisit sa carte et sa cible (clics, taps, specs.md §8.3)
 relève de l'affichage et n'est pas spécifiée ici.
 
-### 4.2 Cible de la carte (`CibleCarteNew`)
+### 4.2 Cible de la carte (`CibleCarte`)
 
 | Cible | Case cliquée | Ce qui est touché |
 |---|---|---|
@@ -210,7 +210,7 @@ joue plus** et son cycle s'arrête.
 
 ### 5.3 Intention
 
-Pour chaque ennemi vivant, `combat_new` donne son **intention** : l'étape courante
+Pour chaque ennemi vivant, `combat` donne son **intention** : l'étape courante
 (`etape_courante`) avec les valeurs du tour en cours (`valeurs_au_tour`), et, pour une attaque
 `PROXIMITE`, le module qui serait visé si rien ne change. La cible d'un tirage au hasard
 (`ALLIE_AVANT_SINON_ARRIERE`) n'est pas annoncée.
@@ -226,7 +226,7 @@ Un module à 0 PV est **détruit** pour le reste du combat :
 2. La pile Hors service n'est **jamais remélangée** dans la pioche.
 3. Ses statuts sont perdus ; il n'est plus une cible, ni pour les ennemis, ni pour les cartes.
 4. **Principal détruit** : **défaite** immédiate.
-5. Un secondaire détruit **repart à ses PV max au combat suivant** (`ModuleNew.copie_pour_combat`) :
+5. Un secondaire détruit **repart à ses PV max au combat suivant** (`Module.copie_pour_combat`) :
    ce n'est pas une perte permanente.
 
 ---
@@ -246,9 +246,9 @@ Un module à 0 PV est **détruit** pour le reste du combat :
 
 ---
 
-## 8. API de `combat_new`
+## 8. API de `combat`
 
-`combat_new` ne contient **aucun affichage** : il expose une API, utilisée par le simulateur
+`combat` ne contient **aucun affichage** : il expose une API, utilisée par le simulateur
 aujourd'hui, par l'affichage PC et web au branchement.
 
 ### 8.1 Actions
@@ -260,7 +260,7 @@ aujourd'hui, par l'affichage PC et web au branchement.
 
 ### 8.2 Consultations
 
-Lectures seules, qui ne modifient rien. Elles sont dans `combat_new` et non dans l'affichage parce
+Lectures seules, qui ne modifient rien. Elles sont dans `combat` et non dans l'affichage parce
 que **chacune répond à une question de règle** : `src/ui` et `src/web/` ne doivent jamais recalculer
 une règle (CLAUDE.md), et le simulateur en a besoin aussi.
 
@@ -278,13 +278,13 @@ une règle (CLAUDE.md), et le simulateur en a besoin aussi.
 
 ## 9. Plan de réalisation
 
-1. ~~**`src/gameplay/combat_new.py`**~~ (fait, 2026-11-11) : `CombatNew` (`combat_new.py`), et trois
-   petits fichiers : `VaisseauNew` (`vaisseau_new.py`, modules sur la grille du joueur),
-   `FlotteNew` (`flotte_new.py`, ennemis sur la grille ennemie, ordre de jeu), `DeckNew`
-   (`deck_new.py`, cinq piles et deck de départ). Montés côté web (`FICHIERS_A_MONTER`).
-2. ~~**Tests**~~ (fait) : `tests/test_combat_new.py`, `test_vaisseau_new.py`, `test_flotte_new.py`,
-   `test_deck_new.py`.
-3. **Simulateur** (à faire après relecture, décision utilisateur) (`outils/simulation/`) : jouer `combat_new` avec le bot, puis simuler pour caler
+1. ~~**`src/gameplay/combat.py`**~~ (fait, 2026-11-11) : `Combat` (`combat.py`), et trois
+   petits fichiers : `Vaisseau` (`vaisseau.py`, modules sur la grille du joueur),
+   `Flotte` (`flotte.py`, ennemis sur la grille ennemie, ordre de jeu), `Deck`
+   (`deck.py`, cinq piles et deck de départ). Montés côté web (`FICHIERS_A_MONTER`).
+2. ~~**Tests**~~ (fait) : `tests/test_combat.py`, `test_vaisseau.py`, `test_flotte.py`,
+   `test_deck.py`.
+3. **Simulateur** (à faire après relecture, décision utilisateur) (`outils/simulation/`) : jouer `combat` avec le bot, puis simuler pour caler
    les valeurs provisoires (PV 60/20, boucliers de Petit Jean et du Boss, renvoi de Miroir,
    augmentations des ennemis).
 4. **Branchement** (hors de ce document) : sauvegarde de la partie (deck avec exemplaires, modules),
@@ -332,5 +332,5 @@ Choix faits en codant, là où la spec ne disait rien :
    reçus, la part **annulée par le leurre**, **renvoyée**, **absorbée par le bouclier**, les **PV
    perdus** et les **PV restants**. Ex. : Pat le Pirate attaque le Lanceur de missiles, 5 dégâts,
    3 absorbés par le bouclier, 2 PV perdus, 18 PV restants.
-9. **La composition des flottes** (quels ennemis, placement préféré) reste hors de `combat_new` :
-   `FlotteNew` reçoit des ennemis déjà placés.
+9. **La composition des flottes** (quels ennemis, placement préféré) reste hors de `combat` :
+   `Flotte` reçoit des ennemis déjà placés.

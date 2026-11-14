@@ -8,6 +8,11 @@ PC et web) sur le moteur de la refonte (`CombatNew` et les fichiers `*_new.py`),
 l'ancien moteur. Contexte : [refonte.md](refonte.md) ; règles du nouveau combat :
 [refonte-combat.md](refonte-combat.md).*
 
+> **Document historique.** Depuis le 2026-11-14, les fichiers de la refonte n'ont plus de suffixe
+> `_new` (`carte_new.py` → `carte.py`, `CarteNew` → `Carte`, `config/carte_new.json` →
+> `config/cartes.json`…). Ce document garde les noms de l'époque : ils désignent les fichiers
+> actuels. L'« ancien moteur » dont il parle n'existe plus.
+
 ---
 
 ## 1. Objectif
@@ -394,13 +399,13 @@ les captures), déjà utilisé par le PC avant la refonte.
 - Un test de `test_ennemi_new.py` comparait les ennemis à l'ancien `ennemis.json` : supprimé avec
   lui.
 
-**Non fait dans cette PR, à décider par l'utilisateur** :
+**Suite, même jour (décision utilisateur : « les 2 »)** :
 
-1. **Renommage des `*_new`** (`CarteNew` → `Carte`, `carte_new.py` → `carte.py`,
-   `config/carte_new.json` → `config/cartes.json`…) : purement mécanique mais touche presque tous
-   les fichiers ; à faire dans une PR à part si souhaité.
-2. **Migration des brouillons `refonte-*.md`** dans les sections numérotées (`combat.md`,
-   `modules-cartes.md`, `interface.md`…), qui décrivent encore l'ancien moteur par endroits.
+1. **Suffixe `_new` retiré** partout : fichiers de `src/gameplay/`, classes (`CarteNew` → `Carte`…),
+   fonctions (`charger_cartes_new` → `charger_cartes`…), tests, simulateur de combats (`bot.py`,
+   `combats.py`), données (`config/cartes.json`, `modules.json`, `ennemis.json` et leurs tableaux
+   `.md`).
+2. **Brouillons `refonte-*.md`** reportés dans les sections numérotées (cf. [specs.md](specs.md)).
 
 ---
 

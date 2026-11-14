@@ -1,6 +1,6 @@
 """
 Ecran "Journal de combat" (specs.md 8.1), ouvert depuis les controles de FenetreCombat (bouton
-journal). Affiche l'historique accumule pendant le combat (CombatNew.journal, mis en phrases
+journal). Affiche l'historique accumule pendant le combat (Combat.journal, mis en phrases
 par src/ui/textes_combat.py, refonte-branchement.md 4.5) - simple liste de lignes multicolores, defilable a la molette.
 
 Fond de combat reutilise en placeholder (meme principe que les autres ecrans de survol du
@@ -10,7 +10,7 @@ parcours, cf. ecran_deck.py/ecran_vaisseau.py).
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.combat_new import Evenement
+from src.gameplay.combat import Evenement
 from src.ui import textes_combat
 from src.ui.fenetre import FOND_IMAGE, HAUTEUR_FENETRE, LARGEUR_FENETRE, _sprite_etire
 

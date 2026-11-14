@@ -2,8 +2,8 @@
 
 *Document de travail, pas encore une section numérotée du document de conception (cf.
 [specs.md](specs.md)). Les choix marqués « décision utilisateur » sont validés, le reste est une
-proposition. **Codé (pas encore branché)** : `ModuleNew` (§8), la pile Hors service et le mot-clé
-Persistante dans le combat de la refonte (`combat_new.py`, `deck_new.py`). Vue d'ensemble :
+proposition. **Codé (pas encore branché)** : `Module` (§8), la pile Hors service et le mot-clé
+Persistante dans le combat de la refonte (`combat.py`, `deck.py`). Vue d'ensemble :
 [refonte.md](refonte.md). Une fois le modèle tranché, le contenu stabilisé ira dans [combat.md](combat.md)
 (§3.4), [parcours.md](parcours.md) (§2.2) et [modules-cartes.md](modules-cartes.md) (§4, §5), et ce
 fichier sera supprimé. Pointeur depuis [a-trancher.md](a-trancher.md) §11.*
@@ -91,13 +91,13 @@ module (§5), impossible de savoir quelle carte appartient auquel. Conception re
    (`EtatModule`, ex. `M1` pour le principal, `M2`, `M3`... ensuite), qui ne change jamais.
 2. **Chaque carte du deck sauvegardé indique son exemplaire** : le deck passe d'une liste d'ids à
    une liste de couples, ex. `[{"id": "CRT_9", "module": "M2"}, {"id": "CRT_9", "module": "M3"}]`.
-3. **En début de combat**, chaque carte est créée rattachée à son exemplaire (`CarteNew`) ; si cet
+3. **En début de combat**, chaque carte est créée rattachée à son exemplaire (`Carte`) ; si cet
    exemplaire est détruit, ses cartes non persistantes partent en pile Hors service (§3.4).
 
 Un identifiant d'exemplaire plutôt que l'emplacement (`avant_gauche`...) : la Station service
 **déplace** des modules (échange possible entre deux emplacements) ; lié à l'emplacement, chaque
 déplacement obligerait à mettre à jour les cartes, avec un risque d'erreur. Avec un identifiant,
-les cartes suivent leur module sans rien faire (champ `exemplaire_module` de `CarteNew`). La carte
+les cartes suivent leur module sans rien faire (champ `exemplaire_module` de `Carte`). La carte
 ne stocke pas le type de son module : il se lit sur l'exemplaire, et `config/modules.json` reste la
 seule source de vérité des cartes de chaque type (une carte peut être commune à plusieurs modules).
 
@@ -166,7 +166,7 @@ service et continue son cycle normal (pioche, main, défausse).
 - **Rare par construction** : réservée à quelques cartes Rares ou Légendaires, sinon le coût de la
   mort (§3.3) disparaît : **0 ou 1 carte Persistante par module** (validé).
 - **Affichage** : le mot-clé apparaît sur la carte (bandeau ou icône), comme les munitions.
-- **Données** : champ booléen `"persistante"` dans `config/carte_new.json` (`CarteNew.persistante`).
+- **Données** : champ booléen `"persistante"` dans `config/cartes.json` (`Carte.persistante`).
 - **Candidates naturelles** : des cartes dont le thème survit au module, par exemple *Leurre*
   (un leurre déjà largué), ou des cartes de résurrection (§5), qui doivent pouvoir ressusciter leur
   propre module. Sans Persistante, une carte de résurrection d'un module mort serait elle-même hors
@@ -197,7 +197,7 @@ module le **buff « Destruction »**, qui porte un effet déclenché quand ce mo
 
 ### 4.2 Format et points ouverts : voir [refonte-destruction.md](refonte-destruction.md)
 
-Le format du buff dans `config/carte_new.json` et ses points à trancher (cible de l'effet
+Le format du buff dans `config/cartes.json` et ses points à trancher (cible de l'effet
 déclenché, moment du déclenchement, valeurs, modules concernés, effets autorisés, affichage) sont
 dans un brouillon dédié, **en attente** : aucune carte ne pose encore ce buff (décision
 utilisateur, 2026-11-08).
@@ -271,15 +271,15 @@ que seulement subie.
 
 ---
 
-## 8. Modèle de données : `module_new.py` et `config/module_new.json` (décision utilisateur)
+## 8. Modèle de données : `module.py` et `config/modules.json` (décision utilisateur)
 
-Même démarche que pour les cartes (`carte_new.py`, `config/carte_new.json`) :
+Même démarche que pour les cartes (`carte.py`, `config/cartes.json`) :
 
-- **`src/gameplay/module_new.py`** : classe `ModuleNew`, cible de la refonte, d'abord sans
+- **`src/gameplay/module.py`** : classe `Module`, cible de la refonte, d'abord sans
   branchement au moteur.
-- **`config/module_new.json`** : source de vérité des modules de la refonte, avec **les deux modules
+- **`config/modules.json`** : source de vérité des modules de la refonte, avec **les deux modules
   jouables** pour commencer (principal et Lanceur de missiles), champs `jouable` et `refonte`,
-  et un tableau lisible `config/module_new.md` **généré** à côté, comme pour les cartes.
+  et un tableau lisible `config/modules.md` **généré** à côté, comme pour les cartes.
 
 Un module mêle aujourd'hui **trois niveaux d'information**, répartis dans trois classes :
 
@@ -289,9 +289,9 @@ Un module mêle aujourd'hui **trois niveaux d'information**, répartis dans troi
 | **Exemplaire dans la partie** | `EtatModule` | identifiant d'exemplaire (`M3`, à ajouter), type, emplacement, PV max avec améliorations, niveau de mise à jour, PV (principal seulement) | sauvegardé d'une partie à l'autre |
 | **État en combat** | `Module` | PV, bouclier, buffs (dont Destruction), leurre, mort, résurrections utilisées | remis à zéro à chaque combat |
 
-**Découpage (décision utilisateur, 2026-11-08)** : **une seule classe `ModuleNew`** dans
-`module_new.py`, qui réunit le modèle, l'exemplaire et les champs de combat (PV de combat,
-bouclier, buffs dont Destruction, leurre, détruit) — même principe que `CarteNew`.
+**Découpage (décision utilisateur, 2026-11-08)** : **une seule classe `Module`** dans
+`module.py`, qui réunit le modèle, l'exemplaire et les champs de combat (PV de combat,
+bouclier, buffs dont Destruction, leurre, détruit) — même principe que `Carte`.
 
 - **Une copie par combat** : au début de chaque combat, le combat travaille sur une **copie** du
   module, champs de combat remis à zéro (PV au maximum pour un secondaire, PV sauvegardés pour le
@@ -304,13 +304,13 @@ bouclier, buffs dont Destruction, leurre, détruit) — même principe que `Cart
   champs de combat (liste explicite).
 - **Deux sortes de PV** à nommer clairement : les PV sauvegardés (principal seulement) et les PV du
   combat en cours.
-- Variante écartée : une classe à part pour le combat, liée à son `ModuleNew` (plus de classes et
+- Variante écartée : une classe à part pour le combat, liée à son `Module` (plus de classes et
   un lien à suivre, pour le même résultat).
 
-**Implémenté (2026-11-08), pas encore branché au moteur** : `src/gameplay/module_new.py`
-(`ModuleNew`, `charger_modules_new`), `config/module_new.json` (principal 60 PV, Lanceur de
-missiles 20 PV, toutes leurs cartes de `config/carte_new.json`, un champ `principal`), tableau
-généré `config/module_new.md`, tests `tests/test_module_new.py`. Méthodes : `nouvel_exemplaire`
+**Implémenté (2026-11-08), pas encore branché au moteur** : `src/gameplay/module.py`
+(`Module`, `charger_modules`), `config/modules.json` (principal 60 PV, Lanceur de
+missiles 20 PV, toutes leurs cartes de `config/cartes.json`, un champ `principal`), tableau
+généré `config/modules.md`, tests `tests/test_module.py`. Méthodes : `nouvel_exemplaire`
 (exemplaire neuf pour une partie), `copie_pour_combat`, `reporter_combat` (PV du principal
 seulement), règles de combat de base (`subir_degats`, `reparer`, `fin_du_tour_ennemi`). Bouclier,
 leurre, incendie… sont des **statuts** partagés avec les ennemis (`statuts`, voir
@@ -333,18 +333,18 @@ sauvegarde de l'exemplaire (`EtatModule`) sera adaptée au branchement.
 6. **Résurrection** : quelles pistes garder (§5.1) ; garde-fou contre les boucles en partie réglé
    par la consommation du buff Destruction (§5.2).
 7. **Sacrifice volontaire** (§6) : oui ou non.
-8. ~~**Découpage de `ModuleNew`**~~ : **tranché**, une seule classe `ModuleNew` (modèle,
+8. ~~**Découpage de `Module`**~~ : **tranché**, une seule classe `Module` (modèle,
    exemplaire et champs de combat), avec une copie par combat (§8).
 
 ---
 
 ## 10. Prochaines étapes
 
-1. ~~Créer `module_new.py` (`ModuleNew`, copie par combat, §8), `config/module_new.json`
+1. ~~Créer `module.py` (`Module`, copie par combat, §8), `config/modules.json`
    (principal 60 PV, Lanceur de missiles 20 PV) et son tableau généré~~ (fait, 2026-11-08) ; pile
    Hors service et Persistante codées dans le combat de la refonte (2026-11-11).
 2. Trancher le rattachement des cartes obtenues hors module (§3.3 ; au principal pour l'instant),
-   puis, au branchement, implémenter le lien carte ↔ exemplaire de module dans la partie (identifiant d'exemplaire, format du deck sauvegardé, `CarteNew`,
+   puis, au branchement, implémenter le lien carte ↔ exemplaire de module dans la partie (identifiant d'exemplaire, format du deck sauvegardé, `Carte`,
    `src/web/bridge.py`, `src/web/app.js`) et choisir les premières cartes Persistantes.
 3. Concevoir les premières cartes Destruction (puis trancher
    [refonte-destruction.md](refonte-destruction.md)), de résurrection et de sacrifice.

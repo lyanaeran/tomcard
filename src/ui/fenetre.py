@@ -1,6 +1,6 @@
 """
 Fenetre pyglet du combat (grille 2x3, plusieurs modules et ennemis, cf. specs.md paragraphe 8),
-sur le moteur de la refonte (CombatNew, specs/refonte-combat.md). N'affiche que ce que le gameplay
+sur le moteur de la refonte (Combat, specs/refonte-combat.md). N'affiche que ce que le gameplay
 decide : cases valides d'une carte (cibles_possibles), carte jouable (peut_jouer), intentions des
 ennemis, journal. Les textes sont dans src/ui/textes_combat.py.
 """
@@ -8,14 +8,14 @@ ennemis, journal. Les textes sont dans src/ui/textes_combat.py.
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.carte_new import Camp, CarteNew, RareteCarte
-from src.gameplay.combat_new import ELECTRICITE_PAR_TOUR, CombatNew, EtatCombatNew
-from src.gameplay.ennemi_new import EnnemiNew
-from src.gameplay.module_new import ModuleNew
+from src.gameplay.carte import Camp, Carte, RareteCarte
+from src.gameplay.combat import ELECTRICITE_PAR_TOUR, Combat, EtatCombat
+from src.gameplay.ennemi import Ennemi
+from src.gameplay.module import Module
 from src.gameplay.partie import RACINE, Partie
 from src.gameplay.position import Colonne, Position, Rangee
-from src.gameplay.statut_new import Statut
-from src.gameplay.vaisseau_new import CASES_PAR_EMPLACEMENT
+from src.gameplay.statut import Statut
+from src.gameplay.vaisseau import CASES_PAR_EMPLACEMENT
 from src.ui import textes_combat
 from src.ui.animation import AnimationPopup
 from src.ui.commun import chemin_image
@@ -382,13 +382,13 @@ def _rect_fusionne(positions: list[Position]) -> tuple[float, float, float, floa
 
 
 
-def texte_effet_carte(carte: CarteNew) -> str:
+def texte_effet_carte(carte: Carte) -> str:
     """Texte d'une carte, partout (combat, recompenses, deck, Aventures) : la description de
-    config/carte_new.json avec ses valeurs actuelles, fournie par le gameplay."""
+    config/cartes.json avec ses valeurs actuelles, fournie par le gameplay."""
     return carte.description_affichee()
 
 
-def _pastilles_statuts(entite: ModuleNew | EnnemiNew, cx_pv: float, cy: float, lot: pyglet.graphics.Batch) -> list:
+def _pastilles_statuts(entite: Module | Ennemi, cx_pv: float, cy: float, lot: pyglet.graphics.Batch) -> list:
     """Pastilles des statuts actifs autres que le Bouclier (Incendie, Renvoi, Leurre), a gauche
     de la pastille Bouclier, avec leur intensite (rien pour le Leurre : present ou absent)."""
     elements = []
@@ -413,15 +413,15 @@ def _marqueur_cible(cx: float, cy: float, lot: pyglet.graphics.Batch) -> list:
 
 
 class FenetreCombat(pyglet.window.Window):
-    """Fenetre de combat : affiche un CombatNew et gere les clics/survols de souris."""
+    """Fenetre de combat : affiche un Combat et gere les clics/survols de souris."""
 
-    def __init__(self, combat: CombatNew, partie: Partie | None = None):
+    def __init__(self, combat: Combat, partie: Partie | None = None):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.combat = combat
         # None seulement pour une fenetre de test sans partie : pas de barre laterale
         self.partie = partie
         self.index_carte_selectionnee: int | None = None
-        self.entite_survolee: ModuleNew | EnnemiNew | None = None
+        self.entite_survolee: Module | Ennemi | None = None
         self.index_carte_survolee: int | None = None
         # Derniere position connue de la souris, pour placer l'infobulle au-dessus du curseur
         self.position_souris: tuple[int, int] = (0, 0)
@@ -444,27 +444,27 @@ class FenetreCombat(pyglet.window.Window):
 
     # --- Lecture du combat ---
 
-    def _main(self) -> list[CarteNew]:
+    def _main(self) -> list[Carte]:
         return self.combat.deck.main
 
-    def _carte_selectionnee(self) -> CarteNew | None:
+    def _carte_selectionnee(self) -> Carte | None:
         main = self._main()
         if self.index_carte_selectionnee is None or self.index_carte_selectionnee >= len(main):
             return None
         return main[self.index_carte_selectionnee]
 
-    def _nom_module_de(self, carte: CarteNew) -> str | None:
+    def _nom_module_de(self, carte: Carte) -> str | None:
         module = self.combat.vaisseau.module_d_exemplaire(carte.exemplaire_module)
         return module.nom if module else None
 
-    def _cases_de(self, entite: ModuleNew | EnnemiNew) -> list[Position]:
-        if isinstance(entite, ModuleNew):
+    def _cases_de(self, entite: Module | Ennemi) -> list[Position]:
+        if isinstance(entite, Module):
             return list(CASES_PAR_EMPLACEMENT[entite.emplacement])
         return self.combat.flotte.cases_de(entite)
 
-    def _entites_valides(self) -> list[ModuleNew | EnnemiNew]:
+    def _entites_valides(self) -> list[Module | Ennemi]:
         """Entites sur lesquelles la carte selectionnee peut etre confirmee (cases decidees par
-        le gameplay : CombatNew.cibles_possibles, seulement si la carte est jouable)."""
+        le gameplay : Combat.cibles_possibles, seulement si la carte est jouable)."""
         carte = self._carte_selectionnee()
         if carte is None or not self.combat.peut_jouer(carte):
             return []
@@ -541,7 +541,7 @@ class FenetreCombat(pyglet.window.Window):
                 elements.extend(self._dessiner_module_case(lot, module, id(module) in menaces))
         return elements
 
-    def _dessiner_module_case(self, lot: pyglet.graphics.Batch, module: ModuleNew, vise: bool) -> list:
+    def _dessiner_module_case(self, lot: pyglet.graphics.Batch, module: Module, vise: bool) -> list:
         """Dessine une case module (image + pastilles PV/Bouclier/statuts, marqueur s'il est vise
         au prochain tour ennemi), grisee si detruite (avec le nombre de ses cartes hors service)."""
         x, y, largeur, hauteur = self._rect_du_module(module)
@@ -560,7 +560,7 @@ class FenetreCombat(pyglet.window.Window):
             elements.extend(_marqueur_cible(x + _RAYON_TOTAL_PASTILLE, cy, lot))
         return elements
 
-    def _cartes_hors_service(self, module: ModuleNew) -> int:
+    def _cartes_hors_service(self, module: Module) -> int:
         return sum(carte.exemplaire_module == module.exemplaire for carte in self.combat.deck.hors_service)
 
     def _dessiner_flotte(self, lot: pyglet.graphics.Batch) -> list:
@@ -573,7 +573,7 @@ class FenetreCombat(pyglet.window.Window):
             elements.extend(self._dessiner_ennemi_case(lot, rect, ennemi, intentions.get(id(ennemi))))
         return elements
 
-    def _dessiner_ennemi_case(self, lot, rect: tuple[float, float, float, float], ennemi: EnnemiNew, intention) -> list:
+    def _dessiner_ennemi_case(self, lot, rect: tuple[float, float, float, float], ennemi: Ennemi, intention) -> list:
         """Dessine une case ennemie : image, pastilles PV/Bouclier/statuts, et son intention pour
         le prochain tour en bas de la case (refonte-branchement.md 4.3) ; grisee si detruite."""
         x, y, largeur, hauteur = rect
@@ -621,7 +621,7 @@ class FenetreCombat(pyglet.window.Window):
         elements = []
         for entite in self._entites_valides():
             x, y, largeur, hauteur = self._rect_de_cible(entite)
-            if isinstance(entite, ModuleNew) and entite.principal:
+            if isinstance(entite, Module) and entite.principal:
                 # Le principal : contour autour de sa pastille de PV plutot que de tout le vaisseau
                 cy = HAUT_PARE_BRISE_VAISSEAU_Y + MARGE_PASTILLE_HAUT + _RAYON_TOTAL_PASTILLE
                 elements.append(
@@ -677,7 +677,7 @@ class FenetreCombat(pyglet.window.Window):
     def _dessiner_main(self, lot: pyglet.graphics.Batch) -> list:
         """Dessine les cartes de la main (refonte-branchement.md 4.1) : illustration, rarete,
         cout, munitions, "x2" si elle est lancee plus d'une fois, bandeau Persistante ; assombrie
-        si elle n'est pas jouable maintenant (decide par le gameplay : CombatNew.peut_jouer)."""
+        si elle n'est pas jouable maintenant (decide par le gameplay : Combat.peut_jouer)."""
         elements = []
         x_depart = self._x_carte_depart()
         for index, carte in enumerate(self._main()):
@@ -717,7 +717,7 @@ class FenetreCombat(pyglet.window.Window):
             )
         return elements
 
-    def _dessiner_pastilles_carte(self, x: float, carte: CarteNew, lot: pyglet.graphics.Batch) -> list:
+    def _dessiner_pastilles_carte(self, x: float, carte: Carte, lot: pyglet.graphics.Batch) -> list:
         """En haut a droite de la carte, de haut en bas : cout, munitions restantes/de depart
         (si limitees), nombre de lancements (si > 1)."""
         cx = x + CARTE_LARGEUR - _RAYON_TOTAL_PASTILLE
@@ -733,7 +733,7 @@ class FenetreCombat(pyglet.window.Window):
             elements += _pastille(cx, cy, COULEUR_PASTILLE_LANCEMENTS, f"×{textes_combat.lancements(carte)}", lot)
         return elements
 
-    def _dessiner_etoile_rarete(self, x: float, carte: CarteNew, lot: pyglet.graphics.Batch) -> list:
+    def _dessiner_etoile_rarete(self, x: float, carte: Carte, lot: pyglet.graphics.Batch) -> list:
         """Etoile de rarete en haut a gauche de la carte (specs.md paragraphe 8.2)."""
         couleur = COULEUR_ETOILE_RARETE[carte.rarete]
         return [
@@ -809,7 +809,7 @@ class FenetreCombat(pyglet.window.Window):
         entite = self.entite_survolee
         if entite is None:
             return []
-        if isinstance(entite, EnnemiNew):
+        if isinstance(entite, Ennemi):
             if entite.est_detruit():
                 return []
             lignes = [entite.nom, f"PV {entite.pv}/{entite.pv_max}", *textes_combat.lignes_statuts(entite)]
@@ -830,7 +830,7 @@ class FenetreCombat(pyglet.window.Window):
 
     def _dessiner_message_fin(self, lot: pyglet.graphics.Batch) -> list:
         """Affiche le message de fin de combat (victoire ou defaite)."""
-        message = "Victoire !" if self.combat.etat == EtatCombatNew.VICTOIRE else "Défaite"
+        message = "Victoire !" if self.combat.etat == EtatCombat.VICTOIRE else "Défaite"
         texte = pyglet.text.Label(
             message, x=LARGEUR_FENETRE / 2, y=HAUTEUR_FENETRE / 2, anchor_x="center", anchor_y="center",
             font_size=36, batch=lot, group=GROUPE_INFOBULLE,
@@ -909,7 +909,7 @@ class FenetreCombat(pyglet.window.Window):
 
     def _essayer_de_cibler(self, x: int, y: int) -> None:
         """Confirme la carte selectionnee sur la case cliquee, si c'est une de ses cases valides :
-        ces cases sont decidees par le gameplay (CombatNew.cibles_possibles), jamais ici. Meme
+        ces cases sont decidees par le gameplay (Combat.cibles_possibles), jamais ici. Meme
         flux que cliquerCase dans src/web/app.js (specs.md 8.3) : une case du bon camp, vivante, et
         valide pour la carte ; sinon le clic est ignore et la carte reste selectionnee. Une
         entite sur deux cases (principal, Boss) : on prend celle de ses cases que le gameplay
@@ -931,7 +931,7 @@ class FenetreCombat(pyglet.window.Window):
         self._afficher_popups_du_journal()
         self.index_carte_selectionnee = None
 
-    def _module_a(self, x: int, y: int, vivant: bool = True) -> ModuleNew | None:
+    def _module_a(self, x: int, y: int, vivant: bool = True) -> Module | None:
         """Renvoie le module du joueur sous ce point (vivant seulement, sauf vivant=False pour
         l'infobulle d'un module detruit), ou None.
 
@@ -948,7 +948,7 @@ class FenetreCombat(pyglet.window.Window):
             return vaisseau.principal
         return None
 
-    def _ennemi_a(self, x: int, y: int) -> EnnemiNew | None:
+    def _ennemi_a(self, x: int, y: int) -> Ennemi | None:
         """Renvoie l'ennemi vivant sous ce point, ou None."""
         for ennemi in self.combat.flotte.ennemis_vivants():
             if _point_dans_rectangle(x, y, *_rect_fusionne(self.combat.flotte.cases_de(ennemi))):
@@ -976,14 +976,14 @@ class FenetreCombat(pyglet.window.Window):
             animation.demarrer()
             self.popups.append((animation, texte, couleur, x + largeur / 2, y + hauteur / 2 + rang * DECALAGE_POPUPS_EMPILES))
 
-    def _rect_de_cible(self, cible: ModuleNew | EnnemiNew) -> tuple[float, float, float, float]:
+    def _rect_de_cible(self, cible: Module | Ennemi) -> tuple[float, float, float, float]:
         """Rectangle (x, y, largeur, hauteur) de la case d'un module ou d'un ennemi (fusion de
         ses cases pour un ennemi sur deux cases)."""
-        if isinstance(cible, EnnemiNew):
+        if isinstance(cible, Ennemi):
             return _rect_fusionne(self.combat.flotte.cases_de(cible))
         return self._rect_du_module(cible)
 
-    def _rect_du_module(self, module: ModuleNew) -> tuple[float, float, float, float]:
+    def _rect_du_module(self, module: Module) -> tuple[float, float, float, float]:
         """Rectangle d'un module du joueur (son emplacement, ou tout le vaisseau pour le principal)."""
         if module.principal:
             return _rect_vaisseau()

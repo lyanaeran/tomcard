@@ -1,16 +1,16 @@
 """
-Tests unitaires pour src/gameplay/flotte_new.py (ennemis de la refonte sur la grille ennemie).
+Tests unitaires pour src/gameplay/flotte.py (ennemis de la refonte sur la grille ennemie).
 """
 
 import random
 
 import pytest
 
-from src.gameplay.ennemi_new import charger_ennemis_new
-from src.gameplay.flotte_new import (
+from src.gameplay.ennemi import charger_ennemis
+from src.gameplay.flotte import (
     ID_BOSS,
     NOMBRE_ENNEMIS_ASTEROIDES,
-    FlotteNew,
+    Flotte,
     flotte_asteroides,
     flotte_boss,
     flotte_prime,
@@ -21,13 +21,13 @@ from src.gameplay.position import Colonne, Position, Rangee
 
 
 def _ennemi(id_ennemi):
-    return charger_ennemis_new()[id_ennemi].pour_combat()
+    return charger_ennemis()[id_ennemi].pour_combat()
 
 
 def test_ordre_de_jeu_avant_puis_arriere_de_droite_a_gauche():
     """Decision utilisateur : la rangee gauche est en bas de l'ecran."""
     arriere_droite, avant_gauche, avant_droite = (_ennemi("ENM_PAT_LE_PIRATE") for _ in range(3))
-    flotte = FlotteNew({
+    flotte = Flotte({
         Position(Colonne.ARRIERE, Rangee.DROITE): arriere_droite,
         Position(Colonne.AVANT, Rangee.GAUCHE): avant_gauche,
         Position(Colonne.AVANT, Rangee.DROITE): avant_droite,
@@ -38,7 +38,7 @@ def test_ordre_de_jeu_avant_puis_arriere_de_droite_a_gauche():
 
 def test_un_ennemi_sur_deux_cases_compte_une_fois_et_est_dans_les_deux_colonnes():
     boss = _ennemi("ENM_BOSS_PIRATES")
-    flotte = FlotteNew({Position(Colonne.AVANT, Rangee.MID): boss, Position(Colonne.ARRIERE, Rangee.MID): boss})
+    flotte = Flotte({Position(Colonne.AVANT, Rangee.MID): boss, Position(Colonne.ARRIERE, Rangee.MID): boss})
 
     assert flotte.ennemis_vivants() == [boss]
     assert flotte.ennemis_vivants_de_colonne(Colonne.ARRIERE) == [boss]
@@ -47,12 +47,12 @@ def test_un_ennemi_sur_deux_cases_compte_une_fois_et_est_dans_les_deux_colonnes(
 
 def test_le_nombre_de_cases_doit_correspondre_aux_emplacements():
     with pytest.raises(ValueError, match="1 case"):
-        FlotteNew({Position(Colonne.AVANT, Rangee.MID): _ennemi("ENM_BOSS_PIRATES")})
+        Flotte({Position(Colonne.AVANT, Rangee.MID): _ennemi("ENM_BOSS_PIRATES")})
 
 
 def test_la_flotte_est_vide_quand_tous_les_ennemis_sont_detruits():
     pat = _ennemi("ENM_PAT_LE_PIRATE")
-    flotte = FlotteNew({Position(Colonne.AVANT, Rangee.MID): pat})
+    flotte = Flotte({Position(Colonne.AVANT, Rangee.MID): pat})
 
     pat.subir_degats(50)
 
@@ -60,7 +60,7 @@ def test_la_flotte_est_vide_quand_tous_les_ennemis_sont_detruits():
 
 
 def test_les_cases_d_un_ennemi_absent_de_la_flotte_sont_refusees():
-    flotte = FlotteNew({Position(Colonne.AVANT, Rangee.MID): _ennemi("ENM_PAT_LE_PIRATE")})
+    flotte = Flotte({Position(Colonne.AVANT, Rangee.MID): _ennemi("ENM_PAT_LE_PIRATE")})
 
     with pytest.raises(ValueError, match="absent de cette flotte"):
         flotte.cases_de(_ennemi("ENM_PAT_LE_PIRATE"))
@@ -69,7 +69,7 @@ def test_les_cases_d_un_ennemi_absent_de_la_flotte_sont_refusees():
 # --- Composition des flottes du parcours (refonte-branchement.md 2, decision 4) ---
 
 
-def _colonnes(flotte: FlotteNew, id_ennemi: str) -> list[Colonne]:
+def _colonnes(flotte: Flotte, id_ennemi: str) -> list[Colonne]:
     return [flotte.cases_de(e)[0].colonne for e in flotte.ennemis if e.id == id_ennemi]
 
 
@@ -107,7 +107,7 @@ def test_placer_ennemis_refuse_plus_de_6_ennemis_ou_un_ennemi_de_deux_cases():
 
 
 def test_flotte_prime_selon_le_niveau_sans_le_boss():
-    modeles = charger_ennemis_new()
+    modeles = charger_ennemis()
     for graine in range(10):
         for niveau, nombre in ((3, 1), (7, 2)):
             flotte = flotte_prime(modeles, niveau, random.Random(graine))
@@ -116,11 +116,11 @@ def test_flotte_prime_selon_le_niveau_sans_le_boss():
 
 
 def test_flotte_asteroides_a_3_ennemis():
-    assert len(flotte_asteroides(charger_ennemis_new(), random.Random(1)).ennemis) == NOMBRE_ENNEMIS_ASTEROIDES == 3
+    assert len(flotte_asteroides(charger_ennemis(), random.Random(1)).ennemis) == NOMBRE_ENNEMIS_ASTEROIDES == 3
 
 
 def test_flotte_boss_sur_les_deux_cases_du_milieu():
-    flotte = flotte_boss(charger_ennemis_new())
+    flotte = flotte_boss(charger_ennemis())
 
     (boss,) = flotte.ennemis
     assert boss.id == ID_BOSS

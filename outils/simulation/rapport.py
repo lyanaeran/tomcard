@@ -5,8 +5,8 @@ Tableaux de synthese (Markdown) a partir des resultats bruts d'outils/simulation
 from collections import Counter, defaultdict
 from statistics import mean
 
-from src.gameplay.carte_new import charger_cartes_new
-from src.gameplay.module_new import charger_modules_new
+from src.gameplay.carte import charger_cartes
+from src.gameplay.module import charger_modules
 
 from outils.simulation.format import moyenne as _moy
 from outils.simulation.format import pourcentage as _pct
@@ -18,7 +18,7 @@ def _tableau(entetes: list[str], lignes: list[list]) -> str:
 
 
 def _noms_modules() -> dict[str, str]:
-    return {module.id: module.nom for module in charger_modules_new().values()}
+    return {module.id: module.nom for module in charger_modules().values()}
 
 
 def validation_bot(combats: list[dict]) -> str:
@@ -100,7 +100,7 @@ def cartes(parties: list[dict]) -> str:
             jouees.update(c["cartes_jouees"])
             vues.update(c["cartes_vues"])
     # Cartes jouables seulement : les autres ne peuvent pas apparaitre en main
-    toutes = {id_carte: carte for id_carte, carte in charger_cartes_new().items() if carte.jouable}
+    toutes = {id_carte: carte for id_carte, carte in charger_cartes().items() if carte.jouable}
     lignes = []
     for id_carte in sorted(vues, key=lambda i: -(jouees[i] / vues[i])):
         carte = toutes[id_carte]

@@ -21,7 +21,7 @@ un buff déjà consommé.
 
 ---
 
-## 2. Format envisagé dans `config/carte_new.json`
+## 2. Format envisagé dans `config/cartes.json`
 
 Une nouvelle nature d'effet `DESTRUCTION`, dont les effets déclenchés sont décrits avec le format
 habituel (valeurs nommées de la carte), dans une liste imbriquée :

@@ -1,7 +1,7 @@
 # Statuts (buffs, debuffs, bouclier) — conception
 
-*Document de travail. Modèle codé (`src/gameplay/statut_new.py`), utilisé par `ModuleNew` et
-`EnnemiNew`, pas encore branché au combat. Une fois stabilisé, le contenu ira dans
+*Document de travail. Modèle codé (`src/gameplay/statut.py`), utilisé par `Module` et
+`Ennemi`, pas encore branché au combat. Une fois stabilisé, le contenu ira dans
 [combat.md](combat.md) et ce fichier sera supprimé. Voir aussi
 [refonte-buffs-debuffs.md](refonte-buffs-debuffs.md) (réflexion d'origine),
 [refonte-ennemis.md](refonte-ennemis.md), [refonte-modules.md](refonte-modules.md).*
@@ -20,7 +20,7 @@ classe.
   immédiate.
 - Chaque statut **déclare sa règle** ; le code applique la règle, sans cas particulier par statut
   sauf ce qui lui est vraiment propre (dégâts de l'incendie, renvoi des dégâts).
-- Le code est **partagé** : `Statuts` (`statut_new.py`) sert à `ModuleNew` comme à `EnnemiNew`.
+- Le code est **partagé** : `Statuts` (`statut.py`) sert à `Module` comme à `Ennemi`.
 
 ---
 
@@ -74,14 +74,14 @@ pour un ennemi, fin du tour ennemi pour un module.
 ## 5. Points ouverts
 
 1. **Statuts à durée** (à traiter plus tard, décision utilisateur) (Vulnérabilité, Réduction de dégâts : une intensité **et** une durée en
-   tours, cumul « Durée » de `CarteNew`) : une intensité seule ne suffit plus ; il faudra une
+   tours, cumul « Durée » de `Carte`) : une intensité seule ne suffit plus ; il faudra une
    petite valeur (intensité, tours restants) pour ces statuts.
 2. **Destruction** ([refonte-destruction.md](refonte-destruction.md)) porte des **effets**, pas un
    nombre : ce n'est pas un statut de ce dictionnaire, il aura son propre champ.
 
 ## 6. Lien avec les cartes (décision utilisateur, 2026-11-11)
 
-**Une seule source pour les règles** : `CarteNew` n'a plus sa propre énumération de cumul. Chaque
+**Une seule source pour les règles** : `Carte` n'a plus sa propre énumération de cumul. Chaque
 nature d'effet qui pose un statut le désigne (`NatureEffet.statut_pose`) : `BOUCLIER` → Bouclier,
 `INCENDIE` → Incendie, `ANNULATION_PROCHAINE_ATTAQUE` → Leurre. Les autres natures sont
 instantanées (dégâts, réparation, pioche, électricité) ou à reprendre plus tard (Vulnérabilité,

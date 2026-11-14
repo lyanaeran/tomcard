@@ -42,11 +42,11 @@ pas reporté (migration à faire, cf. refonte.md).
 |---|---|
 | [refonte.md](refonte.md) | **Vue d'ensemble de la refonte** : les deux moteurs, les grandes décisions, où est quoi (spec, code, données, tests), simulations, ce qui reste à faire |
 | [refonte-buffs-debuffs.md](refonte-buffs-debuffs.md) | Réflexion d'origine sur les buffs/debuffs/bouclier ; en partie dépassée, les décisions sont dans `refonte-statuts.md` |
-| [refonte-modules.md](refonte-modules.md) | Modules secondaires sacrifiables : pile Hors service, Persistante, rattachement des cartes, modèle `ModuleNew` (codé, pas encore branché) |
+| [refonte-modules.md](refonte-modules.md) | Modules secondaires sacrifiables : pile Hors service, Persistante, rattachement des cartes, modèle `Module` (codé, pas encore branché) |
 | [refonte-destruction.md](refonte-destruction.md) | Brouillon du buff « Destruction » (en attente, aucune carte ne le pose encore) |
-| [refonte-statuts.md](refonte-statuts.md) | Statuts (bouclier, incendie, renvoi, leurre…) gérés ensemble pour modules et ennemis : règles de cumul et d'extinction, déroulement ; codé (`statut_new.py`), pas encore branché au combat |
-| [refonte-ennemis.md](refonte-ennemis.md) | Brouillon de refonte des ennemis : cycle d'actions, valeurs nommées qui augmentent, coefficient de difficulté ; modèle codé (`EnnemiNew`, `config/ennemi_new.json`), pas encore branché au combat |
-| [refonte-combat.md](refonte-combat.md) | Spécification du combat de la refonte (`combat_new`) : entrées, déroulement du tour, jeu d'une carte, tour ennemi, destruction, fin de combat (gameplay seulement) ; codé (`combat_new.py`), pas encore branché |
+| [refonte-statuts.md](refonte-statuts.md) | Statuts (bouclier, incendie, renvoi, leurre…) gérés ensemble pour modules et ennemis : règles de cumul et d'extinction, déroulement ; codé (`statut.py`), pas encore branché au combat |
+| [refonte-ennemis.md](refonte-ennemis.md) | Brouillon de refonte des ennemis : cycle d'actions, valeurs nommées qui augmentent, coefficient de difficulté ; modèle codé (`Ennemi`, `config/ennemis.json`), pas encore branché au combat |
+| [refonte-combat.md](refonte-combat.md) | Spécification du combat de la refonte (`combat`) : entrées, déroulement du tour, jeu d'une carte, tour ennemi, destruction, fin de combat (gameplay seulement) ; codé (`combat.py`), pas encore branché |
 | [refonte-branchement.md](refonte-branchement.md) | **Plan validé** pour brancher la refonte au jeu : décisions, correspondance ancien / nouveau combat pour l'affichage, maquette des nouveautés, plan en 4 PR ; **PR 1 (gameplay) codée**, choix à valider au §5.1 |
 | [simulation.md](simulation.md) | Conception des simulateurs d'équilibrage (`outils/simulation/`) : ancien moteur (§11) et combat de la refonte (§12) |
 

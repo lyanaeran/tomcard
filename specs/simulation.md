@@ -244,12 +244,12 @@ python -m outils.simulation combat --variante bouclier_moins_un --parties 2000
 
 > **Depuis la PR 1 du branchement (2026-11-12)**, le simulateur de parties complètes
 > (`partie_auto.py`, `etudes.py`, `python -m outils.simulation`) joue le **parcours branché sur le
-> combat de la refonte** avec le bot de `bot_new.py` (§12) ; l'ancien bot (`bot.py`) est supprimé.
+> combat de la refonte** avec le bot de `bot.py` (§12) ; l'ancien bot (`bot.py`) est supprimé.
 > Les règles décrites ci-dessous restent valables pour la politique hors combat ; les résultats de
 > `analyse_2026-11-07.md` sont ceux de l'ancien moteur.
 
 Implémenté dans `outils/simulation/` (`partie_auto.py`, `etudes.py`, `rapport.py`, `__main__.py`,
-et à l'origine `bot.py`, supprimé à la PR 1 du branchement au profit de `bot_new.py`), sur les
+et à l'origine `bot.py`, supprimé à la PR 1 du branchement au profit de `bot.py`), sur les
 règles du jeu (aucune variante de règles, décision utilisateur : « on ne mélange pas tout »), celles
 du moteur de la refonte depuis la PR 1. Tests : `tests/test_simulation.py`.
 
@@ -299,17 +299,17 @@ rédigées : `outils/simulation/synthese/analyse_AAAA-MM-JJ.md` (rapports géné
 
 ## 12. Simulateur du combat de la refonte (2026-11-11)
 
-Le combat de la refonte (`CombatNew`, [refonte-combat.md](refonte-combat.md)) a son propre
+Le combat de la refonte (`Combat`, [refonte-combat.md](refonte-combat.md)) a son propre
 simulateur, à côté de celui des règles actuelles (§11), qui reste inchangé :
 
-- `outils/simulation/bot_new.py` : bot « recherche » (même faisceau et mêmes poids que §11, plus
-  un leurre et l'incendie restant dans l'évaluation) et bot aléatoire, sur l'API de `CombatNew`
+- `outils/simulation/bot.py` : bot « recherche » (même faisceau et mêmes poids que §11, plus
+  un leurre et l'incendie restant dans l'évaluation) et bot aléatoire, sur l'API de `Combat`
   (`jouer_carte(carte, case)`, `finir_tour`). La recherche copie le combat **sans son journal**.
   **Valeur du deck** (idée utilisateur, 2026-11-11) : l'évaluation ajoute ce que rapporteront les
   lancements en plus (cartes de répétition) d'ici la fin du combat, d'autant plus que le combat est
   jeune (tours restants estimés d'après le numéro du tour, jamais d'après les PV ennemis, qui
   incitaient le bot à ne pas frapper). Sans elle, *Protocole d'urgence* n'était jamais joué.
-- `outils/simulation/combats_new.py` : **combats isolés** seulement (le combat n'est pas encore
+- `outils/simulation/combats.py` : **combats isolés** seulement (le combat n'est pas encore
   branché au parcours) :
   - **robustesse** : le bot aléatoire joue des milliers de combats et un contrôle vérifie après
     chaque action des **invariants** (piles de cartes, PV, statuts, pile Hors service, cohérence
@@ -318,13 +318,13 @@ simulateur, à côté de celui des règles actuelles (§11), qui reste inchangé
     « étoffé » ;
   - **enchaînement** : approximation d'une partie (un combat par niveau du 2 au 10, PV du
     principal reportés, sans soin hors combat).
-- Lancement : `caffeinate -i python -m outils.simulation.combats_new --graines 30 --robustesse 2000
-  --enchainements 300` (environ 3 minutes sur 8 cœurs). Tests : `tests/test_simulation_combats_new.py`.
+- Lancement : `caffeinate -i python -m outils.simulation.combats --graines 30 --robustesse 2000
+  --enchainements 300` (environ 3 minutes sur 8 cœurs). Tests : `tests/test_simulation_combats.py`.
 - La **composition des flottes** (placement préféré, Boss) est celle du jeu :
-  `flotte_new.placer_ennemis` et `flotte_boss` (depuis la PR 1 du branchement).
+  `flotte.placer_ennemis` et `flotte_boss` (depuis la PR 1 du branchement).
 - Première synthèse : `outils/simulation/synthese/analyse_2026-11-11_combat_new.md`.
 - **Essais limités** : `construire_combat(..., valeurs_cartes={"CRT_10": {"bouclier": 4}})` change
-  la valeur d'une carte pour un essai, sans toucher à `config/carte_new.json`. Premier essai :
+  la valeur d'une carte pour un essai, sans toucher à `config/cartes.json`. Premier essai :
   `outils/simulation/essai_bouclier.py` (Bouclier à 3, 4, 5 ou 6 sur 20 combats difficiles et 12 faciles, avec le bouclier maximal atteint), synthèse
   `outils/simulation/synthese/essai_bouclier_2026-11-11.md`.
 - **Pas de campagne sans l'accord de l'utilisateur** (consigne du 2026-11-11 : trop long).

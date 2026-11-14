@@ -34,7 +34,7 @@ testé en navigateur. Méthodes à combiner :
 
 1. **Appeler `bridge.py` directement en Python**, sans navigateur : créer une partie
    (`bridge.nouvelle_partie_web()`, puis `continuer_partie_web(...)` pour un combat), ou construire
-   un `CombatNew` à la main et le passer à `bridge._demarrer_combat`, puis appeler les fonctions
+   un `Combat` à la main et le passer à `bridge._demarrer_combat`, puis appeler les fonctions
    exposées (`bridge.jouer_carte(index, id_case)`, `bridge.finir_tour()`...) et vérifier le JSON
    produit — c'est le même code que celui exécuté par Pyodide.
 2. **Valider la syntaxe** avec `node --check src/web/app.js` (si Node est disponible).

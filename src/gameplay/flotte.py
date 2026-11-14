@@ -1,5 +1,5 @@
 """
-Flotte de la refonte (FlotteNew) : les ennemis en combat (copies d'EnnemiNew) places sur la grille
+Flotte de la refonte (Flotte) : les ennemis en combat (copies d'Ennemi) places sur la grille
 ennemie (specs/refonte-combat.md 2.2, 5.1). Remplace flotte.py:Flotte. La classe recoit les
 ennemis deja places ; la composition des flottes du parcours (quels ennemis selon le niveau, et
 leur placement) est faite par les fonctions en bas de ce fichier (refonte-branchement.md 2,
@@ -11,7 +11,7 @@ n'est compte, touche et joue qu'une fois.
 
 import random
 
-from src.gameplay.ennemi_new import EnnemiNew, PlacementEnnemi
+from src.gameplay.ennemi import Ennemi, PlacementEnnemi
 from src.gameplay.position import Colonne, Position, Rangee
 
 # Ordre de jeu des ennemis (decision utilisateur) : colonne avant puis arriere ; dans une colonne,
@@ -23,13 +23,13 @@ ORDRE_DE_JEU = tuple(
 )
 
 
-class FlotteNew:
+class Flotte:
     """Les ennemis d'un combat, sur leurs cases."""
 
-    def __init__(self, ennemis: dict[Position, EnnemiNew]):
+    def __init__(self, ennemis: dict[Position, Ennemi]):
         self._par_case = dict(ennemis)
         # Le placement ne change jamais pendant un combat : ennemis et cases calcules une fois
-        self._ennemis: list[EnnemiNew] = []
+        self._ennemis: list[Ennemi] = []
         self._cases: list[list[Position]] = []
         for case in ORDRE_DE_JEU:
             ennemi = self._par_case.get(case)
@@ -53,25 +53,25 @@ class FlotteNew:
             raise ValueError("Une flotte a au moins un ennemi")
 
     @property
-    def ennemis(self) -> list[EnnemiNew]:
+    def ennemis(self) -> list[Ennemi]:
         """Tous les ennemis, detruits compris, une fois chacun, dans l'ordre de jeu."""
         return list(self._ennemis)
 
-    def ennemis_vivants(self) -> list[EnnemiNew]:
+    def ennemis_vivants(self) -> list[Ennemi]:
         """Ennemis vivants dans l'ordre de jeu (decision utilisateur, refonte-combat.md 5.1)."""
         return [ennemi for ennemi in self.ennemis if not ennemi.est_detruit()]
 
-    def ennemis_vivants_de_colonne(self, colonne: Colonne) -> list[EnnemiNew]:
+    def ennemis_vivants_de_colonne(self, colonne: Colonne) -> list[Ennemi]:
         return [ennemi for ennemi in self.ennemis_vivants() if any(
             case.colonne == colonne for case in self.cases_de(ennemi)
         )]
 
-    def ennemi_en(self, case: Position) -> EnnemiNew | None:
+    def ennemi_en(self, case: Position) -> Ennemi | None:
         """Ennemi vivant sur cette case, None si elle est vide ou si son ennemi est detruit."""
         ennemi = self._par_case.get(case)
         return None if ennemi is None or ennemi.est_detruit() else ennemi
 
-    def cases_de(self, ennemi: EnnemiNew) -> list[Position]:
+    def cases_de(self, ennemi: Ennemi) -> list[Position]:
         index = next((i for i, deja in enumerate(self._ennemis) if deja is ennemi), None)
         if index is None:
             raise ValueError(f"Ennemi {ennemi.id} : absent de cette flotte")
@@ -80,7 +80,7 @@ class FlotteNew:
     def cases_vivantes(self) -> list[Position]:
         return [case for case in ORDRE_DE_JEU if self.ennemi_en(case) is not None]
 
-    def rangee_de(self, ennemi: EnnemiNew) -> Rangee:
+    def rangee_de(self, ennemi: Ennemi) -> Rangee:
         return self.cases_de(ennemi)[0].rangee
 
     def est_vide(self) -> bool:
@@ -108,12 +108,12 @@ def nombre_ennemis_prime(niveau: int) -> int:
     return 1 if niveau < NIVEAU_PRIME_DEUX_ENNEMIS else 2
 
 
-def ennemis_standard(modeles: dict[str, EnnemiNew]) -> list[EnnemiNew]:
+def ennemis_standard(modeles: dict[str, Ennemi]) -> list[Ennemi]:
     """Ennemis tirables au hasard : ceux d'une seule case (le Boss a sa flotte fixe)."""
     return [modele for modele in modeles.values() if modele.emplacements == 1]
 
 
-def placer_ennemis(ennemis: list[EnnemiNew], aleatoire: random.Random) -> FlotteNew:
+def placer_ennemis(ennemis: list[Ennemi], aleatoire: random.Random) -> Flotte:
     """Place des ennemis d'une case selon leur preference (specs.md 13, comme
     l'ancien moteur) : les protecteurs d'abord a l'avant, puis les
     proteges a l'arriere, puis les autres a l'avant, sinon a l'arriere ; cases tirees au hasard
@@ -125,7 +125,7 @@ def placer_ennemis(ennemis: list[EnnemiNew], aleatoire: random.Random) -> Flotte
     avant, arriere = list(CASES_AVANT), list(CASES_ARRIERE)
     aleatoire.shuffle(avant)
     aleatoire.shuffle(arriere)
-    places: dict[Position, EnnemiNew] = {}
+    places: dict[Position, Ennemi] = {}
     reste = list(ennemis)
     for preference, colonne in ((PlacementEnnemi.PROTECTEUR_AVANT, avant), (PlacementEnnemi.PROTEGE_ARRIERE, arriere)):
         for ennemi in [e for e in reste if e.placement == preference]:
@@ -134,27 +134,27 @@ def placer_ennemis(ennemis: list[EnnemiNew], aleatoire: random.Random) -> Flotte
                 reste.remove(ennemi)
     for ennemi in reste:
         places[(avant or arriere).pop(0)] = ennemi
-    return FlotteNew(places)
+    return Flotte(places)
 
 
-def _tirer_ennemis(modeles: dict[str, EnnemiNew], nombre: int, aleatoire: random.Random) -> list[EnnemiNew]:
+def _tirer_ennemis(modeles: dict[str, Ennemi], nombre: int, aleatoire: random.Random) -> list[Ennemi]:
     """`nombre` ennemis standard tires au hasard (avec remise), prets pour le combat."""
     pool = ennemis_standard(modeles)
     return [aleatoire.choice(pool).pour_combat(COEFFICIENT_PARCOURS) for _ in range(nombre)]
 
 
-def flotte_prime(modeles: dict[str, EnnemiNew], niveau: int, aleatoire: random.Random) -> FlotteNew:
+def flotte_prime(modeles: dict[str, Ennemi], niveau: int, aleatoire: random.Random) -> Flotte:
     """Flotte d'un combat Prime : nombre_ennemis_prime(niveau) ennemis tires et places."""
     return placer_ennemis(_tirer_ennemis(modeles, nombre_ennemis_prime(niveau), aleatoire), aleatoire)
 
 
-def flotte_asteroides(modeles: dict[str, EnnemiNew], aleatoire: random.Random) -> FlotteNew:
+def flotte_asteroides(modeles: dict[str, Ennemi], aleatoire: random.Random) -> Flotte:
     """Flotte du choix "Affronter les pirates" : NOMBRE_ENNEMIS_ASTEROIDES ennemis tires et places
     (placement prefere respecte, decision 4)."""
     return placer_ennemis(_tirer_ennemis(modeles, NOMBRE_ENNEMIS_ASTEROIDES, aleatoire), aleatoire)
 
 
-def flotte_boss(modeles: dict[str, EnnemiNew]) -> FlotteNew:
+def flotte_boss(modeles: dict[str, Ennemi]) -> Flotte:
     """Flotte du Boss : le Boss des pirates seul, sur les deux cases de la rangee du milieu."""
     boss = modeles[ID_BOSS].pour_combat(COEFFICIENT_PARCOURS)
-    return FlotteNew({Position(Colonne.AVANT, Rangee.MID): boss, Position(Colonne.ARRIERE, Rangee.MID): boss})
+    return Flotte({Position(Colonne.AVANT, Rangee.MID): boss, Position(Colonne.ARRIERE, Rangee.MID): boss})

@@ -3,8 +3,8 @@ Petites fonctions partagees par les ecrans PC (aucun pyglet, aucune regle de jeu
 d'images, regroupement des cartes identiques pour l'affichage, textes d'une carte.
 """
 
-from src.gameplay.carte_new import CarteNew
-from src.gameplay.module_new import ModuleNew
+from src.gameplay.carte import Carte
+from src.gameplay.module import Module
 from src.gameplay.partie import RACINE, Partie, modules_de_la_partie
 from src.ui import textes_combat
 
@@ -15,11 +15,11 @@ _IMAGE_CASE_PRINCIPAL = "assets/modules/principal_avant.png"
 
 
 def chemin_image(relatif: str) -> str:
-    """Chemin absolu d'une image citee par config/*_new.json ("assets/...")."""
+    """Chemin absolu d'une image citee par config/*.json ("assets/...")."""
     return str(RACINE / relatif)
 
 
-def image_case_module(module: ModuleNew) -> str:
+def image_case_module(module: Module) -> str:
     """Image d'un module dans une case hors combat (chemin absolu)."""
     return chemin_image(_IMAGE_CASE_PRINCIPAL if module.principal else module.image)
 
@@ -29,16 +29,16 @@ def noms_modules(partie: Partie) -> dict[str, str]:
     return {module.exemplaire: module.nom for module in modules_de_la_partie(partie)}
 
 
-def regrouper_cartes(cartes: list[CarteNew]) -> list[tuple[CarteNew, int]]:
+def regrouper_cartes(cartes: list[Carte]) -> list[tuple[Carte, int]]:
     """Regroupe les exemplaires identiques (meme carte, meme module) : (carte, quantite), dans
     l'ordre de premiere apparition. Affichage seulement (meme regroupement que le web)."""
-    groupes: dict[tuple[str, str | None], list[CarteNew]] = {}
+    groupes: dict[tuple[str, str | None], list[Carte]] = {}
     for carte in cartes:
         groupes.setdefault((carte.id, carte.exemplaire_module), []).append(carte)
     return [(exemplaires[0], len(exemplaires)) for exemplaires in groupes.values()]
 
 
-def texte_carte(carte: CarteNew, noms: dict[str, str] | None = None) -> str:
+def texte_carte(carte: Carte, noms: dict[str, str] | None = None) -> str:
     """Description d'une carte (valeurs actuelles, fournie par le gameplay) suivie de ses details
     sur une ligne : munitions, lancements, Persistante, module."""
     nom_module = (noms or {}).get(carte.exemplaire_module)

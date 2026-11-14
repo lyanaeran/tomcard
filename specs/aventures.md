@@ -65,7 +65,7 @@ pirates de l'espace, vous n'avez plus le choix : vaincre ou périr ! À moins qu
 > **laissent toujours au moins 1 PV** (`PV_MIN_APRES_ASTEROIDES`, décision utilisateur du
 > 2026-11-12 : un combat ne commence jamais avec un principal détruit) ; la carte
 > offerte est rattachée au principal. « Affronter les pirates » : 3 ennemis de la refonte placés
-> selon leur préférence (`flotte_new.flotte_asteroides`). Écrans PC et web à adapter (PR 2 et 3).
+> selon leur préférence (`flotte.flotte_asteroides`). Écrans PC et web à adapter (PR 2 et 3).
 - Choix 1, *Traverser le champ d'astéroïdes* (**ancienne règle, remplacée par la note ci-dessus**
   pour le module touché, la fonction et le plancher de PV ; la séquence d'écrans reste à adapter
   aux PR 2 et 3) : séquence en 3 temps sur le même écran, chaque étape validée par un bouton
@@ -85,7 +85,7 @@ pirates de l'espace, vous n'avez plus le choix : vaincre ou périr ! À moins qu
      était vide (`second_choc_asteroides` renvoie `None`), l'étape `sequence_3` est sautée
      directement vers `resolu`
 - Choix 2, *Affronter les pirates* : lance un combat scripté contre `NOMBRE_ENNEMIS_ASTEROIDES` (3)
-  ennemis (`combat_aventure_asteroides`/`flotte_new.flotte_asteroides`) — approximation décidée en
+  ennemis (`combat_aventure_asteroides`/`flotte.flotte_asteroides`) — approximation décidée en
   attendant la taille S/M/L par ennemi (absente de `config/ennemis.json`, cf. §3.2/§9.1/§10.3) :
   ennemis tirés du pool existant sur les 3 premières cases de la grille (colonne Avant), plutôt que
   le tirage standard d'un combat Prime (grille complète, `combat_depuis_partie`). Délègue
@@ -96,7 +96,7 @@ pirates de l'espace, vous n'avez plus le choix : vaincre ou périr ! À moins qu
   inchangé)
 - Pas de 3ᵉ choix (binaire assumé)
 
-`src/gameplay/flotte_new.py` (`NOMBRE_ENNEMIS_ASTEROIDES`, `flotte_asteroides`) ;
+`src/gameplay/flotte.py` (`NOMBRE_ENNEMIS_ASTEROIDES`, `flotte_asteroides`) ;
 `src/gameplay/partie.py` (`DEGATS_ASTEROIDES`, `subir_degats_module`, **`second_choc_asteroides`**
 — 2e choc + tirage de la carte offerte en un seul appel, `cartes` reçu en paramètre plutôt que
 rechargé en interne ; l'id de la carte offerte est lu directement sur `Carte.id` (§6) —,

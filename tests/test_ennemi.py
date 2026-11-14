@@ -1,6 +1,6 @@
 """
-Tests unitaires pour src/gameplay/ennemi_new.py (EnnemiNew, ennemi de la refonte) et
-config/ennemi_new.json.
+Tests unitaires pour src/gameplay/ennemi.py (Ennemi, ennemi de la refonte) et
+config/ennemis.json.
 """
 
 import json
@@ -8,28 +8,28 @@ from fractions import Fraction
 
 import pytest
 
-from src.gameplay.ennemi_new import (
-    FICHIER_ENNEMIS_NEW, CibleEffetEnnemi, EffetEnnemi, EnnemiNew, NatureEffetEnnemi, ValeurEnnemi,
-    charger_ennemis_new,
+from src.gameplay.ennemi import (
+    FICHIER_ENNEMIS, CibleEffetEnnemi, EffetEnnemi, Ennemi, NatureEffetEnnemi, ValeurEnnemi,
+    charger_ennemis,
 )
-from src.gameplay.statut_new import Statut
+from src.gameplay.statut import Statut
 
 
 def _entree(id_ennemi: str) -> dict:
-    """Entree brute d'un ennemi dans config/ennemi_new.json (pour fabriquer des variantes)."""
-    entrees = json.loads(FICHIER_ENNEMIS_NEW.read_text(encoding="utf-8"))["ennemis"]
+    """Entree brute d'un ennemi dans config/ennemis.json (pour fabriquer des variantes)."""
+    entrees = json.loads(FICHIER_ENNEMIS.read_text(encoding="utf-8"))["ennemis"]
     return json.loads(json.dumps(next(entree for entree in entrees if entree["id"] == id_ennemi)))
 
 
-def _en_combat(id_ennemi: str, coefficient=1) -> EnnemiNew:
-    return charger_ennemis_new()[id_ennemi].pour_combat(coefficient)
+def _en_combat(id_ennemi: str, coefficient=1) -> Ennemi:
+    return charger_ennemis()[id_ennemi].pour_combat(coefficient)
 
 
-# --- config/ennemi_new.json ---
+# --- config/ennemis.json ---
 
 
 def test_les_six_ennemis_actuels_sont_dans_le_json():
-    ennemis = charger_ennemis_new()
+    ennemis = charger_ennemis()
 
     assert sorted(ennemis) == sorted([
         "ENM_PAT_LE_PIRATE", "ENM_LE_NETTOYEUR", "ENM_PETIT_JEAN", "ENM_LE_PUZZLE", "ENM_MIROIR", "ENM_BOSS_PIRATES",
@@ -76,7 +76,7 @@ def test_les_valeurs_montent_au_fil_des_tours():
 
 
 def test_le_modele_n_est_jamais_modifie_par_le_combat():
-    modele = charger_ennemis_new()["ENM_PETIT_JEAN"]
+    modele = charger_ennemis()["ENM_PETIT_JEAN"]
     combat = modele.pour_combat(2)
     combat.subir_degats(30)
     combat.statuts.ajouter(Statut.BOUCLIER, 6)
@@ -171,7 +171,7 @@ def test_une_cle_inconnue_est_refusee():
     entree["points_de_vie"] = 50
 
     with pytest.raises(ValueError, match="^Ennemi ENM_PAT_LE_PIRATE : cles inconnues"):
-        EnnemiNew.depuis_dict(entree)
+        Ennemi.depuis_dict(entree)
 
 
 def test_une_valeur_citee_par_un_effet_doit_exister():
@@ -179,7 +179,7 @@ def test_une_valeur_citee_par_un_effet_doit_exister():
     entree["actions"][0][0]["valeur"] = "degat"
 
     with pytest.raises(ValueError, match="^Ennemi ENM_PAT_LE_PIRATE : valeur inconnue 'degat'"):
-        EnnemiNew.depuis_dict(entree)
+        Ennemi.depuis_dict(entree)
 
 
 def test_une_erreur_dans_une_valeur_est_signalee_avec_l_id_de_l_ennemi():
@@ -187,7 +187,7 @@ def test_une_erreur_dans_une_valeur_est_signalee_avec_l_id_de_l_ennemi():
     entree["valeurs"]["degats"]["tous_les"] = 0
 
     with pytest.raises(ValueError, match="^Ennemi ENM_PAT_LE_PIRATE : tous_les"):
-        EnnemiNew.depuis_dict(entree)
+        Ennemi.depuis_dict(entree)
 
 
 def test_une_etape_vide_est_refusee():
@@ -195,7 +195,7 @@ def test_une_etape_vide_est_refusee():
     entree["actions"].append([])
 
     with pytest.raises(ValueError, match="au moins un effet"):
-        EnnemiNew.depuis_dict(entree)
+        Ennemi.depuis_dict(entree)
 
 
 @pytest.mark.parametrize("nature, cible", [
@@ -220,18 +220,18 @@ def test_une_valeur_qui_n_est_pas_un_objet_est_signalee_avec_l_id_de_l_ennemi():
     entree["valeurs"]["degats"] = 5
 
     with pytest.raises(ValueError, match="^Ennemi ENM_PAT_LE_PIRATE, valeur 'degats' : objet attendu"):
-        EnnemiNew.depuis_dict(entree)
+        Ennemi.depuis_dict(entree)
 
 
 def test_un_id_d_ennemi_en_double_est_refuse(tmp_path):
-    fichier = tmp_path / "ennemi_new.json"
+    fichier = tmp_path / "ennemis.json"
     entrees = [_entree("ENM_PAT_LE_PIRATE"), _entree("ENM_PAT_LE_PIRATE")]
     fichier.write_text(json.dumps({"ennemis": entrees}), encoding="utf-8")
 
     with pytest.raises(ValueError, match="ENM_PAT_LE_PIRATE en double"):
-        charger_ennemis_new(fichier)
+        charger_ennemis(fichier)
 
 
 def test_les_methodes_de_combat_refusent_un_ennemi_hors_combat():
     with pytest.raises(ValueError, match="hors combat"):
-        charger_ennemis_new()["ENM_PAT_LE_PIRATE"].subir_degats(5)
+        charger_ennemis()["ENM_PAT_LE_PIRATE"].subir_degats(5)

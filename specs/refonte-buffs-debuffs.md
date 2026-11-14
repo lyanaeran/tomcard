@@ -2,7 +2,7 @@
 
 > **En partie dépassé (2026-11-11)** : les décisions prises depuis (bouclier et incendie −1 par
 > tour, statuts partagés, renvoi, retrait du « bouclier par tour ») sont dans
-> [refonte-statuts.md](refonte-statuts.md) et codées dans `src/gameplay/statut_new.py`. Ce fichier
+> [refonte-statuts.md](refonte-statuts.md) et codées dans `src/gameplay/statut.py`. Ce fichier
 > garde la réflexion d'origine et les pistes non tranchées (Vulnérabilité, Réduction de dégâts,
 > statuts à durée). Vue d'ensemble : [refonte.md](refonte.md).
 
@@ -301,7 +301,7 @@ représente :
 2. **Cumul en intensité** : qui décroît (Poison : *Embrasement*, *Guerre nucléaire*, *Tir
    incendiaire*), ou **sans décroissance** (Force : `AUGMENTATION_DEGATS` du Boss, montée de dégâts
    §7.2). Décision utilisateur : les mécaniques des ennemis seront gérées **en dehors des cartes**
-   (pas dans `CarteNew`) ; côté cartes, le cumul sans décroissance sert aux effets « lancées N fois
+   (pas dans `Carte`) ; côté cartes, le cumul sans décroissance sert aux effets « lancées N fois
    de plus » (*Salve laser*…, modules-cartes.md §4).
 
 Le **bouclier** garde une décroissance **proportionnelle** (moitié comme aujourd'hui, ou un quart
@@ -332,7 +332,7 @@ contenir l'accumulation — à vérifier une fois la montée implémentée.
    (décision utilisateur, 2026-11-07)** : il baisse de 1 par tour et c'est tout, sans notion de
    durée ; l'accumulation (§7.1) est contenue par la montée des dégâts propre à chaque ennemi
    (§7.2). Conséquence : *Blindage ciblé* devient un bouclier simple de 6 (plus de « pendant Y
-   tours »), et `CarteNew` refuse une durée sur un bouclier.
+   tours »), et `Carte` refuse une durée sur un bouclier.
 2. Fixer la montée de dégâts de chaque ennemi (§7.2) et ajouter le champ à `config/ennemis.json`.
 3. Redessiner Petit Jean et le Boss des pirates (§7.4) si `BOUCLIER_PAR_TOUR` est retiré.
 4. Trancher les points ouverts restants de la §3.3 (taux de décroissance %, bouclier miroir).

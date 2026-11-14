@@ -1,5 +1,5 @@
 """
-Tests unitaires pour src/gameplay/combat_new.py (combat de la refonte, specs/refonte-combat.md).
+Tests unitaires pour src/gameplay/combat.py (combat de la refonte, specs/refonte-combat.md).
 
 Vaisseau de test : principal M1 (60 PV, base) et Lanceur de missiles M2 (20 PV, avant gauche).
 """
@@ -8,33 +8,33 @@ import random
 
 import pytest
 
-from src.gameplay.carte_new import CarteNew, CategorieCarte, CibleCarteNew, Effet, NatureEffet, charger_cartes_new
-from src.gameplay.carte_new import RareteCarte
-from src.gameplay.combat_new import CombatNew, EtatCombatNew, NatureEvenement
-from src.gameplay.deck_new import deck_de_depart
-from src.gameplay.ennemi_new import charger_ennemis_new
-from src.gameplay.flotte_new import FlotteNew
-from src.gameplay.module_new import charger_modules_new
+from src.gameplay.carte import Carte, CategorieCarte, CibleCarte, Effet, NatureEffet, charger_cartes
+from src.gameplay.carte import RareteCarte
+from src.gameplay.combat import Combat, EtatCombat, NatureEvenement
+from src.gameplay.deck import deck_de_depart
+from src.gameplay.ennemi import charger_ennemis
+from src.gameplay.flotte import Flotte
+from src.gameplay.module import charger_modules
 from src.gameplay.position import Colonne, Position, Rangee
-from src.gameplay.statut_new import Statut
+from src.gameplay.statut import Statut
 
 AVANT_GAUCHE = Position(Colonne.AVANT, Rangee.GAUCHE)
 AVANT_MID = Position(Colonne.AVANT, Rangee.MID)
 AVANT_DROITE = Position(Colonne.AVANT, Rangee.DROITE)
 ARRIERE_MID = Position(Colonne.ARRIERE, Rangee.MID)
 ARRIERE_DROITE = Position(Colonne.ARRIERE, Rangee.DROITE)
-CARTES = charger_cartes_new()
-# Valeur de la carte Bouclier (CRT_10), lue dans config/carte_new.json pour suivre les reglages
+CARTES = charger_cartes()
+# Valeur de la carte Bouclier (CRT_10), lue dans config/cartes.json pour suivre les reglages
 BOUCLIER_CARTE = CARTES["CRT_10"].valeurs["bouclier"]
 
 
 def _ennemi(id_ennemi="ENM_PAT_LE_PIRATE", coefficient=1):
-    return charger_ennemis_new()[id_ennemi].pour_combat(coefficient)
+    return charger_ennemis()[id_ennemi].pour_combat(coefficient)
 
 
 def _ennemis_une_case():
     """Un exemplaire de combat de chaque ennemi sur une seule case."""
-    return [modele.pour_combat() for modele in charger_ennemis_new().values() if modele.emplacements == 1]
+    return [modele.pour_combat() for modele in charger_ennemis().values() if modele.emplacements == 1]
 
 
 def _carte(id_carte, module="M1"):
@@ -43,13 +43,13 @@ def _carte(id_carte, module="M1"):
 
 def _combat(ennemis=None, deck=None):
     """Combat de test ; `ennemis` : dict case -> ennemi (Pat le Pirate en avant milieu par defaut)."""
-    modeles = charger_modules_new()
+    modeles = charger_modules()
     modules = [
         modeles["MOD_1"].nouvel_exemplaire("M1", "base").copie_pour_combat(),
         modeles["MOD_2"].nouvel_exemplaire("M2", "avant_gauche").copie_pour_combat(),
     ]
     deck = deck if deck is not None else deck_de_depart(CARTES, "M1")
-    return CombatNew(modules, deck, FlotteNew(ennemis or {AVANT_MID: _ennemi()}), random.Random(0))
+    return Combat(modules, deck, Flotte(ennemis or {AVANT_MID: _ennemi()}), random.Random(0))
 
 
 def _en_main(combat, *cartes):
@@ -68,7 +68,7 @@ def _evenements(combat, nature):
 def test_le_combat_commence_au_tour_1_avec_3_electricite_et_5_cartes():
     combat = _combat()
 
-    assert (combat.tour, combat.electricite, combat.etat) == (1, 3, EtatCombatNew.EN_COURS)
+    assert (combat.tour, combat.electricite, combat.etat) == (1, 3, EtatCombat.EN_COURS)
     assert (len(combat.deck.main), len(combat.deck.pioche)) == (5, 5)
 
 
@@ -124,9 +124,9 @@ def test_carte_injouable_ou_cible_invalide_refusee():
 
 
 def test_une_nature_laissee_pour_plus_tard_rend_la_carte_injouable():
-    breche = CarteNew(
+    breche = Carte(
         id="TEST", nom="Breche", image="", rarete=RareteCarte.COMMUNE, categorie=CategorieCarte.DEBUFF,
-        cible=CibleCarteNew.ENNEMI_UNIQUE, cout=1, description="", valeurs={"vulnerabilite": 100},
+        cible=CibleCarte.ENNEMI_UNIQUE, cout=1, description="", valeurs={"vulnerabilite": 100},
         effets=(Effet(NatureEffet.VULNERABILITE, "vulnerabilite"),), exemplaire_module="M1",
     )
     combat = _combat()
@@ -232,7 +232,7 @@ def test_l_incendie_frappe_a_la_fin_du_tour_du_joueur_et_peut_gagner_le_combat()
 
     combat.finir_tour()
 
-    assert combat.etat == EtatCombatNew.VICTOIRE
+    assert combat.etat == EtatCombat.VICTOIRE
     assert _evenements(combat, NatureEvenement.INCENDIE)[0].pv_perdus == 4
 
 
@@ -399,7 +399,7 @@ def test_module_detruit_ses_cartes_passent_hors_service():
     combat.finir_tour()
 
     assert sorted(carte.id for carte in combat.deck.hors_service) == ["CRT_15", "CRT_9"]
-    assert combat.etat == EtatCombatNew.EN_COURS  # un secondaire detruit n'est pas une defaite
+    assert combat.etat == EtatCombat.EN_COURS  # un secondaire detruit n'est pas une defaite
     assert _evenements(combat, NatureEvenement.CARTES_HORS_SERVICE)[0].valeur == 2
 
 
@@ -409,7 +409,7 @@ def test_principal_detruit_defaite_immediate():
 
     combat.finir_tour()
 
-    assert combat.etat == EtatCombatNew.DEFAITE and combat.tour == 1
+    assert combat.etat == EtatCombat.DEFAITE and combat.tour == 1
     with pytest.raises(ValueError, match="termine"):
         combat.finir_tour()
 
@@ -422,7 +422,7 @@ def test_dernier_ennemi_detruit_victoire():
 
     combat.jouer_carte(laser, AVANT_MID)
 
-    assert combat.etat == EtatCombatNew.VICTOIRE
+    assert combat.etat == EtatCombat.VICTOIRE
     assert combat.ennemis_detruits() == [pat]
     assert [e.nature for e in combat.journal[-2:]] == [NatureEvenement.ENNEMI_DETRUIT, NatureEvenement.VICTOIRE]
 
@@ -513,9 +513,9 @@ def test_carte_lancee_deux_fois_un_seul_cout_et_effets_a_chaque_lancement():
 
 
 def test_pioche_et_gain_d_electricite_a_chaque_lancement():
-    boost = CarteNew(
+    boost = Carte(
         id="TEST", nom="Boost", image="", rarete=RareteCarte.COMMUNE, categorie=CategorieCarte.OUTILS,
-        cible=CibleCarteNew.MODULE_PRINCIPAL, cout=1, description="", valeurs={"pioche": 1, "electricite": 1},
+        cible=CibleCarte.MODULE_PRINCIPAL, cout=1, description="", valeurs={"pioche": 1, "electricite": 1},
         effets=(Effet(NatureEffet.PIOCHE, "pioche"), Effet(NatureEffet.GAIN_ELECTRICITE, "electricite")),
         exemplaire_module="M1", lancements_actuels=2,
     )
@@ -546,9 +546,9 @@ def test_le_combat_ne_modifie_pas_les_cartes_du_deck_de_la_partie():
 
 
 def test_une_nature_appliquee_au_mauvais_camp_est_refusee_avant_toute_modification():
-    degats_sur_module = CarteNew(
+    degats_sur_module = Carte(
         id="TEST", nom="Erreur", image="", rarete=RareteCarte.COMMUNE, categorie=CategorieCarte.ATTAQUE,
-        cible=CibleCarteNew.MODULE_UNIQUE, cout=1, description="", valeurs={"degats": 5},
+        cible=CibleCarte.MODULE_UNIQUE, cout=1, description="", valeurs={"degats": 5},
         effets=(Effet(NatureEffet.DEGATS, "degats"),), exemplaire_module="M1",
     )
     combat = _combat()
@@ -579,7 +579,7 @@ def test_un_ennemi_detruit_pendant_son_etape_ne_joue_pas_la_suite():
 
     combat.finir_tour()
 
-    assert jean.est_detruit() and combat.etat == EtatCombatNew.VICTOIRE
+    assert jean.est_detruit() and combat.etat == EtatCombat.VICTOIRE
     assert not _evenements(combat, NatureEvenement.STATUT_POSE)  # son bouclier n'est pas pose
 
 

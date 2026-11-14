@@ -9,11 +9,11 @@ import random
 import pytest
 
 from src.gameplay import partie as partie_module
-from src.gameplay.carte_new import charger_cartes_new
-from src.gameplay.combat_new import CombatNew, EtatCombatNew
-from src.gameplay.deck_new import DECK_DE_DEPART
-from src.gameplay.flotte_new import ID_BOSS, NOMBRE_ENNEMIS_ASTEROIDES
-from src.gameplay.module_new import charger_modules_new
+from src.gameplay.carte import charger_cartes
+from src.gameplay.combat import Combat, EtatCombat
+from src.gameplay.deck import DECK_DE_DEPART
+from src.gameplay.flotte import ID_BOSS, NOMBRE_ENNEMIS_ASTEROIDES
+from src.gameplay.module import charger_modules
 from src.gameplay.partie import (
     ARGENT_DEPART,
     ARGENT_PAR_ENNEMI_TUE,
@@ -67,7 +67,7 @@ from src.gameplay.partie import (
 )
 from src.gameplay.position import Colonne, Position, Rangee
 
-LANCEUR = charger_modules_new()["MOD_2"]
+LANCEUR = charger_modules()["MOD_2"]
 
 
 def _partie_avec_lanceur(graine: int = 1):
@@ -184,7 +184,7 @@ def test_nouvelle_partie_commence_au_niveau_1_avec_seulement_le_principal():
     assert partie.argent == ARGENT_DEPART
     assert partie.statut == STATUT_EN_COURS
     assert partie.principal.id == "MOD_1" and partie.principal.exemplaire == "M1"
-    assert partie.principal.pv == partie.principal.pv_max == charger_modules_new()["MOD_1"].pv_max_base
+    assert partie.principal.pv == partie.principal.pv_max == charger_modules()["MOD_1"].pv_max_base
     assert all(partie.vaisseau[position] is None for position in partie.vaisseau if position != "base")
 
 
@@ -267,7 +267,7 @@ def test_combat_depuis_partie_reprend_le_vaisseau_et_le_deck_de_la_partie():
 
     combat = combat_depuis_partie(partie, random.Random(1))
 
-    assert isinstance(combat, CombatNew)
+    assert isinstance(combat, Combat)
     assert combat.vaisseau.principal.pv_combat == 33
     # Un secondaire repart a ses PV max (ameliorations comprises)
     lanceur = combat.vaisseau.module_d_exemplaire("M2")
@@ -323,11 +323,11 @@ def test_combat_aventure_asteroides_a_trois_ennemis_places_selon_leur_preference
                 assert colonne == Colonne.ARRIERE
 
 
-def _gagner(combat: CombatNew) -> None:
+def _gagner(combat: Combat) -> None:
     """Detruit tous les ennemis (fin de combat simulee, sans jouer de cartes)."""
     for ennemi in combat.flotte.ennemis:
         ennemi.pv = 0
-    combat.etat = EtatCombatNew.VICTOIRE
+    combat.etat = EtatCombat.VICTOIRE
 
 
 def test_reporter_combat_reporte_seulement_les_pv_du_principal():
@@ -498,7 +498,7 @@ def test_les_asteroides_laissent_toujours_1_pv_au_principal():
 
     subir_degats_principal(partie, DEGATS_ASTEROIDES)
     assert partie.principal.pv == 1
-    second_choc_asteroides(partie, charger_cartes_new(), random.Random(1))
+    second_choc_asteroides(partie, charger_cartes(), random.Random(1))
     assert partie.principal.pv == 1
     assert partie.vaisseau["avant_gauche"].pv == partie.vaisseau["avant_gauche"].pv_max
 
@@ -507,7 +507,7 @@ def test_second_choc_asteroides_touche_le_principal_et_offre_une_carte_rattachee
     partie = _partie_avec_lanceur()
     pv = partie.principal.pv
 
-    carte = second_choc_asteroides(partie, charger_cartes_new(), random.Random(1))
+    carte = second_choc_asteroides(partie, charger_cartes(), random.Random(1))
 
     assert partie.principal.pv == pv - DEGATS_ASTEROIDES
     assert carte is not None and carte.exemplaire_module == "M1"

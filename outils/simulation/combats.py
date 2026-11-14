@@ -1,5 +1,5 @@
 """
-Simulations de combats isoles avec le combat de la refonte (CombatNew, specs/refonte-combat.md).
+Simulations de combats isoles avec le combat de la refonte (Combat, specs/refonte-combat.md).
 Deux objectifs (demande utilisateur, 2026-11-11) :
 1. robustesse : verifier a chaque action des invariants du combat (piles de cartes, PV, statuts,
    journal, intentions, fin de combat), avec le bot aleatoire (beaucoup de coups varies) et le
@@ -8,7 +8,7 @@ Deux objectifs (demande utilisateur, 2026-11-11) :
 
 Combats isoles seulement : les parties completes sont jouees par partie_auto.py / etudes.py.
 
-    caffeinate -i python -m outils.simulation.combats_new --graines 10
+    caffeinate -i python -m outils.simulation.combats --graines 10
 """
 
 import argparse
@@ -23,14 +23,14 @@ from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
 from pathlib import Path
 
-from src.gameplay.carte_new import RareteCarte, charger_cartes_new
-from src.gameplay.combat_new import CombatNew, EtatCombatNew, NatureEvenement
-from src.gameplay.deck_new import TAILLE_MAIN_MAX, deck_de_depart
-from src.gameplay.ennemi_new import NatureEffetEnnemi, charger_ennemis_new
-from src.gameplay.flotte_new import ID_BOSS, FlotteNew, flotte_boss, placer_ennemis
-from src.gameplay.module_new import charger_modules_new
+from src.gameplay.carte import RareteCarte, charger_cartes
+from src.gameplay.combat import Combat, EtatCombat, NatureEvenement
+from src.gameplay.deck import TAILLE_MAIN_MAX, deck_de_depart
+from src.gameplay.ennemi import NatureEffetEnnemi, charger_ennemis
+from src.gameplay.flotte import ID_BOSS, Flotte, flotte_boss, placer_ennemis
+from src.gameplay.module import charger_modules
 
-from outils.simulation.bot_new import BotAleatoire, BotRecherche, jouer_combat
+from outils.simulation.bot import BotAleatoire, BotRecherche, jouer_combat
 from outils.simulation.format import moyenne as _moy
 from outils.simulation.format import pourcentage as _pct
 
@@ -51,14 +51,14 @@ DEGATS = (NatureEvenement.ATTAQUE, NatureEvenement.RENVOI, NatureEvenement.INCEN
 def _module_de_chaque_carte() -> dict[str, str]:
     """id de carte -> exemplaire de module de rattachement (M1 principal, M2 Lanceur)."""
     exemplaires = {"MOD_1": "M1", "MOD_2": "M2"}
-    return {id_carte: exemplaires[module.id] for module in charger_modules_new().values() for id_carte in module.cartes}
+    return {id_carte: exemplaires[module.id] for module in charger_modules().values() for id_carte in module.cartes}
 
 
 def construire_deck(variante: str, aleatoire: random.Random) -> list:
     """Deck de depart, plus une carte du Lanceur (choix du module, Niveau 1) ; le deck "etoffe"
     ajoute CARTES_AJOUTEES_ETOFFE cartes revues hors Base, tirees au hasard (jouables ou non
-    par l'ancien moteur : CombatNew les gere toutes)."""
-    modeles = charger_cartes_new()
+    par l'ancien moteur : Combat les gere toutes)."""
+    modeles = charger_cartes()
     modules = _module_de_chaque_carte()
     deck = deck_de_depart(modeles, "M1")
     cartes_lanceur = sorted(id_carte for id_carte, exemplaire in modules.items() if exemplaire == "M2")
@@ -69,9 +69,9 @@ def construire_deck(variante: str, aleatoire: random.Random) -> list:
     return deck + [modeles[id_carte].copie(exemplaire_module=modules[id_carte]) for id_carte in ajouts]
 
 
-def construire_flotte(ids_ennemis: tuple[str, ...], aleatoire: random.Random) -> FlotteNew:
-    """Flotte de ces ennemis, placee comme dans le jeu (flotte_new.placer_ennemis, flotte_boss)."""
-    modeles = charger_ennemis_new()
+def construire_flotte(ids_ennemis: tuple[str, ...], aleatoire: random.Random) -> Flotte:
+    """Flotte de ces ennemis, placee comme dans le jeu (flotte.placer_ennemis, flotte_boss)."""
+    modeles = charger_ennemis()
     if ids_ennemis == (ID_BOSS,):
         return flotte_boss(modeles)
     return placer_ennemis([modeles[id_ennemi].pour_combat(1) for id_ennemi in ids_ennemis], aleatoire)
@@ -80,12 +80,12 @@ def construire_flotte(ids_ennemis: tuple[str, ...], aleatoire: random.Random) ->
 def construire_combat(
     variante: str, ids_ennemis: tuple[str, ...], graine: int, pv_principal: int | None = None,
     valeurs_cartes: dict[str, dict[str, int]] | None = None,
-) -> CombatNew:
+) -> Combat:
     """Combat isole ; `pv_principal` : PV du principal au debut (pleins par defaut) ;
     `valeurs_cartes` : variante de valeurs de cartes pour un essai, ex. {"CRT_10": {"bouclier": 4}},
-    sans toucher a config/carte_new.json."""
+    sans toucher a config/cartes.json."""
     aleatoire = random.Random(f"{graine}:{variante}:{ids_ennemis}")
-    modeles = charger_modules_new()
+    modeles = charger_modules()
     principal = modeles["MOD_1"].nouvel_exemplaire("M1", "base")
     if pv_principal is not None:
         principal.pv = pv_principal
@@ -96,7 +96,7 @@ def construire_combat(
     deck = construire_deck(variante, aleatoire)
     for carte in deck:
         carte.valeurs.update((valeurs_cartes or {}).get(carte.id, {}))
-    return CombatNew(modules, deck, construire_flotte(ids_ennemis, aleatoire), random.Random(aleatoire.random()))
+    return Combat(modules, deck, construire_flotte(ids_ennemis, aleatoire), random.Random(aleatoire.random()))
 
 
 # --- Invariants (robustesse) ---
@@ -106,7 +106,7 @@ class Controle:
     """Verifie les invariants du combat apres chaque action et chaque fin de tour ; note les
     violations au lieu de s'arreter, pour toutes les voir dans le rapport."""
 
-    def __init__(self, combat: CombatNew):
+    def __init__(self, combat: Combat):
         self.nb_cartes = len(combat.deck.toutes_les_cartes())
         self.violations: list[str] = []
         self.tour = combat.tour
@@ -119,7 +119,7 @@ class Controle:
         if not condition and message not in self.violations:
             self.violations.append(message)
 
-    def avant_fin_de_tour(self, combat: CombatNew) -> None:
+    def avant_fin_de_tour(self, combat: Combat) -> None:
         """Retient les degats annonces par les intentions, compares ensuite aux attaques jouees."""
         self._intentions = {
             id(intention.ennemi): [e.valeur for e in intention.effets if e.effet.nature == NatureEffetEnnemi.ATTAQUE]
@@ -127,7 +127,7 @@ class Controle:
         }
         self._taille_journal = len(combat.journal)
 
-    def apres_action(self, combat: CombatNew) -> None:
+    def apres_action(self, combat: Combat) -> None:
         verifier = self._verifier
         deck = combat.deck
         cartes = deck.toutes_les_cartes()
@@ -154,9 +154,9 @@ class Controle:
             verifier(all(v > 0 for v in ennemi.statuts.intensites.values()), "statut a intensite nulle")
             if ennemi.est_detruit():
                 verifier(not ennemi.statuts.intensites, "ennemi detruit avec des statuts")
-        verifier((combat.etat == EtatCombatNew.VICTOIRE) == combat.flotte.est_vide(), "victoire incoherente")
+        verifier((combat.etat == EtatCombat.VICTOIRE) == combat.flotte.est_vide(), "victoire incoherente")
         verifier(
-            (combat.etat == EtatCombatNew.DEFAITE) == combat.vaisseau.principal.est_detruit(), "defaite incoherente",
+            (combat.etat == EtatCombat.DEFAITE) == combat.vaisseau.principal.est_detruit(), "defaite incoherente",
         )
         for evenement in combat.journal[self._journal_controle:]:
             if evenement.nature in DEGATS:
@@ -166,7 +166,7 @@ class Controle:
         self._journal_controle = len(combat.journal)
         verifier(
             combat.journal[-1].nature not in (NatureEvenement.VICTOIRE, NatureEvenement.DEFAITE)
-            or combat.etat != EtatCombatNew.EN_COURS,
+            or combat.etat != EtatCombat.EN_COURS,
             "fin de combat notee mais combat en cours",
         )
         # Attaques ennemies du tour qui vient de se jouer : valeur annoncee par l'intention
@@ -200,7 +200,7 @@ def simuler(variante: str, ids_ennemis: tuple[str, ...], graine: int, bot: str, 
     return resultat
 
 
-def _mesures_du_journal(combat: CombatNew) -> dict:
+def _mesures_du_journal(combat: Combat) -> dict:
     journal = combat.journal
     lanceur = next(module for module in combat.vaisseau.modules if not module.principal)
     tour_destruction = next(
@@ -228,7 +228,7 @@ NIVEAUX = range(2, 11)
 
 def simuler_enchainement(graine: int) -> dict:
     aleatoire = random.Random(f"enchainement:{graine}")
-    pv = charger_modules_new()["MOD_1"].pv_max_base
+    pv = charger_modules()["MOD_1"].pv_max_base
     # PV au depart de la partie, ranges comme ceux d'un niveau 1 fictif (lus par le tableau)
     pv_par_niveau = {NIVEAUX[0] - 1: pv}
     resultat = {"etude": "enchainement", "graine": graine}
@@ -389,7 +389,7 @@ def tableau_cartes(resultats: list[dict]) -> str:
             jouees.update(r["cartes_jouees"])
             vues.update(r["cartes_vues"])
             tours.update({id_carte: r["tours"] for id_carte in r["cartes_vues"]})
-    modeles = charger_cartes_new()
+    modeles = charger_cartes()
     electricite = sum(jouees[i] * modeles[i].cout for i in jouees) or 1
     lignes = [
         "| Carte | Coût | Vue en main | Jouée | Taux de jeu | En main / tour | Jouée / tour | Part de l'électricité dépensée |",
@@ -417,7 +417,7 @@ def tableau_mesures(resultats: list[dict]) -> str:
 
 
 def main() -> None:
-    arguments = argparse.ArgumentParser(description="Simulations de combats isoles (CombatNew)")
+    arguments = argparse.ArgumentParser(description="Simulations de combats isoles (Combat)")
     arguments.add_argument("--graines", type=int, default=10, help="combats par flotte et par deck (bot de recherche)")
     arguments.add_argument("--robustesse", type=int, default=600, help="combats du bot aleatoire pour la robustesse")
     arguments.add_argument("--enchainements", type=int, default=200, help="parties approximees (niveaux 2 a 10)")
@@ -429,7 +429,7 @@ def main() -> None:
     duree = round(time.time() - debut, 1)
     DOSSIER_RESULTATS.mkdir(exist_ok=True)
     horodatage = datetime.now().strftime("%Y-%m-%d_%H%M")
-    (DOSSIER_RESULTATS / f"{horodatage}_combats_new.json").write_text(
+    (DOSSIER_RESULTATS / f"{horodatage}_combats.json").write_text(
         json.dumps({"combats": resultats, "enchainements": enchainements, "parametres": vars(options)}, default=str)
     )
     sections = [
@@ -442,7 +442,7 @@ def main() -> None:
     ]
     texte = "".join(f"## {titre}\n\n{tableau}\n" for titre, tableau in sections)
     texte += f"{len(resultats)} combats isolés et {len(enchainements)} enchaînements en {duree} s.\n"
-    (DOSSIER_RESULTATS / f"{horodatage}_combats_new.md").write_text(texte)
+    (DOSSIER_RESULTATS / f"{horodatage}_combats.md").write_text(texte)
     print(texte)
 
 

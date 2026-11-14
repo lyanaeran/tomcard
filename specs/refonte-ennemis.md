@@ -1,7 +1,7 @@
 # Refonte des ennemis — brouillon de conception
 
-*Document de travail. Modèle de données codé (`src/gameplay/ennemi_new.py:EnnemiNew`,
-`config/ennemi_new.json`, tableau généré `config/ennemi_new.md`), pas encore branché au combat. Les choix marqués « décision utilisateur » sont
+*Document de travail. Modèle de données codé (`src/gameplay/ennemi.py:Ennemi`,
+`config/ennemis.json`, tableau généré `config/ennemis.md`), pas encore branché au combat. Les choix marqués « décision utilisateur » sont
 validés ; le reste est une proposition. Une fois stabilisé, le contenu ira dans
 [combat.md](combat.md) (§3.2, §13) et ce fichier sera supprimé. Voir aussi
 [refonte-buffs-debuffs.md](refonte-buffs-debuffs.md), [refonte-modules.md](refonte-modules.md),
@@ -55,7 +55,7 @@ la synthèse de simulation `outils/simulation/synthese/analyse_2026-11-07.md` (a
 ## 2. Décisions déjà prises
 
 - **Les ennemis sont gérés en dehors des cartes** : leurs mécaniques n'entrent pas dans
-  `CarteNew` (décision utilisateur).
+  `Carte` (décision utilisateur).
 - **Le « bouclier par tour » est retiré** par la refonte des buffs : Petit Jean et le Boss sont à
   redessiner.
 - **Le bouclier perd 1 par tour**, sans durée, **pour les ennemis comme pour les modules**
@@ -129,7 +129,7 @@ ses valeurs**, **arrondi à l'inférieur**. Exemple : coefficient 1,5 → dégâ
 - Les **rythmes** (« tous les 2 tours ») et les **durées** ne sont pas des valeurs et ne sont
   jamais multipliés.
 
-### 3.5 Format (`config/ennemi_new.json`, implémenté)
+### 3.5 Format (`config/ennemis.json`, implémenté)
 
 ```json
 {
@@ -149,9 +149,9 @@ Le nettoyeur, avec ses attaques multiples : `{ "nature": "ATTAQUE", "valeur": "d
 "PROXIMITE", "repetitions": 2 }`.
 
 `actions` est le cycle : chaque élément est une étape (une liste d'effets). Même démarche que les
-cartes et les modules : `config/ennemi_new.json` source de vérité, la classe `EnnemiNew` (modèle
+cartes et les modules : `config/ennemis.json` source de vérité, la classe `Ennemi` (modèle
 et ennemi en combat, copie par combat avec son coefficient : `pour_combat`), le tableau
-`config/ennemi_new.md` généré par `python -m outils.tableau_ennemis`.
+`config/ennemis.md` généré par `python -m outils.tableau_ennemis`.
 
 - **Statuts** : bouclier, incendie et renvoi sont des statuts partagés avec les modules
   ([refonte-statuts.md](refonte-statuts.md)) ; `BOUCLIER` et `RENVOI` posent le statut du même nom.
@@ -192,7 +192,7 @@ module.
 ### 4.2 Les 6 ennemis dans le nouveau format (2026-11-08)
 
 Première version, au plus près des ennemis actuels ; l'utilisateur ajustera les valeurs ensuite.
-Détail et valeurs tour par tour : `config/ennemi_new.md` (généré).
+Détail et valeurs tour par tour : `config/ennemis.md` (généré).
 
 | Ennemi | PV | Valeurs | Cycle |
 |---|---|---|---|
@@ -222,8 +222,8 @@ Détail et valeurs tour par tour : `config/ennemi_new.md` (généré).
 
 ## 6. Prochaines étapes
 
-1. ~~Redessiner les 6 ennemis, créer `config/ennemi_new.json`, `EnnemiNew` et son tableau~~
+1. ~~Redessiner les 6 ennemis, créer `config/ennemis.json`, `Ennemi` et son tableau~~
    (fait, 2026-11-08) ; ajuster les valeurs (utilisateur).
-2. ~~Le combat de la refonte (`combat_new`, spécifié dans [refonte-combat.md](refonte-combat.md)),
+2. ~~Le combat de la refonte (`combat`, spécifié dans [refonte-combat.md](refonte-combat.md)),
    validé par le simulateur~~ (fait, 2026-11-11 : `outils/simulation/synthese/analyse_2026-11-11_combat_new.md`).
 3. Composition des flottes par niveau (§5), au branchement.

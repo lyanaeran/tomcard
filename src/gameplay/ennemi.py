@@ -1,7 +1,7 @@
 """
-Ennemi de la refonte (EnnemiNew, nom provisoire) : modele de donnees cible de la refonte des
-ennemis (specs/refonte-ennemis.md). Source de verite : config/ennemi_new.json
-(charger_ennemis_new). Seul modele d'ennemi du jeu depuis la suppression de l'ancien moteur (PR 4
+Ennemi (Ennemi) : modele de donnees issu de la refonte des
+ennemis (specs/refonte-ennemis.md). Source de verite : config/ennemis.json
+(charger_ennemis). Seul modele d'ennemi du jeu depuis la suppression de l'ancien moteur (PR 4
 du branchement).
 
 Principes :
@@ -11,12 +11,12 @@ Principes :
 - les effets renvoient a des VALEURS NOMMEES de l'ennemi, comme les cartes ; chaque valeur a une
   augmentation (de combien, tous les combien de tours) et un COEFFICIENT de difficulte (>= 1,
   donne a la creation pour le combat) multiplie base, augmentations et PV, arrondi a l'inferieur ;
-- bouclier, incendie et renvoi sont des STATUTS (statut_new.py, specs/refonte-statuts.md),
-  partages avec ModuleNew ; ils s'eteignent a la fin du tour du joueur (fin_du_tour_du_joueur) ;
+- bouclier, incendie et renvoi sont des STATUTS (statut.py, specs/refonte-statuts.md),
+  partages avec Module ; ils s'eteignent a la fin du tour du joueur (fin_du_tour_du_joueur) ;
 - Miroir pose un RENVOI (plus un bouclier) : cumulable, il dure jusqu'au debut du tour ennemi
   suivant.
 
-Comme ModuleNew, la meme classe sert de modele (lu dans le JSON) et d'ennemi en combat : le combat
+Comme Module, la meme classe sert de modele (lu dans le JSON) et d'ennemi en combat : le combat
 travaille sur une copie (pour_combat), le modele n'est jamais modifie. Le numero de tour n'est pas
 dans l'ennemi : c'est le combat qui le tient (il passe au tour suivant au debut du tour du joueur,
 a partir du tour 2) et le donne pour lire une valeur (valeur, valeurs_au_tour).
@@ -30,11 +30,11 @@ from enum import Enum, auto
 from fractions import Fraction
 from pathlib import Path
 
-from src.gameplay.statut_new import Encaissement, Statut, Statuts
+from src.gameplay.statut import Encaissement, Statut, Statuts
 
-FICHIER_ENNEMIS_NEW = Path(__file__).resolve().parents[2] / "config" / "ennemi_new.json"
+FICHIER_ENNEMIS = Path(__file__).resolve().parents[2] / "config" / "ennemis.json"
 
-# Cles autorisees dans config/ennemi_new.json : une cle inconnue est refusee au chargement
+# Cles autorisees dans config/ennemis.json : une cle inconnue est refusee au chargement
 CLES_ENNEMI = {"id", "nom", "image", "taille", "emplacements", "placement", "pv", "valeurs", "actions"}
 CLES_VALEUR = {"base", "augmentation", "tous_les"}
 CLES_EFFET = {"nature", "valeur", "cible", "repetitions"}
@@ -119,7 +119,7 @@ class ValeurEnnemi:
 @dataclass(frozen=True)
 class EffetEnnemi:
     """Un effet d'une etape du cycle. Ne contient aucun nombre a part les repetitions : `valeur`
-    est le NOM d'une valeur de l'ennemi, lue au moment de jouer (EnnemiNew.valeur)."""
+    est le NOM d'une valeur de l'ennemi, lue au moment de jouer (Ennemi.valeur)."""
 
     nature: NatureEffetEnnemi
     # Nom de la valeur de l'ennemi utilisee par l'effet
@@ -136,7 +136,7 @@ class EffetEnnemi:
 
     @classmethod
     def depuis_dict(cls, entree: dict) -> "EffetEnnemi":
-        """Effet a partir d'une entree d'une etape de "actions" dans config/ennemi_new.json."""
+        """Effet a partir d'une entree d'une etape de "actions" dans config/ennemis.json."""
         _verifier_cles(entree, CLES_EFFET, f"Effet {entree.get('nature')}")
         return cls(
             nature=NatureEffetEnnemi[entree["nature"]],
@@ -147,11 +147,11 @@ class EffetEnnemi:
 
 
 @dataclass(eq=False)
-class EnnemiNew:
+class Ennemi:
     """Un ennemi de la refonte. eq=False : deux ennemis du meme type dans une flotte sont
     distincts."""
 
-    # --- Modele : lu dans config/ennemi_new.json ---
+    # --- Modele : lu dans config/ennemis.json ---
 
     # Identifiant du type d'ennemi (ex. "ENM_PAT_LE_PIRATE")
     id: str
@@ -182,7 +182,7 @@ class EnnemiNew:
     # Position dans le cycle d'actions : index dans `actions` de l'etape jouee au prochain tour
     # ennemi (l'intention affichee), avance par avancer_cycle
     etape: int = 0
-    # Statuts en cours (bouclier, incendie, renvoi...), partages avec les modules (statut_new.py)
+    # Statuts en cours (bouclier, incendie, renvoi...), partages avec les modules (statut.py)
     statuts: Statuts = field(default_factory=Statuts)
 
     def __post_init__(self):
@@ -200,7 +200,7 @@ class EnnemiNew:
 
     # --- Creation pour un combat ---
 
-    def pour_combat(self, coefficient: float | Fraction = 1) -> "EnnemiNew":
+    def pour_combat(self, coefficient: float | Fraction = 1) -> "Ennemi":
         """Copie de cet ennemi pour un combat, avec son coefficient de difficulte (au moins 1,
         decision utilisateur) : PV pleins, debut du cycle, aucun etat de combat."""
         # Fraction(str(...)) : 1.15 x 20 vaut exactement 23, sans erreur d'arrondi des flottants
@@ -260,11 +260,11 @@ class EnnemiNew:
         self._perdre_pv(encaissement.degats_pv)
         return encaissement
 
-    # --- Lecture JSON (format de config/ennemi_new.json) ---
+    # --- Lecture JSON (format de config/ennemis.json) ---
 
     @classmethod
-    def depuis_dict(cls, entree: dict) -> "EnnemiNew":
-        """Modele d'ennemi a partir d'une entree de config/ennemi_new.json ; toute erreur de
+    def depuis_dict(cls, entree: dict) -> "Ennemi":
+        """Modele d'ennemi a partir d'une entree de config/ennemis.json ; toute erreur de
         lecture est signalee avec l'id de l'ennemi."""
         ennemi = f"Ennemi {entree.get('id', '?')}"
         _verifier_cles(entree, CLES_ENNEMI, ennemi)
@@ -295,14 +295,14 @@ class EnnemiNew:
             raise ValueError(f"{ennemi} : {erreur}") from erreur
 
 
-def charger_ennemis_new(fichier: Path = FICHIER_ENNEMIS_NEW) -> dict[str, EnnemiNew]:
-    """Charge config/ennemi_new.json. Renvoie un dict id d'ennemi -> modele d'ennemi ; un id en
+def charger_ennemis(fichier: Path = FICHIER_ENNEMIS) -> dict[str, Ennemi]:
+    """Charge config/ennemis.json. Renvoie un dict id d'ennemi -> modele d'ennemi ; un id en
     double est refuse."""
     donnees = json.loads(fichier.read_text(encoding="utf-8"))
     ennemis = {}
     for entree in donnees["ennemis"]:
-        ennemi = EnnemiNew.depuis_dict(entree)
+        ennemi = Ennemi.depuis_dict(entree)
         if ennemi.id in ennemis:
-            raise ValueError(f"config/ennemi_new.json : ennemi {ennemi.id} en double")
+            raise ValueError(f"config/ennemis.json : ennemi {ennemi.id} en double")
         ennemis[ennemi.id] = ennemi
     return ennemis

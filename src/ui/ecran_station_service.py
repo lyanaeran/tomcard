@@ -11,7 +11,7 @@ reutilise en placeholder (decision utilisateur), a remplacer par un fond dedie.
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.module_new import ModuleNew
+from src.gameplay.module import Module
 from src.gameplay.partie import (
     RACINE,
     COUT_ACTION_STATION_SERVICE,
@@ -236,7 +236,7 @@ class EcranStationService(pyglet.window.Window):
         return x, Y_HAUT_GRILLE - HAUTEUR_CARTE_MODULE, LARGEUR_CARTE_MODULE, HAUTEUR_CARTE_MODULE
 
     def _dessiner_module(
-        self, index: int, position: str, libelle: str, etat: ModuleNew | None, lot: pyglet.graphics.Batch
+        self, index: int, position: str, libelle: str, etat: Module | None, lot: pyglet.graphics.Batch
     ) -> list:
         x, y, largeur, hauteur = self._rect_module(index)
         cx = x + largeur / 2
@@ -465,7 +465,7 @@ class EcranStationService(pyglet.window.Window):
             return
         self._ajouter_popup_action(index, identifiant, etat, pv_avant, pv_max_avant)
 
-    def _ajouter_popup_action(self, index: int, identifiant: str, etat: ModuleNew, pv_avant: int, pv_max_avant: int) -> None:
+    def _ajouter_popup_action(self, index: int, identifiant: str, etat: Module, pv_avant: int, pv_max_avant: int) -> None:
         """Popup de confirmation sur la carte du module concerne (specs.md 2.2) : PV effectivement
         gagnes pour Reparer (plafonne a pv_max, cf. reparer_principal), PV max gagnes pour Ameliorer,
         palier atteint pour Mettre a jour (plafonne a NIVEAU_MAJ_MAX, cf. mettre_a_jour_module)."""

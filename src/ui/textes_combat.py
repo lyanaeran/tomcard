@@ -1,6 +1,6 @@
 """
 Textes de l'ecran de combat PC (refonte-branchement.md 4) : mise en mots des faits fournis par le
-gameplay (CombatNew.intentions, journal, statuts, cartes). Aucune regle de jeu, aucun pyglet :
+gameplay (Combat.intentions, journal, statuts, cartes). Aucune regle de jeu, aucun pyglet :
 testable sans fenetre (tests/test_textes_combat.py). Meme contenu que la version web
 (src/web/bridge.py:_popup_evenement, src/web/app.js:texteEffetEnnemi / construireLigneJournal), mais en
 mots : ni emoji ni symbole (epees, fleche de renvoi) qui dependent de la police de la machine.
@@ -8,11 +8,11 @@ Seuls le signe de multiplication et la fleche simple, presents dans les polices 
 gardes.
 """
 
-from src.gameplay.carte_new import CarteNew
-from src.gameplay.combat_new import CombatNew, Evenement, IntentionEffet, NatureEvenement
-from src.gameplay.ennemi_new import CibleEffetEnnemi, EnnemiNew, NatureEffetEnnemi
-from src.gameplay.module_new import ModuleNew
-from src.gameplay.statut_new import Statut
+from src.gameplay.carte import Carte
+from src.gameplay.combat import Combat, Evenement, IntentionEffet, NatureEvenement
+from src.gameplay.ennemi import CibleEffetEnnemi, Ennemi, NatureEffetEnnemi
+from src.gameplay.module import Module
+from src.gameplay.statut import Statut
 
 # Couleurs partagees par les pastilles, les popups et le journal
 COULEUR_DEGATS = (190, 40, 40)
@@ -75,13 +75,13 @@ def texte_intention(intention: IntentionEffet) -> str:
         cible = " → un allié"
     elif effet.cible == CibleEffetEnnemi.PROXIMITE:
         prevue = intention.cible_prevue
-        cible = f" → {prevue.nom}" if isinstance(prevue, ModuleNew) else " → module le plus proche"
+        cible = f" → {prevue.nom}" if isinstance(prevue, Module) else " → module le plus proche"
     else:
         cible = ""
     return f"{_NOMS_NATURE_ENNEMI.get(effet.nature, '?')} {intention.valeur}{repetitions}{cible}"
 
 
-def lignes_statuts(entite: ModuleNew | EnnemiNew) -> list[str]:
+def lignes_statuts(entite: Module | Ennemi) -> list[str]:
     """Statuts actifs d'un module ou d'un ennemi, en clair, pour son infobulle."""
     lignes = []
     for statut in Statut:
@@ -91,10 +91,10 @@ def lignes_statuts(entite: ModuleNew | EnnemiNew) -> list[str]:
     return lignes
 
 
-def menaces_par_module(combat: CombatNew) -> dict[int, list[str]]:
+def menaces_par_module(combat: Combat) -> dict[int, list[str]]:
     """Attaques prevues au prochain tour ennemi, par module vise (cle : id() du module), deja en
     texte (nom de l'ennemi, valeur, repetitions). Les modules vises sont decides par le gameplay
-    (CombatNew.modules_vises)."""
+    (Combat.modules_vises)."""
     menaces: dict[int, list[str]] = {}
     if not combat.en_cours:
         return menaces
@@ -109,7 +109,7 @@ def menaces_par_module(combat: CombatNew) -> dict[int, list[str]]:
 # --- Cartes ---
 
 
-def texte_munitions(carte: CarteNew) -> str:
+def texte_munitions(carte: Carte) -> str:
     """Munitions "restantes/de depart", vide pour une carte illimitee."""
     if carte.munitions_base is None:
         return ""
@@ -117,11 +117,11 @@ def texte_munitions(carte: CarteNew) -> str:
     return f"{restantes}/{carte.munitions_base}"
 
 
-def lancements(carte: CarteNew) -> int:
+def lancements(carte: Carte) -> int:
     return carte.lancements_actuels if carte.lancements_actuels is not None else carte.lancements_base
 
 
-def lignes_details_carte(carte: CarteNew, nom_module: str | None) -> list[str]:
+def lignes_details_carte(carte: Carte, nom_module: str | None) -> list[str]:
     """Details d'une carte sous sa description : munitions, lancements, Persistante, module."""
     lignes = []
     munitions = texte_munitions(carte)
@@ -136,7 +136,7 @@ def lignes_details_carte(carte: CarteNew, nom_module: str | None) -> list[str]:
     return lignes
 
 
-def texte_compteurs(combat: CombatNew) -> str:
+def texte_compteurs(combat: Combat) -> str:
     """Compteurs des piles (refonte-branchement.md 4.4) ; Hors service seulement si non vide."""
     deck = combat.deck
     morceaux = [f"Pioche {len(deck.pioche)}", f"Défausse {len(deck.defausse)}", f"Épuisées {len(deck.epuisees)}"]
@@ -187,9 +187,9 @@ Segment = tuple[str, tuple[int, int, int]]
 
 
 def _nom(entite: object) -> Segment:
-    if isinstance(entite, CarteNew):
+    if isinstance(entite, Carte):
         return entite.nom, COULEUR_NOM_CARTE
-    if isinstance(entite, EnnemiNew):
+    if isinstance(entite, Ennemi):
         return entite.nom, COULEUR_NOM_ENNEMI
     return entite.nom, COULEUR_NOM_MODULE
 

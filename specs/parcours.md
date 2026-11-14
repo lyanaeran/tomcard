@@ -50,7 +50,7 @@ Quatre actions indépendantes, appliquées à un module choisi par le joueur (vo
 > d'un combat à l'autre, un secondaire repart à ses PV max. **Réparer ne vise plus que le principal**
 > (`partie.reparer_principal`, remplace `reparer_module`) ; Améliorer (+10 PV max, sur tout module),
 > Mettre à jour et Déplacer sont inchangés (Déplacer met aussi à jour l'emplacement de l'exemplaire,
-> ses cartes y restent rattachées). Les modules de la partie sont des `ModuleNew` (`EtatModule`
+> ses cartes y restent rattachées). Les modules de la partie sont des `Module` (`EtatModule`
 > supprimé), les PV de fin de combat sont reportés par `partie.reporter_combat` (remplace
 > `synchroniser_vaisseau_depuis_combat`). Les écrans PC et web ne sont pas encore adaptés (PR 2 et 3).
 >
@@ -191,7 +191,7 @@ remplace les pistes encore ouvertes en §2 pour la Station service et la cadence
   - Reste (5/6) **Prime** (combat)
 - **Nombre d'ennemis en Prime** : 1 seul ennemi jusqu'au niveau 5, puis 2 à partir du niveau 6 —
   s'ajoute au système de tailles S/M/L existant (§3.2, deux axes de difficulté indépendants), ne le
-  remplace pas. **Implémenté** (`flotte_new.flotte_prime`/`nombre_ennemis_prime`, §13.4), de
+  remplace pas. **Implémenté** (`flotte.flotte_prime`/`nombre_ennemis_prime`, §13.4), de
   même que la composition fixe du Boss (§13.4). Progression au-delà de 2 (après le niveau 10 ?)
   pas encore définie
 - **Doublons de modules autorisés** (remplace la piste "interdire les doublons" de §5) : posséder

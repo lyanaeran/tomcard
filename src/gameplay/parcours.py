@@ -9,25 +9,25 @@ from collections.abc import Iterable
 from enum import Enum, auto
 from typing import TypeVar
 
-from src.gameplay.carte_new import CarteNew, RareteCarte
-from src.gameplay.module_new import ModuleNew
+from src.gameplay.carte import Carte, RareteCarte
+from src.gameplay.module import Module
 
 NOMBRE_CANDIDATS_MODULE = 3
 
 T = TypeVar("T")
 
 
-def modules_equipables(modules: Iterable[ModuleNew]) -> list[ModuleNew]:
+def modules_equipables(modules: Iterable[Module]) -> list[Module]:
     """Modeles de modules pouvant etre proposes en choix : tous sauf le module principal, deja
     acquis d'office en debut de run (specs.md paragraphe 5), sauf ceux marques non jouables dans
-    module_new.json (seul le Lanceur de missiles l'est pendant la refonte) et sauf ceux sans
+    modules.json (seul le Lanceur de missiles l'est pendant la refonte) et sauf ceux sans
     carte."""
     return [module for module in modules if not module.principal and module.jouable and module.cartes]
 
 
 def tirer_candidats_module(
-    pool: list[ModuleNew], aleatoire: random.Random, quantite: int = NOMBRE_CANDIDATS_MODULE
-) -> list[ModuleNew]:
+    pool: list[Module], aleatoire: random.Random, quantite: int = NOMBRE_CANDIDATS_MODULE
+) -> list[Module]:
     """Tire `quantite` modules differents au hasard dans la pool (specs.md paragraphe 2.3,
     Niveau 1) : uniforme pour l'instant, puisqu'aucun module n'est encore possede a ce stade du
     run (donc pas de ponderation par doublons a appliquer - cf. specs.md 2.3 "points encore
@@ -54,7 +54,7 @@ def tirer_rarete_recompense(aleatoire: random.Random) -> RareteCarte:
     return RareteCarte.COMMUNE
 
 
-def tirer_carte_recompense(pool: list[CarteNew], aleatoire: random.Random) -> CarteNew | None:
+def tirer_carte_recompense(pool: list[Carte], aleatoire: random.Random) -> Carte | None:
     """Tire une carte de recompense dans `pool` (deja jouable, Base exclue en amont par
     pool_module/pool_toutes_cartes) : la rarete est tiree en premier (tirer_rarete_recompense),
     puis une carte au hasard parmi celles de `pool` a cette rarete precise. Si `pool` n'a aucune
@@ -72,8 +72,8 @@ def tirer_carte_recompense(pool: list[CarteNew], aleatoire: random.Random) -> Ca
     return None
 
 
-def _proposable(carte: CarteNew) -> bool:
-    """Carte proposable en recompense : jouable (champ de carte_new.json) et hors Base."""
+def _proposable(carte: Carte) -> bool:
+    """Carte proposable en recompense : jouable (champ de cartes.json) et hors Base."""
     return carte.jouable and carte.rarete != RareteCarte.BASE
 
 
@@ -87,7 +87,7 @@ RARETES_PAR_NIVEAU_MAJ = {
 }
 
 
-def pool_module(module: ModuleNew, cartes: dict[str, CarteNew]) -> list[CarteNew]:
+def pool_module(module: Module, cartes: dict[str, Carte]) -> list[Carte]:
     """Modeles des cartes que ce module peut proposer (specs.md 2.1/6) : les siennes, jouables,
     non-Base, d'une rarete ouverte par son palier de mise a jour (RARETES_PAR_NIVEAU_MAJ ; un
     modele ou un exemplaire neuf est au palier 1)."""
@@ -98,22 +98,22 @@ def pool_module(module: ModuleNew, cartes: dict[str, CarteNew]) -> list[CarteNew
     ]
 
 
-def pool_toutes_cartes(cartes: dict[str, CarteNew]) -> list[CarteNew]:
+def pool_toutes_cartes(cartes: dict[str, Carte]) -> list[Carte]:
     """Toutes les cartes jouables non-Base, tous modules et toutes raretes confondus (carte
     offerte par l'Aventure Asteroides, specs.md 2.5 : pas de palier de mise a jour)."""
     return [carte for carte in cartes.values() if _proposable(carte)]
 
 
 def tirer_candidats_carte_module(
-    module: ModuleNew, cartes: dict[str, CarteNew], aleatoire: random.Random, quantite: int = 3
-) -> list[CarteNew]:
+    module: Module, cartes: dict[str, Carte], aleatoire: random.Random, quantite: int = 3
+) -> list[Carte]:
     """Tire jusqu'a `quantite` cartes candidates DISTINCTES dans le pool jouable non-Base de ce
     module (specs.md 2.3, apres le choix de module en debut de partie - le joueur en choisit une
     a ajouter a son deck, ou passe). Meme tirage pondere par rarete que tirer_carte_recompense a
     chaque tirage, sur un pool qui retrecit a mesure (jamais deux fois la meme carte parmi les
     candidats) - moins de `quantite` si le pool du module en compte moins."""
     pool_restant = list(pool_module(module, cartes))
-    candidats: list[CarteNew] = []
+    candidats: list[Carte] = []
     for _ in range(quantite):
         carte = tirer_carte_recompense(pool_restant, aleatoire)
         if carte is None:
@@ -124,8 +124,8 @@ def tirer_candidats_carte_module(
 
 
 def tirer_candidats_recompense(
-    modules: list[ModuleNew], cartes: dict[str, CarteNew], aleatoire: random.Random
-) -> list[tuple[ModuleNew, CarteNew | None]]:
+    modules: list[Module], cartes: dict[str, Carte], aleatoire: random.Random
+) -> list[tuple[Module, Carte | None]]:
     """Un candidat de recompense par module utilise dans ce combat (specs.md 2.1/6), au maximum
     5 (base + 4 equipes, cf. specs.md 5) : chaque module, module principal inclus, pioche dans
     son propre pool de cartes jouables non-Base (pool_module) - jamais dans le pool entier du

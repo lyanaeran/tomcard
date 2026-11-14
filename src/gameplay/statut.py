@@ -1,6 +1,6 @@
 """
-Statuts de la refonte (buffs, debuffs, bouclier) portes en combat par un module (ModuleNew) ou un
-ennemi (EnnemiNew) : specs/refonte-statuts.md. Remplace carte.py:BuffActif et les champs
+Statuts de la refonte (buffs, debuffs, bouclier) portes en combat par un module (Module) ou un
+ennemi (Ennemi) : specs/refonte-statuts.md. Remplace carte.py:BuffActif et les champs
 bouclier de l'ancien moteur.
 
 Un statut est un nombre (son intensite) range dans un dictionnaire Statut -> intensite ; absent

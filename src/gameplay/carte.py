@@ -1,7 +1,7 @@
 """
-Carte de la refonte (CarteNew, nom provisoire) : modele de donnees cible de la refonte des cartes
+Carte (Carte) : modele de donnees issu de la refonte des cartes
 (specs/refonte-buffs-debuffs.md, specs/refonte-modules.md). Source de verite :
-config/carte_new.json (charger_cartes_new). Relue et validee par l'utilisateur le 2026-11-08.
+config/cartes.json (charger_cartes). Relue et validee par l'utilisateur le 2026-11-08.
 Seul modele de carte du jeu depuis la suppression de l'ancien moteur (PR 4 du branchement,
 specs/refonte-branchement.md).
 
@@ -11,7 +11,7 @@ Principes :
   cible et sur les autres ennemis), et une description qui les cite entre accolades ("Inflige
   {degats_cible} degats...") ;
 - les natures d'effet qui posent un etat durable (bouclier, incendie, leurre) renvoient a un
-  STATUT (statut_new.py, statut_pose), qui porte seul ses regles de cumul et d'extinction ;
+  STATUT (statut.py, statut_pose), qui porte seul ses regles de cumul et d'extinction ;
 - une carte peut etre lancee plusieurs fois (`lancements_base`) ; les cartes "les cartes X sont
   lancees N fois de plus" (Salve laser, Protocole d'urgence, Bouclier stabilise) sont un effet
   REPETITION dont le FiltreCartes designe les cartes visees : il augmente leur `lancements_actuels`
@@ -30,9 +30,9 @@ from enum import Enum, auto
 from pathlib import Path
 from string import Formatter
 
-from src.gameplay.statut_new import Statut
+from src.gameplay.statut import Statut
 
-FICHIER_CARTES_NEW = Path(__file__).resolve().parents[2] / "config" / "carte_new.json"
+FICHIER_CARTES = Path(__file__).resolve().parents[2] / "config" / "cartes.json"
 
 
 class RareteCarte(Enum):
@@ -61,7 +61,7 @@ class Camp(Enum):
     JOUEUR = auto()
 
 
-class CibleCarteNew(Enum):
+class CibleCarte(Enum):
     """Cible d'une carte. Une cible "unique" ou "colonne" depend de la case cliquee ; les autres
     touchent un ensemble fixe, mais demandent quand meme un clic de confirmation sur une case du bon
     camp (specs.md 8.3, identique PC et web)."""
@@ -83,7 +83,7 @@ class CibleCarteNew(Enum):
     @property
     def depend_de_la_case_cliquee(self) -> bool:
         """True si la case cliquee determine ce qui est touche (sinon simple confirmation)."""
-        return self in (CibleCarteNew.ENNEMI_UNIQUE, CibleCarteNew.ENNEMI_COLONNE, CibleCarteNew.MODULE_UNIQUE)
+        return self in (CibleCarte.ENNEMI_UNIQUE, CibleCarte.ENNEMI_COLONNE, CibleCarte.MODULE_UNIQUE)
 
 
 class NatureEffet(Enum):
@@ -128,7 +128,7 @@ class NatureEffet(Enum):
 NATURES_SANS_VALEUR = {NatureEffet.ANNULATION_PROCHAINE_ATTAQUE, NatureEffet.REDIRECTION_CIBLE}
 
 # Statut pose sur l'entite touchee : ses regles de cumul et d'extinction sont celles de
-# statut_new.py (une seule source, partagee avec les modules et les ennemis, specs/refonte-statuts.md)
+# statut.py (une seule source, partagee avec les modules et les ennemis, specs/refonte-statuts.md)
 STATUT_PAR_NATURE = {
     NatureEffet.BOUCLIER: Statut.BOUCLIER,
     NatureEffet.INCENDIE: Statut.INCENDIE,
@@ -166,7 +166,7 @@ _CAMP_PAR_PORTEE = {
 }
 
 
-# Cles autorisees dans config/carte_new.json : une cle inconnue (ex. faute de frappe "persistant")
+# Cles autorisees dans config/cartes.json : une cle inconnue (ex. faute de frappe "persistant")
 # est refusee au chargement plutot qu'ignoree
 CLES_CARTE = {
     "id", "nom", "image", "rarete", "categorie", "cible", "cout", "munition", "lancements",
@@ -200,7 +200,7 @@ class FiltreCartes:
         if self.id is None and self.rarete is None and self.categorie is None:
             raise ValueError("Un filtre de cartes doit avoir au moins un critere")
 
-    def correspond(self, carte: "CarteNew") -> bool:
+    def correspond(self, carte: "Carte") -> bool:
         return (
             (self.id is None or carte.id == self.id)
             and (self.rarete is None or carte.rarete == self.rarete)
@@ -211,7 +211,7 @@ class FiltreCartes:
 @dataclass(frozen=True)
 class Effet:
     """Un effet d'une carte. Ne contient aucun nombre : `valeur` et `duree` sont des NOMS de
-    valeurs de la carte (CarteNew.valeurs), lues au moment de jouer (CarteNew.valeur_de)."""
+    valeurs de la carte (Carte.valeurs), lues au moment de jouer (Carte.valeur_de)."""
 
     # Ce que fait l'effet
     nature: NatureEffet
@@ -239,7 +239,7 @@ class Effet:
 
     @classmethod
     def depuis_dict(cls, entree: dict) -> "Effet":
-        """Effet a partir d'une entree du tableau "effets" de config/carte_new.json."""
+        """Effet a partir d'une entree du tableau "effets" de config/cartes.json."""
         _verifier_cles(entree, CLES_EFFET, f"Effet {entree.get('nature')}")
         filtre = entree.get("filtre")
         if filtre:
@@ -266,15 +266,15 @@ def _noms_cites(description: str) -> set[str]:
 
 
 @dataclass(eq=False)
-class CarteNew:
+class Carte:
     """Une carte de la refonte. eq=False : deux exemplaires du meme modele sont distincts
     (chacun a ses propres munitions, lancements, valeurs et module de rattachement).
 
     Le type du module n'est pas stocke sur la carte : il se lit sur l'exemplaire de module dans la
-    partie, et les cartes de chaque type de module sont listees dans config/module_new.json (une carte
+    partie, et les cartes de chaque type de module sont listees dans config/modules.json (une carte
     peut etre commune a plusieurs modules)."""
 
-    # --- Modele : lu dans config/carte_new.json, identique pour tous les exemplaires sauf `valeurs`
+    # --- Modele : lu dans config/cartes.json, identique pour tous les exemplaires sauf `valeurs`
     # (propre a chaque exemplaire, pour pouvoir modifier les valeurs d'une seule carte) ---
 
     # Identifiant du modele (ex. "CRT_7"), commun a tous ses exemplaires
@@ -288,7 +288,7 @@ class CarteNew:
     # Categorie (Attaque, Defense, Buff...), sert aussi aux filtres de REPETITION
     categorie: CategorieCarte
     # Ce que le joueur cible au clic ("Ennemi Unique"...)
-    cible: CibleCarteNew
+    cible: CibleCarte
     # Cout en electricite pour jouer la carte
     cout: int
     # Effets appliques quand la carte est jouee, dans l'ordre (au moins un)
@@ -337,7 +337,7 @@ class CarteNew:
         if self.cible.camp == Camp.JOUEUR and any(effet.portee in _PORTEES_ENNEMIES for effet in self.effets):
             raise ValueError(f"{self.id} : portee ennemie sur une carte qui cible le joueur")
         if any(effet.portee == PorteeEffet.AUTRES_ENNEMIS for effet in self.effets) and (
-            self.cible != CibleCarteNew.ENNEMI_UNIQUE
+            self.cible != CibleCarte.ENNEMI_UNIQUE
         ):
             raise ValueError(f"{self.id} : 'autres ennemis' suppose une cible Ennemi Unique")
         self._verifier_valeurs()
@@ -364,7 +364,7 @@ class CarteNew:
 
     # --- Exemplaires ---
 
-    def copie(self, exemplaire_module: str | None = None) -> "CarteNew":
+    def copie(self, exemplaire_module: str | None = None) -> "Carte":
         """Nouvel exemplaire independant, munitions, lancements et valeurs de depart. Rattache a
         `exemplaire_module` s'il est donne, sinon au meme exemplaire de module que cette carte.
         Rien de modifiable n'est partage avec la carte copiee : `valeurs` et `valeurs_actuelles`
@@ -411,11 +411,11 @@ class CarteNew:
         """False : la carte part en pile Hors service tant que son module est detruit."""
         return self.persistante
 
-    # --- Lecture JSON (format de config/carte_new.json) ---
+    # --- Lecture JSON (format de config/cartes.json) ---
 
     @classmethod
-    def depuis_dict(cls, entree: dict) -> "CarteNew":
-        """Carte a partir d'une entree de config/carte_new.json. Toute erreur de lecture (cle
+    def depuis_dict(cls, entree: dict) -> "Carte":
+        """Carte a partir d'une entree de config/cartes.json. Toute erreur de lecture (cle
         manquante ou inconnue, texte inconnu dans une enumeration, effet invalide) est signalee avec
         l'id de la carte, pour retrouver facilement la faute dans le JSON ecrit a la main."""
         carte = f"Carte {entree.get('id', '?')}"
@@ -427,7 +427,7 @@ class CarteNew:
                 image=entree["image"],
                 rarete=RareteCarte[entree["rarete"].upper()],
                 categorie=CategorieCarte(entree["categorie"]),
-                cible=CibleCarteNew(entree["cible"]),
+                cible=CibleCarte(entree["cible"]),
                 cout=entree["cout"],
                 effets=tuple(Effet.depuis_dict(effet) for effet in entree["effets"]),
                 description=entree.get("description", ""),
@@ -445,20 +445,20 @@ class CarteNew:
         return cls(**champs)
 
 
-def charger_cartes_new(fichier: Path = FICHIER_CARTES_NEW) -> dict[str, CarteNew]:
-    """Charge config/carte_new.json. Renvoie un dict id de carte -> modele de carte ; un id en
+def charger_cartes(fichier: Path = FICHIER_CARTES) -> dict[str, Carte]:
+    """Charge config/cartes.json. Renvoie un dict id de carte -> modele de carte ; un id en
     double est refuse."""
     donnees = json.loads(fichier.read_text(encoding="utf-8"))
     cartes = {}
     for entree in donnees["cartes"]:
-        carte = CarteNew.depuis_dict(entree)
+        carte = Carte.depuis_dict(entree)
         if carte.id in cartes:
-            raise ValueError(f"config/carte_new.json : carte {carte.id} en double")
+            raise ValueError(f"config/cartes.json : carte {carte.id} en double")
         cartes[carte.id] = carte
     return cartes
 
 
-def appliquer_repetition(effet: Effet, supplement: int, cartes: Iterable[CarteNew]) -> int:
+def appliquer_repetition(effet: Effet, supplement: int, cartes: Iterable[Carte]) -> int:
     """Effet REPETITION joue : chaque carte visee par son filtre est lancee `supplement` fois de plus
     (valeur de l'effet sur la carte jouee : carte.valeur_de(effet)), pour le reste du combat.
     `cartes` : toutes les cartes du combat, toutes piles confondues (main, pioche, defausse,

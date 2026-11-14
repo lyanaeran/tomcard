@@ -9,7 +9,7 @@ independante comme les autres ecrans du parcours, mute directement `partie.vaiss
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.carte_new import CarteNew
+from src.gameplay.carte import Carte
 from src.gameplay.partie import (
     RACINE,
     CartePossedee,
@@ -291,7 +291,7 @@ class EcranAventureTroisLunes(pyglet.window.Window):
             elements.extend(self._dessiner_carte_deck(index, total, carte, quantite, lot))
         return elements
 
-    def _dessiner_carte_deck(self, index: int, total: int, carte: CarteNew, quantite: int, lot: pyglet.graphics.Batch) -> list:
+    def _dessiner_carte_deck(self, index: int, total: int, carte: Carte, quantite: int, lot: pyglet.graphics.Batch) -> list:
         x, y, largeur, hauteur = _rect_carte_deck(index, total)
         survole = index == self.index_survole
         cadre = shapes.BorderedRectangle(

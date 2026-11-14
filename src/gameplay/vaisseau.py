@@ -1,5 +1,5 @@
 """
-Vaisseau de la refonte (VaisseauNew) : les modules en combat (copies de ModuleNew) places sur la
+Vaisseau de combat (Vaisseau) : les modules en combat (copies de Module) places sur la
 grille du joueur (specs/refonte-combat.md 2.2).
 
 Grille 2 colonnes (avant, arriere) x 3 rangees (gauche, milieu, droite). Le principal occupe toute
@@ -9,10 +9,10 @@ case.
 
 from collections.abc import Iterable
 
-from src.gameplay.module_new import ModuleNew
+from src.gameplay.module import Module
 from src.gameplay.position import Colonne, Position, Rangee, ordre_rangees_par_proximite
 
-# Cases occupees par chaque emplacement (ModuleNew.emplacement)
+# Cases occupees par chaque emplacement (Module.emplacement)
 CASES_PAR_EMPLACEMENT = {
     "base": (Position(Colonne.AVANT, Rangee.MID), Position(Colonne.ARRIERE, Rangee.MID)),
     "avant_gauche": (Position(Colonne.AVANT, Rangee.GAUCHE),),
@@ -22,12 +22,12 @@ CASES_PAR_EMPLACEMENT = {
 }
 
 
-class VaisseauNew:
+class Vaisseau:
     """Les modules du joueur pendant un combat, sur leurs cases."""
 
-    def __init__(self, modules: Iterable[ModuleNew]):
-        self.modules: list[ModuleNew] = list(modules)
-        self._par_case: dict[Position, ModuleNew] = {}
+    def __init__(self, modules: Iterable[Module]):
+        self.modules: list[Module] = list(modules)
+        self._par_case: dict[Position, Module] = {}
         for module in self.modules:
             if module.pv_combat is None:
                 raise ValueError(f"Module {module.id} : le vaisseau de combat prend des copies de combat")
@@ -46,22 +46,22 @@ class VaisseauNew:
             raise ValueError("Chaque module doit avoir un identifiant d'exemplaire unique")
 
     @property
-    def principal(self) -> ModuleNew:
+    def principal(self) -> Module:
         return self._par_case[Position(Colonne.AVANT, Rangee.MID)]
 
-    def module_en(self, case: Position) -> ModuleNew | None:
+    def module_en(self, case: Position) -> Module | None:
         """Module vivant sur cette case, None si elle est vide ou si son module est detruit."""
         module = self._par_case.get(case)
         return None if module is None or module.est_detruit() else module
 
-    def module_d_exemplaire(self, exemplaire: str) -> ModuleNew | None:
+    def module_d_exemplaire(self, exemplaire: str) -> Module | None:
         """Module de cet identifiant d'exemplaire ("M3"), detruit ou non."""
         return next((module for module in self.modules if module.exemplaire == exemplaire), None)
 
-    def modules_vivants(self) -> list[ModuleNew]:
+    def modules_vivants(self) -> list[Module]:
         return [module for module in self.modules if not module.est_detruit()]
 
-    def modules_vivants_de_colonne(self, colonne: Colonne) -> list[ModuleNew]:
+    def modules_vivants_de_colonne(self, colonne: Colonne) -> list[Module]:
         """Modules vivants de cette colonne ; le principal est dans les deux."""
         return [module for module in self.modules_vivants() if any(
             case.colonne == colonne for case in CASES_PAR_EMPLACEMENT[module.emplacement]
@@ -71,7 +71,7 @@ class VaisseauNew:
         """Cases occupees par un module vivant."""
         return [case for case, module in self._par_case.items() if not module.est_detruit()]
 
-    def module_le_plus_proche(self, rangee_ennemi: Rangee) -> ModuleNew | None:
+    def module_le_plus_proche(self, rangee_ennemi: Rangee) -> Module | None:
         """Module vise par une attaque PROXIMITE d'un ennemi de cette rangee : sa rangee d'abord
         (avant puis arriere), puis les rangees voisines (meme regle que ciblage.py)."""
         for rangee in ordre_rangees_par_proximite(rangee_ennemi):

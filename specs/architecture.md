@@ -36,7 +36,7 @@ pyproject.toml
 ```
 
 - `assets/` : uniquement des images pour le moment ; le son sera ajouté plus tard si besoin
-- `config/` : contenu du jeu décrit en JSON (modules, ennemis, cartes), référençant les images d'`assets/` — format : `config/*_new.json`, décrit dans `carte_new.py`, `module_new.py`, `ennemi_new.py` (les anciens `cartes.json`, `modules.json`, `ennemis.json` sont supprimés)
+- `config/` : contenu du jeu décrit en JSON (modules, ennemis, cartes), référençant les images d'`assets/` — format : `config/*.json`, décrit dans `carte.py`, `module.py`, `ennemi.py` (les anciens `cartes.json`, `modules.json`, `ennemis.json` sont supprimés)
 - Séparation stricte entre `src/ui` (affichage PC) et `src/gameplay` (logique de jeu, partagée avec la version web)
 - `src/gameplay` reste la seule source de vérité des règles de jeu : la version web ne fait que l'exécuter et l'afficher, elle ne réimplémente aucune règle
 

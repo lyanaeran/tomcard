@@ -1,6 +1,6 @@
 """
 Partie complete jouee automatiquement (specs/simulation.md 5) : suit l'enchainement decide par
-src/gameplay/deroulement.py, le bot de recherche du combat de la refonte (bot_new.py) pour les
+src/gameplay/deroulement.py, le bot de recherche du combat de la refonte (bot.py) pour les
 combats, et une politique par defaut simple pour les decisions hors combat (5.1).
 
 Tout le hasard derive de la graine de la partie, du niveau et de l'usage (_aleatoire) : rejouer
@@ -12,10 +12,10 @@ import random
 from dataclasses import dataclass, field
 
 from src.gameplay import deroulement
-from src.gameplay.carte_new import charger_cartes_new
-from src.gameplay.combat_new import EtatCombatNew
+from src.gameplay.carte import charger_cartes
+from src.gameplay.combat import EtatCombat
 from src.gameplay.deroulement import Ecran
-from src.gameplay.module_new import charger_modules_new
+from src.gameplay.module import charger_modules
 from src.gameplay.parcours import TypeEtape
 from src.gameplay.partie import (
     COUT_ACTION_STATION_SERVICE,
@@ -35,7 +35,7 @@ from src.gameplay.partie import (
     subir_degats_principal,
 )
 
-from outils.simulation.bot_new import BotRecherche, jouer_combat
+from outils.simulation.bot import BotRecherche, jouer_combat
 
 # Garde-fou : etapes au-dela desquelles une partie est arretee
 ETAPES_MAX = 40
@@ -99,7 +99,7 @@ def _station_service(partie: Partie) -> None:
 def _aventure_asteroides(partie: Partie) -> Ecran:
     """Traverse le champ d'asteroides (les chocs touchent le principal) et prend la carte offerte."""
     subir_degats_principal(partie, DEGATS_ASTEROIDES)
-    carte = second_choc_asteroides(partie, charger_cartes_new(), _aleatoire(partie, "asteroides"))
+    carte = second_choc_asteroides(partie, charger_cartes(), _aleatoire(partie, "asteroides"))
     if carte is not None:
         ajouter_carte(partie, carte.id, carte.exemplaire_module)
     return deroulement.terminer_etape(partie)
@@ -120,7 +120,7 @@ def _combat(partie: Partie, resultat: ResultatPartie, combat, type_combat: str) 
     resultat.combats.append(stats)
     candidats = deroulement.conclure_combat(partie, combat, _aleatoire(partie, "recompense"))
     carte = _la_plus_rare([carte for _module, carte in candidats if carte is not None])
-    victoire = combat.etat == EtatCombatNew.VICTOIRE
+    victoire = combat.etat == EtatCombat.VICTOIRE
     return deroulement.resoudre_fin_combat(partie, victoire, carte)
 
 
@@ -130,7 +130,7 @@ def jouer_partie(
     """Joue une partie complete. `module_force` : id du module du Niveau 1 (5.3) ;
     `choix_imposes` : {index de decision: TypeEtape.name} impose au choix du prochain niveau (5.2)."""
     choix_imposes = choix_imposes or {}
-    modeles = charger_modules_new()
+    modeles = charger_modules()
     partie = nouvelle_partie(random.Random(graine))
 
     # Niveau 1 : choix du module (force, sinon tire) puis de sa carte

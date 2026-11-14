@@ -1,55 +1,55 @@
 """
-Tests unitaires pour src/gameplay/carte_new.py (CarteNew, carte de la refonte) et
-config/carte_new.json (source de verite des cartes revues).
+Tests unitaires pour src/gameplay/carte.py (Carte, carte de la refonte) et
+config/cartes.json (source de verite des cartes revues).
 """
 
 import json
 
 import pytest
 
-from src.gameplay.carte_new import RareteCarte
-from src.gameplay.carte_new import (
+from src.gameplay.carte import RareteCarte
+from src.gameplay.carte import (
     Camp,
-    CarteNew,
+    Carte,
     CategorieCarte,
-    CibleCarteNew,
+    CibleCarte,
     Effet,
     FiltreCartes,
     NatureEffet,
     PorteeEffet,
-    FICHIER_CARTES_NEW,
+    FICHIER_CARTES,
     appliquer_repetition,
-    charger_cartes_new,
+    charger_cartes,
 )
-from src.gameplay.statut_new import Statut
+from src.gameplay.statut import Statut
 
 
-def _cartes() -> dict[str, CarteNew]:
-    """Cartes de config/carte_new.json, par nom (nouvelles instances a chaque appel)."""
-    return {carte.nom: carte for carte in charger_cartes_new().values()}
+def _cartes() -> dict[str, Carte]:
+    """Cartes de config/cartes.json, par nom (nouvelles instances a chaque appel)."""
+    return {carte.nom: carte for carte in charger_cartes().values()}
 
 
 def _entree(id_carte: str) -> dict:
-    """Entree brute d'une carte dans config/carte_new.json (pour fabriquer des variantes)."""
-    return next(entree for entree in json.loads(FICHIER_CARTES_NEW.read_text(encoding="utf-8"))["cartes"]
+    """Entree brute d'une carte dans config/cartes.json (pour fabriquer des variantes)."""
+    return next(entree for entree in json.loads(FICHIER_CARTES.read_text(encoding="utf-8"))["cartes"]
                 if entree["id"] == id_carte)
 
 
-def _carte_simple(**champs) -> CarteNew:
+def _carte_simple(**champs) -> Carte:
     valeurs = dict(
         id="TEST", nom="Test", image="test.png", rarete=RareteCarte.COMMUNE,
-        categorie=CategorieCarte.ATTAQUE, cible=CibleCarteNew.ENNEMI_UNIQUE, cout=1,
+        categorie=CategorieCarte.ATTAQUE, cible=CibleCarte.ENNEMI_UNIQUE, cout=1,
         description="Inflige {degats} degats", valeurs={"degats": 5}, effets=(Effet(NatureEffet.DEGATS, "degats"),),
     )
     valeurs.update(champs)
-    return CarteNew(**valeurs)
+    return Carte(**valeurs)
 
 
-# --- config/carte_new.json ---
+# --- config/cartes.json ---
 
 
-def test_carte_new_json_contient_les_19_cartes_revues():
-    cartes = charger_cartes_new()
+def test_cartes_json_contient_les_19_cartes_revues():
+    cartes = charger_cartes()
 
     assert len(cartes) == 19
     assert all(carte.refonte for carte in cartes.values())
@@ -57,7 +57,7 @@ def test_carte_new_json_contient_les_19_cartes_revues():
 
 def test_les_19_cartes_revues_sont_jouables():
     # Decision 5 du branchement (refonte-branchement.md 2) : toutes proposables en recompense
-    assert all(carte.jouable for carte in charger_cartes_new().values())
+    assert all(carte.jouable for carte in charger_cartes().values())
 
 
 def test_description_affichee_remplace_les_valeurs_nommees():
@@ -117,11 +117,11 @@ def test_duree_nommee_seulement_pour_un_effet_a_duree():
         Effet(NatureEffet.BOUCLIER, "bouclier", duree="bouclier_duree")
 
 
-# --- Statuts poses (regles dans statut_new.py) ---
+# --- Statuts poses (regles dans statut.py) ---
 
 
 def test_bouclier_incendie_et_leurre_posent_le_statut_correspondant():
-    """Une seule source pour les regles de cumul et d'extinction : statut_new.py."""
+    """Une seule source pour les regles de cumul et d'extinction : statut.py."""
     cartes = _cartes()
 
     assert cartes["Embrasement"].effets[0].nature.statut_pose == Statut.INCENDIE
@@ -135,7 +135,7 @@ def test_bouclier_incendie_et_leurre_posent_le_statut_correspondant():
 
 def test_une_carte_est_lancee_une_fois_par_defaut_ou_plus_si_precise():
     laser = _cartes()["Laser"]
-    double_laser = CarteNew.depuis_dict(dict(_entree("CRT_7"), lancements=2))
+    double_laser = Carte.depuis_dict(dict(_entree("CRT_7"), lancements=2))
 
     assert laser.lancements_base == laser.lancements_actuels == 1
     assert double_laser.lancements_base == double_laser.lancements_actuels == 2
@@ -186,12 +186,12 @@ def test_seul_un_effet_repetition_modifie_les_lancements():
 
 
 def test_cible_camp_et_case_cliquee():
-    assert CibleCarteNew("Ennemi Tous").camp == Camp.ENNEMI
-    assert CibleCarteNew("Module Principal").camp == Camp.JOUEUR
-    assert CibleCarteNew.ENNEMI_UNIQUE.depend_de_la_case_cliquee
-    assert CibleCarteNew.ENNEMI_COLONNE.depend_de_la_case_cliquee
-    assert not CibleCarteNew.ENNEMI_TOUS.depend_de_la_case_cliquee
-    assert not CibleCarteNew.MODULE_PRINCIPAL.depend_de_la_case_cliquee
+    assert CibleCarte("Ennemi Tous").camp == Camp.ENNEMI
+    assert CibleCarte("Module Principal").camp == Camp.JOUEUR
+    assert CibleCarte.ENNEMI_UNIQUE.depend_de_la_case_cliquee
+    assert CibleCarte.ENNEMI_COLONNE.depend_de_la_case_cliquee
+    assert not CibleCarte.ENNEMI_TOUS.depend_de_la_case_cliquee
+    assert not CibleCarte.MODULE_PRINCIPAL.depend_de_la_case_cliquee
 
 
 # --- Munitions, valeurs et exemplaires ---
@@ -239,7 +239,7 @@ def test_la_copie_ne_partage_aucun_dictionnaire_de_valeurs():
 def test_le_filtre_vise_une_carte_par_son_id_pas_par_son_nom():
     cartes = _cartes()
     filtre = cartes["Salve laser"].effets[0].filtre
-    laser_renomme = CarteNew.depuis_dict(dict(_entree("CRT_7"), nom="Laser léger"))
+    laser_renomme = Carte.depuis_dict(dict(_entree("CRT_7"), nom="Laser léger"))
 
     assert filtre.correspond(laser_renomme)
     assert not filtre.correspond(cartes["Laser lourd"])
@@ -257,7 +257,7 @@ def test_une_cle_inconnue_dans_le_json_est_refusee(modification):
     modification(entree)
 
     with pytest.raises(ValueError, match="cles inconnues"):
-        CarteNew.depuis_dict(entree)
+        Carte.depuis_dict(entree)
 
 
 @pytest.mark.parametrize(
@@ -265,7 +265,7 @@ def test_une_cle_inconnue_dans_le_json_est_refusee(modification):
     [
         (lambda entree: entree.pop("cout"), "cle manquante ou texte inconnu 'cout'"),
         (lambda entree: entree["effets"][0].update(nature="DEGAT"), "cle manquante ou texte inconnu 'DEGAT'"),
-        (lambda entree: entree.update(cible="Ennemi unique"), "is not a valid CibleCarteNew"),
+        (lambda entree: entree.update(cible="Ennemi unique"), "is not a valid CibleCarte"),
         (lambda entree: entree["effets"][0].pop("valeur"), "valeur nommee manquante"),
     ],
 )
@@ -274,7 +274,7 @@ def test_une_erreur_de_lecture_du_json_indique_la_carte(modification, message):
     modification(entree)
 
     with pytest.raises(ValueError, match="^Carte CRT_13 : ") as erreur:
-        CarteNew.depuis_dict(entree)
+        Carte.depuis_dict(entree)
     assert message in str(erreur.value)
 
 
@@ -283,7 +283,7 @@ def test_une_cle_inconnue_dans_un_filtre_est_refusee():
     entree["effets"][0]["filtre"]["nom"] = "Laser"  # ancien critere par nom
 
     with pytest.raises(ValueError, match="cles inconnues"):
-        CarteNew.depuis_dict(entree)
+        Carte.depuis_dict(entree)
 
 
 def test_copie_donne_un_exemplaire_independant_rattache_si_demande():
@@ -310,7 +310,7 @@ def test_seule_une_carte_persistante_reste_jouable_si_son_module_est_detruit():
 def test_persistante_lue_depuis_le_json():
     laser = _cartes()["Laser"]
 
-    assert CarteNew.depuis_dict(dict(_entree("CRT_7"), persistante=True)).persistante
+    assert Carte.depuis_dict(dict(_entree("CRT_7"), persistante=True)).persistante
     assert not laser.persistante
 
 
@@ -325,9 +325,9 @@ def test_persistante_lue_depuis_le_json():
         {"munitions_base": 0},
         {"lancements_base": 0},
         {"valeurs": {"degats": -1}},
-        {"cible": CibleCarteNew.MODULE_UNIQUE,
+        {"cible": CibleCarte.MODULE_UNIQUE,
          "effets": (Effet(NatureEffet.DEGATS, "degats", PorteeEffet.AUTRES_ENNEMIS),)},
-        {"cible": CibleCarteNew.ENNEMI_TOUS,
+        {"cible": CibleCarte.ENNEMI_TOUS,
          "effets": (Effet(NatureEffet.DEGATS, "degats", PorteeEffet.AUTRES_ENNEMIS),)},
     ],
 )
@@ -351,10 +351,10 @@ def test_chaque_portee_declare_le_camp_qu_elle_touche():
 
 
 def test_un_id_de_carte_en_double_est_refuse(tmp_path):
-    donnees = json.loads(FICHIER_CARTES_NEW.read_text(encoding="utf-8"))
+    donnees = json.loads(FICHIER_CARTES.read_text(encoding="utf-8"))
     donnees["cartes"].append(donnees["cartes"][0])
-    fichier = tmp_path / "carte_new.json"
+    fichier = tmp_path / "cartes.json"
     fichier.write_text(json.dumps(donnees), encoding="utf-8")
 
     with pytest.raises(ValueError, match="en double"):
-        charger_cartes_new(fichier)
+        charger_cartes(fichier)

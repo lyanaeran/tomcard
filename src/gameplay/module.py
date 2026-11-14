@@ -1,7 +1,7 @@
 """
-Module de la refonte (ModuleNew, nom provisoire) : modele de donnees cible de la refonte des
-modules (specs/refonte-modules.md, 8). Source de verite : config/module_new.json
-(charger_modules_new). Seul modele de module du jeu depuis la suppression de l'ancien moteur (PR 4
+Module (Module) : modele de donnees issu de la refonte des
+modules (specs/refonte-modules.md, 8). Source de verite : config/modules.json
+(charger_modules). Seul modele de module du jeu depuis la suppression de l'ancien moteur (PR 4
 du branchement).
 
 Une seule classe reunit les trois niveaux d'information d'un module :
@@ -14,8 +14,8 @@ le module de la partie n'est jamais modifie pendant un combat (un combat abandon
 la partie), et seuls les PV du principal y sont reportes a la fin (reporter_combat).
 
 Regles de la refonte : les modules secondaires repartent a leur PV max a chaque combat, seuls les
-PV du principal persistent. Bouclier, leurre, incendie... sont des STATUTS (statut_new.py,
-specs/refonte-statuts.md), partages avec EnnemiNew ; ils s'eteignent a la fin du tour ennemi.
+PV du principal persistent. Bouclier, leurre, incendie... sont des STATUTS (statut.py,
+specs/refonte-statuts.md), partages avec Ennemi ; ils s'eteignent a la fin du tour ennemi.
 """
 
 import dataclasses
@@ -23,19 +23,19 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from src.gameplay.statut_new import Encaissement, Statuts
+from src.gameplay.statut import Encaissement, Statuts
 
-FICHIER_MODULES_NEW = Path(__file__).resolve().parents[2] / "config" / "module_new.json"
+FICHIER_MODULES = Path(__file__).resolve().parents[2] / "config" / "modules.json"
 
-# Cles autorisees dans config/module_new.json : une cle inconnue est refusee au chargement
+# Cles autorisees dans config/modules.json : une cle inconnue est refusee au chargement
 CLES_MODULE = {"id", "nom", "image", "description", "principal", "pv_max", "cartes", "jouable", "refonte"}
 
 
 @dataclass(eq=False)
-class ModuleNew:
+class Module:
     """Un module de la refonte. eq=False : deux exemplaires du meme type de module sont distincts."""
 
-    # --- Modele : lu dans config/module_new.json, identique pour tous les exemplaires ---
+    # --- Modele : lu dans config/modules.json, identique pour tous les exemplaires ---
 
     # Identifiant du type de module (ex. "MOD_2")
     id: str
@@ -47,7 +47,7 @@ class ModuleNew:
     description: str
     # PV max d'un exemplaire neuf, avant toute amelioration
     pv_max_base: int
-    # Ids des cartes du module (config/carte_new.json), jouables ou non
+    # Ids des cartes du module (config/cartes.json), jouables ou non
     cartes: tuple[str, ...] = ()
     # True pour le module principal : toujours equipe, seul a garder ses PV entre deux combats
     principal: bool = False
@@ -75,7 +75,7 @@ class ModuleNew:
 
     # PV pendant le combat ; None hors combat
     pv_combat: int | None = None
-    # Statuts en cours (bouclier, leurre, incendie...), partages avec les ennemis (statut_new.py)
+    # Statuts en cours (bouclier, leurre, incendie...), partages avec les ennemis (statut.py)
     statuts: Statuts = field(default_factory=Statuts)
 
     def __post_init__(self):
@@ -91,7 +91,7 @@ class ModuleNew:
 
     # --- Exemplaires ---
 
-    def nouvel_exemplaire(self, exemplaire: str, emplacement: str) -> "ModuleNew":
+    def nouvel_exemplaire(self, exemplaire: str, emplacement: str) -> "Module":
         """Nouvel exemplaire de ce type de module pour une partie : PV max de base, PV pleins,
         palier 1, aucun etat de combat."""
         return dataclasses.replace(
@@ -105,12 +105,12 @@ class ModuleNew:
         principal, PV max pour un secondaire (il repart plein). A afficher hors combat."""
         return self.pv if self.principal else self.pv_max
 
-    def copie_pour_combat(self) -> "ModuleNew":
+    def copie_pour_combat(self) -> "Module":
         """Copie de ce module pour un combat, champs de combat remis a zero, PV de depart
         pv_au_prochain_combat. Le module d'origine n'est pas modifie."""
         return dataclasses.replace(self, pv_combat=self.pv_au_prochain_combat, statuts=Statuts())
 
-    def reporter_combat(self, copie_de_combat: "ModuleNew") -> None:
+    def reporter_combat(self, copie_de_combat: "Module") -> None:
         """Fin de combat : reporte sur ce module de la partie ce qui doit persister, c'est-a-dire
         les PV du principal seulement."""
         if self.principal:
@@ -153,11 +153,11 @@ class ModuleNew:
         self._perdre_pv(encaissement.degats_pv)
         return encaissement
 
-    # --- Lecture JSON (format de config/module_new.json) ---
+    # --- Lecture JSON (format de config/modules.json) ---
 
     @classmethod
-    def depuis_dict(cls, entree: dict) -> "ModuleNew":
-        """Modele de module a partir d'une entree de config/module_new.json ; toute erreur de
+    def depuis_dict(cls, entree: dict) -> "Module":
+        """Modele de module a partir d'une entree de config/modules.json ; toute erreur de
         lecture est signalee avec l'id du module."""
         module = f"Module {entree.get('id', '?')}"
         inconnues = entree.keys() - CLES_MODULE
@@ -184,16 +184,16 @@ class ModuleNew:
             raise ValueError(f"{module} : {erreur}") from erreur
 
 
-def charger_modules_new(fichier: Path = FICHIER_MODULES_NEW) -> dict[str, ModuleNew]:
-    """Charge config/module_new.json. Renvoie un dict id de module -> modele de module ; un id
+def charger_modules(fichier: Path = FICHIER_MODULES) -> dict[str, Module]:
+    """Charge config/modules.json. Renvoie un dict id de module -> modele de module ; un id
     en double est refuse."""
     donnees = json.loads(fichier.read_text(encoding="utf-8"))
     modules = {}
     for entree in donnees["modules"]:
-        module = ModuleNew.depuis_dict(entree)
+        module = Module.depuis_dict(entree)
         if module.id in modules:
-            raise ValueError(f"config/module_new.json : module {module.id} en double")
+            raise ValueError(f"config/modules.json : module {module.id} en double")
         modules[module.id] = module
     if sum(module.principal for module in modules.values()) != 1:
-        raise ValueError("config/module_new.json : il faut exactement un module principal")
+        raise ValueError("config/modules.json : il faut exactement un module principal")
     return modules

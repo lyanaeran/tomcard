@@ -9,8 +9,8 @@ Fond de combat reutilise en placeholder (decision utilisateur), a remplacer par 
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.carte_new import CarteNew
-from src.gameplay.module_new import ModuleNew
+from src.gameplay.carte import Carte
+from src.gameplay.module import Module
 from src.gameplay.partie import Partie, deck_de_la_partie
 from src.ui import barre_laterale
 from src.ui.ecran_deck import EcranDeck
@@ -74,7 +74,7 @@ class EcranFinCombat(pyglet.window.Window):
     recompense parmi les candidats, un par module utilise - specs.md 2.1/6)."""
 
     def __init__(
-        self, victoire: bool, partie: Partie, candidats: list[tuple[ModuleNew, CarteNew | None]] | None = None
+        self, victoire: bool, partie: Partie, candidats: list[tuple[Module, Carte | None]] | None = None
     ):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.victoire = victoire
@@ -85,7 +85,7 @@ class EcranFinCombat(pyglet.window.Window):
         self.index_survole: int | None = None
         self.survole_passer = False
         self.survole_barre: str | None = None
-        self.carte_choisie: CarteNew | None = None
+        self.carte_choisie: Carte | None = None
         # True une fois que l'ecran peut etre ferme : defaite (clic n'importe ou), ou victoire
         # avec une carte choisie (ou sans aucun candidat a choisir, cf. on_mouse_press) - un seul
         # signal a surveiller par l'appelant quelle que soit la branche (specs.md 2.4).
@@ -199,7 +199,7 @@ class EcranFinCombat(pyglet.window.Window):
         return [cadre, texte]
 
     def _dessiner_candidat(
-        self, index: int, total: int, spec: ModuleNew, carte: CarteNew, lot: pyglet.graphics.Batch
+        self, index: int, total: int, spec: Module, carte: Carte, lot: pyglet.graphics.Batch
     ) -> list:
         x, y, largeur, hauteur = _rect_candidat(index, total)
         survole = index == self.index_survole
