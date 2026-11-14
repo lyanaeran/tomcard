@@ -12,12 +12,13 @@ Fond de combat reutilise en placeholder (decision utilisateur), a remplacer par 
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.donnees import RACINE
+from src.gameplay.partie import RACINE
 from src.gameplay.parcours import TypeEtape
 from src.gameplay.partie import Partie, deck_de_la_partie
 from src.ui import barre_laterale
 from src.ui.ecran_deck import EcranDeck
 from src.ui.ecran_vaisseau import EcranVaisseau
+from src.ui.commun import noms_modules
 from src.ui.fenetre import FOND_IMAGE, HAUTEUR_FENETRE, LARGEUR_FENETRE, _sprite_ajuste, _sprite_etire
 
 COULEUR_FOND_CARTE = (20, 24, 34)
@@ -38,7 +39,7 @@ LIBELLES_TYPE_ETAPE = {
         str(_DOSSIER_ICONES / "station_service.png"), "Station service", "Entretien du vaisseau contre de l'Argent.",
     ),
     TypeEtape.PLANETE_COMMERCIALE: (
-        str(_DOSSIER_ICONES / "planete_commerciale.png"), "Planete commerciale", "Achat de cartes contre de l'Argent.",
+        str(_DOSSIER_ICONES / "planete_commerciale.png"), "Planète commerciale", "Achat de cartes contre de l'Argent.",
     ),
     TypeEtape.AVENTURE: (str(_DOSSIER_ICONES / "aventure.png"), "Aventure", "Evenement inconnu."),
     TypeEtape.BOSS: (str(_DOSSIER_ICONES / "boss.png"), "Boss", "Combattre le Boss !"),
@@ -104,7 +105,7 @@ class EcranChoixNiveau(pyglet.window.Window):
             elements.extend(self._dessiner_candidat(index, total, type_etape, lot))
         elements.append(
             pyglet.text.Label(
-                "Choisissez la prochaine etape.",
+                "Choisissez la prochaine étape.",
                 x=LARGEUR_FENETRE / 2,
                 y=150,
                 anchor_x="center",
@@ -158,7 +159,7 @@ class EcranChoixNiveau(pyglet.window.Window):
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
         bouton_barre = barre_laterale.bouton_survole(x, y)
         if bouton_barre == "deck":
-            barre_laterale.ouvrir_survol(EcranDeck(deck_de_la_partie(self.partie)))
+            barre_laterale.ouvrir_survol(EcranDeck(deck_de_la_partie(self.partie), noms_modules(self.partie)))
             return
         if bouton_barre == "vaisseau":
             barre_laterale.ouvrir_survol(EcranVaisseau(self.partie))

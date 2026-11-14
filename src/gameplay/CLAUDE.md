@@ -13,9 +13,9 @@ elle appartient à `src/ui`. Couvert par pytest (`tests/`, un fichier de test pa
 
 Les fichiers `*_new.py` (`carte_new`, `module_new`, `ennemi_new`, `statut_new`, `combat_new`,
 `deck_new`, `flotte_new`, `vaisseau_new`) sont le **moteur de la refonte**. Depuis la PR 1 du
-branchement, le parcours (`partie.py`, `parcours.py`, `deroulement.py`) l'utilise ; l'ancien moteur
-(`carte.py`, `module.py`, `ennemi.py`, `combat.py`...) n'est plus lu que par l'affichage PC et web
-(en attente des PR 2 et 3), puis sera supprimé (PR 4). Le combat de démonstration
+branchement, le parcours (`partie.py`, `parcours.py`, `deroulement.py`) l'utilise ; le web depuis la PR 2 et
+le PC depuis la PR 3 ; l'ancien moteur (`carte.py`, `module.py`, `ennemi.py`, `combat.py`...)
+n'est plus lu par le jeu et sera supprimé (PR 4). Le combat de démonstration
 (`config_poc.py`) est supprimé : le jeu ne se joue que par le parcours. Vue d'ensemble : `specs/refonte.md`, plan : `specs/refonte-branchement.md`.
 
 - Ne pas mélanger les deux : un fichier `_new` n'importe pas l'ancien moteur, sauf réutilisation
@@ -38,7 +38,7 @@ branchement, le parcours (`partie.py`, `parcours.py`, `deroulement.py`) l'utilis
 ## Déterminisme du tirage aléatoire
 
 Tout tirage (vaisseau, flotte, deck, parcours, Aventures...) passe par un `random.Random` explicite
-injecté (ex. `creer_combat_poc(generateur_aleatoire=...)`, `Combat.aleatoire`) — **jamais le module
+injecté (ex. `combat_depuis_partie(partie, aleatoire)`, `CombatNew.aleatoire`) — **jamais le module
 `random` global** (`random.choice(...)`, `random.random()`...), et jamais une instance jetable
 recréée à chaque appel là où une instance unique doit être conservée d'un bout à l'autre d'un
 écran/d'une session. Un écran PC ou `web/bridge.py` peut construire son propre `random.Random()`

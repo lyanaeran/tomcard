@@ -11,9 +11,10 @@ import random
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.carte import Carte
-from src.gameplay.donnees import RACINE, charger_cartes
+from src.gameplay.carte_new import CarteNew
+from src.gameplay.carte_new import charger_cartes_new
 from src.gameplay.partie import (
+    RACINE,
     COUT_METTRE_AUX_NORMES,
     Partie,
     deck_de_la_partie,
@@ -25,7 +26,8 @@ from src.gameplay.partie import (
 from src.ui import barre_laterale
 from src.ui.ecran_deck import EcranDeck
 from src.ui.ecran_vaisseau import EcranVaisseau
-from src.ui.fenetre import COULEUR_ETOILE_RARETE, HAUTEUR_FENETRE, LARGEUR_FENETRE, _sprite_ajuste, _sprite_etire, texte_effet_carte
+from src.ui.commun import chemin_image, noms_modules, texte_carte
+from src.ui.fenetre import COULEUR_ETOILE_RARETE, HAUTEUR_FENETRE, LARGEUR_FENETRE, _sprite_ajuste, _sprite_etire
 
 FOND_POLICE = str(RACINE / "assets" / "aventure" / "police.png")
 
@@ -55,13 +57,13 @@ OPACITE_FOND = 190
 CHOIX = (
     ("confiscation", _ICONE_CONFISCATION, "Confiscation", "Supprime cette carte de votre deck."),
     ("mettre_aux_normes", _ICONE_METTRE_AUX_NORMES, "Mettre aux normes", f"Payez {COUT_METTRE_AUX_NORMES} € et gardez la carte."),
-    ("detourner", _ICONE_DETOURNER, "Detourner l'attention", "Tire une autre carte (une seule fois)."),
+    ("detourner", _ICONE_DETOURNER, "Détourner l'attention", "Tire une autre carte (une seule fois)."),
 )
 
 # Carte tiree affichee seule au-dessus des choix, comme une carte en combat (image en haut, texte
 # en dessous) plutot que la ligne image+texte des choix en dessous - pour ne pas donner
 # l'impression que c'est elle-meme une option cliquable (specs.md 2.5). Meme composition que
-# _dessiner_carte_offerte de l'Aventure Astéroïdes (etoile + image + nom + description empiles).
+# _dessiner_carte_offerte de l'Aventure Asteroides (etoile + image + nom + description empiles).
 LARGEUR_CARTE_ACTUELLE = 240
 HAUTEUR_CARTE_ACTUELLE = 250
 IMAGE_CARTE_ACTUELLE_TAILLE = 130
@@ -106,9 +108,8 @@ class EcranAventurePolice(pyglet.window.Window):
     def __init__(self, partie: Partie, aleatoire: random.Random | None = None):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.partie = partie
-        # Un seul chargement, reutilise pour chaque tirage (charger_cartes() reconstruit de
-        # nouvelles instances a chaque appel, ce qui casserait toute comparaison par identite).
-        self.cartes = charger_cartes()
+        # Modeles de cartes, lus une seule fois
+        self.cartes = charger_cartes_new()
         # Instance explicite (jamais le module random global directement, cf. CLAUDE.md
         # "Determinisme du tirage aleatoire"), injectable pour un test reproductible.
         self.aleatoire = aleatoire or random.Random()
@@ -126,8 +127,10 @@ class EcranAventurePolice(pyglet.window.Window):
         self.survole_barre: str | None = None
         self.termine: bool = False
 
-    def _carte_actuelle(self) -> Carte:
-        return self.cartes[self.etat_police.id_carte_actuelle]
+    def _carte_actuelle(self) -> CarteNew:
+        """Carte tiree (EtatAventurePolice.carte_actuelle), rattachee a son module."""
+        possedee = self.etat_police.carte_actuelle
+        return self.cartes[possedee.id].copie(exemplaire_module=possedee.module)
 
     def _choix_visibles(self) -> tuple:
         if self.etat_police.detourner_disponible:
@@ -207,14 +210,14 @@ class EcranAventurePolice(pyglet.window.Window):
         )
         taille_image = IMAGE_CARTE_ACTUELLE_TAILLE
         sprite = _sprite_ajuste(
-            carte.image, cx - taille_image / 2, y + hauteur - 30 - taille_image, taille_image, taille_image, lot
+            chemin_image(carte.image), cx - taille_image / 2, y + hauteur - 30 - taille_image, taille_image, taille_image, lot
         )
         nom = pyglet.text.Label(
             f"{carte.nom}  (⚡{carte.cout})", x=cx, y=y + hauteur - 48 - taille_image,
             anchor_x="center", anchor_y="center", font_size=15, color=(*COULEUR_NOM, 255), batch=lot,
         )
         description = pyglet.text.Label(
-            texte_effet_carte(carte), x=cx, y=y + hauteur - 70 - taille_image,
+            texte_carte(carte, noms_modules(self.partie)), x=cx, y=y + hauteur - 70 - taille_image,
             anchor_x="center", anchor_y="top", font_size=12, color=(*COULEUR_TEXTE, 255),
             multiline=True, width=largeur - 24, align="center", batch=lot,
         )
@@ -288,7 +291,7 @@ class EcranAventurePolice(pyglet.window.Window):
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
         bouton_barre = barre_laterale.bouton_survole(x, y)
         if bouton_barre == "deck":
-            barre_laterale.ouvrir_survol(EcranDeck(deck_de_la_partie(self.partie)))
+            barre_laterale.ouvrir_survol(EcranDeck(deck_de_la_partie(self.partie), noms_modules(self.partie)))
             return
         if bouton_barre == "vaisseau":
             barre_laterale.ouvrir_survol(EcranVaisseau(self.partie))
@@ -306,8 +309,8 @@ class EcranAventurePolice(pyglet.window.Window):
         identifiant = choix_visibles[index][0]
         if identifiant == "confiscation":
             carte = self._carte_actuelle()
-            retirer_carte(self.partie, self.etat_police.id_carte_actuelle)
-            self.message_resolu = f"Carte confisquee : {carte.nom}."
+            retirer_carte(self.partie, self.etat_police.carte_actuelle)
+            self.message_resolu = f"Carte confisquée : {carte.nom}."
             self.etape = "resolu"
         elif identifiant == "mettre_aux_normes":
             if payer_mise_aux_normes(self.partie):

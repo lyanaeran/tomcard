@@ -11,22 +11,23 @@ reutilise en placeholder (decision utilisateur), a remplacer par un fond dedie.
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.donnees import RACINE, charger_modules, image_case_module
+from src.gameplay.module_new import ModuleNew
 from src.gameplay.partie import (
+    RACINE,
     COUT_ACTION_STATION_SERVICE,
-    PV_AMELIORATION,
-    EtatModule,
     Partie,
     ameliorer_module,
     deck_de_la_partie,
     deplacer_module,
+    ResultatStation,
     mettre_a_jour_module,
-    reparer_module,
+    reparer_principal,
 )
 from src.ui import barre_laterale
 from src.ui.animation import AnimationPopup
 from src.ui.ecran_deck import EcranDeck
 from src.ui.ecran_vaisseau import EcranVaisseau
+from src.ui.commun import image_case_module, noms_modules
 from src.ui.fenetre import (
     COULEUR_OMBRE_POPUP,
     COULEUR_POPUP_DEGATS,
@@ -61,8 +62,8 @@ POSITIONS_AFFICHEES = (
     ("base", "Principal"),
     ("avant_gauche", "Avant gauche"),
     ("avant_droite", "Avant droite"),
-    ("arriere_gauche", "Arriere gauche"),
-    ("arriere_droite", "Arriere droite"),
+    ("arriere_gauche", "Arrière gauche"),
+    ("arriere_droite", "Arrière droite"),
 )
 # Deplacer ne s'applique jamais au module principal (specs.md 2.2).
 POSITIONS_DEPLACABLES = tuple(position for position, _libelle in POSITIONS_AFFICHEES if position != "base")
@@ -93,16 +94,23 @@ _DOSSIER_ICONES = RACINE / "assets" / "station_service" / "avec_texte"
 
 # (identifiant, libelle, chemin de l'icone) - ordre d'affichage des 4 actions (specs.md 2.2).
 ACTIONS = (
-    ("reparer", "Reparer", str(_DOSSIER_ICONES / "reparer.png")),
-    ("ameliorer", "Ameliorer", str(_DOSSIER_ICONES / "ameliorer.png")),
-    ("mettre_a_jour", "Mettre a jour", str(_DOSSIER_ICONES / "mettre_a_jour.png")),
-    ("deplacer", "Deplacer", str(_DOSSIER_ICONES / "deplacer.png")),
+    ("reparer", "Réparer", str(_DOSSIER_ICONES / "reparer.png")),
+    ("ameliorer", "Améliorer", str(_DOSSIER_ICONES / "ameliorer.png")),
+    ("mettre_a_jour", "Mettre à jour", str(_DOSSIER_ICONES / "mettre_a_jour.png")),
+    ("deplacer", "Déplacer", str(_DOSSIER_ICONES / "deplacer.png")),
 )
 
+# Reparer s'applique toujours au principal, sans selection (refonte-branchement.md 2, decision 2)
 APPLICATEURS_ACTION = {
-    "reparer": reparer_module,
+    "reparer": lambda partie, _position: reparer_principal(partie),
     "ameliorer": ameliorer_module,
     "mettre_a_jour": mettre_a_jour_module,
+}
+
+
+TEXTES_REFUS = {
+    ResultatStation.ARGENT_INSUFFISANT: "Argent insuffisant !",
+    ResultatStation.INUTILE: "Déjà au maximum !",
 }
 
 
@@ -118,7 +126,6 @@ class EcranStationService(pyglet.window.Window):
     def __init__(self, partie: Partie):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.partie = partie
-        self.specs_par_id = {spec.id: spec for spec in charger_modules()}
         self.position_selectionnee: str | None = None
         # True = Deplacer arme (module source deja choisi), en attente d'un clic de destination.
         self.mode_deplacement: bool = False
@@ -204,8 +211,8 @@ class EcranStationService(pyglet.window.Window):
         if self.mode_deplacement:
             return "Cliquez l'emplacement de destination (ou recliquez le module pour annuler)."
         if self.position_selectionnee is None:
-            return "Selectionnez un module, puis une action."
-        return "Selectionnez une action pour ce module."
+            return "Sélectionnez un module, puis une action (Réparer soigne toujours le principal)."
+        return "Sélectionnez une action pour ce module."
 
     def _dessiner_instruction(self, lot: pyglet.graphics.Batch) -> list:
         return [
@@ -229,7 +236,7 @@ class EcranStationService(pyglet.window.Window):
         return x, Y_HAUT_GRILLE - HAUTEUR_CARTE_MODULE, LARGEUR_CARTE_MODULE, HAUTEUR_CARTE_MODULE
 
     def _dessiner_module(
-        self, index: int, position: str, libelle: str, etat: EtatModule | None, lot: pyglet.graphics.Batch
+        self, index: int, position: str, libelle: str, etat: ModuleNew | None, lot: pyglet.graphics.Batch
     ) -> list:
         x, y, largeur, hauteur = self._rect_module(index)
         cx = x + largeur / 2
@@ -264,7 +271,7 @@ class EcranStationService(pyglet.window.Window):
             )
             return [cadre, libelle_label, vide]
 
-        spec = self.specs_par_id[etat.module_id]
+        spec = etat
         couleur_contour = COULEUR_CONTOUR_SELECTIONNEE if (survole or selectionnee) else COULEUR_CONTOUR_CARTE
         epaisseur = 4 if selectionnee else 2
         cadre = shapes.BorderedRectangle(
@@ -295,7 +302,7 @@ class EcranStationService(pyglet.window.Window):
             batch=lot,
         )
         pv = pyglet.text.Label(
-            f"{etat.pv} / {etat.pv_max} PV",
+            f"{etat.pv_au_prochain_combat} / {etat.pv_max} PV",
             x=cx,
             y=y + 34,
             anchor_x="center",
@@ -305,7 +312,7 @@ class EcranStationService(pyglet.window.Window):
             batch=lot,
         )
         niveau_maj = pyglet.text.Label(
-            f"Mise a jour : niveau {etat.niveau_maj}",
+            f"Mise à jour : niveau {etat.niveau_maj}",
             x=cx,
             y=y + 14,
             anchor_x="center",
@@ -375,7 +382,7 @@ class EcranStationService(pyglet.window.Window):
         couleur = COULEUR_BOUTON_TERMINE_SURVOLE if self.bouton_termine_survole else COULEUR_BOUTON_TERMINE
         rectangle = shapes.Rectangle(x, y, largeur, hauteur, color=couleur, batch=lot)
         texte = pyglet.text.Label(
-            "J'ai termine",
+            "J'ai terminé",
             x=x + largeur / 2,
             y=y + hauteur / 2,
             anchor_x="center",
@@ -395,7 +402,7 @@ class EcranStationService(pyglet.window.Window):
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
         bouton_barre = barre_laterale.bouton_survole(x, y)
         if bouton_barre == "deck":
-            barre_laterale.ouvrir_survol(EcranDeck(deck_de_la_partie(self.partie)))
+            barre_laterale.ouvrir_survol(EcranDeck(deck_de_la_partie(self.partie), noms_modules(self.partie)))
             return
         if bouton_barre == "vaisseau":
             barre_laterale.ouvrir_survol(EcranVaisseau(self.partie))
@@ -420,9 +427,10 @@ class EcranStationService(pyglet.window.Window):
             if position in POSITIONS_DEPLACABLES:
                 index = next(i for i, (p, _libelle) in enumerate(POSITIONS_AFFICHEES) if p == self.position_selectionnee)
                 # deplacer_module (src/gameplay/partie.py) verifie et deduit l'Argent elle-meme -
-                # son bool de retour est la seule source de verite, jamais reverifie ici.
-                if not deplacer_module(self.partie, self.position_selectionnee, position):
-                    self._ajouter_popup_argent_insuffisant(index)
+                # son resultat est la seule source de verite, jamais reverifie ici.
+                resultat = deplacer_module(self.partie, self.position_selectionnee, position)
+                if not resultat:
+                    self._ajouter_popup_refus(index, resultat)
                 self.mode_deplacement = False
                 self.position_selectionnee = None
             return
@@ -430,6 +438,12 @@ class EcranStationService(pyglet.window.Window):
             self.position_selectionnee = position
 
     def _cliquer_action(self, identifiant: str) -> None:
+        # Meme flux que cliquerActionStation (web/app.js) : une autre action annule un Deplacement
+        # en attente de destination, et Reparer vise toujours le principal, sans selection.
+        if identifiant != "deplacer":
+            self.mode_deplacement = False
+        if identifiant == "reparer":
+            self.position_selectionnee = "base"
         if self.position_selectionnee is None:
             return
         if identifiant == "deplacer":
@@ -438,26 +452,27 @@ class EcranStationService(pyglet.window.Window):
             return
         index = next(i for i, (position, _libelle) in enumerate(POSITIONS_AFFICHEES) if position == self.position_selectionnee)
         etat = self.partie.vaisseau[self.position_selectionnee]
-        pv_avant = etat.pv
-        # reparer_module/ameliorer_module/mettre_a_jour_module (src/gameplay/partie.py) verifient
-        # et deduisent l'Argent elles-memes - leur bool de retour est la seule source de verite,
-        # jamais reverifie ici (cf. CLAUDE.md, gameplay commun aux deux interfaces).
-        if not APPLICATEURS_ACTION[identifiant](self.partie, self.position_selectionnee):
-            self._ajouter_popup_argent_insuffisant(index)
-            return
-        self._ajouter_popup_action(index, identifiant, etat, pv_avant)
-        # Deselectionne une fois l'action appliquee (demande utilisateur) : le popup ci-dessus
-        # suffit a confirmer l'effet, pas besoin de garder le module arme pour une autre action.
+        pv_avant, pv_max_avant = etat.pv, etat.pv_max
+        # reparer_principal/ameliorer_module/mettre_a_jour_module (src/gameplay/partie.py)
+        # verifient et deduisent l'Argent elles-memes - leur resultat (ResultatStation) est la
+        # seule source de verite, jamais reverifie ici (gameplay commun aux deux interfaces).
+        resultat = APPLICATEURS_ACTION[identifiant](self.partie, self.position_selectionnee)
+        # Deselectionne dans tous les cas (demande utilisateur) : le popup suffit a confirmer
+        # l'effet ou le refus, pas besoin de garder le module arme.
         self.position_selectionnee = None
+        if not resultat:
+            self._ajouter_popup_refus(index, resultat)
+            return
+        self._ajouter_popup_action(index, identifiant, etat, pv_avant, pv_max_avant)
 
-    def _ajouter_popup_action(self, index: int, identifiant: str, etat: EtatModule, pv_avant: int) -> None:
+    def _ajouter_popup_action(self, index: int, identifiant: str, etat: ModuleNew, pv_avant: int, pv_max_avant: int) -> None:
         """Popup de confirmation sur la carte du module concerne (specs.md 2.2) : PV effectivement
-        gagnes pour Reparer (plafonne a pv_max, cf. reparer_module), PV max gagnes pour Ameliorer,
+        gagnes pour Reparer (plafonne a pv_max, cf. reparer_principal), PV max gagnes pour Ameliorer,
         palier atteint pour Mettre a jour (plafonne a NIVEAU_MAJ_MAX, cf. mettre_a_jour_module)."""
         if identifiant == "reparer":
             texte = f"+{etat.pv - pv_avant} PV"
         elif identifiant == "ameliorer":
-            texte = f"+{PV_AMELIORATION} PV max"
+            texte = f"+{etat.pv_max - pv_max_avant} PV max"
         else:
             texte = f"Niveau {etat.niveau_maj}"
         couleur = COULEUR_POPUP_SOIN if identifiant in ("reparer", "ameliorer") else COULEUR_NIVEAU_MAJ
@@ -466,13 +481,15 @@ class EcranStationService(pyglet.window.Window):
         animation.demarrer()
         self.popups.append((animation, texte, couleur, x + largeur / 2, y + hauteur / 2))
 
-    def _ajouter_popup_argent_insuffisant(self, index: int) -> None:
-        """Popup d'echec sur la carte du module cible quand l'Argent est insuffisant pour l'action
-        (specs.md 2.1/2.2, COUT_ACTION_STATION_SERVICE)."""
+    def _ajouter_popup_refus(self, index: int, resultat: ResultatStation) -> None:
+        """Popup de refus sur la carte du module concerne, d'apres la raison donnee par le
+        gameplay (ResultatStation) : jamais de condition reverifiee ici. Memes textes que le web
+        (TEXTES_REFUS_STATION)."""
         x, y, largeur, hauteur = self._rect_module(index)
         animation = AnimationPopup()
         animation.demarrer()
-        self.popups.append((animation, "Argent insuffisant !", COULEUR_POPUP_DEGATS, x + largeur / 2, y + hauteur / 2))
+        texte = TEXTES_REFUS.get(resultat, "Action impossible")
+        self.popups.append((animation, texte, COULEUR_POPUP_DEGATS, x + largeur / 2, y + hauteur / 2))
 
     def _index_module_a(self, x: int, y: int) -> int | None:
         for index in range(len(POSITIONS_AFFICHEES)):

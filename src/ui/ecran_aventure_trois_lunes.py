@@ -9,9 +9,10 @@ independante comme les autres ecrans du parcours, mute directement `partie.vaiss
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.carte import Carte, regrouper_cartes
-from src.gameplay.donnees import RACINE, charger_modules, image_case_module
+from src.gameplay.carte_new import CarteNew
 from src.gameplay.partie import (
+    RACINE,
+    CartePossedee,
     PV_AMELIORATION,
     PV_REPARATION_VAISSEAU,
     Partie,
@@ -24,6 +25,7 @@ from src.ui import barre_laterale
 from src.ui.ecran_deck import EcranDeck
 from src.ui.ecran_station_service import POSITIONS_AFFICHEES
 from src.ui.ecran_vaisseau import EcranVaisseau
+from src.ui.commun import chemin_image, image_case_module, noms_modules, regrouper_cartes
 from src.ui.fenetre import HAUTEUR_FENETRE, LARGEUR_FENETRE, _sprite_ajuste, _sprite_etire
 
 FOND_TROIS_LUNES = str(RACINE / "assets" / "aventure" / "trois_lunes.png")
@@ -56,8 +58,8 @@ _ICONE_AMELIORER = str(RACINE / "assets" / "station_service" / "ameliorer.png")
 _ICONE_BRICOLER = str(RACINE / "assets" / "aventure" / "bricoler.png")
 
 CHOIX = (
-    ("reparer", _ICONE_REPARER, "Reparer le vaisseau", f"Chaque module regagne {PV_REPARATION_VAISSEAU} PV."),
-    ("ameliorer", _ICONE_AMELIORER, "Ameliorer un module", f"+{PV_AMELIORATION} PV max sur le module de votre choix."),
+    ("reparer", _ICONE_REPARER, "Réparer le vaisseau", f"Le module principal regagne {PV_REPARATION_VAISSEAU} PV."),
+    ("ameliorer", _ICONE_AMELIORER, "Améliorer un module", f"+{PV_AMELIORATION} PV max sur le module de votre choix."),
     ("bricoler", _ICONE_BRICOLER, "Bricoler", "Retirez une carte de votre deck."),
 )
 
@@ -127,8 +129,7 @@ class EcranAventureTroisLunes(pyglet.window.Window):
     def __init__(self, partie: Partie):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.partie = partie
-        self.specs_par_id = {spec.id: spec for spec in charger_modules()}
-        # Regroupe par id (carte.id), qui est aussi ce que retirer_carte attend (choix Bricoler).
+        # Une entree par carte et par module de rattachement (choix Bricoler)
         self.groupes_deck = regrouper_cartes(deck_de_la_partie(partie))
         # "choix" (3 choix initiaux) -> "choix_module" (Ameliorer) ou "choix_carte" (Bricoler),
         # ou directement "resolu" (Reparer, effet immediat sans cible a choisir) -> "resolu".
@@ -231,7 +232,7 @@ class EcranAventureTroisLunes(pyglet.window.Window):
         return elements
 
     def _dessiner_choix_module(self, lot: pyglet.graphics.Batch) -> list:
-        elements = [self._dessiner_instruction("Choisissez le module a ameliorer.", lot)]
+        elements = [self._dessiner_instruction("Choisissez le module à améliorer.", lot)]
         for index, (position, libelle) in enumerate(POSITIONS_AFFICHEES):
             elements.extend(self._dessiner_carte_module(index, position, libelle, lot))
         return elements
@@ -259,7 +260,7 @@ class EcranAventureTroisLunes(pyglet.window.Window):
             )
             return [cadre, libelle_label, vide]
 
-        spec = self.specs_par_id[etat.module_id]
+        spec = etat
         cadre = shapes.BorderedRectangle(
             x, y, largeur, hauteur, border=2, color=COULEUR_FOND_CARTE,
             border_color=COULEUR_CONTOUR_SURVOLEE if survole else COULEUR_CONTOUR_CARTE, batch=lot,
@@ -278,19 +279,19 @@ class EcranAventureTroisLunes(pyglet.window.Window):
             font_size=13, color=(*COULEUR_TEXTE, 255), batch=lot,
         )
         pv = pyglet.text.Label(
-            f"{etat.pv} / {etat.pv_max} PV", x=cx, y=y + 16, anchor_x="center", anchor_y="center",
+            f"{etat.pv_au_prochain_combat} / {etat.pv_max} PV", x=cx, y=y + 16, anchor_x="center", anchor_y="center",
             font_size=12, color=(*COULEUR_TEXTE, 255), batch=lot,
         )
         return [cadre, libelle_label, sprite, nom, pv]
 
     def _dessiner_choix_carte(self, lot: pyglet.graphics.Batch) -> list:
-        elements = [self._dessiner_instruction("Choisissez une carte a retirer de votre deck.", lot)]
+        elements = [self._dessiner_instruction("Choisissez une carte à retirer de votre deck.", lot)]
         total = len(self.groupes_deck)
         for index, (carte, quantite) in enumerate(self.groupes_deck):
             elements.extend(self._dessiner_carte_deck(index, total, carte, quantite, lot))
         return elements
 
-    def _dessiner_carte_deck(self, index: int, total: int, carte: Carte, quantite: int, lot: pyglet.graphics.Batch) -> list:
+    def _dessiner_carte_deck(self, index: int, total: int, carte: CarteNew, quantite: int, lot: pyglet.graphics.Batch) -> list:
         x, y, largeur, hauteur = _rect_carte_deck(index, total)
         survole = index == self.index_survole
         cadre = shapes.BorderedRectangle(
@@ -300,14 +301,19 @@ class EcranAventureTroisLunes(pyglet.window.Window):
         cadre.opacity = OPACITE_FOND
         cx = x + largeur / 2
         sprite = _sprite_ajuste(
-            carte.image, cx - IMAGE_DECK_TAILLE / 2, y + hauteur - 16 - IMAGE_DECK_TAILLE,
+            chemin_image(carte.image), cx - IMAGE_DECK_TAILLE / 2, y + hauteur - 16 - IMAGE_DECK_TAILLE,
             IMAGE_DECK_TAILLE, IMAGE_DECK_TAILLE, lot,
         )
         nom = pyglet.text.Label(
             carte.nom, x=cx, y=y + hauteur - 26 - IMAGE_DECK_TAILLE, anchor_x="center", anchor_y="top",
             font_size=13, color=(*COULEUR_TEXTE, 255), multiline=True, width=largeur - 16, align="center", batch=lot,
         )
-        elements = [cadre, sprite, nom]
+        # Module auquel la carte est rattachee : deux entrees du meme nom se distinguent ainsi
+        module = pyglet.text.Label(
+            noms_modules(self.partie).get(carte.exemplaire_module, ""), x=cx, y=y + 12, anchor_x="center",
+            anchor_y="center", font_size=9, color=(*COULEUR_SOUS_TITRE, 255), batch=lot,
+        )
+        elements = [cadre, sprite, nom, module]
         if quantite > 1:
             elements.append(
                 pyglet.text.Label(
@@ -356,7 +362,7 @@ class EcranAventureTroisLunes(pyglet.window.Window):
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
         bouton_barre = barre_laterale.bouton_survole(x, y)
         if bouton_barre == "deck":
-            barre_laterale.ouvrir_survol(EcranDeck(deck_de_la_partie(self.partie)))
+            barre_laterale.ouvrir_survol(EcranDeck(deck_de_la_partie(self.partie), noms_modules(self.partie)))
             return
         if bouton_barre == "vaisseau":
             barre_laterale.ouvrir_survol(EcranVaisseau(self.partie))
@@ -378,7 +384,7 @@ class EcranAventureTroisLunes(pyglet.window.Window):
         if identifiant == "reparer":
             reparer_vaisseau(self.partie)
             self.etape = "resolu"
-            self.message_resolu = f"Chaque module regagne {PV_REPARATION_VAISSEAU} PV !"
+            self.message_resolu = f"Le module principal regagne {PV_REPARATION_VAISSEAU} PV !"
         elif identifiant == "ameliorer":
             self.etape = "choix_module"
         elif identifiant == "bricoler":
@@ -393,9 +399,9 @@ class EcranAventureTroisLunes(pyglet.window.Window):
         if self.partie.vaisseau[position] is None:
             return
         ameliorer_module_aventure(self.partie, position)
-        nom = self.specs_par_id[self.partie.vaisseau[position].module_id].nom
+        nom = self.partie.vaisseau[position].nom
         self.etape = "resolu"
-        self.message_resolu = f"{nom} ameliore : +{PV_AMELIORATION} PV max !"
+        self.message_resolu = f"{nom} amélioré : +{PV_AMELIORATION} PV max !"
 
     def _cliquer_carte(self, x: int, y: int) -> None:
         total = len(self.groupes_deck)
@@ -403,9 +409,9 @@ class EcranAventureTroisLunes(pyglet.window.Window):
         if index is None:
             return
         carte, _quantite = self.groupes_deck[index]
-        retirer_carte(self.partie, carte.id)
+        retirer_carte(self.partie, CartePossedee(carte.id, carte.exemplaire_module))
         self.etape = "resolu"
-        self.message_resolu = f"Carte retiree : {carte.nom}."
+        self.message_resolu = f"Carte retirée : {carte.nom}."
 
     def _index_a(self, x: int, y: int, total: int, rect_de) -> int | None:
         for index in range(total):

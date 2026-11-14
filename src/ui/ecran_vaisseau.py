@@ -11,9 +11,10 @@ Fond de combat reutilise en placeholder (decision utilisateur), a remplacer par 
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.donnees import charger_modules, image_case_module
-from src.gameplay.partie import EtatModule, Partie
+from src.gameplay.module_new import ModuleNew
+from src.gameplay.partie import Partie
 from src.ui.animation import AnimationPopup
+from src.ui.commun import image_case_module
 from src.ui.fenetre import (
     FOND_IMAGE,
     HAUTEUR_FENETRE,
@@ -44,8 +45,8 @@ POSITIONS_AFFICHEES = (
     ("base", "Principal"),
     ("avant_gauche", "Avant gauche"),
     ("avant_droite", "Avant droite"),
-    ("arriere_gauche", "Arriere gauche"),
-    ("arriere_droite", "Arriere droite"),
+    ("arriere_gauche", "Arrière gauche"),
+    ("arriere_droite", "Arrière droite"),
 )
 
 LARGEUR_CARTE_MODULE = 200
@@ -83,7 +84,6 @@ class EcranVaisseau(pyglet.window.Window):
     def __init__(self, partie: Partie):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.partie = partie
-        self.specs_par_id = {spec.id: spec for spec in charger_modules()}
         self.bouton_retour_survole: bool = False
         self.termine: bool = False
         # Description affichee quelques secondes au clic sur un module (specs.md 5) - index dans
@@ -131,13 +131,13 @@ class EcranVaisseau(pyglet.window.Window):
         etat = self.partie.vaisseau[POSITIONS_AFFICHEES[index][0]]
         if etat is None:
             return []
-        spec = self.specs_par_id[etat.module_id]
+        spec = etat
         return _infobulle_au_curseur(
             spec.description, self.position_clic, lot, largeur=LARGEUR_INFOBULLE_MODULE, couleur_texte=COULEUR_TEXTE
         )
 
     def _dessiner_module(
-        self, index: int, libelle: str, etat: EtatModule | None, lot: pyglet.graphics.Batch
+        self, index: int, libelle: str, etat: ModuleNew | None, lot: pyglet.graphics.Batch
     ) -> list:
         x, y, largeur, hauteur = _rect_module(index)
         cx = x + largeur / 2
@@ -156,7 +156,7 @@ class EcranVaisseau(pyglet.window.Window):
             )
             return [cadre, libelle_label, vide]
 
-        spec = self.specs_par_id[etat.module_id]
+        spec = etat
         cadre = shapes.BorderedRectangle(
             x, y, largeur, hauteur, border=2, color=COULEUR_FOND_CARTE, border_color=COULEUR_CONTOUR_CARTE, batch=lot
         )
@@ -173,11 +173,11 @@ class EcranVaisseau(pyglet.window.Window):
             font_size=13, color=(*COULEUR_TEXTE, 255), batch=lot,
         )
         pv = pyglet.text.Label(
-            f"{etat.pv} / {etat.pv_max} PV", x=cx, y=y + 34, anchor_x="center", anchor_y="center",
+            f"{etat.pv_au_prochain_combat} / {etat.pv_max} PV", x=cx, y=y + 34, anchor_x="center", anchor_y="center",
             font_size=12, color=(*COULEUR_TEXTE, 255), batch=lot,
         )
         niveau_maj = pyglet.text.Label(
-            f"Mise a jour : niveau {etat.niveau_maj}", x=cx, y=y + 14, anchor_x="center", anchor_y="center",
+            f"Mise à jour : niveau {etat.niveau_maj}", x=cx, y=y + 14, anchor_x="center", anchor_y="center",
             font_size=11, color=(*COULEUR_NIVEAU_MAJ, 255), batch=lot,
         )
         return [cadre, libelle_label, sprite, nom, pv, niveau_maj]

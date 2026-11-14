@@ -85,7 +85,7 @@ _PAIRES_CASES_ENNEMIES = (("AV_G", "AR_G"), ("AV_M", "AR_M"), ("AV_D", "AR_D"))
 
 # Version du contrat entre bridge.py et web/app.js : doit etre egale a VERSION_CACHE (app.js),
 # verifie au demarrage par app.js (versionsAccordees) et par tests/test_architecture.py
-VERSION_WEB = "85"
+VERSION_WEB = "86"
 
 combat = None
 # Taille du journal deja transmise : les popups d'une action sont calcules a partir des seules
@@ -213,19 +213,12 @@ def _statuts_json(entite) -> dict:
 
 
 def _menaces(intentions) -> dict[int, list[dict]]:
-    """Attaques prevues au prochain tour ennemi, par module vise (id de l'objet module) : le
-    module le plus proche pour une attaque PROXIMITE (cible prevue par CombatNew.intentions), tous
-    les modules vivants pour TOUS_MODULES. Sert a marquer les modules vises."""
+    """Attaques prevues au prochain tour ennemi, par module vise (id de l'objet module), d'apres
+    CombatNew.modules_vises. Sert a marquer les modules vises."""
     menaces: dict[int, list[dict]] = {}
     for intention in intentions:
         for effet in intention.effets:
-            if effet.effet.cible == CibleEffetEnnemi.TOUS_MODULES:
-                vises = combat.vaisseau.modules_vivants()
-            elif effet.effet.cible == CibleEffetEnnemi.PROXIMITE and effet.cible_prevue is not None:
-                vises = [effet.cible_prevue]
-            else:
-                continue
-            for module in vises:
+            for module in combat.modules_vises(effet):
                 menaces.setdefault(id(module), []).append(
                     {"ennemi": intention.ennemi.nom, "valeur": effet.valeur, "repetitions": effet.effet.repetitions}
                 )

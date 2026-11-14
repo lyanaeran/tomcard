@@ -10,11 +10,12 @@ Fond de combat reutilise en placeholder (decision utilisateur), a remplacer par 
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.donnees import SpecModule
+from src.gameplay.module_new import ModuleNew
 from src.gameplay.partie import Partie, deck_de_la_partie
 from src.ui import barre_laterale
 from src.ui.ecran_deck import EcranDeck
 from src.ui.ecran_vaisseau import EcranVaisseau
+from src.ui.commun import chemin_image, noms_modules
 from src.ui.fenetre import FOND_IMAGE, HAUTEUR_FENETRE, LARGEUR_FENETRE, _sprite_ajuste, _sprite_etire
 
 COULEUR_FOND_CARTE = (20, 24, 34)
@@ -51,13 +52,13 @@ def _point_dans_rectangle(px: float, py: float, x: float, y: float, largeur: flo
 class EcranChoixModule(pyglet.window.Window):
     """Ecran de choix d'un nouveau module parmi 3 candidats (specs.md 2.3, Niveau 1)."""
 
-    def __init__(self, candidats: list[SpecModule], partie: Partie):
+    def __init__(self, candidats: list[ModuleNew], partie: Partie):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.candidats = candidats
         self.partie = partie
         self.index_survole: int | None = None
         self.survole_barre: str | None = None
-        self.module_choisi: SpecModule | None = None
+        self.module_choisi: ModuleNew | None = None
 
     def on_draw(self) -> None:
         self.clear()
@@ -98,7 +99,7 @@ class EcranChoixModule(pyglet.window.Window):
         elements.extend(barre_laterale.dessiner(self.partie, self.survole_barre, lot))
         return elements
 
-    def _dessiner_candidat(self, index: int, total: int, candidat: SpecModule, lot: pyglet.graphics.Batch) -> list:
+    def _dessiner_candidat(self, index: int, total: int, candidat: ModuleNew, lot: pyglet.graphics.Batch) -> list:
         """Une ligne de candidat : image carree a gauche, rectangle de texte (nom + accroche
         narrative, specs.md 5) a droite - meme convention que le choix du prochain niveau."""
         x, y, largeur, hauteur = _rect_candidat(index, total)
@@ -111,7 +112,7 @@ class EcranChoixModule(pyglet.window.Window):
             color=COULEUR_FOND_CARTE, border_color=couleur_contour, batch=lot,
         )
         cadre_image.opacity = OPACITE_FOND_CARTE
-        sprite = _sprite_ajuste(candidat.image, x, y_image, TAILLE_IMAGE, TAILLE_IMAGE, lot)
+        sprite = _sprite_ajuste(chemin_image(candidat.image), x, y_image, TAILLE_IMAGE, TAILLE_IMAGE, lot)
 
         x_texte = x + TAILLE_IMAGE + ESPACEMENT_IMAGE_TEXTE
         largeur_texte = largeur - TAILLE_IMAGE - ESPACEMENT_IMAGE_TEXTE
@@ -138,7 +139,7 @@ class EcranChoixModule(pyglet.window.Window):
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
         bouton_barre = barre_laterale.bouton_survole(x, y)
         if bouton_barre == "deck":
-            barre_laterale.ouvrir_survol(EcranDeck(deck_de_la_partie(self.partie)))
+            barre_laterale.ouvrir_survol(EcranDeck(deck_de_la_partie(self.partie), noms_modules(self.partie)))
             return
         if bouton_barre == "vaisseau":
             barre_laterale.ouvrir_survol(EcranVaisseau(self.partie))

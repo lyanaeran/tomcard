@@ -3,7 +3,7 @@
 *Document de travail, hors numérotation (cf. [specs.md](specs.md)). **Plan validé** (décisions du
 §2 et ordre des PR du §5 tranchés le 2026-11-11 ; l'affichage du §4 reste une proposition, à
 valider sur maquette). **PR 1 (gameplay) codée le 2026-11-12** (§5.1) ; **PR 2 (web) codée le
-2026-11-12, maquette en attente de validation** (§5.2) ; PR 3 et 4 à faire. Décrit comment faire passer le jeu (parcours, sauvegarde, affichage
+2026-11-12** (§5.2) ; **PR 3 (PC) codée le 2026-11-14** (§5.4) ; PR 4 à faire. Décrit comment faire passer le jeu (parcours, sauvegarde, affichage
 PC et web) sur le moteur de la refonte (`CombatNew` et les fichiers `*_new.py`), puis supprimer
 l'ancien moteur. Contexte : [refonte.md](refonte.md) ; règles du nouveau combat :
 [refonte-combat.md](refonte-combat.md).*
@@ -314,6 +314,56 @@ Laissé de côté, **à décider par l'utilisateur** :
 - Même contenu que le web, lu dans l'API de `CombatNew` ; `_essayer_de_cibler` identique à
   `cliquerCase` de la PR 2.
 - Vérification par captures d'écran (méthode de `src/ui/CLAUDE.md`).
+
+### 5.4 PR 3 codée (2026-11-14) : ce qui a été fait, écarts avec le web (à valider)
+
+`python main.py` redémarre : `main.py` et `src/ui/` ne lisent plus que le moteur de la refonte
+(vérifié par `tests/test_architecture.py`). Le mode démo (combat sans partie) est supprimé.
+
+- **Combat** (`src/ui/fenetre.py`) : même contenu que le web, lu dans `CombatNew`.
+  - Cartes en main : coût, munitions « restantes/de départ », « ×2 » si lancée plus d'une fois,
+    bandeau PERSISTANTE, carte assombrie si `peut_jouer` est faux. **Survol d'une carte** :
+    infobulle avec sa description (valeurs actuelles), ses détails et son module.
+  - Cases : pastilles PV et Bouclier, puis Incendie (orange), Renvoi (violet), Leurre (cyan,
+    « L ») seulement s'ils sont actifs ; **anneau rouge** sur un module visé au prochain tour ;
+    intention courte en bas de la case de l'ennemi ; module détruit : « Détruit · N HS ».
+  - Carte sélectionnée : **contour vert** sur les cases où elle peut être confirmée.
+  - `_essayer_de_cibler` = `cliquerCase` : une case du bon camp, valide d'après
+    `cibles_possibles` ; sinon le clic est ignoré et la carte reste sélectionnée. Une entité sur
+    deux cases (principal, Boss) : on prend celle de ses cases que le gameplay accepte.
+  - Infobulles (survol) : mêmes lignes que le tap du web (ennemi : actions du prochain tour, une
+    par ligne, sans titre ni cycle).
+  - Sous les boutons : « Tour N », Pioche, Défausse, Épuisées, Hors service (si non vide).
+  - Popups et journal calculés à partir des entrées du journal du gameplay
+    (`src/ui/textes_combat.py`, sans pyglet, testé par `tests/test_textes_combat.py`).
+  - Bouton Deck pendant un combat : toutes les cartes du combat, toutes piles confondues.
+- **Parcours** : Station (Réparer vise toujours le principal, sans sélection ; refus « Argent
+  insuffisant ! » / « Déjà au maximum ! » d'après `ResultatStation`), Astéroïdes (plus de choix de
+  module : les chocs touchent le principal), Police et Trois lunes (cartes désignées par carte et
+  module), récompenses déjà rattachées à leur module, écran Deck avec le module de chaque carte.
+- **`Ecran.RECOMPENSE`** géré dans `main.py:_aller_a` ; la partie est sauvegardée dès la fin du
+  combat (reprise sur l'écran de récompense, jamais sur le combat déjà joué).
+- **Gameplay** : `CombatNew.modules_vises(effet)` (modules touchés par un effet d'intention),
+  utilisé par le PC et par `web/bridge.py` à la place de leur propre calcul.
+- **Textes affichés du PC accentués** (« Réparer », « Astéroïdes », « DÉFAITE »…), comme le web.
+
+**Écarts avec le web, à valider (propositions)** :
+
+1. **Pas d'emoji sur PC** (pyglet ne les affiche pas sur toutes les machines) : « Bouclier 10 » au
+   lieu de « 🛡 10 » dans l'intention, popups « +6 bouclier », « bloqué (6) », « -4 (bouclier 2) »
+   au lieu de « +6 🛡 », « bloqué 🛡6 », « -4 (🛡2) » ; anneau rouge au lieu de « 🎯 » ; pastille
+   « L » au lieu de « 🎭 ». Les symboles « ⚔ », « ↩ », « ⚡ », « ★ » sont gardés.
+2. **Plusieurs popups sur la même case** : empilés vers le haut (le web les décale dans le temps).
+3. **Fin de combat** : la fenêtre de combat se ferme dès la victoire ou la défaite, pour ouvrir
+   l'écran de fin (comportement PC inchangé) ; le web affiche une bannière « Continuer ».
+
+**Vérifié** : captures sous Xvfb (Linux) de l'écran de combat (Prime à 2 ennemis, Boss, carte
+armée, clics du mauvais camp ignorés, Ligne arrière sur le Boss, module détruit, tour ennemi,
+journal, deck) et de chaque écran du parcours, avec contrôle de la partie après chaque clic ; un
+parcours de bout en bout par `main.py` (nouvelle partie → module → carte → combat gagné → quitter
+sur la récompense → reprise → combat perdu). **Non vérifié** : macOS et Windows (pas de machine) ;
+sous Linux, la police par défaut n'a pas les glyphes « ⚔ » et « ⚡ » (affichés en carré sur les
+captures), à contrôler sur le Mac.
 
 ### PR 4 — Nettoyage
 

@@ -2,9 +2,9 @@
 
 Deckbuilder roguelike (thème vaisseaux spatiaux) inspiré de Slay the Spire. Le combat et le
 **parcours** (boucle de run jusqu'au Boss du niveau 10) sont jouables. Une **refonte** des cartes,
-modules, ennemis et du combat est en cours de branchement : le parcours et la version web
-utilisent le nouveau moteur, **la version PC ne démarre pas** tant qu'elle n'est pas adaptée
-(voir `specs/refonte.md`). Conception complète : `specs/specs.md`.
+modules, ennemis et du combat est en cours de branchement : le parcours et les deux
+versions (PC et web) utilisent le nouveau moteur ; l'ancien reste à supprimer (voir
+`specs/refonte.md`). Conception complète : `specs/specs.md`.
 
 Le jeu se lance de **deux façons**, qui partagent exactement la même logique de jeu
 (`src/gameplay/`) et doivent toutes les deux rester fonctionnelles :

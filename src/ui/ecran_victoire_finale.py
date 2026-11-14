@@ -12,7 +12,8 @@ Fond de combat reutilise en placeholder (decision utilisateur), a remplacer par 
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.carte import Carte, regrouper_cartes
+from src.gameplay.carte_new import CarteNew
+from src.ui.commun import chemin_image, regrouper_cartes
 from src.ui.fenetre import (
     COULEUR_ETOILE_RARETE,
     FOND_IMAGE,
@@ -38,7 +39,7 @@ OPACITE_FOND_PANNEAU = 235
 COULEUR_BOUTON = (70, 190, 90)
 COULEUR_BOUTON_SURVOLE = (100, 210, 115)
 
-MESSAGE_FELICITATIONS = "Vous avez vaincu le Boss et termine ce run !"
+MESSAGE_FELICITATIONS = "Vous avez vaincu le Boss et terminé ce run !"
 
 LARGEUR_CARTE_DECK = 130
 HAUTEUR_CARTE_DECK = 170
@@ -83,7 +84,7 @@ class EcranVictoireFinale(pyglet.window.Window):
     """Felicitations + deck complet du joueur (meme rendu que EcranDeck) + bouton "Continuer"
     (specs.md 2.4, etape 11)."""
 
-    def __init__(self, cartes: list[Carte]):
+    def __init__(self, cartes: list[CarteNew]):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.groupes = regrouper_cartes(cartes)
         self.index_survole: int | None = None
@@ -131,7 +132,7 @@ class EcranVictoireFinale(pyglet.window.Window):
         elements.extend(self._dessiner_bouton(lot))
         return elements
 
-    def _dessiner_carte(self, index: int, carte: Carte, quantite: int, lot: pyglet.graphics.Batch) -> list:
+    def _dessiner_carte(self, index: int, carte: CarteNew, quantite: int, lot: pyglet.graphics.Batch) -> list:
         x, y, largeur, hauteur = _rect_carte(index)
         survole = index == self.index_survole
         cadre = shapes.BorderedRectangle(
@@ -147,7 +148,7 @@ class EcranVictoireFinale(pyglet.window.Window):
         cadre.opacity = OPACITE_FOND_CARTE
         cx = x + largeur / 2
 
-        sprite = _sprite_ajuste(carte.image, cx - IMAGE_TAILLE / 2, y + hauteur - 12 - IMAGE_TAILLE, IMAGE_TAILLE, IMAGE_TAILLE, lot)
+        sprite = _sprite_ajuste(chemin_image(carte.image), cx - IMAGE_TAILLE / 2, y + hauteur - 12 - IMAGE_TAILLE, IMAGE_TAILLE, IMAGE_TAILLE, lot)
 
         etoile = pyglet.text.Label(
             "★",
@@ -199,7 +200,7 @@ class EcranVictoireFinale(pyglet.window.Window):
             )
         return elements
 
-    def _dessiner_panneau_description(self, carte: Carte, lot: pyglet.graphics.Batch) -> list:
+    def _dessiner_panneau_description(self, carte: CarteNew, lot: pyglet.graphics.Batch) -> list:
         cx = LARGEUR_FENETRE / 2
         y_bas = 20
         fond = shapes.BorderedRectangle(

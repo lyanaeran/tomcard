@@ -94,3 +94,20 @@ def test_versions_web_accordees():
     version_app = re.search(r'const VERSION_CACHE = "(\d+)";', app_js).group(1)
     version_index = re.search(r'web/app\.js\?v=(\d+)', index).group(1)
     assert version_bridge == version_app == version_index
+
+
+# Fichiers de l'ancien moteur (supprimes a la PR 4 du branchement) : l'affichage PC ne les lit plus
+_ANCIEN_MOTEUR = {"carte", "combat", "module", "ennemi", "donnees", "journal", "deck", "joueur", "flotte", "vaisseau", "ciblage"}
+
+
+def test_l_affichage_pc_n_importe_plus_l_ancien_moteur():
+    """main.py et src/ui ne lisent que le moteur de la refonte (specs/refonte-branchement.md,
+    PR 3)."""
+    fautifs = []
+    for fichier in [RACINE / "main.py", *_fichiers_python(RACINE / "src" / "ui")]:
+        arbre = ast.parse(fichier.read_text(encoding="utf-8"))
+        for noeud in ast.walk(arbre):
+            if isinstance(noeud, ast.ImportFrom) and noeud.module and noeud.module.startswith("src.gameplay."):
+                if noeud.module.split(".")[-1] in _ANCIEN_MOTEUR:
+                    fautifs.append(f"{fichier.name} : {noeud.module}")
+    assert not fautifs, f"Imports de l'ancien moteur : {fautifs}"

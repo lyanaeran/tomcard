@@ -24,9 +24,9 @@ import pyglet
 pyglet.options.dpi_scaling = "stretch"
 
 from src.gameplay import deroulement
-from src.gameplay.combat import Combat, EtatCombat
+from src.gameplay.combat_new import CombatNew, EtatCombatNew
 from src.gameplay.deroulement import Ecran
-from src.gameplay.donnees import SpecModule
+from src.gameplay.module_new import ModuleNew
 from src.gameplay.parcours import TypeEtape
 from src.gameplay.partie import (
     Partie,
@@ -39,6 +39,7 @@ from src.gameplay.partie import (
     partie_en_cours,
     sauvegarder_partie,
 )
+from src.ui.commun import noms_modules
 from src.ui.ecran_accueil_joueur import EcranAccueilJoueur
 from src.ui.ecran_aventure_asteroides import EcranAventureAsteroides
 from src.ui.ecran_aventure_police import EcranAventurePolice
@@ -106,6 +107,8 @@ def _aller_a(ecran: Ecran, profil: Profil, partie: Partie) -> None:
         Ecran.PLANETE_COMMERCIALE: lambda: _ouvrir_etape(
             EcranEtapePlaceholder(TypeEtape.PLANETE_COMMERCIALE, partie), profil, partie
         ),
+        # Combat gagne dont la recompense n'a pas ete choisie (partie quittee sur cet ecran)
+        Ecran.RECOMPENSE: lambda: _ouvrir_fin_combat(profil, partie, True, deroulement.recompense_en_attente(partie)),
         Ecran.VICTOIRE_FINALE: lambda: _ouvrir_victoire_finale(profil, partie),
     }
     ouvertures[ecran]()
@@ -129,7 +132,7 @@ def _traiter_action(profil: Profil, partie: Partie | None, action: str) -> None:
         abandonner_partie(profil.id, partie)
         _ouvrir_accueil(profil)
     elif action == "voir_deck":
-        fenetre = EcranDeck(deck_de_la_partie(partie))
+        fenetre = EcranDeck(deck_de_la_partie(partie), noms_modules(partie))
         _attendre(fenetre, lambda: fenetre.termine, lambda: _ouvrir_accueil(profil))
     elif action == "nouvelle_partie":
         _aller_a(Ecran.CHOIX_MODULE, profil, nouvelle_partie())
@@ -144,17 +147,17 @@ def _ouvrir_choix_module(profil: Profil, partie: Partie) -> None:
     )
 
 
-def _ouvrir_choix_carte_module(profil: Profil, partie: Partie, spec: SpecModule) -> None:
+def _ouvrir_choix_carte_module(profil: Profil, partie: Partie, modele: ModuleNew) -> None:
     """Cartes proposees pour le module qui vient d'etre equipe ; ecran saute si rien a proposer."""
-    candidats = deroulement.choisir_module(partie, spec, random.Random())
+    candidats = deroulement.choisir_module(partie, modele, random.Random())
     if not candidats:
         _aller_a(deroulement.resoudre_carte_module(partie, None), profil, partie)
         return
-    fenetre = EcranChoixCarteModule(spec.nom, candidats, partie)
+    fenetre = EcranChoixCarteModule(modele.nom, candidats, partie)
 
     def suite() -> None:
-        id_carte = fenetre.carte_choisie.id if fenetre.carte_choisie is not None else None
-        _aller_a(deroulement.resoudre_carte_module(partie, id_carte), profil, partie)
+        # Carte choisie deja rattachee au nouveau module (None = Passer)
+        _aller_a(deroulement.resoudre_carte_module(partie, fenetre.carte_choisie), profil, partie)
 
     _attendre(fenetre, lambda: fenetre.termine, suite)
 
@@ -188,7 +191,7 @@ def _ouvrir_aventure_asteroides(profil: Profil, partie: Partie) -> None:
     _attendre(fenetre, lambda: fenetre.combat_demande or fenetre.termine, suite)
 
 
-def _ouvrir_combat(profil: Profil, partie: Partie, combat: Combat | None = None) -> None:
+def _ouvrir_combat(profil: Profil, partie: Partie, combat: CombatNew | None = None) -> None:
     """`combat` : deja construit pour un combat scripte (Aventure Asteroides) ; None pour un
     Prime/Boss normal (combat_depuis_partie)."""
     combat = combat or combat_depuis_partie(partie)
@@ -201,17 +204,19 @@ def _ouvrir_combat(profil: Profil, partie: Partie, combat: Combat | None = None)
             _ouvrir_selection_joueur()
             return
         candidats = deroulement.conclure_combat(partie, combat, random.Random())
-        _ouvrir_fin_combat(profil, partie, combat.etat == EtatCombat.VICTOIRE, candidats)
+        # Sauvegarde des la fin du combat : PV, Argent et recompense en attente sont notes, la
+        # partie reprendra sur l'ecran de recompense (jamais sur le combat deja joue)
+        sauvegarder_partie(profil.id, partie)
+        _ouvrir_fin_combat(profil, partie, combat.etat == EtatCombatNew.VICTOIRE, candidats)
 
-    _attendre(fenetre, lambda: fenetre.quitte_demandee or combat.etat != EtatCombat.EN_COURS, suite)
+    _attendre(fenetre, lambda: fenetre.quitte_demandee or not combat.en_cours, suite)
 
 
 def _ouvrir_fin_combat(profil: Profil, partie: Partie, victoire: bool, candidats: list) -> None:
     fenetre = EcranFinCombat(victoire, partie, candidats)
 
     def suite() -> None:
-        id_carte = fenetre.carte_choisie.id if fenetre.carte_choisie is not None else None
-        _aller_a(deroulement.resoudre_fin_combat(partie, victoire, id_carte), profil, partie)
+        _aller_a(deroulement.resoudre_fin_combat(partie, victoire, fenetre.carte_choisie), profil, partie)
 
     _attendre(fenetre, lambda: fenetre.termine, suite)
 

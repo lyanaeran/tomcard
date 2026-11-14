@@ -10,7 +10,8 @@ Fond de combat reutilise en placeholder (decision utilisateur), a remplacer par 
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.carte import Carte, regrouper_cartes
+from src.gameplay.carte_new import CarteNew
+from src.ui.commun import chemin_image, regrouper_cartes, texte_carte
 from src.ui.fenetre import (
     COULEUR_ETOILE_RARETE,
     FOND_IMAGE,
@@ -18,7 +19,6 @@ from src.ui.fenetre import (
     LARGEUR_FENETRE,
     _sprite_ajuste,
     _sprite_etire,
-    texte_effet_carte,
 )
 
 COULEUR_TEXTE = (255, 255, 255)
@@ -45,7 +45,7 @@ Y_HAUT_GRILLE = HAUTEUR_FENETRE - 110
 # Panneau de description fixe en bas de l'ecran (plutot qu'une infobulle flottante ancree sur
 # la carte survolee) : la grille est dense (peu d'espace entre les lignes), une infobulle
 # positionnee pres de la carte survolee chevaucherait la ligne voisine.
-HAUTEUR_PANNEAU = 70
+HAUTEUR_PANNEAU = 92
 LARGEUR_PANNEAU = 500
 
 # Bouton "Retour" en haut a droite (plutot qu'en bas, ou la place depend de la taille du deck) -
@@ -81,12 +81,14 @@ def _point_dans_rectangle(px: float, py: float, x: float, y: float, largeur: flo
 
 
 class EcranDeck(pyglet.window.Window):
-    """Grille de toutes les cartes possedees par le joueur, regroupees par modele (Carte,
-    quantite). Survol d'une carte : infobulle avec sa description complete."""
+    """Grille de cartes (deck possede, ou toutes les cartes d'un combat en cours), regroupees par
+    carte et module (carte, quantite). Survol d'une carte : sa description complete et le module
+    auquel elle est rattachee (`noms_modules` : exemplaire -> nom)."""
 
-    def __init__(self, cartes: list[Carte]):
+    def __init__(self, cartes: list[CarteNew], noms_modules: dict[str, str] | None = None):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.groupes = regrouper_cartes(cartes)
+        self.noms_modules = noms_modules or {}
         self.index_survole: int | None = None
         self.bouton_retour_survole: bool = False
         self.termine: bool = False
@@ -136,7 +138,7 @@ class EcranDeck(pyglet.window.Window):
         )
         return [rectangle, texte]
 
-    def _dessiner_carte(self, index: int, carte: Carte, quantite: int, lot: pyglet.graphics.Batch) -> list:
+    def _dessiner_carte(self, index: int, carte: CarteNew, quantite: int, lot: pyglet.graphics.Batch) -> list:
         x, y, largeur, hauteur = _rect_carte(index)
         survole = index == self.index_survole
         cadre = shapes.BorderedRectangle(
@@ -152,7 +154,7 @@ class EcranDeck(pyglet.window.Window):
         cadre.opacity = OPACITE_FOND_CARTE
         cx = x + largeur / 2
 
-        sprite = _sprite_ajuste(carte.image, cx - IMAGE_TAILLE / 2, y + hauteur - 12 - IMAGE_TAILLE, IMAGE_TAILLE, IMAGE_TAILLE, lot)
+        sprite = _sprite_ajuste(chemin_image(carte.image), cx - IMAGE_TAILLE / 2, y + hauteur - 12 - IMAGE_TAILLE, IMAGE_TAILLE, IMAGE_TAILLE, lot)
 
         etoile = pyglet.text.Label(
             "★",
@@ -204,7 +206,7 @@ class EcranDeck(pyglet.window.Window):
             )
         return elements
 
-    def _dessiner_panneau_description(self, carte: Carte, lot: pyglet.graphics.Batch) -> list:
+    def _dessiner_panneau_description(self, carte: CarteNew, lot: pyglet.graphics.Batch) -> list:
         """Description complete de la carte survolee, dans un panneau fixe en bas de l'ecran
         (evite tout chevauchement avec la grille, dense)."""
         cx = LARGEUR_FENETRE / 2
@@ -231,7 +233,7 @@ class EcranDeck(pyglet.window.Window):
             batch=lot,
         )
         description = pyglet.text.Label(
-            texte_effet_carte(carte),
+            texte_carte(carte, self.noms_modules),
             x=cx,
             y=y_bas + HAUTEUR_PANNEAU - 34,
             anchor_x="center",

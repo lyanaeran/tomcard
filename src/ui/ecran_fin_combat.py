@@ -9,12 +9,13 @@ Fond de combat reutilise en placeholder (decision utilisateur), a remplacer par 
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.carte import Carte, RareteCarte
-from src.gameplay.donnees import SpecModule
+from src.gameplay.carte_new import CarteNew
+from src.gameplay.module_new import ModuleNew
 from src.gameplay.partie import Partie, deck_de_la_partie
 from src.ui import barre_laterale
 from src.ui.ecran_deck import EcranDeck
 from src.ui.ecran_vaisseau import EcranVaisseau
+from src.ui.commun import chemin_image, noms_modules
 from src.ui.fenetre import (
     COULEUR_ETOILE_RARETE,
     FOND_IMAGE,
@@ -36,8 +37,8 @@ COULEUR_BOUTON_PASSER = (60, 66, 82)
 COULEUR_CONTOUR_BOUTON_PASSER = (140, 150, 170)
 OPACITE_FOND_CARTE = 190
 
-MESSAGE_DEFAITE = "Pas d'inquietude : vos restes seront recycles, rien ne se perd dans l'espace."
-INSTRUCTION_VICTOIRE = "Choisissez une carte a ajouter a votre deck, ou passez."
+MESSAGE_DEFAITE = "Pas d'inquiétude : vos restes seront recyclés, rien ne se perd dans l'espace."
+INSTRUCTION_VICTOIRE = "Choisissez une carte à ajouter à votre deck, ou passez."
 
 LARGEUR_CARTE_RECOMPENSE = 180
 HAUTEUR_IMAGE_RECOMPENSE = 100
@@ -73,7 +74,7 @@ class EcranFinCombat(pyglet.window.Window):
     recompense parmi les candidats, un par module utilise - specs.md 2.1/6)."""
 
     def __init__(
-        self, victoire: bool, partie: Partie, candidats: list[tuple[SpecModule, Carte | None]] | None = None
+        self, victoire: bool, partie: Partie, candidats: list[tuple[ModuleNew, CarteNew | None]] | None = None
     ):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.victoire = victoire
@@ -84,7 +85,7 @@ class EcranFinCombat(pyglet.window.Window):
         self.index_survole: int | None = None
         self.survole_passer = False
         self.survole_barre: str | None = None
-        self.carte_choisie: Carte | None = None
+        self.carte_choisie: CarteNew | None = None
         # True une fois que l'ecran peut etre ferme : defaite (clic n'importe ou), ou victoire
         # avec une carte choisie (ou sans aucun candidat a choisir, cf. on_mouse_press) - un seul
         # signal a surveiller par l'appelant quelle que soit la branche (specs.md 2.4).
@@ -108,7 +109,7 @@ class EcranFinCombat(pyglet.window.Window):
 
     def _dessiner_defaite(self, lot: pyglet.graphics.Batch) -> list:
         titre = pyglet.text.Label(
-            "DEFAITE",
+            "DÉFAITE",
             x=LARGEUR_FENETRE / 2,
             y=HAUTEUR_FENETRE - 120,
             anchor_x="center",
@@ -198,7 +199,7 @@ class EcranFinCombat(pyglet.window.Window):
         return [cadre, texte]
 
     def _dessiner_candidat(
-        self, index: int, total: int, spec: SpecModule, carte: Carte, lot: pyglet.graphics.Batch
+        self, index: int, total: int, spec: ModuleNew, carte: CarteNew, lot: pyglet.graphics.Batch
     ) -> list:
         x, y, largeur, hauteur = _rect_candidat(index, total)
         survole = index == self.index_survole
@@ -227,7 +228,7 @@ class EcranFinCombat(pyglet.window.Window):
         )
 
         y_image = y + hauteur - 40 - HAUTEUR_IMAGE_RECOMPENSE
-        sprite = _sprite_ajuste(carte.image, cx - HAUTEUR_IMAGE_RECOMPENSE / 2, y_image, HAUTEUR_IMAGE_RECOMPENSE, HAUTEUR_IMAGE_RECOMPENSE, lot)
+        sprite = _sprite_ajuste(chemin_image(carte.image), cx - HAUTEUR_IMAGE_RECOMPENSE / 2, y_image, HAUTEUR_IMAGE_RECOMPENSE, HAUTEUR_IMAGE_RECOMPENSE, lot)
 
         etoile = pyglet.text.Label(
             "★",
@@ -283,7 +284,7 @@ class EcranFinCombat(pyglet.window.Window):
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
         bouton_barre = barre_laterale.bouton_survole(x, y)
         if bouton_barre == "deck":
-            barre_laterale.ouvrir_survol(EcranDeck(deck_de_la_partie(self.partie)))
+            barre_laterale.ouvrir_survol(EcranDeck(deck_de_la_partie(self.partie), noms_modules(self.partie)))
             return
         if bouton_barre == "vaisseau":
             barre_laterale.ouvrir_survol(EcranVaisseau(self.partie))

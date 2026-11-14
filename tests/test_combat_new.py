@@ -32,6 +32,11 @@ def _ennemi(id_ennemi="ENM_PAT_LE_PIRATE", coefficient=1):
     return charger_ennemis_new()[id_ennemi].pour_combat(coefficient)
 
 
+def _ennemis_une_case():
+    """Un exemplaire de combat de chaque ennemi sur une seule case."""
+    return [modele.pour_combat() for modele in charger_ennemis_new().values() if modele.emplacements == 1]
+
+
 def _carte(id_carte, module="M1"):
     return CARTES[id_carte].copie(exemplaire_module=module)
 
@@ -362,6 +367,24 @@ def test_intentions_etape_courante_valeur_du_tour_et_cible_prevue():
 
     assert intention.ennemi is pat
     assert (intention.effets[0].valeur, intention.effets[0].cible_prevue) == (5, combat.vaisseau.module_d_exemplaire("M2"))
+
+
+def test_modules_vises_proximite_tous_et_aucun():
+    pat = _ennemi()
+    combat = _combat({AVANT_GAUCHE: pat})
+    (intention,) = combat.intentions()
+    assert combat.modules_vises(intention.effets[0]) == [combat.vaisseau.module_d_exemplaire("M2")]
+
+    for ennemi in _ennemis_une_case():
+        combat = _combat({AVANT_GAUCHE: ennemi})
+        for effet in combat.intentions()[0].effets:
+            vises = combat.modules_vises(effet)
+            if effet.effet.cible.name == "TOUS_MODULES":
+                assert vises == combat.vaisseau.modules_vivants()
+            elif effet.effet.cible.name == "PROXIMITE":
+                assert vises == [effet.cible_prevue]
+            else:
+                assert vises == []
 
 
 # --- Destruction et fin du combat (6, 7) ---

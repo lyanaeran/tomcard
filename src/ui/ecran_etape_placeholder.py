@@ -18,6 +18,7 @@ from src.ui import barre_laterale
 from src.ui.ecran_choix_niveau import LIBELLES_TYPE_ETAPE
 from src.ui.ecran_deck import EcranDeck
 from src.ui.ecran_vaisseau import EcranVaisseau
+from src.ui.commun import noms_modules
 from src.ui.fenetre import FOND_IMAGE, HAUTEUR_FENETRE, LARGEUR_FENETRE, _sprite_ajuste, _sprite_etire
 
 COULEUR_TEXTE = (255, 255, 255)
@@ -25,7 +26,7 @@ COULEUR_SOUS_TITRE = (200, 200, 205)
 COULEUR_BOUTON = (60, 90, 160)
 COULEUR_BOUTON_SURVOLE = (90, 130, 210)
 
-MESSAGE_CONTENU_A_VENIR = "Contenu pas encore defini pour cette etape."
+MESSAGE_CONTENU_A_VENIR = "Contenu pas encore défini pour cette étape."
 
 IMAGE_TAILLE = 240
 LARGEUR_BOUTON = 220
@@ -107,7 +108,7 @@ class EcranEtapePlaceholder(pyglet.window.Window):
         couleur = COULEUR_BOUTON_SURVOLE if self.bouton_survole else COULEUR_BOUTON
         rectangle = shapes.Rectangle(x, y, largeur, hauteur, color=couleur, batch=lot)
         texte = pyglet.text.Label(
-            "J'ai termine",
+            "J'ai terminé",
             x=x + largeur / 2,
             y=y + hauteur / 2,
             anchor_x="center",
@@ -125,7 +126,7 @@ class EcranEtapePlaceholder(pyglet.window.Window):
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
         bouton_barre = barre_laterale.bouton_survole(x, y)
         if bouton_barre == "deck":
-            barre_laterale.ouvrir_survol(EcranDeck(deck_de_la_partie(self.partie)))
+            barre_laterale.ouvrir_survol(EcranDeck(deck_de_la_partie(self.partie), noms_modules(self.partie)))
             return
         if bouton_barre == "vaisseau":
             barre_laterale.ouvrir_survol(EcranVaisseau(self.partie))

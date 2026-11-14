@@ -11,8 +11,9 @@ ecrans du parcours), a remplacer par un fond dedie.
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.donnees import charger_modules, image_case_module
-from src.gameplay.partie import EtatModule, Partie, Profil
+from src.gameplay.module_new import ModuleNew
+from src.gameplay.partie import Partie, Profil
+from src.ui.commun import image_case_module
 from src.ui.fenetre import FOND_IMAGE, HAUTEUR_FENETRE, LARGEUR_FENETRE, _sprite_ajuste, _sprite_etire
 
 COULEUR_TEXTE = (255, 255, 255)
@@ -34,8 +35,8 @@ POSITIONS_AFFICHEES = (
     ("base", "Principal"),
     ("avant_gauche", "Avant gauche"),
     ("avant_droite", "Avant droite"),
-    ("arriere_gauche", "Arriere gauche"),
-    ("arriere_droite", "Arriere droite"),
+    ("arriere_gauche", "Arrière gauche"),
+    ("arriere_droite", "Arrière droite"),
 )
 
 LARGEUR_CARTE_MODULE = 200
@@ -59,7 +60,6 @@ class EcranAccueilJoueur(pyglet.window.Window):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.profil = profil
         self.partie_active = partie_active
-        self.specs_modules = {spec.id: spec for spec in charger_modules()}
         self.index_bouton_survole: int | None = None
         self.action: str | None = None
 
@@ -117,7 +117,7 @@ class EcranAccueilJoueur(pyglet.window.Window):
         return x, Y_HAUT_GRILLE - HAUTEUR_CARTE_MODULE, LARGEUR_CARTE_MODULE, HAUTEUR_CARTE_MODULE
 
     def _dessiner_module(
-        self, index: int, libelle: str, etat: EtatModule | None, lot: pyglet.graphics.Batch
+        self, index: int, libelle: str, etat: ModuleNew | None, lot: pyglet.graphics.Batch
     ) -> list:
         x, y, largeur, hauteur = self._rect_module(index)
         cx = x + largeur / 2
@@ -148,7 +148,7 @@ class EcranAccueilJoueur(pyglet.window.Window):
             )
             return [cadre, libelle_label, vide]
 
-        spec = self.specs_modules[etat.module_id]
+        spec = etat
         cadre = shapes.BorderedRectangle(
             x, y, largeur, hauteur, border=2, color=COULEUR_FOND_CARTE, border_color=COULEUR_CONTOUR_CARTE, batch=lot
         )
@@ -177,7 +177,7 @@ class EcranAccueilJoueur(pyglet.window.Window):
             batch=lot,
         )
         pv = pyglet.text.Label(
-            f"{etat.pv} / {etat.pv_max} PV",
+            f"{etat.pv_au_prochain_combat} / {etat.pv_max} PV",
             x=cx,
             y=y + 34,
             anchor_x="center",
@@ -187,7 +187,7 @@ class EcranAccueilJoueur(pyglet.window.Window):
             batch=lot,
         )
         niveau_maj = pyglet.text.Label(
-            f"Mise a jour : niveau {etat.niveau_maj}",
+            f"Mise à jour : niveau {etat.niveau_maj}",
             x=cx,
             y=y + 14,
             anchor_x="center",

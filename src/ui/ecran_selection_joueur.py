@@ -11,7 +11,7 @@ import pyglet
 from pyglet import shapes
 from pyglet.window import key
 
-from src.gameplay.donnees import RACINE
+from src.gameplay.partie import RACINE
 from src.gameplay.partie import Profil, creer_profil, lister_profils, supprimer_profil
 from src.ui.fenetre import (
     FOND_IMAGE,
@@ -251,7 +251,7 @@ class EcranSelectionJoueur(pyglet.window.Window):
             batch=lot,
         )
         instruction = pyglet.text.Label(
-            "Nouveau joueur : tapez un nom puis appuyez sur Entree",
+            "Nouveau joueur : tapez un nom puis appuyez sur Entrée",
             x=LARGEUR_FENETRE / 2,
             y=y - 26,
             anchor_x="center",

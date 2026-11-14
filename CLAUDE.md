@@ -8,8 +8,8 @@ et le **parcours** (boucle de run) s'enchaîne écran par écran jusqu'au Boss d
 (fichiers `*_new.py`, `config/*_new.json`) est codé et testé **à côté de l'ancien**. Son
 **branchement** se fait en 4 PR (`specs/refonte-branchement.md`) : le gameplay du parcours
 (partie, sauvegarde, déroulement, simulateur) l'utilise depuis la PR 1, la version web depuis la
-PR 2 ; l'affichage PC lit encore l'ancien combat, **la version PC ne démarre donc plus** jusqu'à la
-PR 3.
+PR 2, la version PC depuis la PR 3 ; il reste la PR 4 (suppression de l'ancien moteur, que plus
+rien n'utilise dans le jeu).
 **Lire `specs/refonte.md` en premier** : état des lieux, où est quoi, ce qui reste à faire.
 
 ## Langue
