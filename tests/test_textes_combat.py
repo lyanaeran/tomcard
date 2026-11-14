@@ -43,7 +43,7 @@ def test_menaces_le_module_vise_par_une_attaque_de_proximite():
     }
     assert attendus <= set(menaces)
     for lignes in menaces.values():
-        assert all("⚔" in ligne for ligne in lignes)
+        assert all("Attaque" in ligne for ligne in lignes)
 
 
 def test_menaces_tous_les_modules_pour_le_boss():
@@ -72,7 +72,13 @@ def test_popups_des_degats():
     assert textes_combat.popup_evenement(attaque(absorbes_bouclier=2, pv_perdus=4))[0] == "-4 (bouclier 2)"
     assert textes_combat.popup_evenement(attaque(absorbes_bouclier=6, pv_perdus=0))[0] == "bloqué (6)"
     assert textes_combat.popup_evenement(attaque(annules_leurre=6, pv_perdus=0))[0] == "annulé"
-    assert textes_combat.popup_evenement(attaque(renvoyes=6, pv_perdus=0))[0] == "↩ 6"
+    assert textes_combat.popup_evenement(attaque(renvoyes=6, pv_perdus=0))[0] == "renvoi 6"
+    # Renvoi et bouclier se partagent toute l'attaque : jamais "-0"
+    assert textes_combat.popup_evenement(attaque(renvoyes=5, absorbes_bouclier=1, pv_perdus=0))[0] == "renvoi 5 · bloqué (1)"
+    assert textes_combat.popup_evenement(attaque(annules_leurre=4, absorbes_bouclier=2, pv_perdus=0))[0] == "annulé · bloqué (2)"
+    # Reparation d'un module deja plein : pas de popup
+    assert textes_combat.popup_evenement(Evenement(NatureEvenement.REPARATION, 1, cible=object(), valeur=0, pv_restants=60)) is None
+    assert textes_combat.popup_evenement(Evenement(NatureEvenement.REPARATION, 1, cible=object(), valeur=3, pv_restants=60))[0] == "+3"
     assert textes_combat.popup_evenement(Evenement(NatureEvenement.DEBUT_TOUR, 1, valeur=1)) is None
     leurre = Evenement(NatureEvenement.STATUT_POSE, 1, cible=object(), valeur=1, statut=Statut.LEURRE)
     assert textes_combat.popup_evenement(leurre)[0] == "Leurre"

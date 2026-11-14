@@ -26,8 +26,9 @@ reporté côté web (`_essayer_de_cibler` ↔ `cliquerCase`, cf. specs.md §8.3)
   fenêtre ; tout le dessin et les clics restent en coordonnées logiques 1280x800. Un script de test
   qui crée une fenêtre sans passer par `main.py` doit faire le même réglage, sinon le dessin
   n'occupe que le quart de la fenêtre.
-- Sous Linux (Xvfb), la police par défaut n'a pas les glyphes « ⚔ » et « ⚡ » : ils sortent en
-  carré sur les captures, pas sur macOS/Windows.
+- **Pas d'emoji ni de symbole rare dans les textes** (« ⚔ », « ↩ », « 🛡 »…) : leur affichage
+  dépend de la police de la machine. Écrire des mots (`textes_combat.py`). Sous Linux (Xvfb), même
+  « ⚡ » (coût des cartes) sort en carré sur les captures.
 - macOS : Python 3.14 fait planter pyglet (segfault) ; le `.venv` utilise Python 3.13.
 
 ## Tester un changement visible (obligatoire avant de le considérer terminé)

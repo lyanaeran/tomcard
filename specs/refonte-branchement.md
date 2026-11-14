@@ -345,14 +345,19 @@ Laissé de côté, **à décider par l'utilisateur** :
   combat (reprise sur l'écran de récompense, jamais sur le combat déjà joué).
 - **Gameplay** : `CombatNew.modules_vises(effet)` (modules touchés par un effet d'intention),
   utilisé par le PC et par `web/bridge.py` à la place de leur propre calcul.
+- **Popups (PC et web, revue de la PR 68)** : une attaque qui ne fait perdre aucun PV dit ce qui
+  l'a arrêtée, même quand plusieurs protections se la partagent (« renvoi 5 · bloqué (1) » sur PC,
+  « ↩ 5 bloqué 🛡1 » sur le web, jamais « -0 ») ; une réparation de 0 PV ne donne pas de popup.
 - **Textes affichés du PC accentués** (« Réparer », « Astéroïdes », « DÉFAITE »…), comme le web.
 
 **Écarts avec le web, à valider (propositions)** :
 
-1. **Pas d'emoji sur PC** (pyglet ne les affiche pas sur toutes les machines) : « Bouclier 10 » au
-   lieu de « 🛡 10 » dans l'intention, popups « +6 bouclier », « bloqué (6) », « -4 (bouclier 2) »
-   au lieu de « +6 🛡 », « bloqué 🛡6 », « -4 (🛡2) » ; anneau rouge au lieu de « 🎯 » ; pastille
-   « L » au lieu de « 🎭 ». Les symboles « ⚔ », « ↩ », « ⚡ », « ★ » sont gardés.
+1. **Ni emoji ni symbole sur PC** (ils dépendent de la police de la machine, non vérifiable sur
+   Windows ; revue de la PR 68) : des mots à la place. Intention dans la case : « Att. 7×2 »,
+   « Att. 9 tous », « Bouclier 10 », « Renvoi 5 » ; infobulle : « Attaque 7 ×2 → Lanceur de
+   missiles », « Renvoi 5 → un allié » ; popups « +6 bouclier », « bloqué (6) »,
+   « -4 (bouclier 2) », « renvoi 5 » ; anneau rouge au lieu de « 🎯 » ; pastille « L » au lieu de
+   « 🎭 ». Restent « × », « → », et « ⚡ », « ★ » déjà utilisés par le PC avant la refonte.
 2. **Plusieurs popups sur la même case** : empilés vers le haut (le web les décale dans le temps).
 3. **Fin de combat** : la fenêtre de combat se ferme dès la victoire ou la défaite, pour ouvrir
    l'écran de fin (comportement PC inchangé) ; le web affiche une bannière « Continuer ».
@@ -362,8 +367,8 @@ armée, clics du mauvais camp ignorés, Ligne arrière sur le Boss, module détr
 journal, deck) et de chaque écran du parcours, avec contrôle de la partie après chaque clic ; un
 parcours de bout en bout par `main.py` (nouvelle partie → module → carte → combat gagné → quitter
 sur la récompense → reprise → combat perdu). **Non vérifié** : macOS et Windows (pas de machine) ;
-sous Linux, la police par défaut n'a pas les glyphes « ⚔ » et « ⚡ » (affichés en carré sur les
-captures), à contrôler sur le Mac.
+sous Linux, la police par défaut n'a pas le glyphe « ⚡ » (coût des cartes, affiché en carré sur
+les captures), déjà utilisé par le PC avant la refonte.
 
 ### PR 4 — Nettoyage
 

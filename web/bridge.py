@@ -85,7 +85,7 @@ _PAIRES_CASES_ENNEMIES = (("AV_G", "AR_G"), ("AV_M", "AR_M"), ("AV_D", "AR_D"))
 
 # Version du contrat entre bridge.py et web/app.js : doit etre egale a VERSION_CACHE (app.js),
 # verifie au demarrage par app.js (versionsAccordees) et par tests/test_architecture.py
-VERSION_WEB = "86"
+VERSION_WEB = "87"
 
 combat = None
 # Taille du journal deja transmise : les popups d'une action sont calcules a partir des seules
@@ -400,13 +400,20 @@ def _popup_evenement(evenement) -> dict | None:
             texte = f"+{evenement.valeur} {_SYMBOLES_STATUT[evenement.statut.name]}"
         couleur = {"BOUCLIER": "bouclier", "INCENDIE": "degats", "RENVOI": "debuff"}.get(evenement.statut.name, "buff")
     elif nature == NatureEvenement.REPARATION:
+        if not evenement.valeur:
+            # Reparation d'un module deja plein : rien a montrer
+            return None
         texte, couleur = f"+{evenement.valeur}", "soin"
-    elif evenement.annules_leurre and not evenement.pv_perdus and not evenement.absorbes_bouclier:
-        texte, couleur = "annulé", "bouclier"
-    elif evenement.absorbes_bouclier and not evenement.pv_perdus and not evenement.renvoyes:
-        texte, couleur = f"bloqué 🛡{evenement.absorbes_bouclier}", "bouclier"
-    elif evenement.renvoyes and not evenement.pv_perdus and not evenement.absorbes_bouclier:
-        texte, couleur = f"↩ {evenement.renvoyes}", "debuff"
+    elif not evenement.pv_perdus and (evenement.annules_leurre or evenement.renvoyes or evenement.absorbes_bouclier):
+        # Aucun PV perdu : on dit ce qui a arrete l'attaque (leurre, renvoi, bouclier, ou plusieurs)
+        morceaux = []
+        if evenement.annules_leurre:
+            morceaux.append("annulé")
+        if evenement.renvoyes:
+            morceaux.append(f"↩ {evenement.renvoyes}")
+        if evenement.absorbes_bouclier:
+            morceaux.append(f"bloqué 🛡{evenement.absorbes_bouclier}")
+        texte, couleur = " ".join(morceaux), "debuff" if evenement.renvoyes else "bouclier"
     else:
         texte = f"-{evenement.pv_perdus}"
         if evenement.absorbes_bouclier:

@@ -2,8 +2,10 @@
 Textes de l'ecran de combat PC (refonte-branchement.md 4) : mise en mots des faits fournis par le
 gameplay (CombatNew.intentions, journal, statuts, cartes). Aucune regle de jeu, aucun pyglet :
 testable sans fenetre (tests/test_textes_combat.py). Meme contenu que la version web
-(web/bridge.py:_popup_evenement, web/app.js:texteEffetEnnemi / construireLigneJournal), sans les
-emojis que pyglet n'affiche pas sur toutes les machines.
+(web/bridge.py:_popup_evenement, web/app.js:texteEffetEnnemi / construireLigneJournal), mais en
+mots : ni emoji ni symbole (epees, fleche de renvoi) qui dependent de la police de la machine.
+Seuls le signe de multiplication et la fleche simple, presents dans les polices courantes, sont
+gardes.
 """
 
 from src.gameplay.carte_new import CarteNew
@@ -45,25 +47,22 @@ COULEUR_PAR_NATURE_ENNEMI = {
     NatureEffetEnnemi.BOUCLIER: (130, 180, 255),
     NatureEffetEnnemi.RENVOI: (200, 170, 245),
 }
-_MOTS_NATURE_ENNEMI = {
-    NatureEffetEnnemi.ATTAQUE: "⚔",
+# Nom de chaque nature d'effet ennemi : version courte (dans la case) et complete (infobulle)
+_NOMS_COURTS_NATURE_ENNEMI = {
+    NatureEffetEnnemi.ATTAQUE: "Att.",
     NatureEffetEnnemi.BOUCLIER: "Bouclier",
-    NatureEffetEnnemi.RENVOI: "↩",
+    NatureEffetEnnemi.RENVOI: "Renvoi",
 }
-
-
-def _symbole(nature: NatureEffetEnnemi) -> str:
-    return _MOTS_NATURE_ENNEMI.get(nature, "?")
+_NOMS_NATURE_ENNEMI = {**_NOMS_COURTS_NATURE_ENNEMI, NatureEffetEnnemi.ATTAQUE: "Attaque"}
 
 
 def texte_intention_court(intention: IntentionEffet) -> str:
-    """Dans la case de l'ennemi : symbole de la nature, valeur, "x2" si repete, "tous" pour une
-    attaque de tous les modules."""
+    """Dans la case de l'ennemi : nature abregee, valeur, "x2" si repete, "tous" pour une attaque
+    de tous les modules."""
     effet = intention.effet
     repetitions = f"×{effet.repetitions}" if effet.repetitions > 1 else ""
     tous = " tous" if effet.cible == CibleEffetEnnemi.TOUS_MODULES else ""
-    espace = " " if effet.nature == NatureEffetEnnemi.BOUCLIER else ""
-    return f"{_symbole(effet.nature)}{espace}{intention.valeur}{repetitions}{tous}"
+    return f"{_NOMS_COURTS_NATURE_ENNEMI.get(effet.nature, '?')} {intention.valeur}{repetitions}{tous}"
 
 
 def texte_intention(intention: IntentionEffet) -> str:
@@ -79,8 +78,7 @@ def texte_intention(intention: IntentionEffet) -> str:
         cible = f" → {prevue.nom}" if isinstance(prevue, ModuleNew) else " → module le plus proche"
     else:
         cible = ""
-    nom = "↩ Renvoi" if effet.nature == NatureEffetEnnemi.RENVOI else _symbole(effet.nature)
-    return f"{nom} {intention.valeur}{repetitions}{cible}"
+    return f"{_NOMS_NATURE_ENNEMI.get(effet.nature, '?')} {intention.valeur}{repetitions}{cible}"
 
 
 def lignes_statuts(entite: ModuleNew | EnnemiNew) -> list[str]:
@@ -104,7 +102,7 @@ def menaces_par_module(combat: CombatNew) -> dict[int, list[str]]:
         for effet in intention.effets:
             repetitions = f" ×{effet.effet.repetitions}" if effet.effet.repetitions > 1 else ""
             for module in combat.modules_vises(effet):
-                menaces.setdefault(id(module), []).append(f"{intention.ennemi.nom} : ⚔ {effet.valeur}{repetitions}")
+                menaces.setdefault(id(module), []).append(f"{intention.ennemi.nom} : Attaque {effet.valeur}{repetitions}")
     return menaces
 
 
@@ -164,13 +162,19 @@ def popup_evenement(evenement: Evenement) -> tuple[str, tuple[int, int, int]] | 
             return "Leurre", COULEUR_LEURRE
         return f"+{evenement.valeur} {NOMS_STATUT[evenement.statut].lower()}", COULEUR_PAR_STATUT[evenement.statut]
     if evenement.nature == NatureEvenement.REPARATION:
-        return f"+{evenement.valeur}", COULEUR_SOIN
-    if evenement.annules_leurre and not evenement.pv_perdus and not evenement.absorbes_bouclier:
-        return "annulé", COULEUR_BOUCLIER
-    if evenement.absorbes_bouclier and not evenement.pv_perdus and not evenement.renvoyes:
-        return f"bloqué ({evenement.absorbes_bouclier})", COULEUR_BOUCLIER
-    if evenement.renvoyes and not evenement.pv_perdus and not evenement.absorbes_bouclier:
-        return f"↩ {evenement.renvoyes}", COULEUR_RENVOI
+        # Reparation d'un module deja plein : rien a montrer
+        return (f"+{evenement.valeur}", COULEUR_SOIN) if evenement.valeur else None
+    if not evenement.pv_perdus:
+        # Aucun PV perdu : on dit ce qui a arrete l'attaque (leurre, renvoi, bouclier, ou plusieurs)
+        morceaux = []
+        if evenement.annules_leurre:
+            morceaux.append("annulé")
+        if evenement.renvoyes:
+            morceaux.append(f"renvoi {evenement.renvoyes}")
+        if evenement.absorbes_bouclier:
+            morceaux.append(f"bloqué ({evenement.absorbes_bouclier})")
+        if morceaux:
+            return " · ".join(morceaux), COULEUR_RENVOI if evenement.renvoyes else COULEUR_BOUCLIER
     texte = f"-{evenement.pv_perdus}"
     if evenement.absorbes_bouclier:
         texte += f" (bouclier {evenement.absorbes_bouclier})"
