@@ -91,7 +91,7 @@ pirates de l'espace, vous n'avez plus le choix : vaincre ou périr ! À moins qu
   le tirage standard d'un combat Prime (grille complète, `combat_depuis_partie`). Délègue
   entièrement au pipeline Combat existant (étape 5/6 : victoire → Argent + carte, comme un Prime
   normal ; défaite → même traitement qu'un combat normal) via `main.py:_ouvrir_combat`
-  (paramètre `combat` optionnel, déjà construit par l'appelant) / `web/bridge.py:combat_aventure_asteroides_web`
+  (paramètre `combat` optionnel, déjà construit par l'appelant) / `src/web/bridge.py:combat_aventure_asteroides_web`
   (même variable globale `combat` que `continuer_partie_web`, reste du pipeline de fin de combat
   inchangé)
 - Pas de 3ᵉ choix (binaire assumé)
@@ -104,12 +104,12 @@ rechargé en interne ; l'id de la carte offerte est lu directement sur `Carte.id
 factorisée avec `combat_depuis_partie`) ; `src/ui/ecran_aventure_asteroides.py` (PC, garde une
 instance `random.Random` explicite en attribut — jamais recréée à chaque appel, cf. CLAUDE.md
 "Déterminisme du tirage aléatoire") + `main.py:_ouvrir_aventure_asteroides` ; côté web
-`web/bridge.py` (`constantes_aventure_asteroides_web` expose `DEGATS_ASTEROIDES` pour le texte des
-choix avant de les jouer, plutôt que dupliqué en dur dans `web/app.js`, cf. CLAUDE.md ;
+`src/web/bridge.py` (`constantes_aventure_asteroides_web` expose `DEGATS_ASTEROIDES` pour le texte des
+choix avant de les jouer, plutôt que dupliqué en dur dans `src/web/app.js`, cf. CLAUDE.md ;
 `subir_degats_module_asteroides_web` pour le 1er choc ; **`second_choc_asteroides_web`** pour le
 2e — sérialise le résultat de `second_choc_asteroides`, ne recalcule jamais si une carte est
 offerte ; `prendre_carte_offerte_asteroides_web` ; `combat_aventure_asteroides_web` ;
-`terminer_aventure_asteroides_web`) + `web/app.js` (`ouvrirAventureAsteroidesPartie` et fonctions
+`terminer_aventure_asteroides_web`) + `src/web/app.js` (`ouvrirAventureAsteroidesPartie` et fonctions
 associées)
 
 **Trois lunes** — **implémentée** (fond `assets/aventure/trois_lunes.png`) — "Un havre de paix au
@@ -131,11 +131,11 @@ immédiatement (pas de séquence), retour direct au Choix du prochain niveau (bo
 `src/gameplay/partie.py` (`PV_REPARATION_VAISSEAU`, `reparer_vaisseau`, `ameliorer_module_aventure`,
 `retirer_carte`) ; `src/ui/ecran_aventure_trois_lunes.py` (PC, écran à état interne `etape` : "choix"
 -> "choix_module"/"choix_carte" -> "resolu") + `main.py:_ouvrir_etape` ; côté web
-`web/bridge.py` (`constantes_aventure_trois_lunes_web` expose PV_REPARATION_VAISSEAU/PV_AMELIORATION
-pour le texte des choix avant de les jouer, plutôt que dupliqués en dur dans `web/app.js`, cf.
+`src/web/bridge.py` (`constantes_aventure_trois_lunes_web` expose PV_REPARATION_VAISSEAU/PV_AMELIORATION
+pour le texte des choix avant de les jouer, plutôt que dupliqués en dur dans `src/web/app.js`, cf.
 CLAUDE.md ; `deck_groupe_par_id_partie_web` ; `reparer_vaisseau_aventure_web` ;
 `ameliorer_module_aventure_web` ; `retirer_carte_aventure_web` ; `terminer_aventure_trois_lunes_web`)
-+ `web/app.js` (`ouvrirAventureTroisLunesPartie`/`rendreAventureTroisLunes` et les fonctions de clic
++ `src/web/app.js` (`ouvrirAventureTroisLunesPartie`/`rendreAventureTroisLunes` et les fonctions de clic
 associées)
 
 **Police** — **implémentée** (fond `assets/aventure/police.png`) — "Pas de bol, votre dernier achat
@@ -160,7 +160,7 @@ le gameplay — **`EtatAventurePolice`** (`src/gameplay/partie.py`, dataclass
 `id_carte_actuelle`/`detourner_disponible`), jamais par l'écran PC ni par des variables JS
 indépendantes : `demarrer_aventure_police` l'initialise (1er tirage), `detourner_aventure_police`
 le fait évoluer (renvoie `False` sans rien faire si "Détourner" a déjà été utilisé). PC
-(`EcranAventurePolice.etat_police`) et web (`web/bridge.py:etat_aventure_police`, variable globale
+(`EcranAventurePolice.etat_police`) et web (`src/web/bridge.py:etat_aventure_police`, variable globale
 — même principe que `combat`) gardent chacun une référence à cet état plutôt que de suivre
 `detourner_disponible` séparément (cf. CLAUDE.md, gameplay commun aux deux interfaces — décision
 initialement dupliquée indépendamment côté PC et web, corrigée après relecture).
@@ -169,13 +169,13 @@ initialement dupliquée indépendamment côté PC et web, corrigée après relec
 (`COUT_METTRE_AUX_NORMES`, `payer_mise_aux_normes`, `EtatAventurePolice`,
 `demarrer_aventure_police`, `detourner_aventure_police`) ; `src/ui/ecran_aventure_police.py` (PC,
 écran à état interne `etape` : "choix" -> "resolu", garde une instance `random.Random` explicite en
-attribut) + `main.py:_ouvrir_etape` ; côté web `web/bridge.py`
+attribut) + `main.py:_ouvrir_etape` ; côté web `src/web/bridge.py`
 (`constantes_aventure_police_web` expose `COUT_METTRE_AUX_NORMES` pour le texte du choix avant de
-le jouer, plutôt que dupliqué en dur dans `web/app.js`, cf. CLAUDE.md ;
+le jouer, plutôt que dupliqué en dur dans `src/web/app.js`, cf. CLAUDE.md ;
 `demarrer_aventure_police_web` — appelée à l'ouverture de l'écran ; `detourner_police_web` — renvoie
 aussi `succes`/`detourner_disponible`, JS ne décide jamais lui-même si "Détourner" reste possible ;
 `confiscation_police_web` — retire `etat_aventure_police.id_carte_actuelle`, plus besoin de le
 transmettre depuis JS ; `mettre_aux_normes_police_web` renvoie `{"partie": ..., "succes": bool}`,
 même convention que les actions payantes qui peuvent échouer ; `terminer_aventure_police_web`) +
-`web/app.js` (`ouvrirAventurePolicePartie`/`rendreAventurePolice` et les fonctions de clic
+`src/web/app.js` (`ouvrirAventurePolicePartie`/`rendreAventurePolice` et les fonctions de clic
 associées, qui ne font plus que refléter la dernière réponse du gameplay)

@@ -1,6 +1,6 @@
 """
-Tests de web/bridge.py (pont entre l'affichage web et src/gameplay), appele directement en Python :
-c'est le meme code que celui execute par Pyodide (web/CLAUDE.md).
+Tests de src/web/bridge.py (pont entre l'affichage web et src/gameplay), appele directement en Python :
+c'est le meme code que celui execute par Pyodide (src/web/CLAUDE.md).
 """
 
 import importlib.util
@@ -16,7 +16,7 @@ from src.gameplay.ennemi_new import charger_ennemis_new
 from src.gameplay.flotte_new import flotte_boss
 from src.gameplay.module_new import charger_modules_new
 
-FICHIER_BRIDGE = Path(__file__).resolve().parents[1] / "web" / "bridge.py"
+FICHIER_BRIDGE = Path(__file__).resolve().parents[1] / "src" / "web" / "bridge.py"
 
 
 @pytest.fixture

@@ -1,10 +1,10 @@
 # web — version navigateur / iPhone (Pyodide)
 
-Chargé automatiquement quand on travaille dans `web/`. Règles générales : `CLAUDE.md` racine.
+Chargé automatiquement quand on travaille dans `src/web/`. Règles générales : `CLAUDE.md` racine.
 
 ## Rôle
 
-`index.html` + `web/` exécutent `src/gameplay/` tel quel dans le navigateur via Pyodide.
+`index.html` + `src/web/` exécutent `src/gameplay/` tel quel dans le navigateur via Pyodide.
 `bridge.py` sérialise l'état en JSON ; `app.js`/`style.css` ne font que l'afficher — **aucune
 règle de jeu en JS**, aucun tirage `random` global (vérifié par `tests/test_architecture.py`).
 
@@ -37,7 +37,7 @@ testé en navigateur. Méthodes à combiner :
    un `CombatNew` à la main et le passer à `bridge._demarrer_combat`, puis appeler les fonctions
    exposées (`bridge.jouer_carte(index, id_case)`, `bridge.finir_tour()`...) et vérifier le JSON
    produit — c'est le même code que celui exécuté par Pyodide.
-2. **Valider la syntaxe** avec `node --check web/app.js` (si Node est disponible).
+2. **Valider la syntaxe** avec `node --check src/web/app.js` (si Node est disponible).
 3. **Essais dans un vrai navigateur** : `python -m http.server 8765` à la racine, puis
    `node outils/test_web/essais.js [dossier des captures]` (Chromium + Pyodide, iPhone 13 paysage :
    une partie réelle, des combats préparés, les écrans hors combat, la reprise d'une partie, le

@@ -23,7 +23,7 @@ pour mesurer l'équilibrage du jeu et produire une synthèse chiffrée :
 
 ## 2. Principes
 
-- **Aucune règle de jeu dans l'outil.** Comme `src/ui` et `web/` (cf. `CLAUDE.md`), l'outil ne fait
+- **Aucune règle de jeu dans l'outil.** Comme `src/ui` et `src/web/` (cf. `CLAUDE.md`), l'outil ne fait
   qu'appeler `src/gameplay/` et **décider** à la place du joueur. Il ne réimplémente ni le combat,
   ni les récompenses, ni les Aventures.
 - **Variantes de règles dans `src/gameplay`, désactivées par défaut.** Une variante (ex. bouclier
@@ -35,7 +35,7 @@ pour mesurer l'équilibrage du jeu et produire une synthèse chiffrée :
   `CLAUDE.md`). Une simulation relancée avec les mêmes graines donne exactement les mêmes résultats.
 - **Orchestration du parcours** : l'enchaînement des écrans d'une partie est décidé par
   `src/gameplay/deroulement.py` (parcours.md §2.4), partagé par le PC, le web et la simulation
-  (décision utilisateur : il était auparavant dupliqué dans `main.py` et `web/`, ce qui
+  (décision utilisateur : il était auparavant dupliqué dans `main.py` et `src/web/`, ce qui
   contredisait la règle « tout le gameplay dans `src/gameplay` »). La simulation appelle les mêmes
   fonctions de transition, sans réimplémenter l'enchaînement.
 
@@ -290,7 +290,7 @@ rédigées : `outils/simulation/synthese/analyse_AAAA-MM-JJ.md` (rapports géné
 - **Séquences internes des Aventures** (deux chocs d'Astéroïdes, Détourner puis choisir de Police)
   : jouées par l'outil en appelant les fonctions de `src/gameplay/partie.py` dans l'ordre où les
   écrans les appellent ; ces petites séquences vivent encore dans les écrans (`src/ui/`,
-  `web/app.js`), à extraire dans `src/gameplay` comme l'enchaînement du parcours si elles
+  `src/web/app.js`), à extraire dans `src/gameplay` comme l'enchaînement du parcours si elles
   deviennent plus riches.
 - **Budget par défaut** (500 simulations au plus, décision utilisateur) : 60 combats de
   validation, 90 combats isolés, 200 parties à module forcé, au plus 150 parties clonées.

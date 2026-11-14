@@ -177,11 +177,11 @@ restent le plan cible pour les 4 nouveaux modules, à concevoir dans une passe d
   - **Implémenté** en écran de fin de combat autonome (Victoire/Défaite), **relié à l'orchestration
     du parcours** (§2.4) pour une vraie partie : `src/gameplay/parcours.py`
     (`tirer_candidats_recompense` et les fonctions de tirage par palier), `src/ui/ecran_fin_combat.py`
-    (PC), `main.py:_ouvrir_fin_combat` ; côté web `web/bridge.py:conclure_combat_partie_web`/
-    `resoudre_victoire_partie_web` + `web/app.js:terminerCombatPartie`/`choisirRecompense`. Reste
+    (PC), `main.py:_ouvrir_fin_combat` ; côté web `src/web/bridge.py:conclure_combat_partie_web`/
+    `resoudre_victoire_partie_web` + `src/web/app.js:terminerCombatPartie`/`choisirRecompense`. Reste
     aussi accessible en démonstration isolée (candidats tirés depuis un vaisseau tiré au sort plutôt
-    qu'une vraie partie) via `web/app.js` (`nouvelleVictoire`/`nouvelleDefaite`, exposées sur
-    `window`) + `web/bridge.py` (`fin_combat_victoire`), utilisée quand `partieActive` est `null`.
+    qu'une vraie partie) via `src/web/app.js` (`nouvelleVictoire`/`nouvelleDefaite`, exposées sur
+    `window`) + `src/web/bridge.py` (`fin_combat_victoire`), utilisée quand `partieActive` est `null`.
     Défaite : titre rouge "DEFAITE" + message
     "Pas d'inquietude : vos restes seront recycles, rien ne se perd dans l'espace." (fond de
     combat réutilisé en placeholder, décision utilisateur, à remplacer par un fond dédié)
@@ -189,7 +189,7 @@ restent le plan cible pour les 4 nouveaux modules, à concevoir dans une passe d
     texte "Coût N") et sa description d'effet en toutes lettres, générée depuis ses données
     (type/cible/action/valeur/durée) : `texte_effet_carte()` dans `src/ui/fenetre.py` côté PC
     (réutilisable par d'autres écrans, notamment le futur écran de deck complet, §6 plus bas),
-    `texteEffetCarte()` déjà existant dans `web/app.js` côté web (réutilisé tel quel, `bridge.py`
+    `texteEffetCarte()` déjà existant dans `src/web/app.js` côté web (réutilisé tel quel, `bridge.py`
     enrichi des champs `type`/`cible`/`action`/`duree`/`valeur` par candidate)
 - **Écran "deck en entier"** : consultable depuis plusieurs endroits du parcours (pour l'instant
   uniquement depuis l'Écran de partie via "Voir le deck", §10.3 — pas encore depuis les autres
@@ -208,8 +208,8 @@ restent le plan cible pour les 4 nouveaux modules, à concevoir dans une passe d
     relié à un vrai bouton dans l'UI) : `src/ui/ecran_deck.py` (PC, grille figée de 8 colonnes,
     survol d'une carte → panneau de description fixe en bas d'écran plutôt qu'une infobulle
     ancrée sur la carte, pour éviter tout chevauchement avec la ligne voisine dans une grille
-    dense) ; `web/bridge.py` (`etat_deck`, cartes du combat en cours si actif sinon un deck de
-    démonstration tiré au sort) + `web/app.js` (`voirDeck`, exposée sur `window` — pas
+    dense) ; `src/web/bridge.py` (`etat_deck`, cartes du combat en cours si actif sinon un deck de
+    démonstration tiré au sort) + `src/web/app.js` (`voirDeck`, exposée sur `window` — pas
     d'infobulle au survol comme le reste de l'UI web, taper une carte affiche sa description
     dans un popup, même principe que `#info-carte` pour la main en combat)
 - À la Planète commerciale (§2.2), achat direct de cartes contre de l'Argent ; la disponibilité de cartes Rares/Légendaires pour un module dépend de son niveau de mise à jour (Station service, §2.2)

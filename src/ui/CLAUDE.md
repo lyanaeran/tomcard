@@ -11,7 +11,7 @@ popups, journal, `tests/test_textes_combat.py`) et `commun.py` (chemins d'images
 des cartes). L'affichage ne lit que le moteur de la refonte (`CombatNew`, `ModuleNew`,
 `CarteNew`) : cases valides, carte jouable, intentions et journal viennent du gameplay. Aucune règle de jeu ni état de session ici (cf. racine).
 
-Le web (`web/app.js`) affiche les mêmes écrans : un changement de flux d'interaction ici doit être
+Le web (`src/web/app.js`) affiche les mêmes écrans : un changement de flux d'interaction ici doit être
 reporté côté web (`_essayer_de_cibler` ↔ `cliquerCase`, cf. specs.md §8.3).
 
 ## Pièges pyglet connus

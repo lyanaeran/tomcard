@@ -4,7 +4,7 @@ compte/login, mais plusieurs profils peuvent coexister sur un meme appareil. Cha
 avoir qu'une seule partie EN_COURS a la fois (decision utilisateur).
 
 Les fonctions vers_dict/depuis_dict/vers_json/depuis_json sont pures (testables sans I/O). L'I/O
-fichier (PC uniquement, cf. web/bridge.py + web/app.js pour localStorage cote web) est regroupee en
+fichier (PC uniquement, cf. src/web/bridge.py + src/web/app.js pour localStorage cote web) est regroupee en
 bas de ce fichier.
 """
 
@@ -635,7 +635,7 @@ def sauvegarder_partie(joueur_id: str, partie: Partie) -> None:
 def marquer_terminee(partie: Partie) -> Partie:
     """Marque la partie TERMINEE (decision utilisateur : comme une defaite, gardee pour de
     futures statistiques) - fonction pure, reutilisee par abandonner_partie (I/O PC, ci-dessous)
-    et par web/bridge.py:abandonner_partie_web (I/O localStorage cote JS)."""
+    et par src/web/bridge.py:abandonner_partie_web (I/O localStorage cote JS)."""
     partie.statut = STATUT_TERMINEE
     return partie
 

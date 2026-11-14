@@ -432,7 +432,7 @@ class FenetreCombat(pyglet.window.Window):
         self.quitte_demandee: bool = False
         self.popups: list[tuple[AnimationPopup, str, tuple[int, int, int], float, float]] = []
         # Taille du journal deja affichee en popups : ceux d'une action viennent des seules
-        # entrees ajoutees depuis (meme principe que web/bridge.py:_resultat_combat)
+        # entrees ajoutees depuis (meme principe que src/web/bridge.py:_resultat_combat)
         self._taille_journal_vue = len(combat.journal)
         pyglet.clock.schedule_interval(self.update, 1 / 60.0)
 
@@ -910,7 +910,7 @@ class FenetreCombat(pyglet.window.Window):
     def _essayer_de_cibler(self, x: int, y: int) -> None:
         """Confirme la carte selectionnee sur la case cliquee, si c'est une de ses cases valides :
         ces cases sont decidees par le gameplay (CombatNew.cibles_possibles), jamais ici. Meme
-        flux que cliquerCase dans web/app.js (specs.md 8.3) : une case du bon camp, vivante, et
+        flux que cliquerCase dans src/web/app.js (specs.md 8.3) : une case du bon camp, vivante, et
         valide pour la carte ; sinon le clic est ignore et la carte reste selectionnee. Une
         entite sur deux cases (principal, Boss) : on prend celle de ses cases que le gameplay
         accepte (ex. Ligne arriere sur le Boss = sa case Arriere)."""

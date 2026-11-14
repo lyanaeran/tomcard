@@ -32,7 +32,7 @@ sections : [specs.md](specs.md).*
   de l'Électricité (ressource de combat, voir §3). **Implémenté** : 5 € galactiques par ennemi de la
   flotte affrontée (`ARGENT_PAR_ENNEMI_TUE`, `src/gameplay/partie.py:gagner_argent_combat`), appelée
   juste après `synchroniser_vaisseau_depuis_combat` (§2.2) — `main.py:_ouvrir_combat` (PC),
-  `web/bridge.py:resoudre_victoire_partie_web` (web). Compte un ennemi par case de la flotte
+  `src/web/bridge.py:resoudre_victoire_partie_web` (web). Compte un ennemi par case de la flotte
   (`Flotte.positions()`), pas de fusion des ennemis L sur 2 cases pour l'instant (§3.2/§9.1). Une
   partie démarre avec `ARGENT_DEPART` = 7 € (`nouvelle_partie`). Montants inventés faute de spec
   précise à l'origine de cette décision — à ajuster en playtest si besoin, comme les autres
@@ -87,12 +87,12 @@ de retour). Écran Station service (PC et web) : prix affiché sous chaque actio
 "Argent insuffisant !" **si l'appel de l'action correspondante renvoie `False`** — PC et web
 n'effectuent plus leur propre pré-vérification du seuil avant d'appeler l'action (le popup dépend
 uniquement du booléen déjà calculé par le gameplay, jamais d'une condition dupliquée dans
-`src/ui`/`web/app.js`, cf. CLAUDE.md, corrigé après relecture) ; Déplacer s'arme donc
+`src/ui`/`src/web/app.js`, cf. CLAUDE.md, corrigé après relecture) ; Déplacer s'arme donc
 inconditionnellement au clic sur son icône, et c'est l'appel de `deplacer_module` au clic de
 destination qui peut échouer et afficher le popup, plutôt qu'un blocage supposé à l'armement. Argent
 total affiché dans le titre de l'écran ("... - Niveau N - X €"). Côté web,
-`COUT_ACTION_STATION_SERVICE` est exposé par `web/bridge.py:cout_action_station_service_web()`
-plutôt que dupliqué en dur dans `web/app.js` (CLAUDE.md, valeur de seuil partagée — seule la
+`COUT_ACTION_STATION_SERVICE` est exposé par `src/web/bridge.py:cout_action_station_service_web()`
+plutôt que dupliqué en dur dans `src/web/app.js` (CLAUDE.md, valeur de seuil partagée — seule la
 condition de gating a été dédupliquée).
 
 - Réparer/Améliorer/Mettre à jour s'appliquent au **module principal** comme aux modules équipés.
@@ -114,7 +114,7 @@ condition de gating a été dédupliquée).
   (`src/gameplay/partie.py`) reporte les PV du `Vaisseau` de combat sur `partie.vaisseau[...]` (pas
   `pv_max`, ni le bouclier, mécanique de combat éphémère absente d'`EtatModule`) — appelée dès la fin
   d'un combat gagné, avant tout enchaînement/sauvegarde ultérieur : `main.py:_ouvrir_combat` (PC),
-  `web/bridge.py:resoudre_victoire_partie_web` (web, à partir de la variable globale `combat` encore
+  `src/web/bridge.py:resoudre_victoire_partie_web` (web, à partir de la variable globale `combat` encore
   celle du combat qui vient de se terminer à ce stade)
 
 #### Écran Station service (interface) — **implémenté**, relié à l'orchestration du parcours (§2.4)
@@ -153,9 +153,9 @@ condition de gating a été dédupliquée).
   d'accueil du joueur (§10.3) pour la même raison
 - `src/gameplay/partie.py` (`reparer_module`, `ameliorer_module`, `mettre_a_jour_module`,
   `deplacer_module`, fonctions pures partagées PC+web) ; `src/ui/ecran_station_service.py` (PC) ;
-  `main.py:_ouvrir_etape` (PC) ; côté web `web/bridge.py` (`reparer_module_web`/
+  `main.py:_ouvrir_etape` (PC) ; côté web `src/web/bridge.py` (`reparer_module_web`/
   `ameliorer_module_web`/`mettre_a_jour_module_web`/`deplacer_module_web`/
-  `terminer_station_service_web`) + `web/app.js` (`ouvrirStationServicePartie` et les fonctions
+  `terminer_station_service_web`) + `src/web/app.js` (`ouvrirStationServicePartie` et les fonctions
   `cliquerModuleStation`/`cliquerActionStation`/`terminerStationServicePartie`)
 
 ### 2.3 Structure par niveaux
@@ -170,9 +170,9 @@ remplace les pistes encore ouvertes en §2 pour la Station service et la cadence
   **Implémenté** et relié à l'orchestration du parcours (§2.4) pour une vraie partie :
   `src/gameplay/parcours.py` (tirage), `src/ui/ecran_choix_module.py` (PC),
   `main.py:_ouvrir_choix_module` (equipe le module choisi, avance le niveau, sauvegarde) ;
-  côté web `web/bridge.py:choisir_module_partie_web` + `web/app.js:ouvrirChoixModulePartie`/
+  côté web `src/web/bridge.py:choisir_module_partie_web` + `src/web/app.js:ouvrirChoixModulePartie`/
   `choisirModule`. Reste aussi accessible en démonstration isolée (candidats tirés indépendamment
-  d'une partie) via `web/app.js` (`nouveauChoixModule`, exposée sur `window`) + `web/bridge.py`
+  d'une partie) via `src/web/app.js` (`nouveauChoixModule`, exposée sur `window`) + `src/web/bridge.py`
   (`nouveau_choix_module`), utilisée quand `partieActive` est `null`. Écran présenté **empilé
   verticalement, image carrée à gauche et rectangle de texte (nom + `description`) à droite**, même
   convention que le choix du prochain niveau (§2.3 ci-dessus) et les choix d'Aventure/Station
@@ -214,7 +214,7 @@ d'implémentation entre parenthèses pour chaque écran ; le detail de chacun re
 section (référencée), cette liste ne fait que les enchaîner.
 
 **Où vit l'enchaînement (décision utilisateur)** : dans `src/gameplay/deroulement.py`, **jamais**
-dans `main.py`, `src/ui/` ou `web/`. Ce module décide de l'écran suivant (énumération `Ecran`) et
+dans `main.py`, `src/ui/` ou `src/web/`. Ce module décide de l'écran suivant (énumération `Ecran`) et
 applique les règles de chaque transition :
 
 | Fonction | Rôle |
@@ -227,7 +227,7 @@ applique les règles de chaque transition :
 | `resoudre_fin_combat` | Défaite → partie terminée, accueil ; victoire → carte ajoutée, puis victoire finale (Boss) ou niveau suivant |
 | `terminer_victoire_finale` | Partie terminée, accueil |
 
-`main.py` (`_aller_a`) et `web/app.js` (`allerA`, via `web/bridge.py` qui renvoie
+`main.py` (`_aller_a`) et `src/web/app.js` (`allerA`, via `src/web/bridge.py` qui renvoie
 `{partie, ecran}`) ne font que sauvegarder la partie et afficher l'écran renvoyé ; la simulation
 d'équilibrage (`outils/simulation/`, cf. [simulation.md](simulation.md)) appelle les mêmes
 fonctions. Tout tirage est injecté (`random.Random`) : PC et web passent un générateur non seedé,
@@ -261,9 +261,9 @@ terminé à ce stade).
   (`_dessiner_controles_combat` : Électricité, tour suivant, Quitter), via `barre_laterale.
   HAUTEUR_CONTENU` (hauteur exportée du contenu de la barre) plutôt qu'au sommet de la fenêtre en
   mode démo (`self.partie is None`).
-- Web (`web/app.js` : `actualiserBarreLaterale`/`ouvrirSurvolDeck`/`ouvrirSurvolVaisseau`) :
+- Web (`src/web/app.js` : `actualiserBarreLaterale`/`ouvrirSurvolDeck`/`ouvrirSurvolVaisseau`) :
   `#ecran-deck`/`#ecran-vaisseau` passent en `position: fixed` (classe `.ecran-survol`,
-  `web/style.css`) pour se superposer à l'écran actuellement affiché sans passer par
+  `src/web/style.css`) pour se superposer à l'écran actuellement affiché sans passer par
   `masquerTousLesEcrans()` (qui le masquerait) — même principe que côté PC, sans fenêtre
   additionnelle puisque le web n'affiche qu'un seul écran DOM visible à la fois. En Combat, un
   élément séparé `#controles-combat` (Électricité/tour suivant/Quitter) s'empile sous
@@ -288,10 +288,10 @@ terminé à ce stade).
   infobulle que le survol en combat, `fenetre.py:_infobulle_au_curseur`, §8.2) ; réutilise le minuteur `AnimationPopup` existant
   (`src/ui/animation.py`), avec une durée dédiée `DUREE_INFOBULLE_MODULE` plus longue que celle
   des popups de combat (le temps de lire la phrase) ; nécessite une boucle
-  `pyglet.clock.schedule_interval` que cet écran n'avait pas jusqu'ici. Web (`web/app.js`) : réutilise
+  `pyglet.clock.schedule_interval` que cet écran n'avait pas jusqu'ici. Web (`src/web/app.js`) : réutilise
   le panneau `position: fixed` centré déjà utilisé pour `#info-carte`/`#info-case`/`#info-carte-deck`
   (nouveau `#info-carte-vaisseau` dans `index.html`), rempli par `afficherDescriptionModuleVaisseau`
-  et effacé après le même délai via `setTimeout` ; `web/bridge.py:infos_vaisseau_web` inclut
+  et effacé après le même délai via `setTimeout` ; `src/web/bridge.py:infos_vaisseau_web` inclut
   désormais `description` par module équipé pour l'alimenter.
 
 1. **Sélection du joueur** (implémenté, §10.3) — choisir un profil existant ou en créer un →
@@ -330,8 +330,8 @@ terminé à ce stade).
    incrusté** — présentées **empilées verticalement, image à gauche et rectangle de texte (titre +
    description) à droite**, même convention que les choix d'Aventure (§2.5) et de Station service
    (§2.2), plutôt que des cartes côte à côte avec image+description empilées à l'intérieur — mise en
-   page initiale, abandonnée une fois les icônes fournies sans texte) ; `web/bridge.py`
-   (`choix_niveau_web`), `web/app.js` (`afficherChoixNiveau`/`choisirEtape`)
+   page initiale, abandonnée une fois les icônes fournies sans texte) ; `src/web/bridge.py`
+   (`choix_niveau_web`), `src/web/app.js` (`afficherChoixNiveau`/`choisirEtape`)
 4. **Choix de module, Niveau 1** (implémenté en écran autonome, §2.3, **relié à la partie**) : une
    fois un module choisi, met à jour la partie (2ᵉ emplacement du vaisseau), puis → **Choix d'une
    carte du module** (décision utilisateur, **implémenté**) : jusqu'à 3 cartes candidates tirées
@@ -341,8 +341,8 @@ terminé à ce stade).
    (bouton **Passer**, décision utilisateur — voir aussi §6) ; écran sauté directement (candidats vide, pool de ce module encore
    vide) sans action du joueur. Le niveau n'avance (1 → 2) qu'une fois ce choix résolu, puis →
    Choix du prochain niveau (étape 3). `src/ui/ecran_choix_carte_module.py` (PC),
-   `main.py:_ouvrir_choix_carte_module` ; côté web `web/bridge.py`
-   (`candidats_carte_module_web`/`resoudre_carte_module_web`) + `web/app.js`
+   `main.py:_ouvrir_choix_carte_module` ; côté web `src/web/bridge.py`
+   (`candidats_carte_module_web`/`resoudre_carte_module_web`) + `src/web/app.js`
    (`ouvrirChoixCarteModule`/`afficherChoixCarteModule`/`choisirCarteModule`/`passerCarteModule`)
 5. **Combat** (implémenté en écran indépendant, `FenetreCombat`/`#app`, **relié à l'enchaînement**) :
    une fois le combat terminé (victoire ou défaite) → Fin de combat (étape 6)
@@ -365,14 +365,14 @@ terminé à ce stade).
    au pipeline Combat (étape 5) via un combat scripté plutôt que d'avancer directement.
    `src/ui/ecran_aventure_trois_lunes.py`/`src/ui/ecran_aventure_asteroides.py`/
    `src/ui/ecran_aventure_police.py` (PC) + `main.py:_ouvrir_etape`/
-   `_ouvrir_aventure_asteroides`/`_ouvrir_aventure_police` ; côté web `web/bridge.py`
+   `_ouvrir_aventure_asteroides`/`_ouvrir_aventure_police` ; côté web `src/web/bridge.py`
    (`constantes_aventure_trois_lunes_web`/`deck_groupe_par_id_partie_web`/
    `reparer_vaisseau_aventure_web`/`ameliorer_module_aventure_web`/`retirer_carte_aventure_web`/
    `terminer_aventure_trois_lunes_web` ; `constantes_aventure_asteroides_web`/
    `subir_degats_module_asteroides_web`/`carte_offerte_asteroides_web`/
    `prendre_carte_offerte_asteroides_web`/`combat_aventure_asteroides_web`/
    `terminer_aventure_asteroides_web` ; `constantes_aventure_police_web`/`tirer_carte_police_web`/
-   `confiscation_police_web`/`mettre_aux_normes_police_web`/`terminer_aventure_police_web`) + `web/app.js`
+   `confiscation_police_web`/`mettre_aux_normes_police_web`/`terminer_aventure_police_web`) + `src/web/app.js`
    (`ouvrirAventureTroisLunesPartie`/`ouvrirAventureAsteroidesPartie`/`ouvrirAventurePolicePartie` et
    fonctions associées)
 8. **Station service** (détaillé en §2.2, **implémenté et relié à l'enchaînement**) : Réparer /
@@ -383,7 +383,7 @@ terminé à ce stade).
    (étape 3) — en attendant un vrai contenu, l'écran se limite à afficher l'icône/description déjà
    utilisées au Choix du prochain niveau avec un message "Contenu pas encore défini pour cette
    étape." `src/ui/ecran_etape_placeholder.py` (PC) + `main.py:_ouvrir_etape` ; côté web
-   `web/bridge.py` (`terminer_etape_placeholder_web`) + `web/app.js`
+   `src/web/bridge.py` (`terminer_etape_placeholder_web`) + `src/web/app.js`
    (`ouvrirEtapePlaceholderPartie`/`terminerEtapePlaceholder`)
 10. **Boss** (niveau 10, puis tous les 10 niveaux à terme — §2.3), atteint via la proposition
     unique "Combattre le Boss !" de l'étape 3 : réutilise l'écran Combat pour l'instant, pas encore
@@ -395,7 +395,7 @@ terminé à ce stade).
     petits helpers de disposition) → bouton "Continuer" marque la partie `TERMINEE` (elle était
     restée `EN_COURS` depuis la résolution de l'étape 6) → Écran de partie (étape 2).
     `src/ui/ecran_victoire_finale.py` (PC) + `main.py:_ouvrir_victoire_finale` ; côté web
-    `web/bridge.py` (`terminer_victoire_finale_web`, `resoudre_victoire_partie_web` renvoie
-    désormais `{"partie": ..., "niveau_boss": bool}` pour signaler à `web/app.js` quand ouvrir cet
-    écran plutôt que d'avancer directement) + `web/app.js` (`ouvrirVictoireFinalePartie`,
+    `src/web/bridge.py` (`terminer_victoire_finale_web`, `resoudre_victoire_partie_web` renvoie
+    désormais `{"partie": ..., "niveau_boss": bool}` pour signaler à `src/web/app.js` quand ouvrir cet
+    écran plutôt que d'avancer directement) + `src/web/app.js` (`ouvrirVictoireFinalePartie`,
     `terminerVictoireFinale`)

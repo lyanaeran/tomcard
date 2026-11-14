@@ -32,7 +32,7 @@ OPACITE_FOND_CARTE = 190
 _DOSSIER_ICONES = RACINE / "assets" / "prochain_niveau"
 
 # Icone (desormais sans texte incruste, fournie par l'utilisateur), titre et description par type
-# d'etape (specs.md 2), memes textes que le web (web/app.js).
+# d'etape (specs.md 2), memes textes que le web (src/web/app.js).
 LIBELLES_TYPE_ETAPE = {
     TypeEtape.PRIME: (str(_DOSSIER_ICONES / "prime.png"), "Prime", "Combat, contrat de chasseur de primes."),
     TypeEtape.STATION_SERVICE: (

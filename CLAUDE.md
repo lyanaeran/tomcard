@@ -2,7 +2,7 @@
 
 Deckbuilder roguelike (thème vaisseaux spatiaux) inspiré de Slay the Spire. Le combat est jouable
 et le **parcours** (boucle de run) s'enchaîne écran par écran jusqu'au Boss du niveau 10
-(specs.md §2.4), sur les deux versions : `main.py` côté PC, `web/app.js` côté web.
+(specs.md §2.4), sur les deux versions : `main.py` côté PC, `src/web/app.js` côté web.
 
 **Une refonte est en cours** (cartes, modules, ennemis, statuts, combat) : un **nouveau moteur**
 (fichiers `*_new.py`, `config/*_new.json`) est codé et testé **à côté de l'ancien**. Son
@@ -81,7 +81,7 @@ relire la section concernée.
 
 Les détails propres à chaque partie sont dans des `CLAUDE.md` chargés quand on travaille dans le
 dossier : `src/gameplay/CLAUDE.md` (compatibilité web, déterminisme du tirage aléatoire),
-`src/ui/CLAUDE.md` (pièges pyglet, méthode de test PC par capture), `web/CLAUDE.md` (Pyodide,
+`src/ui/CLAUDE.md` (pièges pyglet, méthode de test PC par capture), `src/web/CLAUDE.md` (Pyodide,
 cache-busting, méthode de test web), `outils/simulation/CLAUDE.md` (lancer les simulations, les
 deux simulateurs, les synthèses). **Les lire avant de toucher ces dossiers ou de tester.**
 
@@ -92,7 +92,7 @@ Même logique (`src/gameplay/`), deux couches d'affichage (lancement : `README.m
 
 - **PC (pyglet)** : application de bureau, `python main.py`, affichage `src/ui/` — tourne sur
   Windows comme sur macOS. Version de référence, la plus fidèle à `specs/`.
-- **Web (navigateur / iPhone)** : `index.html` + `web/`, exécute `src/gameplay/` via Pyodide.
+- **Web (navigateur / iPhone)** : `index.html` + `src/web/`, exécute `src/gameplay/` via Pyodide.
 
 Règles :
 
@@ -100,13 +100,13 @@ Règles :
 - **Le flux d'interaction (nombre de clics/taps pour jouer une carte) reste identique entre PC et
   web**, même pour les cartes « sans clic de ciblage » : sélectionner la carte puis confirmer par un
   clic/tap sur une case vivante du bon camp, jamais de résolution automatique (specs.md §8.3). Toute
-  divergence entre `src/ui/fenetre.py` (`_essayer_de_cibler`) et `web/app.js` (`cliquerCase`) est
+  divergence entre `src/ui/fenetre.py` (`_essayer_de_cibler`) et `src/web/app.js` (`cliquerCase`) est
   un bug.
 - **Tout changement est testé avant d'être considéré terminé**, pas seulement relu :
   - changement interne à `src/gameplay/` ou `config/*.json` sans impact visible → `pytest` suffit
     (même code pour les deux versions) ;
-  - changement de `src/ui/`, `web/` ou du comportement visible d'une carte/mécanique → vérification
-    sur **PC et web** avec les méthodes de `src/ui/CLAUDE.md` et `web/CLAUDE.md`.
+  - changement de `src/ui/`, `src/web/` ou du comportement visible d'une carte/mécanique → vérification
+    sur **PC et web** avec les méthodes de `src/ui/CLAUDE.md` et `src/web/CLAUDE.md`.
 
 ## Stack et commandes
 
@@ -122,26 +122,28 @@ Séparation stricte (specs.md §10) :
 - `src/gameplay/` — logique de jeu pure, sans pyglet, entièrement testable
 - `src/ui/` — tout ce qui dépend de pyglet ; `main.py` ouvre et ferme les fenêtres
 - **L'enchaînement des écrans du parcours (quel écran vient ensuite, règles de chaque transition)
-  vit dans `src/gameplay/deroulement.py`, jamais dans `main.py`, `src/ui/` ou `web/`** (consigne
-  utilisateur) : PC (`main.py:_aller_a`), web (`web/app.js:allerA`) et simulation ne font
+  vit dans `src/gameplay/deroulement.py`, jamais dans `main.py`, `src/ui/` ou `src/web/`** (consigne
+  utilisateur) : PC (`main.py:_aller_a`), web (`src/web/app.js:allerA`) et simulation ne font
   qu'afficher ou suivre l'`Ecran` qu'il renvoie
 - `outils/simulation/` — simulateurs d'équilibrage (conception : `specs/simulation.md`), qui jouent
   des combats et des parties sans affichage en appelant `src/gameplay` : un pour l'ancien moteur,
   un pour le combat de la refonte
 - `outils/tableau_*.py` — génèrent les tableaux lisibles `config/*_new.md` à partir des JSON
-- `outils/test_web/essais.js` — essais de la version web dans Chromium (cf. `web/CLAUDE.md`) ;
+- `outils/test_web/essais.js` — essais de la version web dans Chromium (cf. `src/web/CLAUDE.md`) ;
   `.github/workflows/tests.yml` lance `pytest` et la syntaxe du web à chaque PR
-- `index.html` + `web/` — version web ; `web/bridge.py` importe `src/gameplay/` sans le modifier
+- `index.html` (à la racine : c'est l'adresse servie par GitHub Pages) + `src/web/` — version web
+  (dossier déplacé de `web/` vers `src/web/` le 2026-11-14, décision utilisateur) ;
+  `src/web/bridge.py` importe `src/gameplay/` sans le modifier
 - `config/*.json` — contenu déclaratif (modules, ennemis, cartes), chargé par
-  `src/gameplay/donnees.py` (PC) et fetché directement par `web/app.js` (web)
+  `src/gameplay/donnees.py` (PC) et fetché directement par `src/web/app.js` (web)
 - `assets/` — images ; `tests/` — un fichier de test par module de `src/gameplay/` (ancien et
   `_new`), plus `test_animation.py`, `test_architecture.py`, les tests des tableaux générés et des
   simulateurs
 
-**`src/ui` et `web/` ne possèdent jamais de règle de jeu ni d'état de session** (uniquement la
+**`src/ui` et `src/web/` ne possèdent jamais de règle de jeu ni d'état de session** (uniquement la
 présentation d'un état décidé par `src/gameplay`) — précédents : le journal de combat
 (`Combat.journal`) et la résolution des Aventures Astéroïdes/Police vivent dans `src/gameplay`.
-Avant de considérer terminée une tâche qui ajoute du code à `src/ui` ou `web/`, vérifier qu'il n'y
+Avant de considérer terminée une tâche qui ajoute du code à `src/ui` ou `src/web/`, vérifier qu'il n'y
 a : aucun tirage aléatoire non injecté, aucune machine à états qui décide d'une branche métier (ex.
 « une carte est-elle offerte ? »), aucune ressource à usage limité suivie localement, aucune
 condition métier (ex. seuil d'Argent) re-vérifiée en plus de la valeur de retour d'une fonction

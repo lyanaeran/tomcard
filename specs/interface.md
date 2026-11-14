@@ -56,7 +56,7 @@ sections : [specs.md](specs.md).*
   utilisateur) : rangée du haut face aux modules du haut (FG/FD), rangée du bas face aux modules
   du bas (AG/AD), rangée du milieu face au vaisseau (module de base, au centre). PC
   (`src/ui/fenetre.py:RANGEE_Y`) : centres dérivés directement des mêmes emplacements que
-  `_rect_module` (rangée du milieu = moyenne des centres haut/bas). Web (`web/style.css`) :
+  `_rect_module` (rangée du milieu = moyenne des centres haut/bas). Web (`src/web/style.css`) :
   `.grille.grille-ennemis` définit un `row-gap` dérivé du même ratio (`--taille-case`), et un
   padding haut/bas égal (contrairement à une version antérieure, plus généreuse en haut pour la
   pastille PV/Bouclier) pour que la rangée du milieu reste centrée sur le bloc vaisseau — les deux
@@ -132,7 +132,7 @@ sections : [specs.md](specs.md).*
    `src/ui/ecran_journal.py:EcranJournal`, ouvert en survol comme Deck/Vaisseau, lit directement
    `combat.journal`) et web (`#ecran-journal-combat`, `#bouton-journal-combat`,
    `construireLigneJournal`/`construireLigne*` dans `app.js`, qui lisent `etatCourant.journal` —
-   `web/bridge.py:_evenement_json` ne fait que sérialiser `Combat.journal` en JSON dans
+   `src/web/bridge.py:_evenement_json` ne fait que sérialiser `Combat.journal` en JSON dans
    `_etat_dict()`) ne dupliquent que la mise en forme (phrases/couleurs), jamais le calcul de ce
    qui s'est produit — même précédent que `texte_effet_carte`/`texteEffetCarte`. Journal
    réinitialisé (avec le marqueur du tour 1) à chaque nouveau combat via `Combat.__init__`, jamais
