@@ -292,18 +292,20 @@ Le presse-papiers du navigateur demande une page sécurisée : c'est le cas sur 
 
 ## 10. Changements du jeu à faire avant l'outil
 
-Deux décisions changent le format des données du jeu. **À faire dans une PR à part, avant
-l'outil** (proposition), avec les tests et la mise à jour de `modules-cartes.md` :
+Deux décisions changent le format des données du jeu. **Faits le 2026-11-15** (même PR que
+l'outil), avec les tests et la mise à jour de `modules-cartes.md` §12 :
 
 1. **Module porté par la carte** : champ `"modules": [...]` dans chaque carte de
    `config/cartes.json`, rempli à partir des listes actuelles de `config/modules.json`, qui
    perdent leur champ `cartes`. Le chargement (`charger_cartes`, `charger_modules`) et la
    recherche des cartes d'un module (`parcours.py` : récompenses, choix de module) lisent le
    nouveau champ ; un module inconnu dans une carte est refusé au chargement. Les tableaux
-   générés `config/cartes.md` et `config/modules.md` suivent.
-2. **Jouable à trois valeurs** : Oui, Non, Supprimée. **Proposition de format** : des textes
-   `"oui"`, `"non"`, `"supprimee"` au lieu de `true` / `false`, pour ne pas mélanger booléens et
-   texte dans le même champ. Le jeu traite « Supprimée » comme « Non » : jamais proposée, jamais
+   générés `config/cartes.md` (nouvelle colonne Modules) et `config/modules.md` suivent. Dans le
+   code, `Module.cartes` est gardé mais **calculé** par `charger_modules` ; l'ordre des cartes
+   reste celui de `cartes.json`, identique aux anciennes listes.
+2. **Jouable à trois valeurs** : Oui, Non, Supprimée, sous forme de textes `"oui"`, `"non"`,
+   `"supprimee"` au lieu de `true` / `false` (pour ne pas mélanger booléens et texte dans le même
+   champ ; l'ancien format booléen est refusé au chargement). Le jeu traite « Supprimée » comme « Non » : jamais proposée, jamais
    jouée. Les 19 cartes actuelles passent à `"oui"`.
 
 ---

@@ -37,14 +37,11 @@ def _oui_non(valeur: bool) -> str:
 
 def tableau_markdown(fichier_json: Path = FICHIER_JSON) -> str:
     """Contenu complet de config/modules.md pour ce fichier JSON. Passe par le chargeur
-    (lecture stricte) ; une carte absente de config/cartes.json est une erreur."""
+    (lecture stricte) ; les cartes de chaque module viennent du champ `modules` des cartes."""
     modules = charger_modules(fichier_json).values()
     noms_cartes = {id_carte: carte.nom for id_carte, carte in charger_cartes().items()}
     lignes = ["| " + " | ".join(COLONNES) + " |", "|" + "|".join("---" for _ in COLONNES) + "|"]
     for module in modules:
-        inconnues = [id_carte for id_carte in module.cartes if id_carte not in noms_cartes]
-        if inconnues:
-            raise ValueError(f"Module {module.id} : cartes absentes de config/cartes.json {inconnues}")
         cartes = "<br>".join(f"{id_carte} {noms_cartes[id_carte]}" for id_carte in module.cartes)
         valeurs = [
             module.id, module.nom, _oui_non(module.principal), str(module.pv_max_base),

@@ -5,7 +5,8 @@ modules (specs.md 4). Source de verite : config/modules.json
 du branchement).
 
 Une seule classe reunit les trois niveaux d'information d'un module :
-- le MODELE (le type de module, lu dans le JSON : nom, PV de base, cartes...) ;
+- le MODELE (le type de module, lu dans le JSON : nom, PV de base... ; ses cartes sont calculees a
+  partir du champ `modules` des cartes, charger_modules) ;
 - l'EXEMPLAIRE dans la partie (identifiant "M3", emplacement, PV max ameliores...), sauvegarde ;
 - l'ETAT EN COMBAT (PV de combat, statuts : bouclier, leurre...), jamais sauvegarde.
 
@@ -23,12 +24,14 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from src.gameplay.carte import FICHIER_CARTES, charger_cartes
 from src.gameplay.statut import Encaissement, Statuts
 
 FICHIER_MODULES = Path(__file__).resolve().parents[2] / "config" / "modules.json"
 
 # Cles autorisees dans config/modules.json : une cle inconnue est refusee au chargement
-CLES_MODULE = {"id", "nom", "image", "description", "principal", "pv_max", "cartes", "jouable", "refonte"}
+# (plus de "cartes" : c'est chaque carte qui dit a quels modules elle appartient, config/cartes.json)
+CLES_MODULE = {"id", "nom", "image", "description", "principal", "pv_max", "jouable", "refonte"}
 
 
 @dataclass(eq=False)
@@ -47,7 +50,8 @@ class Module:
     description: str
     # PV max d'un exemplaire neuf, avant toute amelioration
     pv_max_base: int
-    # Ids des cartes du module (config/cartes.json), jouables ou non
+    # Ids des cartes du module, jouables ou non, dans l'ordre de config/cartes.json : calcules par
+    # charger_modules a partir du champ `modules` de chaque carte (pas lus dans modules.json)
     cartes: tuple[str, ...] = ()
     # True pour le module principal : toujours equipe, seul a garder ses PV entre deux combats
     principal: bool = False
@@ -170,7 +174,6 @@ class Module:
                 image=entree["image"],
                 description=entree["description"],
                 pv_max_base=entree["pv_max"],
-                cartes=tuple(entree.get("cartes", [])),
                 principal=entree.get("principal", False),
                 jouable=entree.get("jouable", True),
                 refonte=entree.get("refonte", False),
@@ -184,9 +187,10 @@ class Module:
             raise ValueError(f"{module} : {erreur}") from erreur
 
 
-def charger_modules(fichier: Path = FICHIER_MODULES) -> dict[str, Module]:
+def charger_modules(fichier: Path = FICHIER_MODULES, fichier_cartes: Path = FICHIER_CARTES) -> dict[str, Module]:
     """Charge config/modules.json. Renvoie un dict id de module -> modele de module ; un id
-    en double est refuse."""
+    en double est refuse. Les cartes de chaque module sont celles de `fichier_cartes` qui le
+    citent dans leur champ `modules` ; une carte qui cite un module inconnu est refusee."""
     donnees = json.loads(fichier.read_text(encoding="utf-8"))
     modules = {}
     for entree in donnees["modules"]:
@@ -196,4 +200,12 @@ def charger_modules(fichier: Path = FICHIER_MODULES) -> dict[str, Module]:
         modules[module.id] = module
     if sum(module.principal for module in modules.values()) != 1:
         raise ValueError("config/modules.json : il faut exactement un module principal")
+    cartes_par_module: dict[str, list[str]] = {id_module: [] for id_module in modules}
+    for carte in charger_cartes(fichier_cartes).values():
+        for id_module in carte.modules:
+            if id_module not in cartes_par_module:
+                raise ValueError(f"Carte {carte.id} : module inconnu {id_module!r} (absent de config/modules.json)")
+            cartes_par_module[id_module].append(carte.id)
+    for id_module, module in modules.items():
+        module.cartes = tuple(cartes_par_module[id_module])
     return modules

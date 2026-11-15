@@ -52,7 +52,8 @@ L'utilisateur conçoit le jeu ; l'agent propose, documente et code. Préférence
   `config/cartes.md`, `config/modules.md`, `config/ennemis.md`).
 - **Données de la refonte (décision utilisateur)** :
   - `config/cartes.json` est la **source de vérité des cartes** : format de la refonte
-    (`src/gameplay/carte.py:Carte`), valeurs nommées, effets, champs `jouable` et `refonte`.
+    (`src/gameplay/carte.py:Carte`), valeurs nommées, effets, `modules` (la carte dit à quels
+    modules elle appartient), `jouable` (`"oui"`, `"non"`, `"supprimee"`) et `refonte`.
     C'est là qu'on modifie une carte, puis on régénère `config/cartes.md` (tableau lisible,
     **toujours généré**, jamais modifié à la main) avec `python -m outils.tableau_cartes` ;
     `tests/test_tableau_cartes.py` échoue tant que le tableau n'est pas à jour.

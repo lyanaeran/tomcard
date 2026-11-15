@@ -5,7 +5,7 @@ Tests unitaires pour la logique du parcours (src/gameplay/parcours.py).
 import dataclasses
 import random
 
-from src.gameplay.carte import RareteCarte, charger_cartes
+from src.gameplay.carte import Jouabilite, RareteCarte, charger_cartes
 from src.gameplay.module import charger_modules
 from src.gameplay.parcours import (
     TypeAventure,
@@ -114,7 +114,8 @@ _MODELES = charger_cartes()
 CARTE_COMMUNE = dataclasses.replace(_MODELES["CRT_8"], id="TEST_C")
 CARTE_RARE = dataclasses.replace(_MODELES["CRT_15"], id="TEST_R")
 CARTE_BASE = dataclasses.replace(_MODELES["CRT_7"], id="TEST_B")
-CARTE_NON_JOUABLE = dataclasses.replace(_MODELES["CRT_8"], id="TEST_NJ", jouable=False)
+CARTE_NON_JOUABLE = dataclasses.replace(_MODELES["CRT_8"], id="TEST_NJ", jouabilite=Jouabilite.NON)
+CARTE_SUPPRIMEE = dataclasses.replace(_MODELES["CRT_8"], id="TEST_SU", jouabilite=Jouabilite.SUPPRIMEE)
 
 
 def test_tirer_carte_recompense_retombe_sur_le_palier_inferieur_si_vide():
@@ -136,6 +137,13 @@ def test_pool_module_exclut_les_cartes_base_et_non_jouables():
     cartes = {"B": CARTE_BASE, "C": CARTE_COMMUNE, "NJ": CARTE_NON_JOUABLE}
 
     assert pool_module(_lanceur_avec_cartes("B", "C", "NJ"), cartes) == [CARTE_COMMUNE]
+
+
+def test_une_carte_supprimee_n_est_jamais_proposee():
+    cartes = {"C": CARTE_COMMUNE, "SU": CARTE_SUPPRIMEE}
+
+    assert pool_module(_lanceur_avec_cartes("C", "SU"), cartes) == [CARTE_COMMUNE]
+    assert pool_toutes_cartes(cartes) == [CARTE_COMMUNE]
 
 
 def test_pool_toutes_cartes_exclut_les_cartes_base_et_non_jouables():

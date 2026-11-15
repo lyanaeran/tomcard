@@ -10,7 +10,10 @@ sections : [specs.md](specs.md). Décrit le moteur actuel (`src/gameplay/module.
 ## 4. Modules
 
 Le vaisseau démarre avec un **module principal** et en récupère d'autres au fil de l'avancée.
-Chaque module a ses propres cartes (une carte peut être commune à plusieurs modules).
+Chaque module a ses propres cartes (une carte peut être commune à plusieurs modules). **C'est la
+carte qui dit à quels modules elle appartient** : champ `modules` de `config/cartes.json` (ex.
+`"modules": ["MOD_2"]`) ; `config/modules.json` ne liste plus ses cartes (décision utilisateur,
+2026-11-15, `specs/outil-editeur-cartes.md` §10).
 
 **Données** : `config/modules.json` (source de vérité), tableau lisible **généré**
 `config/modules.md` (`python -m outils.tableau_modules`). **Deux modules jouables** pour l'instant
@@ -25,7 +28,7 @@ d'information :
 
 | Niveau | Contenu | Durée de vie |
 |---|---|---|
-| **Modèle** (le type de module) | id (`MOD_2`), nom, image, description, PV max de base, cartes, `principal`, `jouable` | lu dans le JSON, ne change jamais |
+| **Modèle** (le type de module) | id (`MOD_2`), nom, image, description, PV max de base, `principal`, `jouable` ; ses cartes, calculées à partir du champ `modules` des cartes (`charger_modules`) | lu dans le JSON, ne change jamais |
 | **Exemplaire dans la partie** | identifiant d'exemplaire (`M1` pour le principal, puis `M2`, `M3`…), emplacement, PV max (améliorations comprises), palier de mise à jour, PV (principal seulement) | sauvegardé |
 | **État en combat** | PV de combat, statuts (combat.md §3.5) | une **copie par combat** (`copie_pour_combat`), jamais sauvegardée |
 
@@ -207,8 +210,13 @@ règle systématique entre rareté et munitions (a-trancher.md §9.1).
   "degats_cible"}`, avec une portée (§12.3), une durée nommée ou un filtre (§12.5) si besoin.
 - Une **description** qui cite les valeurs entre accolades (« Inflige {degats_cible} dégâts… »),
   remplie par `Carte.description_affichee`.
-- `cout`, `rarete`, `categorie`, `cible`, `munitions`, `lancements`, `persistante`, et deux
-  booléens : `jouable` (le moteur sait l'exécuter) et `refonte` (carte revue).
+- `cout`, `rarete`, `categorie`, `cible`, `munitions`, `lancements`, `persistante`, `refonte`
+  (booléen : carte revue).
+- `modules` : liste des types de module qui proposent la carte (ex. `["MOD_1"]`) ; une carte sans
+  module n'est proposée nulle part, un module inconnu est refusé au chargement.
+- `jouable` : **trois valeurs** (décision utilisateur, 2026-11-15) : `"oui"` (proposée et jouée),
+  `"non"` (pas proposée), `"supprimee"` (retirée du jeu sans être effacée du fichier, traitée
+  comme `"non"`). L'ancien format booléen est refusé.
 - **Au chargement** : tout nom cité doit exister, toute valeur doit servir, et **toute clé
   inconnue est refusée** (coquilles détectées).
 - Chaque **exemplaire** a ses propres valeurs (`valeurs`, et `valeurs_actuelles` en combat), base

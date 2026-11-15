@@ -19,7 +19,12 @@ Principes :
 - mot-cle Persistante et rattachement a un exemplaire de module (exemplaire_module) : une carte dont
   le module est detruit part en pile Hors service, sauf si elle est Persistante
   (specs.md 3.4, 12.4) ;
-- la cible reprend le vocabulaire du registre des cartes ("Ennemi Unique", "Module Tous"...).
+- la cible reprend le vocabulaire du registre des cartes ("Ennemi Unique", "Module Tous"...) ;
+- la carte dit a quel(s) type(s) de module elle appartient (`modules`, ex. ["MOD_2"]) :
+  config/modules.json ne liste plus ses cartes, Module.cartes est calcule a partir des cartes
+  (module.py:charger_modules) ;
+- `jouabilite` a trois valeurs : oui, non, supprimee (carte retiree du jeu sans etre effacee du
+  fichier, specs/outil-editeur-cartes.md).
 """
 
 import dataclasses
@@ -42,6 +47,17 @@ class RareteCarte(Enum):
     COMMUNE = auto()
     RARE = auto()
     LEGENDAIRE = auto()
+
+
+class Jouabilite(Enum):
+    """Champ "jouable" de config/cartes.json."""
+
+    # Proposee en recompense et jouee normalement
+    OUI = "oui"
+    # Pas proposee (ex. carte en preparation)
+    NON = "non"
+    # Retiree du jeu mais gardee dans le fichier ; traitee comme NON par le jeu
+    SUPPRIMEE = "supprimee"
 
 
 class CategorieCarte(Enum):
@@ -169,7 +185,7 @@ _CAMP_PAR_PORTEE = {
 # Cles autorisees dans config/cartes.json : une cle inconnue (ex. faute de frappe "persistant")
 # est refusee au chargement plutot qu'ignoree
 CLES_CARTE = {
-    "id", "nom", "image", "rarete", "categorie", "cible", "cout", "munition", "lancements",
+    "id", "nom", "image", "rarete", "categorie", "cible", "modules", "cout", "munition", "lancements",
     "persistante", "jouable", "refonte", "description", "valeurs", "effets",
 }
 CLES_EFFET = {"nature", "valeur", "portee", "duree", "filtre"}
@@ -270,9 +286,9 @@ class Carte:
     """Une carte de la refonte. eq=False : deux exemplaires du meme modele sont distincts
     (chacun a ses propres munitions, lancements, valeurs et module de rattachement).
 
-    Le type du module n'est pas stocke sur la carte : il se lit sur l'exemplaire de module dans la
-    partie, et les cartes de chaque type de module sont listees dans config/modules.json (une carte
-    peut etre commune a plusieurs modules)."""
+    Le modele dit a quels types de module la carte appartient (`modules`, une carte pouvant etre
+    commune a plusieurs modules) ; chaque exemplaire est en plus rattache a un exemplaire de module
+    de la partie (`exemplaire_module`)."""
 
     # --- Modele : lu dans config/cartes.json, identique pour tous les exemplaires sauf `valeurs`
     # (propre a chaque exemplaire, pour pouvoir modifier les valeurs d'une seule carte) ---
@@ -300,8 +316,11 @@ class Carte:
     valeurs: dict[str, int] = field(default_factory=dict)
     # Mot-cle Persistante : reste jouable si son module est detruit (specs.md 12.4)
     persistante: bool = False
-    # True si le moteur sait executer tous les effets de la carte
-    jouable: bool = True
+    # Oui : proposee et jouee ; Non ou Supprimee : jamais proposee (cf. propriete `jouable`)
+    jouabilite: Jouabilite = Jouabilite.OUI
+    # Ids des types de module qui proposent cette carte (config/modules.json), ex. ("MOD_2",) ;
+    # vide : proposee nulle part. Verifies par module.py:charger_modules
+    modules: tuple[str, ...] = ()
     # True si la carte a ete revue dans la refonte des cartes
     refonte: bool = False
     # Nombre de fois que les effets s'appliquent quand la carte est jouee, au depart de chaque combat
@@ -326,6 +345,9 @@ class Carte:
 
     def __post_init__(self):
         self.effets = tuple(self.effets)
+        self.modules = tuple(self.modules)
+        if not all(isinstance(module, str) for module in self.modules):
+            raise ValueError(f"{self.id} : modules doit etre une liste d'ids de module")
         if self.cout < 0:
             raise ValueError(f"{self.id} : cout negatif")
         if not self.effets:
@@ -411,6 +433,11 @@ class Carte:
         """False : la carte part en pile Hors service tant que son module est detruit."""
         return self.persistante
 
+    @property
+    def jouable(self) -> bool:
+        """True si la carte peut etre proposee et jouee (jouabilite Oui)."""
+        return self.jouabilite == Jouabilite.OUI
+
     # --- Lecture JSON (format de config/cartes.json) ---
 
     @classmethod
@@ -433,7 +460,8 @@ class Carte:
                 description=entree.get("description", ""),
                 valeurs=dict(entree.get("valeurs", {})),
                 persistante=entree.get("persistante", False),
-                jouable=entree.get("jouable", True),
+                jouabilite=_jouabilite(entree.get("jouable", "oui")),
+                modules=tuple(entree.get("modules", [])),
                 refonte=entree.get("refonte", False),
                 lancements_base=entree.get("lancements", 1),
                 munitions_base=entree.get("munition"),
@@ -443,6 +471,15 @@ class Carte:
         except ValueError as erreur:
             raise ValueError(erreur if str(erreur).startswith(carte) else f"{carte} : {erreur}") from erreur
         return cls(**champs)
+
+
+def _jouabilite(valeur) -> Jouabilite:
+    """Champ "jouable" du JSON : "oui", "non" ou "supprimee" (un booleen est refuse, ancien
+    format)."""
+    try:
+        return Jouabilite(valeur)
+    except ValueError:
+        raise ValueError(f"jouable doit valoir \"oui\", \"non\" ou \"supprimee\" ({valeur!r})") from None
 
 
 def charger_cartes(fichier: Path = FICHIER_CARTES) -> dict[str, Carte]:
