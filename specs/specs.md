@@ -44,6 +44,7 @@ et les brouillons de la refonte ont été reportés dans les sections numéroté
 | [refonte-buffs-debuffs.md](refonte-buffs-debuffs.md) | Réflexion d'origine sur les buffs, debuffs et bouclier : historique, avec des **pistes non codées** (statuts à durée, boucliers à seuil) |
 | [archive-cartes-modules.md](archive-cartes-modules.md) | **Archive** : les 44 cartes et 10 modules de l'ancien moteur (anciens `config/cartes.json` et `modules.json`), en tableaux ; réserve d'idées pour revoir les autres modules, ne décrit pas le jeu actuel |
 | [simulation.md](simulation.md) | Conception des simulateurs d'équilibrage (`outils/simulation/`) : parties complètes (§11) et combats isolés (§12) |
+| [outil-editeur-cartes.md](outil-editeur-cartes.md) | **Proposition** (non codée) d'outil d'administration web / iPhone : liste des cartes, détail modifiable, sauvegarde locale, repérage des cartes modifiées, export |
 
 ## Quel fichier lire selon la tâche
 
