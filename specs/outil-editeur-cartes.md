@@ -56,23 +56,23 @@ une police de 13 à 14 points et des lignes de 32 points, une barre d'outils en 
 du tableau, on voit **9 à 10 cartes à la fois** ; le tableau défile verticalement, **jamais
 horizontalement**.
 
-### 3.2 Colonnes (décision utilisateur : 7 colonnes)
+### 3.2 Colonnes (décision utilisateur, 2026-11-15, révisée après un premier essai)
 
 | Colonne | Largeur | Contenu | Exemple |
 |---|---|---|---|
-| État | 24 | pastille (§5) | ● |
-| Nom | 160 | nom de la carte (20 caractères au plus aujourd'hui) | Laser lourd |
-| Coût | 40 | électricité | 1 |
-| Rareté | 80 | Base, Commune, Rare, Légendaire | Commune |
-| Cible | 120 | cible de la carte | Ennemi Unique |
-| Module | 110 | module(s) de la carte (§4.7) | Principal |
-| Valeurs | 200 | valeurs nommées, abrégées, tronquées | degats 12 |
+| État | 24 | pastille : modifiée ou non (§5) | ● |
+| Nom | 140 | nom de la carte | Laser lourd |
+| Coût | 48 | électricité | 1 |
+| Rareté | 84 | Base, Commune, Rare, Legendaire | Commune |
+| Catégorie | 84 | Attaque, Defense… | Attaque |
+| Module | 100 | module(s) de la carte (§4.7) | Principal |
+| Munitions | 80 | munitions, ∞ si illimitées | 3 |
+| Description | le reste (environ 200) | **description avec les valeurs remplacées** (« Inflige 12 dégâts… » et non « Inflige {degats} dégâts… »), deux lignes au plus | Inflige 12 dégâts à un ennemi unique |
 
-Total : environ **735 points**, dans les 760 disponibles. Id, image, catégorie, munitions,
-lancements, Persistante, jouable, revue, description et effets restent dans l'écran 2.
+Id, image, cible, lancements, Persistante, jouable, revue et valeurs restent dans l'écran 2.
 
 **En portrait** (402 points de large), le tableau se réduit à 4 colonnes (État, Nom, Coût,
-Valeurs) ; l'outil reste utilisable, mais le paysage est le mode prévu.
+Description) ; l'outil reste utilisable, mais le paysage est le mode prévu.
 
 ### 3.3 Barre d'outils (en haut)
 
@@ -127,19 +127,17 @@ Aperçu : « Inflige 12 dégâts à un ennemi unique »
 | | Persistante, Revue (`refonte`) | interrupteurs oui / non |
 | Texte | Description | texte sur plusieurs lignes, avec les valeurs entre accolades (`{degats}`) ; **aperçu** en dessous, valeurs remplacées |
 | Valeurs | Valeurs nommées | une ligne par valeur : nom (texte) et nombre ; boutons « + valeur » et « supprimer » |
-| Effets | un bloc par effet | voir §4.2 ; boutons « + effet » et « supprimer » |
 
-### 4.2 Les effets
+### 4.2 Les effets : pas de saisie (décision utilisateur, 2026-11-15)
 
-Chaque effet est un petit bloc :
+Les **effets** d'une carte (`effets` dans `config/cartes.json`) **ne se saisissent pas** dans
+l'outil : ils se déduisent de la description, et un effet d'un genre nouveau demande de toute
+façon du code. L'outil ne les montre pas et ne les modifie pas (sauf pour suivre le renommage d'une
+valeur nommée). Une nouvelle carte est exportée sans effet (`"effets": []`).
 
-| Champ | Saisie |
-|---|---|
-| Nature | **liste** (DEGATS, BOUCLIER, REPARATION, INCENDIE, VULNERABILITE, REDUCTION_DEGATS, ANNULATION_PROCHAINE_ATTAQUE, REDIRECTION_CIBLE, GAIN_ELECTRICITE, PIOCHE, REPETITION) ou libre, avec un libellé en clair (« Dégâts », « Bouclier »…) |
-| Valeur | **liste des valeurs nommées de la carte** ou libre ; vide pour une nature sans valeur (Leurre) |
-| Portée | **liste** (Cible, Autres ennemis, Colonne avant ennemie, Colonne arrière ennemie) |
-| Durée | liste des valeurs nommées, ou vide (seulement pour Vulnérabilité, Réduction de dégâts, Tir allié) |
-| Filtre (Répétition) | carte visée (liste des cartes, par nom et id), rareté, catégorie |
+C'est l'**agent** qui écrit ou corrige les effets **quand il intègre le fichier exporté** (§7),
+d'après la description et les valeurs. L'écran 2 le rappelle par une note quand la description a
+changé, quand la carte est nouvelle, ou quand les effets ne correspondent plus aux valeurs.
 
 ### 4.3 Listes avec valeur libre
 
@@ -156,12 +154,16 @@ dessous (« jeu : 6 »). Un petit bouton ↺ à côté du champ remet la valeur 
 ### 4.5 Validation
 
 À chaque modification, la carte est vérifiée **par le code du jeu** (`Carte.depuis_dict`, comme au
-chargement de `config/cartes.json`) :
+chargement de `config/cartes.json`), **sauf ses effets** (§4.2) : des effets qui ne correspondent
+plus aux valeurs (nouvelle valeur, valeur supprimée, nouvelle carte sans effet) **ne bloquent
+pas** l'outil, ils sont seulement signalés comme « à écrire par l'agent ». La description, elle,
+ne doit citer que des valeurs qui existent.
 
 - **Erreurs** en tête de l'écran, en rouge, en clair (clé manquante, valeur citée mais absente,
   coût négatif, portée ennemie sur une carte qui vise un module, module inconnu…).
 - Une carte en erreur **reste sauvée** (on peut finir plus tard), mais elle est marquée ⚠ dans la
-  liste et **bloque la copie** (§6.2), pour ne jamais envoyer un fichier que le jeu refuserait.
+  liste et **bloque la copie** (§6.2). Le fichier copié peut en revanche avoir des effets à
+  écrire : le jeu ne le chargera qu'après leur écriture par l'agent (§7).
 - **Aperçu** de la description avec les valeurs, calculé par le jeu.
 
 ### 4.6 Boutons et suppression
@@ -191,8 +193,8 @@ n'est proposée nulle part en jeu (signalé, mais pas une erreur).
 - **Id proposé** : le premier `CRT_n` libre (aujourd'hui `CRT_51`), modifiable.
 - **Champs pré-remplis** (proposition) : rareté Commune, catégorie Attaque, cible Ennemi Unique,
   coût 1, lancements 1, munitions illimitées, jouable Oui, revue oui, aucun module, une valeur
-  `degats` à 0 et un effet Dégâts qui l'utilise. La carte est ainsi valide dès le départ et on ne
-  fait que l'ajuster.
+  `degats` à 0 citée par la description, **aucun effet** (écrits par l'agent, §4.2). La carte est
+  ainsi valide dès le départ et on ne fait que l'ajuster.
 - Une nouvelle carte est marquée **« Nouvelle »** dans la liste.
 
 ---
@@ -251,9 +253,10 @@ Le presse-papiers du navigateur demande une page sécurisée : c'est le cas sur 
 ## 7. Intégrer un export dans le jeu
 
 1. L'utilisateur colle le fichier copié dans la conversation avec l'agent (ou l'envoie).
-2. L'agent remplace `config/cartes.json`, régénère le tableau `config/cartes.md`
+2. L'agent remplace `config/cartes.json`, **écrit ou corrige les effets** des cartes nouvelles ou
+   dont la description ou les valeurs ont changé (§4.2), régénère le tableau `config/cartes.md`
    (`python -m outils.tableau_cartes`), lance `pytest`, et signale ce qui a changé, en particulier
-   les tests qui lisent une valeur de carte.
+   les tests qui lisent une valeur de carte et les effets qui demandent du code nouveau.
 3. PR habituelle sur `devjeux`. Après le merge et le déploiement, les modifications locales de
    l'outil deviennent « Inchangées » toutes seules, puisque le jeu les contient.
 
@@ -280,13 +283,14 @@ Le presse-papiers du navigateur demande une page sécurisée : c'est le cas sur 
 
 | # | Question | Décision |
 |---|---|---|
-| 1 | Colonnes de l'écran 1 | État, Nom, Coût, Rareté, Cible, Module, Valeurs (§3.2) |
+| 1 | Colonnes de l'écran 1 | État, Nom, Coût, Rareté, Catégorie, Module, Munitions, Description avec les valeurs remplacées (§3.2 ; d'abord État, Nom, Coût, Rareté, Cible, Module, Valeurs, révisé après essai) |
 | 2 | Version PC | Web seulement pour l'éditeur ; le jeu PC a un bouton Admin qui ouvre la page web dans le navigateur (§2, §8) |
 | 3 | Bouton Admin | Visible seulement pour les joueurs thomas, tom ou lyan, quelle que soit la casse (§8) |
 | 4 | Module | Dans `cartes.json`, champ `modules` (liste) sur chaque carte ; la liste `cartes` de `modules.json` disparaît (§4.7, §10) |
 | 5 | Export | Copier le fichier `cartes.json` complet dans le presse-papiers, seulement (§6.2) |
 | 6 | Suppression | Le champ Jouable prend une troisième valeur, « Supprimée » ; la carte reste dans le fichier (§4.6, §10) |
 | 7 | Options | Tri par colonne et filtre dans la première version ; « Dupliquer » et « Tout effacer » plus tard (§11) |
+| 8 | Effets | Pas de saisie des effets : ils se déduisent de la description et sont écrits par l'agent à l'intégration (§4.2) |
 
 ---
 

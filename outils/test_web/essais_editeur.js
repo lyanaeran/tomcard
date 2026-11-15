@@ -32,6 +32,9 @@ function verifier(condition, message) {
     await page.goto(URL + "#editeur");
     await page.waitForSelector("#ecran-editeur-liste:not(.cachee)", { timeout: 180000 });
     verifier((await page.locator("#tableau-editeur tbody tr").count()) === 19, "19 cartes dans la liste");
+    const entetes = (await page.locator("#tableau-editeur th").allTextContents()).map((texte) => texte.replace(/[▲▼]/g, "").trim());
+    verifier(entetes.join("|") === "|Nom|Coût|Rareté|Catégorie|Module|Munitions|Description", `colonnes (${entetes.join("|")})`);
+    verifier((await page.locator('#tableau-editeur tr[data-id="CRT_47"] .col-description').textContent()).includes("12"), "description avec les valeurs remplacées");
     const debordement = await page.evaluate(() => {
         const c = document.getElementById("conteneur-tableau-editeur");
         return { page: document.documentElement.scrollWidth - window.innerWidth, tableau: c.scrollWidth - c.clientWidth, lignesVisibles: Math.floor(c.clientHeight / 32) };
@@ -43,6 +46,7 @@ function verifier(condition, message) {
     await page.waitForSelector("#ecran-editeur-carte:not(.cachee)");
     await page.screenshot({ path: `${captures}/2_detail.png` });
     verifier((await page.locator(".apercu-editeur").textContent()).includes("12"), "aperçu de la description");
+    verifier((await page.locator("legend", { hasText: "Effets" }).count()) === 0, "pas de saisie des effets");
     const cout = page.locator('.saisie-editeur[data-chemin=\'["cout"]\']');
     await cout.fill("2");
     await cout.blur();
@@ -98,6 +102,7 @@ function verifier(condition, message) {
     verifier(cartes.length === 20, "fichier copié : 20 cartes");
     verifier(cartes.find((c) => c.id === "CRT_47").cout === 2 && cartes.find((c) => c.id === "CRT_16").jouable === "supprimee", "fichier copié : modifications appliquées");
     verifier(cartes[19].id === "CRT_51" && cartes[19].modules[0] === "MOD_2", "fichier copié : nouvelle carte à la fin, avec son module");
+    verifier(cartes[19].effets.length === 0, "fichier copié : effets de la nouvelle carte laissés à l'agent");
     fs.writeFileSync(`${captures}/cartes_copiees.json`, texte);
 
     // Bouton Admin : seulement pour certains joueurs

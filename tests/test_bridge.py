@@ -175,7 +175,7 @@ def test_editeur_reference_cartes_du_fichier_et_listes_du_jeu(bridge):
     assert [choix["valeur"] for choix in listes["jouable"]] == ["oui", "non", "supprimee"]
     assert [choix["valeur"] for choix in listes["modules"]] == ["MOD_1", "MOD_2"]
     assert "Ennemi Unique" in [choix["valeur"] for choix in listes["cible"]]
-    assert {"valeur": "DEGATS", "libelle": "Dégâts"} in listes["nature"]
+    assert "nature" not in listes  # effets non saisis dans l'outil
 
 
 def test_editeur_valide_comme_le_jeu_et_donne_l_apercu(bridge):
@@ -189,7 +189,27 @@ def test_editeur_valide_comme_le_jeu_et_donne_l_apercu(bridge):
     assert resultats[0]["erreurs"] == ["Carte CRT_7 : module inconnu 'MOD_9' (absent de config/modules.json)"]
     assert "jouable doit valoir" in resultats[1]["erreurs"][0]
     assert "utilisé par plusieurs cartes" in resultats[2]["erreurs"][0] and resultats[3]["erreurs"]
-    assert resultats[4] == {"erreurs": [], "apercu": cartes[4]["description"].format(**cartes[4]["valeurs"])}
+    attendu = {"erreurs": [], "apercu": cartes[4]["description"].format(**cartes[4]["valeurs"]), "effets_a_revoir": False}
+    assert resultats[4] == attendu
+
+
+def test_editeur_des_effets_qui_ne_correspondent_plus_ne_bloquent_pas(bridge):
+    """Les effets ne se saisissent pas dans l'outil : ils sont ecrits par l'agent d'apres la
+    description (decision utilisateur) ; seule la description doit citer des valeurs existantes."""
+    cartes = json.loads(bridge.editeur_reference_web())["cartes"]
+    laser = cartes[0]
+    laser["valeurs"] = {"degats": 6, "brulure": 2}  # nouvelle valeur, citee par aucun effet
+    laser["description"] = "Inflige {degats} dégâts et {brulure} d'incendie"
+    nouvelle = dict(laser, id="CRT_51", effets=[])
+    cartes.append(nouvelle)
+    citation_inconnue = dict(laser, id="CRT_52", description="Inflige {inconnu} dégâts")
+    cartes.append(citation_inconnue)
+
+    resultats = json.loads(bridge.editeur_valider_web(json.dumps(cartes)))
+
+    assert resultats[0] == {"erreurs": [], "apercu": "Inflige 6 dégâts et 2 d'incendie", "effets_a_revoir": True}
+    assert resultats[-2]["erreurs"] == [] and resultats[-2]["effets_a_revoir"]
+    assert resultats[-1]["erreurs"] and "inconnu" in resultats[-1]["erreurs"][0]
 
 
 def test_editeur_exporte_le_fichier_dans_sa_mise_en_forme(bridge):
