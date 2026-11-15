@@ -17,7 +17,8 @@ Chaque module a ses propres cartes (une carte peut être commune à plusieurs mo
 (décision utilisateur, 2026-11-07) : le **Principal** (60 PV, 11 cartes) et le **Lanceur de
 missiles** (20 PV, 8 cartes). Le choix de module du Niveau 1 ne propose donc que le Lanceur. Les
 autres modules (Blindage, Générateur, Soute, Sabotage, Canon lourd, Contrôle, Atelier, Radar)
-restent des idées, décrites en §4.1 à §4.3, à reprendre un par un.
+restent des idées, décrites en §4.1 à §4.3, à reprendre un par un ; leurs anciennes données
+(PV, description, cartes) sont gardées dans [archive-cartes-modules.md](archive-cartes-modules.md).
 
 **Une seule classe `Module`** (décision utilisateur, 2026-11-08) réunit trois niveaux
 d'information :
@@ -263,6 +264,11 @@ Réservée à quelques cartes Rares ou Légendaires, **0 ou 1 par module** (vali
 d'un module ne coûte plus rien. Aucune carte ne le porte encore. Affichée par un bandeau sur la
 carte.
 
+- **Candidates naturelles** : des cartes dont le thème survit au module, par exemple *Leurre* (un
+  leurre déjà largué), et les **cartes de résurrection**, qui doivent pouvoir ressusciter leur
+  propre module. **Sans Persistante, une carte de résurrection d'un module mort serait elle-même
+  hors service : à proscrire** (contrainte de conception, refonte-destruction.md §5).
+
 ### 12.5 Lancements et répétition
 
 - Une carte est lancée `lancements_base` fois (1 par défaut) : coût payé une fois, tous les effets
@@ -276,8 +282,11 @@ carte.
 
 ### 12.6 Mécaniques envisagées, non codées
 
-Idées du tableau de cartes d'origine (`specs/cartes_legacy.xlsx`, archivé), à reprendre avec les
-modules concernés :
+Idées des anciennes cartes, à reprendre avec les modules concernés. **Les 44 cartes de l'ancien
+moteur** (dont 25 qui n'existent plus dans le jeu : Mode défensif, Transfert, Renvoi, Tir allié,
+Boost, Cannibalisme…), avec leurs dernières valeurs, sont dans
+[archive-cartes-modules.md](archive-cartes-modules.md) ; leur première version, dans
+`specs/cartes_legacy.xlsx` (archivé). Mécaniques correspondantes :
 
 - **Statuts à durée** : Vulnérabilité (% de dégâts subis en plus), Réduction de dégâts, Tir allié
   (un ennemi attaque un de ses alliés) ; réflexion dans

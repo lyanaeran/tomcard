@@ -106,6 +106,14 @@ combat »).
 | Carte *Nanobots* | Pose un buff sur un module vivant : s'il meurt dans les 2 tours, il revient à 1 PV | Prépare la mort plutôt que la réparer ; s'inscrit dans le modèle de durée de la refonte des buffs |
 | *Pièces détachées* | Chaque mort de module donne 1 « pièce » ; X pièces = un module ressuscité | Ressource de combat supplémentaire, plus lourd à afficher |
 
+- **Les cartes d'un module ressuscité** reviennent de la pile Hors service **dans la défausse** :
+  elles réapparaissent au prochain remélange, sans arriver d'un coup en main. Une carte de
+  résurrection plus rare pourrait les renvoyer directement dans la pioche (mélangées), voire en
+  main.
+- **Une carte de résurrection doit être Persistante** (contrainte de conception) : sinon, rattachée
+  au module mort, elle serait elle-même hors service et ne pourrait pas le ressusciter
+  (modules-cartes.md §12.4).
+
 ### 5.2 Combo mort + résurrection : garde-fou nécessaire
 
 Le buff Destruction **disparaît quand il se déclenche** (§1) : un module ressuscité ne le
@@ -130,6 +138,10 @@ que seulement subie.
 
 ## 7. Interactions avec l'existant
 
+- **Un module qui meurt protège encore** : tant qu'il est vivant, il absorbe les coups
+  `PROXIMITE` ; sa mort expose les modules suivants, puis le principal. Le PV max des secondaires
+  règle donc directement **combien de tours le principal est à l'abri** : à mesurer par
+  simulation pour régler ces PV (combat.md §13.5).
 - **Fonds de tiroir** (+1 électricité par module actif) : pénalisée quand des modules meurent.
   Cohérent avec le thème, à garder en tête.
 - **Récompense de combat** (modules-cartes.md §6 : une carte candidate par module équipé) : un module mort pendant le

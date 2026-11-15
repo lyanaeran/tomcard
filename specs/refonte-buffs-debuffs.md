@@ -206,9 +206,10 @@ tel quel sous le nouveau modèle sans décision/ajustement supplémentaire.
 *Cartes connexes non listées ci-dessus* : *Embrasement, Guerre nucléaire, Tir incendiaire* (dégâts
 répétés sur Y tours, `TypeCarte.ATTAQUE`, non jouables) partagent la même famille de problème
 (« une valeur qui doit décroître dans le temps ») — le modèle de la §3 (et l'idée « Stacks à
-intensité façon Poison », déjà notée en [a-trancher.md](a-trancher.md) §11) les débloquerait
-probablement du même coup : un stack de dégâts qui s'inflige chaque tour puis décroît de -1, au
-lieu d'un `duree` fixe à suivre séparément.
+intensité façon Poison ») les débloquerait probablement du même coup : un stack de dégâts qui
+s'inflige chaque tour puis décroît de -1, au lieu d'un `duree` fixe à suivre séparément. **Réalisé
+depuis** : c'est le statut **Incendie**, cumulable et −1 par tour (combat.md §3.5) ; ces trois
+cartes sont jouables.
 
 ---
 

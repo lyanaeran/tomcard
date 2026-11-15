@@ -63,6 +63,9 @@ L'utilisateur conçoit le jeu ; l'agent propose, documente et code. Préférence
   - **Ennemis, même principe** : `config/ennemis.json` (`src/gameplay/ennemi.py:Ennemi`)
     est la source de vérité des ennemis de la refonte, avec son tableau **généré**
     `config/ennemis.md` (`python -m outils.tableau_ennemis`, `tests/test_tableau_ennemis.py`).
+  - `specs/archive-cartes-modules.md` : **toutes les cartes et tous les modules de l'ancien
+    moteur** (dernière version des anciens JSON, en tableaux), gardés comme réserve d'idées
+    (décision utilisateur, 2026-11-15) ; archive, ne décrit pas le jeu actuel.
   - `specs/cartes_legacy.xlsx` : ancien registre (onglets Cartes, Aventures, Ennemis, Modules),
     **archivé, plus maintenu**.
 

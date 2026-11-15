@@ -73,6 +73,7 @@ utilisateur) :
 | Destruction, résurrection, sacrifice | `refonte-destruction.md` (**pistes non codées**) | — | — | — |
 | Réflexion d'origine sur les buffs | `refonte-buffs-debuffs.md` (historique, pistes non codées) | — | — | — |
 | Historique du branchement | `refonte-branchement.md` | — | — | — |
+| Anciennes cartes et anciens modules | `archive-cartes-modules.md` (**archive**) | — | — | — |
 
 Les tableaux `config/*.md` sont **générés** (`python -m outils.tableau_cartes`,
 `tableau_modules`, `tableau_ennemis`), jamais modifiés à la main ; un test échoue s'ils ne sont pas
