@@ -1,0 +1,16 @@
+{
+    // F5 (ou Executer et deboguer > "Space Fight (PC)") : lance le jeu PC depuis la racine du
+    // projet, quel que soit le fichier ouvert ; solution de secours si le bouton Executer echoue
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Space Fight (PC)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }
+    ]
+}

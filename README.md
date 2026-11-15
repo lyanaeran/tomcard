@@ -18,6 +18,10 @@ python main.py
 Fenêtre native, affichage géré par [pyglet](https://pyglet.readthedocs.io/) (`src/ui/fenetre.py`).
 C'est la version de référence : la plus fidèle à `specs/specs.md`.
 
+Dans VS Code, le bouton **Exécuter** sur `main.py` (ou F5, configuration « Space Fight (PC) »)
+lance le jeu : `.vscode/settings.json` corrige les guillemets en trop que l'extension « Python
+Environments » ajoutait autour d'un chemin contenant une espace (« Document Parent »).
+
 ## 2. Version web (navigateur / iPhone)
 
 Aucune installation : `index.html` charge [Pyodide](https://pyodide.org/) (Python compilé en
