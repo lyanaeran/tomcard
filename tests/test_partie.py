@@ -640,3 +640,10 @@ def test_abandonner_partie_la_marque_terminee(dossier_saves_isole):
     abandonner_partie(profil.id, partie)
 
     assert partie_en_cours(profil.id) is None
+
+
+def test_bouton_admin_reserve_a_certains_joueurs_quelle_que_soit_la_casse():
+    from src.gameplay.partie import est_admin
+
+    assert all(est_admin(nom) for nom in ("thomas", "Tom", "LYAN", " lyan "))
+    assert not any(est_admin(nom) for nom in ("Paul", "tomas", "thomas2", ""))

@@ -22,6 +22,9 @@ Le flux d'interaction doit rester identique au PC (`cliquerCase` ↔ `_essayer_d
   (cache-busting manuel, cf. commentaire en tête de `app.js`). Au démarrage, `app.js` recharge la
   page si `bridge.py` n'a pas la même version (fichiers de deux mises en ligne mélangés par le
   cache du téléphone) ; `tests/test_architecture.py` vérifie que les trois valeurs sont égales.
+- `src/web/editeur.js` (outil d'administration, éditeur de cartes, TEMPORAIRE,
+  `specs/outil-editeur-cartes.md`) est chargé après `app.js` : son `?v=` dans `index.html` suit la
+  même version. Essai navigateur dédié : `node outils/test_web/essais_editeur.js`.
 - Un nouveau fichier dans `src/gameplay/` doit être ajouté à `FICHIERS_A_MONTER` dans `app.js`,
   sinon l'import échoue dans Pyodide et le web ne charge plus (déjà arrivé avec `journal.py`).
 - `app.js` fetche aussi `config/*.json` directement : un changement de format doit y rester lisible.

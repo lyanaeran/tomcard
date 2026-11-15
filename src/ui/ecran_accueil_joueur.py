@@ -12,7 +12,7 @@ import pyglet
 from pyglet import shapes
 
 from src.gameplay.module import Module
-from src.gameplay.partie import Partie, Profil
+from src.gameplay.partie import Partie, Profil, est_admin
 from src.ui.commun import image_case_module
 from src.ui.fenetre import FOND_IMAGE, HAUTEUR_FENETRE, LARGEUR_FENETRE, _sprite_ajuste, _sprite_etire
 
@@ -50,6 +50,11 @@ HAUTEUR_BOUTON = 56
 ESPACEMENT_BOUTON = 30
 Y_BOUTONS = 140
 
+# Outil d'administration (editeur de cartes, specs/outil-editeur-cartes.md 8), TEMPORAIRE : il
+# n'existe que dans la version web ; le bouton Admin ouvre cette adresse dans le navigateur
+# (version publiee sur GitHub Pages ; #editeur ouvre directement l'outil)
+URL_OUTIL_ADMIN = "https://lyanaeran.github.io/tomcard/#editeur"
+
 
 def _point_dans_rectangle(px: float, py: float, x: float, y: float, largeur: float, hauteur: float) -> bool:
     return x <= px <= x + largeur and y <= py <= y + hauteur
@@ -66,8 +71,12 @@ class EcranAccueilJoueur(pyglet.window.Window):
     def _boutons(self) -> list[tuple[str, str]]:
         """Liste (identifiant_action, libelle) des boutons de cet ecran, dans l'ordre affiche."""
         if self.partie_active is not None:
-            return [("continuer", "Continuer"), ("abandonner", "Abandonner la partie"), ("voir_deck", "Voir le deck")]
-        return [("nouvelle_partie", "Nouvelle partie")]
+            boutons = [("continuer", "Continuer"), ("abandonner", "Abandonner la partie"), ("voir_deck", "Voir le deck")]
+        else:
+            boutons = [("nouvelle_partie", "Nouvelle partie")]
+        if est_admin(self.profil.nom):
+            boutons.append(("admin", "Admin"))
+        return boutons
 
     def on_draw(self) -> None:
         self.clear()

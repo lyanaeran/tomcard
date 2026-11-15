@@ -386,3 +386,24 @@ def test_modules_doit_etre_une_liste_d_ids():
     with pytest.raises(ValueError, match="CRT_7 : modules doit etre une liste"):
         Carte.depuis_dict(dict(_entree("CRT_7"), modules=[1]))
 
+
+
+# --- Ecriture de config/cartes.json (outil d'edition des cartes) ---
+
+
+def test_l_ecriture_reproduit_cartes_json_a_l_identique():
+    from src.gameplay.carte import cartes_vers_texte_json
+
+    texte = FICHIER_CARTES.read_text(encoding="utf-8")
+
+    assert cartes_vers_texte_json(json.loads(texte)["cartes"]) == texte
+
+
+def test_l_ecriture_remet_les_cles_dans_l_ordre_du_fichier():
+    from src.gameplay.carte import cartes_vers_texte_json
+
+    entree = _entree("CRT_49")
+    melangee = dict(reversed(list(entree.items())))
+    melangee["effets"] = [dict(reversed(list(effet.items()))) for effet in entree["effets"]]
+
+    assert cartes_vers_texte_json([melangee]) == cartes_vers_texte_json([entree])

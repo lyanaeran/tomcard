@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "91";
+const VERSION_CACHE = "92";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -117,6 +117,8 @@ const IDS_ECRANS = [
     "ecran-deck",
     "ecran-vaisseau",
     "ecran-journal-combat",
+    "ecran-editeur-liste",
+    "ecran-editeur-carte",
 ];
 
 function masquerTousLesEcrans() {
@@ -140,7 +142,10 @@ async function demarrer() {
             return;
         }
         statut.remove();
-        afficherSelectionJoueur();
+        // Adresse se terminant par #editeur : ouvre directement l'outil d'administration (lien du
+        // bouton Admin du jeu PC, specs/outil-editeur-cartes.md 8)
+        if (window.location.hash === "#editeur") ouvrirEditeur(afficherSelectionJoueur);
+        else afficherSelectionJoueur();
         tenterVerrouillagePaysage();
         configurerPleinEcran();
     } catch (erreur) {
@@ -1846,6 +1851,8 @@ function afficherAccueilJoueur() {
     document.getElementById("vaisseau-accueil").classList.toggle("cachee", !enCours);
     document.getElementById("boutons-partie-en-cours").classList.toggle("cachee", !enCours);
     document.getElementById("bouton-nouvelle-partie").classList.toggle("cachee", enCours);
+    // Outil d'administration (TEMPORAIRE) : seulement pour certains joueurs (partie.py:est_admin)
+    document.getElementById("bouton-admin").classList.toggle("cachee", !appelerBridge("est_admin_web", joueurCourant.nom));
 
     if (enCours) {
         const vaisseau = appelerBridge("infos_vaisseau_web", JSON.stringify(partie));
@@ -2026,6 +2033,7 @@ document.getElementById("bouton-continuer").addEventListener("click", continuerP
 document.getElementById("bouton-abandonner").addEventListener("click", abandonnerPartie);
 document.getElementById("bouton-voir-deck-partie").addEventListener("click", voirDeckPartie);
 document.getElementById("bouton-nouvelle-partie").addEventListener("click", nouvellePartie);
+document.getElementById("bouton-admin").addEventListener("click", () => ouvrirEditeur(afficherAccueilJoueur));
 document.getElementById("bouton-continuer-fin-combat").addEventListener("click", continuerApresFinCombat);
 document.getElementById("bouton-passer-fin-combat").addEventListener("click", passerFinCombat);
 document.getElementById("bouton-passer-carte-module").addEventListener("click", passerCarteModule);

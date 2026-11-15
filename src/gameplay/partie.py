@@ -247,6 +247,16 @@ def profil_depuis_json(texte: str) -> Profil:
 # --- Creation ---
 
 
+# Joueurs qui voient le bouton "Admin" (outil d'edition des cartes, specs/outil-editeur-cartes.md
+# 8), quelle que soit la casse ; TEMPORAIRE (decision utilisateur), a retirer avec le bouton
+NOMS_ADMIN = ("thomas", "tom", "lyan")
+
+
+def est_admin(nom: str) -> bool:
+    """True si ce nom de joueur donne acces a l'outil d'administration (bouton Admin)."""
+    return nom.strip().casefold() in NOMS_ADMIN
+
+
 def nouveau_profil(nom: str) -> Profil:
     return Profil(id=f"joueur_{_horodatage()}", nom=nom)
 

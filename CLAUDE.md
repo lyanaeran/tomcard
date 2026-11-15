@@ -34,6 +34,10 @@ L'utilisateur conçoit le jeu ; l'agent propose, documente et code. Préférence
   tel quel.
 - **Réponses courtes et concrètes, en français**, avec des exemples chiffrés plutôt que du jargon ;
   dire clairement ce qui a été testé et ce qui ne l'a pas été.
+- **Cartes modifiées dans l'outil d'administration** (éditeur de cartes web / iPhone,
+  `specs/outil-editeur-cartes.md`) : l'utilisateur colle le `config/cartes.json` complet copié par
+  l'outil. Le remplacer tel quel, régénérer `config/cartes.md` (`python -m outils.tableau_cartes`),
+  lancer `pytest`, et résumer ce qui a changé carte par carte avant la PR.
 - **Revues de PR** : un bot (Claude Code) commente les PR. À la demande de l'utilisateur, lire les
   commentaires (`~/.local/bin/gh api repos/{owner}/{repo}/pulls/<n>/comments`), corriger ce qui
   est juste (avec un test), et répondre sous chaque commentaire (corrigé dans tel commit, ou

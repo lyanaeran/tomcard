@@ -187,6 +187,13 @@ class Module:
             raise ValueError(f"{module} : {erreur}") from erreur
 
 
+def verifier_modules_de_la_carte(carte, ids_modules) -> None:
+    """Refuse une carte qui cite un module absent de config/modules.json (ValueError)."""
+    for id_module in carte.modules:
+        if id_module not in ids_modules:
+            raise ValueError(f"Carte {carte.id} : module inconnu {id_module!r} (absent de config/modules.json)")
+
+
 def charger_modules(fichier: Path = FICHIER_MODULES, fichier_cartes: Path = FICHIER_CARTES) -> dict[str, Module]:
     """Charge config/modules.json. Renvoie un dict id de module -> modele de module ; un id
     en double est refuse. Les cartes de chaque module sont celles de `fichier_cartes` qui le
@@ -202,9 +209,8 @@ def charger_modules(fichier: Path = FICHIER_MODULES, fichier_cartes: Path = FICH
         raise ValueError("config/modules.json : il faut exactement un module principal")
     cartes_par_module: dict[str, list[str]] = {id_module: [] for id_module in modules}
     for carte in charger_cartes(fichier_cartes).values():
+        verifier_modules_de_la_carte(carte, modules)
         for id_module in carte.modules:
-            if id_module not in cartes_par_module:
-                raise ValueError(f"Carte {carte.id} : module inconnu {id_module!r} (absent de config/modules.json)")
             cartes_par_module[id_module].append(carte.id)
     for id_module, module in modules.items():
         module.cartes = tuple(cartes_par_module[id_module])

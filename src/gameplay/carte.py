@@ -507,3 +507,59 @@ def appliquer_repetition(effet: Effet, supplement: int, cartes: Iterable[Carte])
     for carte in visees:
         carte.lancements_actuels += supplement
     return len(visees)
+
+
+# --- Ecriture de config/cartes.json (outil d'edition des cartes, specs/outil-editeur-cartes.md) ---
+
+# Ordre des cles dans le fichier, comme ecrit a la main ; une cle absente de ces listes est ecrite
+# apres les autres
+ORDRE_CLES_CARTE = (
+    "id", "nom", "image", "rarete", "categorie", "cible", "modules", "cout", "munition", "lancements",
+    "persistante", "jouable", "refonte", "description", "valeurs", "effets",
+)
+ORDRE_CLES_EFFET = ("nature", "valeur", "portee", "duree", "filtre")
+ORDRE_CLES_FILTRE = ("id", "rarete", "categorie")
+
+
+def _trier_cles(entree: dict, ordre: tuple[str, ...]) -> dict:
+    connues = [cle for cle in ordre if cle in entree]
+    return {cle: entree[cle] for cle in connues + [cle for cle in entree if cle not in ordre]}
+
+
+def _sur_une_ligne(valeur) -> str:
+    """Objet ou liste sur une ligne, au style de cartes.json : { "a": 1, "b": 2 }, ["MOD_1"]."""
+    if isinstance(valeur, dict):
+        if not valeur:
+            return "{}"
+        return "{ " + ", ".join(f"{json.dumps(cle, ensure_ascii=False)}: {_sur_une_ligne(v)}" for cle, v in valeur.items()) + " }"
+    if isinstance(valeur, list):
+        return "[" + ", ".join(_sur_une_ligne(v) for v in valeur) + "]"
+    return json.dumps(valeur, ensure_ascii=False)
+
+
+def _effet_trie(effet) -> dict:
+    if not isinstance(effet, dict):
+        return effet
+    effet = _trier_cles(effet, ORDRE_CLES_EFFET)
+    if isinstance(effet.get("filtre"), dict):
+        effet["filtre"] = _trier_cles(effet["filtre"], ORDRE_CLES_FILTRE)
+    return effet
+
+
+def cartes_vers_texte_json(entrees: list[dict]) -> str:
+    """Texte complet de config/cartes.json pour ces entrees, dans la mise en forme du fichier ecrit
+    a la main (une cle par ligne, valeurs et effets sur une ligne) : un fichier exporte par l'outil
+    d'edition remplace l'original avec un diff limite aux vrais changements."""
+    blocs = []
+    for entree in entrees:
+        entree = _trier_cles(entree, ORDRE_CLES_CARTE)
+        lignes = []
+        for cle, valeur in entree.items():
+            if cle == "effets" and isinstance(valeur, list) and valeur:
+                effets = ",\n".join("        " + _sur_une_ligne(_effet_trie(effet)) for effet in valeur)
+                texte = "[\n" + effets + "\n      ]"
+            else:
+                texte = _sur_une_ligne(valeur)
+            lignes.append(f'      {json.dumps(cle)}: {texte}')
+        blocs.append("    {\n" + ",\n".join(lignes) + "\n    }")
+    return '{\n  "cartes": [\n' + ",\n".join(blocs) + "\n  ]\n}\n"

@@ -1,8 +1,8 @@
 # Outil d'administration : éditeur de cartes — spécification
 
 *Document de conception d'outil, hors numérotation (cf. [specs.md](specs.md)). **Spécification
-validée, rien n'est codé** (décisions utilisateur du 2026-11-15, §9). Les détails marqués
-**(proposition)** restent à confirmer en cours de réalisation.*
+validée et codée le 2026-11-15** (décisions utilisateur, §9 ; réalisation, §12). Les détails
+marqués **(proposition)** restent à confirmer par l'utilisateur à l'usage.*
 
 ---
 
@@ -320,3 +320,37 @@ l'outil), avec les tests et la mise à jour de `modules-cartes.md` §12 :
   charge `config/cartes.json` dans Pyodide ; il suffirait d'y écrire la version modifiée), à
   garder séparé pour ne pas jouer sans le savoir avec des cartes non officielles.
 - **Même outil pour les modules et les ennemis** (même structure : tableau, détail, copie).
+
+---
+
+## 12. Réalisation (2026-11-15)
+
+| Partie | Fichiers |
+|---|---|
+| Format des cartes (§10) | `config/cartes.json` (champs `modules` et `jouable` à trois valeurs), `config/modules.json` (sans `cartes`), `src/gameplay/carte.py` (`Jouabilite`, `Carte.modules`, `cartes_vers_texte_json`), `src/gameplay/module.py` (`Module.cartes` calculé, `verifier_modules_de_la_carte`) |
+| Joueurs admin | `src/gameplay/partie.py` (`NOMS_ADMIN`, `est_admin`) |
+| Pont web | `src/web/bridge.py` : `est_admin_web`, `editeur_reference_web` (cartes du fichier et listes de choix), `editeur_valider_web` (validation et aperçu par le jeu), `editeur_exporter_web` (texte du fichier) |
+| Écrans web | `index.html` (`#ecran-editeur-liste`, `#ecran-editeur-carte`, bouton `#bouton-admin`), `src/web/editeur.js`, `src/web/style.css` (fin du fichier) ; l'adresse `…/index.html#editeur` ouvre directement l'outil |
+| Bouton Admin PC | `src/ui/ecran_accueil_joueur.py` (`URL_OUTIL_ADMIN`), `main.py` (ouvre le navigateur) |
+| Tests | `tests/test_carte.py`, `test_module.py`, `test_parcours.py`, `test_partie.py`, `test_bridge.py`, `test_tableau_modules.py` ; essai navigateur `outils/test_web/essais_editeur.js` (22 contrôles, iPhone 17 paysage) |
+
+**Précisions de réalisation** (à relire) :
+
+1. **Fichier exporté** : même mise en forme que `config/cartes.json` écrit à la main (clés dans
+   l'ordre habituel, valeurs et effets sur une ligne) ; un test vérifie que réécrire le fichier
+   actuel le redonne à l'identique, pour que l'intégration d'un export ne montre que les vrais
+   changements.
+2. **Liste des images** : seulement les images déjà utilisées par des cartes (le navigateur ne peut
+   pas lister le dossier `assets/cartes/`) ; une autre image se choisit par « Autre… », la vignette
+   montre tout de suite si le chemin est bon.
+3. **Copie sans presse-papiers** : sur une page non sécurisée (ex. jeu servi depuis l'adresse locale
+   d'un Mac et ouvert sur l'iPhone, `http://192.168…`), le navigateur refuse la copie
+   automatique : l'outil affiche alors le texte sélectionné, à copier à la main.
+4. **Saisie** : un champ texte est enregistré quand on le quitte (pas à chaque lettre) ; les champs
+   de saisie font 16 points, sinon Safari zoome sur le champ touché.
+5. **Renommer une valeur nommée** met à jour les effets qui la citaient.
+6. **« Annuler mes modifications »** sur une nouvelle carte la retire de l'outil (seul moyen de
+   supprimer une carte qui n'est pas dans le jeu ; une carte du jeu se « supprime » par Jouable).
+7. **Adresse du bouton Admin PC** : `https://lyanaeran.github.io/tomcard/#editeur` (version
+   publiée) ; à corriger dans `URL_OUTIL_ADMIN` si le site est publié ailleurs.
+
