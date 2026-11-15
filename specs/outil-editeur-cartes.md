@@ -1,8 +1,8 @@
 # Outil d'administration : éditeur de cartes — spécification
 
-*Document de conception d'outil, hors numérotation (cf. [specs.md](specs.md)). **Proposition, rien
-n'est codé** (2026-11-15). Les points marqués **(proposition)** sont à valider ; les questions
-ouvertes sont au §9.*
+*Document de conception d'outil, hors numérotation (cf. [specs.md](specs.md)). **Spécification
+validée, rien n'est codé** (décisions utilisateur du 2026-11-15, §9). Les détails marqués
+**(proposition)** restent à confirmer en cours de réalisation.*
 
 ---
 
@@ -16,40 +16,31 @@ ordinateur, puis **envoyer le résultat** pour qu'il soit intégré au jeu.
   l'écran 1. Le bouton **+** de l'écran 1 ouvre ce même écran pour une nouvelle carte.
 - Les modifications sont **sauvées sur l'appareil** et retrouvées en revenant sur l'outil.
 - Les cartes **modifiées par rapport au jeu** (`config/cartes.json`) sont **signalées**.
-- Un bouton **Exporter** envoie le fichier modifié (§6).
-- Accès par un **bouton « Admin » temporaire** dans le jeu.
+- Un bouton **Copier** met le fichier `cartes.json` modifié dans le presse-papiers (§6).
+- Accès par un **bouton « Admin » temporaire**, réservé à certains joueurs (§8).
 
 **Hors périmètre** : l'outil ne change pas le jeu. Les cartes modifiées ne sont pas jouées tant
-que le fichier exporté n'a pas été intégré au dépôt (§7). Une option « tester en jeu » est
-évoquée au §8.
+que le fichier exporté n'a pas été intégré au dépôt (§7).
 
 ---
 
-## 2. Où le faire : dans la version web (proposition)
+## 2. Où le faire : dans la version web (décision utilisateur)
 
-L'outil est fait **dans la version web** (`index.html` + `src/web/`), pas dans la version PC
-(pyglet).
+L'outil est fait **dans la version web** (`index.html` + `src/web/`). Il sert sur iPhone (Safari)
+**et** sur Mac / PC dans un navigateur. **Le jeu PC (pyglet) n'a pas d'éditeur** : son bouton
+« Admin » **ouvre la page web de l'outil dans le navigateur** (§8).
 
-| | Version web | Version PC (pyglet) |
-|---|---|---|
-| iPhone | oui (Safari) | non |
-| Mac / PC | **oui, dans n'importe quel navigateur** (même page) | oui |
-| Champs de saisie, listes, clavier | natifs (HTML) | à construire à la main dans pyglet, beaucoup plus de travail |
-| Sauvegarde locale | `localStorage`, déjà utilisé par le jeu web | fichier dans `saves/` |
-| Export | presse-papiers, feuille de partage iOS, téléchargement | presse-papiers seulement |
-
-Le web couvre donc iPhone **et** Mac / PC (ouvrir la version web dans un navigateur : GitHub Pages,
-ou en local `python -m http.server` puis `index.html`). **Proposition : pas de version pyglet** de
-l'outil. Le bouton « Admin » n'existe que dans la version web.
+Pourquoi : les champs de saisie, les listes et le presse-papiers sont natifs en HTML, alors qu'il
+faudrait les construire à la main dans pyglet.
 
 **Règles du projet respectées** :
 
 - **Aucune règle de jeu en JavaScript** (CLAUDE.md) : la **validation** d'une carte et l'**aperçu
   de sa description** sont faits par le code Python du jeu, déjà chargé dans la page par Pyodide
   (`Carte.depuis_dict`, `Carte.description_affichee`), via de nouvelles fonctions de
-  `src/web/bridge.py`. Les **listes de choix** (raretés, catégories, cibles, natures, portées)
-  viennent aussi du Python (`src/gameplay/carte.py`), pour qu'une valeur ajoutée au jeu apparaisse
-  seule dans l'outil.
+  `src/web/bridge.py`. Les **listes de choix** (raretés, catégories, cibles, natures, portées,
+  modules) viennent aussi du Python et des données du jeu, pour qu'une valeur ajoutée au jeu
+  apparaisse seule dans l'outil.
 - L'outil est un écran de plus dans `index.html` / `app.js` / `style.css`, avec le cache-busting
   habituel (`VERSION_CACHE`, `?v=`).
 
@@ -65,23 +56,20 @@ une police de 13 à 14 points et des lignes de 32 points, une barre d'outils en 
 du tableau, on voit **9 à 10 cartes à la fois** ; le tableau défile verticalement, **jamais
 horizontalement**.
 
-### 3.2 Colonnes (proposition : 7)
+### 3.2 Colonnes (décision utilisateur : 7 colonnes)
 
 | Colonne | Largeur | Contenu | Exemple |
 |---|---|---|---|
-| État | 24 | pastille de modification (§5) | ● |
+| État | 24 | pastille (§5) | ● |
 | Nom | 160 | nom de la carte (20 caractères au plus aujourd'hui) | Laser lourd |
 | Coût | 40 | électricité | 1 |
 | Rareté | 80 | Base, Commune, Rare, Légendaire | Commune |
 | Cible | 120 | cible de la carte | Ennemi Unique |
-| Module | 110 | module(s) qui la proposent (§4.7) | Principal |
+| Module | 110 | module(s) de la carte (§4.7) | Principal |
 | Valeurs | 200 | valeurs nommées, abrégées, tronquées | degats 12 |
 
-Total : environ **735 points**, dans les 760 disponibles.
-
-**Laissés à l'écran 2** : id, image, catégorie, munitions, lancements, Persistante, jouable,
-refonte, description, effets. La catégorie suit presque toujours la cible et la nature des effets
-(Attaque, Défense…) ; elle peut remplacer « Module » si tu préfères (§9, question 1).
+Total : environ **735 points**, dans les 760 disponibles. Id, image, catégorie, munitions,
+lancements, Persistante, jouable, revue, description et effets restent dans l'écran 2.
 
 **En portrait** (402 points de large), le tableau se réduit à 4 colonnes (État, Nom, Coût,
 Valeurs) ; l'outil reste utilisable, mais le paysage est le mode prévu.
@@ -89,20 +77,23 @@ Valeurs) ; l'outil reste utilisable, mais le paysage est le mode prévu.
 ### 3.3 Barre d'outils (en haut)
 
 ```
-[ ← Jeu ]   Cartes (19 · 2 modifiées · 1 nouvelle)   [Tous ▾]   [ + ]   [ Exporter ]
+[ ← Jeu ]   Cartes (19 · 2 modifiées · 1 nouvelle)   [ Toutes ▾ ]   [ + ]   [ Copier ]
 ```
 
-- **← Jeu** : retour au jeu, à l'écran d'où l'on vient.
+- **← Jeu** : retour à l'écran du jeu d'où l'on vient.
 - **Compteur** : nombre de cartes, de cartes modifiées et de nouvelles.
-- **Filtre** (proposition) : Toutes / Modifiées seulement / par module.
+- **Filtre** (décision utilisateur) : Toutes / Modifiées seulement / par module (Principal,
+  Lanceur de missiles…) / Supprimées.
 - **+** : nouvelle carte (§4.8).
-- **Exporter** : §6.
+- **Copier** : §6.2.
 
 ### 3.4 Interactions
 
 - **Toucher une ligne** : ouvre l'écran 2 de cette carte.
-- **Toucher un en-tête de colonne** (proposition) : trie par cette colonne ; un second toucher
-  inverse l'ordre. Tri par défaut : ordre du fichier `cartes.json`, nouvelles cartes à la fin.
+- **Toucher un en-tête de colonne** (décision utilisateur) : trie par cette colonne ; un second
+  toucher inverse l'ordre. Tri par défaut : ordre du fichier `cartes.json`, nouvelles cartes à la
+  fin.
+- **Carte supprimée** (§4.6) : ligne grisée, nom barré.
 
 ---
 
@@ -128,14 +119,15 @@ Aperçu : « Inflige 12 dégâts à un ennemi unique »
 | Classement | Rareté | **liste** (Base, Commune, Rare, Légendaire) ou libre |
 | | Catégorie | **liste** (Attaque, Defense, Reparation, Buff, Debuff, Outils, Controle) ou libre |
 | | Cible | **liste** (Ennemi Unique, Ennemi Colonne, Ennemi Avant, Ennemi Arriere, Ennemi Tous, Module Unique, Module Principal, Module Avant, Module Tous) ou libre |
+| Module | Modules | cases à cocher : les modules de `config/modules.json` (§4.7) |
 | Coût et usage | Coût | nombre |
 | | Munitions | nombre, ou vide = illimitées |
 | | Lancements | nombre (1 d'ordinaire) |
-| | Persistante, Jouable, Revue (`refonte`) | interrupteurs oui / non |
+| | Jouable | **liste à trois choix : Oui, Non, Supprimée** (§4.6) |
+| | Persistante, Revue (`refonte`) | interrupteurs oui / non |
 | Texte | Description | texte sur plusieurs lignes, avec les valeurs entre accolades (`{degats}`) ; **aperçu** en dessous, valeurs remplacées |
 | Valeurs | Valeurs nommées | une ligne par valeur : nom (texte) et nombre ; boutons « + valeur » et « supprimer » |
 | Effets | un bloc par effet | voir §4.2 ; boutons « + effet » et « supprimer » |
-| Module | module(s) | voir §4.7 |
 
 ### 4.2 Les effets
 
@@ -152,14 +144,14 @@ Chaque effet est un petit bloc :
 ### 4.3 Listes avec valeur libre
 
 Pour chaque champ à liste : une **liste déroulante** dont le dernier choix est **« Autre… »**, qui
-fait apparaître un champ texte pour une valeur libre. **Proposition** plutôt que la suggestion
-pendant la frappe (`datalist` HTML), discrète et peu lisible sur iPhone. Une valeur libre inconnue
-du jeu est acceptée et sauvée, mais signalée par la validation (§4.5).
+fait apparaître un champ texte pour une valeur libre (proposition, plus lisible sur iPhone qu'une
+suggestion pendant la frappe). Une valeur libre inconnue du jeu est acceptée et sauvée, mais
+signalée par la validation (§4.5).
 
 ### 4.4 Valeurs modifiées
 
 Dans une carte du jeu, chaque **champ modifié** est **surligné**, avec la **valeur du jeu** en petit
-dessous (« jeu : 6 »). Un appui long (ou un petit bouton ↺) sur le champ remet la valeur du jeu.
+dessous (« jeu : 6 »). Un petit bouton ↺ à côté du champ remet la valeur du jeu.
 
 ### 4.5 Validation
 
@@ -167,34 +159,40 @@ dessous (« jeu : 6 »). Un appui long (ou un petit bouton ↺) sur le champ rem
 chargement de `config/cartes.json`) :
 
 - **Erreurs** en tête de l'écran, en rouge, en clair (clé manquante, valeur citée mais absente,
-  coût négatif, portée ennemie sur une carte qui vise un module…).
+  coût négatif, portée ennemie sur une carte qui vise un module, module inconnu…).
 - Une carte en erreur **reste sauvée** (on peut finir plus tard), mais elle est marquée ⚠ dans la
-  liste et **bloque l'export** (§6), pour ne jamais envoyer un fichier que le jeu refuserait.
+  liste et **bloque la copie** (§6.2), pour ne jamais envoyer un fichier que le jeu refuserait.
 - **Aperçu** de la description avec les valeurs, calculé par le jeu.
 
-### 4.6 Boutons
+### 4.6 Boutons et suppression
 
 - **Fermer** : retour à l'écran 1, à la même position dans la liste.
 - **Annuler mes modifications** (carte du jeu) : la carte redevient celle du jeu, après
-  confirmation.
-- **Supprimer** (nouvelle carte seulement) : après confirmation.
-- **Dupliquer** (proposition) : crée une nouvelle carte à partir de celle-ci, pratique pour une
-  variante.
+  confirmation. Pour une nouvelle carte : la retire de l'outil, après confirmation.
+- **Supprimer une carte** (décision utilisateur) : on ne la retire pas du fichier, on passe son
+  champ **Jouable à « Supprimée »**. La carte reste dans `cartes.json`, le jeu ne la propose
+  jamais (comme une carte non jouable), et on peut la remettre à Oui ou Non à tout moment. Voir
+  §10 : le jeu doit accepter cette troisième valeur.
 
-### 4.7 Module de la carte
+### 4.7 Module de la carte (décision utilisateur : dans `cartes.json`)
 
-Une carte n'est proposée en jeu (récompense, choix de module) que si elle figure dans la liste
-`cartes` d'un module de `config/modules.json`. L'écran 2 affiche donc le ou les modules qui
-contiennent la carte, avec des **cases à cocher** (Principal, Lanceur de missiles…).
-**Proposition** : ce choix est modifiable, et l'export contient aussi l'affectation des cartes
-aux modules (§6). Sans ça, une nouvelle carte ne serait jamais proposée en jeu.
+Aujourd'hui, c'est chaque module de `config/modules.json` qui liste ses cartes
+(`"cartes": ["CRT_7", …]`). **Décision utilisateur** : le module est porté **par la carte**, dans
+`config/cartes.json`, par un champ **`"modules"`**, une **liste** d'ids de module, par exemple
+`"modules": ["MOD_1"]` (une liste, parce qu'une carte peut être commune à plusieurs modules,
+modules-cartes.md). La liste `cartes` disparaît de `modules.json`. Voir §10 : changement du jeu
+à faire avant l'outil.
+
+Dans l'écran 2 : une case à cocher par module de `config/modules.json`. Une carte sans module
+n'est proposée nulle part en jeu (signalé, mais pas une erreur).
 
 ### 4.8 Nouvelle carte (bouton +)
 
 - **Id proposé** : le premier `CRT_n` libre (aujourd'hui `CRT_51`), modifiable.
 - **Champs pré-remplis** (proposition) : rareté Commune, catégorie Attaque, cible Ennemi Unique,
-  coût 1, lancements 1, munitions illimitées, jouable oui, revue oui, une valeur `degats` à 0 et un
-  effet Dégâts qui l'utilise. La carte est ainsi valide dès le départ et on ne fait que l'ajuster.
+  coût 1, lancements 1, munitions illimitées, jouable Oui, revue oui, aucun module, une valeur
+  `degats` à 0 et un effet Dégâts qui l'utilise. La carte est ainsi valide dès le départ et on ne
+  fait que l'ajuster.
 - Une nouvelle carte est marquée **« Nouvelle »** dans la liste.
 
 ---
@@ -209,17 +207,18 @@ référence, déjà présent dans la page) :
 | Inchangée | aucune | identique au jeu |
 | **Modifiée** | ● orange | au moins un champ diffère du jeu |
 | **Nouvelle** | ✚ vert | id absent du jeu |
-| **En erreur** | ⚠ rouge | refusée par la validation (§4.5), avant les autres pastilles |
+| **En erreur** | ⚠ rouge | refusée par la validation (§4.5), affichée avant les autres pastilles |
 | **Le jeu a changé** | ⇄ violet | la carte a été modifiée dans le jeu depuis ta modification locale (voir ci-dessous) |
+
+Une carte supprimée (Jouable « Supprimée ») est en plus grisée et barrée (§3.4).
 
 - La comparaison se fait **sur le contenu**, pas sur la date : une modification annulée à la main
   (retour à la valeur d'origine) rend la carte à nouveau « Inchangée ».
 - **Le jeu a changé** : quand on modifie une carte, l'outil garde une copie de la version du jeu à
   ce moment-là. Si, plus tard, `config/cartes.json` a changé pour cette carte (nouvelle version du
-  jeu), l'outil le signale ; l'écran 2 montre alors la version du jeu, la tienne, et propose de
+  jeu), l'outil le signale ; l'écran 2 montre alors la version du jeu et la tienne, et propose de
   garder la tienne ou de reprendre celle du jeu. Évite d'écraser sans le voir un changement fait
   entre-temps dans le dépôt.
-- Dans l'écran 2, les champs modifiés sont surlignés (§4.4).
 
 ---
 
@@ -230,85 +229,92 @@ référence, déjà présent dans la page) :
 - Dans le `localStorage` du navigateur, sous une clé propre à l'outil (ex.
   `space_fight_editeur_cartes`), séparée des parties et des profils.
 - **Seules les différences** sont gardées : les cartes modifiées ou nouvelles (contenu complet de
-  la carte, plus la copie de la version du jeu du §5), les cartes supprimées, l'affectation aux
-  modules si elle a changé. Les cartes inchangées viennent toujours du jeu.
+  la carte, plus la copie de la version du jeu du §5). Les cartes inchangées viennent toujours du
+  jeu.
 - Rechargée à chaque ouverture de l'écran 1.
-- Un bouton **« Tout effacer »** (avec confirmation), dans un menu de l'écran 1, revient aux
-  cartes du jeu.
 - Limite connue : le `localStorage` est propre à l'appareil **et** au navigateur (Safari sur
-  iPhone ≠ Chrome sur Mac). Pour passer d'un appareil à l'autre : exporter puis importer (§6.3).
+  iPhone ≠ Chrome sur Mac) ; pas d'import dans la première version (§11).
 
-### 6.2 Export (proposition)
+### 6.2 Export : copier le fichier (décision utilisateur)
 
-Un bouton **Exporter** (désactivé tant qu'une carte est en erreur) ouvre un petit menu :
+Un seul bouton, **Copier**, désactivé tant qu'une carte est en erreur : il met le fichier
+**`config/cartes.json` complet** dans le **presse-papiers** (toutes les cartes du jeu, les
+modifications appliquées, les nouvelles cartes à la fin, dans le même format), avec un message
+« Fichier copié (2 cartes modifiées, 1 nouvelle) ». On le colle ensuite dans un message ou dans la
+conversation avec l'agent.
 
-1. **Partager…** (recommandé sur iPhone) : la **feuille de partage d'iOS** (Messages, Mail,
-   Notes, AirDrop, enregistrer dans Fichiers…) avec le fichier `cartes.json` complet en pièce
-   jointe. Sur Mac, la même chose dans Safari ; ailleurs, téléchargement du fichier.
-2. **Copier** : le fichier `cartes.json` complet dans le **presse-papiers**, à coller dans un
-   message ou dans une conversation avec l'agent.
-3. **Copier le résumé** : un texte court et lisible des changements seulement, par exemple :
-
-```
-Cartes modifiées (2) :
-- CRT_10 Bouclier : bouclier 4 -> 5
-- CRT_47 Laser lourd : cout 1 -> 2
-Nouvelle carte (1) :
-- CRT_51 Tir de barrage : Commune, 2 électricité, Ennemi Tous, degats 5 ; module Lanceur de missiles
-```
-
-**Contenu du fichier exporté** : `config/cartes.json` **complet**, toutes cartes du jeu avec les
-modifications appliquées, dans le même format et le même ordre, prêt à remplacer le fichier du
-dépôt. Si l'affectation aux modules a changé (§4.7), le fichier `config/modules.json` complet
-est exporté aussi : deux pièces jointes avec « Partager », ou les deux fichiers l'un après
-l'autre avec « Copier » (proposition, §9 question 4).
-
-### 6.3 Import (proposition)
-
-Un bouton **Importer** (menu de l'écran 1) colle ou charge un fichier exporté, par exemple pour
-reprendre sur Mac un travail fait sur iPhone. Les cartes qui diffèrent du jeu deviennent des
-modifications locales.
+Le presse-papiers du navigateur demande une page sécurisée : c'est le cas sur GitHub Pages
+(https) et en local (`localhost`).
 
 ---
 
 ## 7. Intégrer un export dans le jeu
 
-1. L'utilisateur envoie le fichier exporté (ou le colle dans la conversation avec l'agent).
-2. L'agent remplace `config/cartes.json` (et `config/modules.json` s'il a changé), régénère le
-   tableau `config/cartes.md` (`python -m outils.tableau_cartes`), lance `pytest`, et signale ce
-   qui a changé, en particulier les tests qui lisent une valeur de carte.
+1. L'utilisateur colle le fichier copié dans la conversation avec l'agent (ou l'envoie).
+2. L'agent remplace `config/cartes.json`, régénère le tableau `config/cartes.md`
+   (`python -m outils.tableau_cartes`), lance `pytest`, et signale ce qui a changé, en particulier
+   les tests qui lisent une valeur de carte.
 3. PR habituelle sur `devjeux`. Après le merge et le déploiement, les modifications locales de
    l'outil deviennent « Inchangées » toutes seules, puisque le jeu les contient.
 
 ---
 
-## 8. Accès et options
+## 8. Accès : bouton « Admin »
 
-- **Bouton « Admin »** (temporaire) : en bas de l'écran de sélection du joueur et de l'accueil du
-  joueur, discret. **Proposition** : une seule constante dans `app.js` pour l'afficher ou le
-  masquer, pour le retirer facilement plus tard. Variante : ne l'afficher que si l'adresse contient
-  `?admin` (invisible pour un autre joueur).
-- **Option future, non prévue ici** : **« Tester en jeu »**, qui ferait jouer la prochaine partie
-  avec les cartes modifiées de l'appareil (le web charge `config/cartes.json` dans Pyodide ; il
-  suffirait d'y écrire la version modifiée). Pratique pour essayer une valeur sans passer par le
-  dépôt, mais à garder séparé : risque de jouer sans s'en rendre compte avec des cartes non
-  officielles.
-- **Plus tard**, le même principe pourrait servir aux modules et aux ennemis (même structure :
-  tableau, détail, export).
+- **Réservé à certains joueurs** (décision utilisateur) : le bouton n'apparaît que si le joueur
+  choisi s'appelle **thomas**, **tom** ou **lyan**, **quelle que soit la casse** (« Thomas »,
+  « TOM »…). Il est donc sur l'**écran d'accueil du joueur** (après le choix du joueur), pas sur
+  l'écran de sélection. La liste des noms est une constante, à retirer avec le bouton.
+- **Web** : le bouton ouvre l'écran 1 ; « ← Jeu » ramène à l'accueil du joueur.
+- **PC** (décision utilisateur) : même bouton, mêmes noms, sur l'accueil du joueur
+  (`src/ui/ecran_accueil_joueur.py`) ; il **ouvre la page web de l'outil dans le navigateur**
+  (module `webbrowser` de Python). **Adresse (proposition)** : la version publiée sur GitHub
+  Pages (constante, à régler une fois) ; elle demande une connexion et montre les cartes de la
+  version publiée de `main`, pas d'un dépôt local modifié.
+- **Temporaire** : bouton, condition sur les noms et ouverture du navigateur sont regroupés pour
+  être retirés facilement.
 
 ---
 
-## 9. Questions ouvertes
+## 9. Décisions utilisateur (2026-11-15)
 
-1. **Colonnes de l'écran 1** : les 7 du §3.2 (État, Nom, Coût, Rareté, Cible, Module, Valeurs) ?
-   Remplacer « Module » par « Catégorie » ?
-2. **Version PC (pyglet)** : d'accord pour ne pas la faire, Mac et PC passant par le navigateur
-   (§2) ?
-3. **Bouton Admin** : toujours visible, ou seulement avec `?admin` dans l'adresse (§8) ?
-4. **Modules** : rendre l'affectation d'une carte à un module modifiable et exportable (§4.7) ?
-5. **Export** : les trois options du §6.2 (Partager, Copier, Copier le résumé) ? Faut-il
-   l'**import** (§6.3) dès la première version ?
-6. **Suppression d'une carte du jeu** : prévue seulement pour les nouvelles cartes (§4.6) ;
-   faut-il pouvoir retirer une carte existante (elle disparaîtrait de l'export) ?
-7. **Options** : tri par colonne, filtre, « Dupliquer » : à garder dans la première version, ou
-   plus tard ?
+| # | Question | Décision |
+|---|---|---|
+| 1 | Colonnes de l'écran 1 | État, Nom, Coût, Rareté, Cible, Module, Valeurs (§3.2) |
+| 2 | Version PC | Web seulement pour l'éditeur ; le jeu PC a un bouton Admin qui ouvre la page web dans le navigateur (§2, §8) |
+| 3 | Bouton Admin | Visible seulement pour les joueurs thomas, tom ou lyan, quelle que soit la casse (§8) |
+| 4 | Module | Dans `cartes.json`, champ `modules` (liste) sur chaque carte ; la liste `cartes` de `modules.json` disparaît (§4.7, §10) |
+| 5 | Export | Copier le fichier `cartes.json` complet dans le presse-papiers, seulement (§6.2) |
+| 6 | Suppression | Le champ Jouable prend une troisième valeur, « Supprimée » ; la carte reste dans le fichier (§4.6, §10) |
+| 7 | Options | Tri par colonne et filtre dans la première version ; « Dupliquer » et « Tout effacer » plus tard (§11) |
+
+---
+
+## 10. Changements du jeu à faire avant l'outil
+
+Deux décisions changent le format des données du jeu. **À faire dans une PR à part, avant
+l'outil** (proposition), avec les tests et la mise à jour de `modules-cartes.md` :
+
+1. **Module porté par la carte** : champ `"modules": [...]` dans chaque carte de
+   `config/cartes.json`, rempli à partir des listes actuelles de `config/modules.json`, qui
+   perdent leur champ `cartes`. Le chargement (`charger_cartes`, `charger_modules`) et la
+   recherche des cartes d'un module (`parcours.py` : récompenses, choix de module) lisent le
+   nouveau champ ; un module inconnu dans une carte est refusé au chargement. Les tableaux
+   générés `config/cartes.md` et `config/modules.md` suivent.
+2. **Jouable à trois valeurs** : Oui, Non, Supprimée. **Proposition de format** : des textes
+   `"oui"`, `"non"`, `"supprimee"` au lieu de `true` / `false`, pour ne pas mélanger booléens et
+   texte dans le même champ. Le jeu traite « Supprimée » comme « Non » : jamais proposée, jamais
+   jouée. Les 19 cartes actuelles passent à `"oui"`.
+
+---
+
+## 11. Plus tard (hors première version)
+
+- **Dupliquer** une carte, **Tout effacer** les modifications locales (décision utilisateur :
+  plus tard).
+- **Autres façons d'exporter** : feuille de partage d'iOS, résumé lisible des changements ;
+  **import** d'un fichier exporté (pour passer d'un appareil à l'autre).
+- **« Tester en jeu »** : jouer la prochaine partie avec les cartes modifiées de l'appareil (le web
+  charge `config/cartes.json` dans Pyodide ; il suffirait d'y écrire la version modifiée), à
+  garder séparé pour ne pas jouer sans le savoir avec des cartes non officielles.
+- **Même outil pour les modules et les ennemis** (même structure : tableau, détail, copie).
