@@ -36,8 +36,11 @@ L'utilisateur conçoit le jeu ; l'agent propose, documente et code. Préférence
   dire clairement ce qui a été testé et ce qui ne l'a pas été.
 - **Cartes modifiées dans l'outil d'administration** (éditeur de cartes web / iPhone,
   `specs/outil-editeur-cartes.md`) : l'utilisateur colle le `config/cartes.json` complet copié par
-  l'outil. Le remplacer tel quel, régénérer `config/cartes.md` (`python -m outils.tableau_cartes`),
-  lancer `pytest`, et résumer ce qui a changé carte par carte avant la PR.
+  l'outil. Le remplacer tel quel, puis **écrire ou corriger les effets** des cartes nouvelles ou
+  dont la description ou les valeurs ont changé (l'outil ne les saisit pas : ils se déduisent de
+  la description ; un effet d'un genre nouveau demande du code), régénérer `config/cartes.md`
+  (`python -m outils.tableau_cartes`), lancer `pytest`, et résumer ce qui a changé carte par
+  carte avant la PR.
 - **Revues de PR** : un bot (Claude Code) commente les PR. À la demande de l'utilisateur, lire les
   commentaires (`~/.local/bin/gh api repos/{owner}/{repo}/pulls/<n>/comments`), corriger ce qui
   est juste (avec un test), et répondre sous chaque commentaire (corrigé dans tel commit, ou

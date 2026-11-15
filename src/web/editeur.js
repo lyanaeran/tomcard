@@ -143,19 +143,27 @@ function libelleModules(carte) {
     return modules.map((id) => noms[id] || id).join(", ") || "—";
 }
 
-function libelleValeurs(carte) {
-    const valeurs = carte.valeurs && typeof carte.valeurs === "object" ? carte.valeurs : {};
-    return Object.entries(valeurs).map(([nom, valeur]) => `${nom} ${valeur}`).join(" · ") || "—";
+function libelleMunitions(carte) {
+    return carte.munition === null || carte.munition === undefined || carte.munition === "" ? "∞" : String(carte.munition);
 }
 
+// Description avec les valeurs remplacees (apercu calcule par le jeu) ; texte brut si la carte est
+// en erreur et qu'aucun apercu n'est possible
+function libelleDescription(carte) {
+    const validation = editeurValidations[carte.id];
+    return validation && validation.apercu !== null ? validation.apercu : String(carte.description || "");
+}
+
+// Colonnes de l'ecran 1 (decision utilisateur, 2026-11-15)
 const COLONNES_EDITEUR = [
     { cle: "etat", titre: "", valeur: (carte) => rangEtat(etatCarte(carte.id)) },
     { cle: "nom", titre: "Nom", valeur: (carte) => String(carte.nom || "") },
     { cle: "cout", titre: "Coût", valeur: (carte) => Number(carte.cout) },
     { cle: "rarete", titre: "Rareté", valeur: (carte) => String(carte.rarete || "") },
-    { cle: "cible", titre: "Cible", valeur: (carte) => String(carte.cible || "") },
+    { cle: "categorie", titre: "Catégorie", valeur: (carte) => String(carte.categorie || "") },
     { cle: "module", titre: "Module", valeur: (carte) => libelleModules(carte) },
-    { cle: "valeurs", titre: "Valeurs", valeur: (carte) => libelleValeurs(carte) },
+    { cle: "munitions", titre: "Munitions", valeur: (carte) => (libelleMunitions(carte) === "∞" ? Infinity : Number(carte.munition)) },
+    { cle: "description", titre: "Description", valeur: (carte) => libelleDescription(carte) },
 ];
 
 function rangEtat(etat) {
@@ -185,7 +193,7 @@ function afficherListeEditeur() {
             .sort((a, b) => {
                 const va = colonne.valeur(a.carte);
                 const vb = colonne.valeur(b.carte);
-                const ordre = typeof va === "number" && typeof vb === "number" ? va - vb : String(va).localeCompare(String(vb), "fr");
+                const ordre = typeof va === "number" && typeof vb === "number" ? (va === vb ? 0 : va < vb ? -1 : 1) : String(va).localeCompare(String(vb), "fr");
                 return (editeurTri.inverse ? -ordre : ordre) || a.index - b.index;
             })
             .map((element) => element.carte);
@@ -226,9 +234,10 @@ function afficherListeEditeur() {
                 <td class="col-nom">${echapper(carte.nom)}</td>
                 <td class="col-cout">${echapper(carte.cout)}</td>
                 <td class="col-rarete">${echapper(carte.rarete)}</td>
-                <td class="col-cible">${echapper(carte.cible)}</td>
+                <td class="col-categorie">${echapper(carte.categorie)}</td>
                 <td class="col-module">${echapper(libelleModules(carte))}</td>
-                <td class="col-valeurs">${echapper(libelleValeurs(carte))}</td>
+                <td class="col-munitions">${echapper(libelleMunitions(carte))}</td>
+                <td class="col-description"><div class="texte-description">${echapper(libelleDescription(carte))}</div></td>
             </tr>`;
         })
         .join("");
@@ -289,7 +298,8 @@ function nouvelleCarteEditeur() {
         refonte: true,
         description: "Inflige {degats} dégâts à un ennemi unique",
         valeurs: { degats: 0 },
-        effets: [{ nature: "DEGATS", valeur: "degats" }],
+        // Effets non saisis dans l'outil : ecrits par l'agent d'apres la description
+        effets: [],
     };
     editeurLocal.nouvelles.push(id);
     enregistrerCarte(id, carte);
@@ -306,7 +316,9 @@ function copierFichierEditeur() {
     }
     const texte = appelerBridge("editeur_exporter_web", JSON.stringify(cartesEffectives()));
     const etats = cartesEffectives().map((carte) => etatCarte(carte.id));
-    const resume = `${etats.filter((e) => e.modifiee).length} modifiée(s), ${etats.filter((e) => e.nouvelle).length} nouvelle(s)`;
+    const aRevoir = cartesEffectives().filter((carte) => editeurValidations[carte.id].effets_a_revoir).length;
+    const resume = `${etats.filter((e) => e.modifiee).length} modifiée(s), ${etats.filter((e) => e.nouvelle).length} nouvelle(s)` +
+        (aRevoir ? `, ${aRevoir} dont les effets seront écrits par l'agent` : "");
     const enSecours = () => {
         // Presse-papiers indisponible (page non securisee, ex. http://adresse-locale) : on montre le
         // texte selectionne, a copier a la main
@@ -484,34 +496,6 @@ function blocValeurs(carte) {
         <button id="bouton-ajouter-valeur" class="bouton-petit">+ valeur</button>${rappelJeu(["valeurs"], carte.valeurs)}</div>`;
 }
 
-function blocEffets(carte) {
-    const listes = editeurReference.listes;
-    const effets = Array.isArray(carte.effets) ? carte.effets : [];
-    const nomsValeurs = Object.keys(carte.valeurs && typeof carte.valeurs === "object" ? carte.valeurs : {}).map((nom) => ({ valeur: nom, libelle: nom }));
-    const cartesFiltre = cartesEffectives().map((c) => ({ valeur: c.id, libelle: `${c.nom} (${c.id})` }));
-    const blocs = effets
-        .map((effet, index) => {
-            const filtre = effet && effet.filtre ? `
-                <div class="sous-bloc-editeur"><span>Filtre (cartes visées)</span>
-                ${champListe("Carte", ["effets", index, "filtre", "id"], cartesFiltre, { aucun: "—" })}
-                ${champListe("Rareté", ["effets", index, "filtre", "rarete"], listes.rarete, { aucun: "—" })}
-                ${champListe("Catégorie", ["effets", index, "filtre", "categorie"], listes.categorie, { aucun: "—" })}
-                </div>` : `<button class="bouton-petit bouton-ajouter-filtre" data-index="${index}">+ filtre (répétition)</button>`;
-            return `
-            <div class="bloc-effet${classeModifie(["effets", index], effet)}">
-                <div class="titre-effet">Effet ${index + 1} <button class="bouton-supprimer-effet" data-index="${index}" title="Supprimer cet effet">✕</button></div>
-                ${champListe("Nature", ["effets", index, "nature"], listes.nature)}
-                ${champListe("Valeur", ["effets", index, "valeur"], nomsValeurs, { aucun: "— (sans valeur)" })}
-                ${champListe("Portée", ["effets", index, "portee"], listes.portee.filter((p) => p.valeur !== "CIBLE"), { aucun: "Cible de la carte" })}
-                ${champListe("Durée", ["effets", index, "duree"], nomsValeurs, { aucun: "— (sans durée)" })}
-                ${filtre}
-                ${rappelJeu(["effets", index], effet)}
-            </div>`;
-        })
-        .join("");
-    return `<div class="champ-editeur"><span>Effets</span>${blocs}<button id="bouton-ajouter-effet" class="bouton-petit">+ effet</button></div>`;
-}
-
 function afficherCarteEditeur() {
     const carte = carteOuverte();
     const id = editeurIdOuvert;
@@ -535,10 +519,15 @@ function afficherCarteEditeur() {
         ? `<ul class="erreurs-editeur">${validation.erreurs.map((erreur) => `<li>⚠ ${echapper(erreur)}</li>`).join("")}</ul>`
         : "";
     const apercu = validation.apercu !== null ? `<div class="apercu-editeur">Aperçu : « ${echapper(validation.apercu)} »</div>` : "";
+    // Les effets ne se saisissent pas ici (decision utilisateur) : ils se deduisent de la description
+    const descriptionChangee = duJeu && carte.description !== duJeu.description;
+    const noteEffets = validation.effets_a_revoir || descriptionChangee || !duJeu
+        ? '<div class="note-effets-editeur">Effets de la carte : ils ne se saisissent pas ici. Ils seront écrits d\'après la description quand le fichier sera intégré au jeu.</div>'
+        : "";
     const image = carte.image ? `<img class="vignette-editeur" src="${echapper(carte.image)}" alt="">` : "";
 
     document.getElementById("contenu-editeur-carte").innerHTML = `
-        ${conflit}${erreurs}${apercu}
+        ${conflit}${erreurs}${apercu}${noteEffets}
         <fieldset><legend>Identité</legend>
             ${champTexte("Id", ["id"], { lectureSeule: Boolean(duJeu) })}
             ${champTexte("Nom", ["nom"])}
@@ -561,8 +550,7 @@ function afficherCarteEditeur() {
         <fieldset><legend>Texte</legend>
             ${champTexte("Description (valeurs entre accolades : {degats})", ["description"], { multiligne: true })}
         </fieldset>
-        <fieldset><legend>Valeurs</legend>${blocValeurs(carte)}</fieldset>
-        <fieldset><legend>Effets</legend>${blocEffets(carte)}</fieldset>`;
+        <fieldset><legend>Valeurs</legend>${blocValeurs(carte)}</fieldset>`;
 
     brancherCarteEditeur();
     masquerTousLesEcrans();
@@ -596,7 +584,6 @@ function brancherCarteEditeur() {
                 if (liste.value === "__aucun__") ecrireChemin(carte, chemin, undefined);
                 else if (liste.value === "__autre__") ecrireChemin(carte, chemin, "");
                 else ecrireChemin(carte, chemin, liste.value);
-                nettoyerEffets(carte);
             });
         });
     });
@@ -657,33 +644,6 @@ function brancherCarteEditeur() {
         });
     });
 
-    contenu.querySelectorAll(".bouton-supprimer-effet").forEach((bouton) => {
-        bouton.addEventListener("click", (evenement) => {
-            evenement.preventDefault();
-            modifierCarteOuverte((carte) => {
-                carte.effets.splice(Number(bouton.dataset.index), 1);
-            });
-        });
-    });
-
-    contenu.querySelectorAll(".bouton-ajouter-filtre").forEach((bouton) => {
-        bouton.addEventListener("click", (evenement) => {
-            evenement.preventDefault();
-            modifierCarteOuverte((carte) => {
-                carte.effets[Number(bouton.dataset.index)].filtre = { id: "" };
-            });
-        });
-    });
-
-    document.getElementById("bouton-ajouter-effet").addEventListener("click", (evenement) => {
-        evenement.preventDefault();
-        modifierCarteOuverte((carte) => {
-            carte.effets = Array.isArray(carte.effets) ? carte.effets : [];
-            const premiere = Object.keys(carte.valeurs || {})[0];
-            carte.effets.push(premiere ? { nature: "DEGATS", valeur: premiere } : { nature: "DEGATS" });
-        });
-    });
-
     contenu.querySelectorAll(".bouton-remettre").forEach((bouton) => {
         bouton.addEventListener("click", (evenement) => {
             evenement.preventDefault();
@@ -709,18 +669,6 @@ function brancherCarteEditeur() {
             afficherCarteEditeur();
         });
     }
-}
-
-// Effet : un filtre vide ou des sous-cles vides sont retires (le fichier n'ecrit que l'utile)
-function nettoyerEffets(carte) {
-    (carte.effets || []).forEach((effet) => {
-        if (effet && effet.filtre && typeof effet.filtre === "object") {
-            Object.keys(effet.filtre).forEach((cle) => {
-                if (effet.filtre[cle] === undefined) delete effet.filtre[cle];
-            });
-            if (Object.keys(effet.filtre).length === 0) delete effet.filtre;
-        }
-    });
 }
 
 // Nouvelle carte : son id est modifiable ; renommer deplace sa sauvegarde locale

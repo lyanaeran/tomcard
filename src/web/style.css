@@ -1877,7 +1877,7 @@ body {
 }
 
 #tableau-editeur tbody tr {
-    height: 32px;
+    height: 36px;
     border-bottom: 1px solid #1c2440;
 }
 
@@ -1894,19 +1894,37 @@ body {
     text-decoration: line-through;
 }
 
-/* Largeurs en points de la spec (§3.2) ; Valeurs prend le reste */
+/* Colonnes (decision utilisateur, specs/outil-editeur-cartes.md 3.2) ; la description prend le
+   reste et tient sur deux lignes au plus */
 #tableau-editeur .col-etat { width: 24px; text-align: center; }
-#tableau-editeur .col-nom { width: 160px; }
+#tableau-editeur .col-nom { width: 140px; }
 #tableau-editeur .col-cout { width: 48px; }
-#tableau-editeur .col-rarete { width: 80px; }
-#tableau-editeur .col-cible { width: 120px; }
-#tableau-editeur .col-module { width: 110px; }
+#tableau-editeur .col-rarete { width: 84px; }
+#tableau-editeur .col-categorie { width: 84px; }
+#tableau-editeur .col-module { width: 100px; }
+#tableau-editeur .col-munitions { width: 80px; }
 
-/* Portrait : 4 colonnes seulement (Etat, Nom, Cout, Valeurs) */
+#tableau-editeur td.col-description {
+    white-space: normal;
+    font-size: 12px;
+    line-height: 1.25;
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+
+.texte-description {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Portrait : Etat, Nom, Cout et Description seulement */
 @media (orientation: portrait) {
     #tableau-editeur .col-rarete,
-    #tableau-editeur .col-cible,
-    #tableau-editeur .col-module {
+    #tableau-editeur .col-categorie,
+    #tableau-editeur .col-module,
+    #tableau-editeur .col-munitions {
         display: none;
     }
 }
@@ -1974,8 +1992,7 @@ body {
 .champ-modifie > input,
 .champ-modifie > select,
 .champ-modifie > textarea,
-.champ-modifie.champ-coche,
-.bloc-effet.champ-modifie {
+.champ-modifie.champ-coche {
     border-color: #ff9f40 !important;
     box-shadow: 0 0 0 1px #ff9f40;
 }
@@ -1986,8 +2003,7 @@ body {
 }
 
 .bouton-remettre,
-.bouton-supprimer-valeur,
-.bouton-supprimer-effet {
+.bouton-supprimer-valeur {
     min-width: 28px;
     min-height: 28px;
     border-radius: 6px;
@@ -2013,7 +2029,7 @@ body {
     gap: 0.3rem 0.9rem;
 }
 
-/* Valeurs, effets, aperçu et erreurs : sur toute la largeur du bloc */
+/* Valeurs et image : sur toute la largeur du bloc */
 #contenu-editeur-carte fieldset > .champ-editeur:only-child,
 .ligne-image {
     grid-column: 1 / -1;
@@ -2044,37 +2060,6 @@ body {
     margin-bottom: 0.3rem;
 }
 
-.bloc-effet {
-    border: 1px solid #2a3350;
-    border-radius: 8px;
-    padding: 0.3rem 0.5rem;
-    margin-bottom: 0.4rem;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 0.3rem 0.6rem;
-}
-
-.titre-effet {
-    grid-column: 1 / -1;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    color: #b8c0dd;
-}
-
-.sous-bloc-editeur {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 0.3rem 0.6rem;
-}
-
-.sous-bloc-editeur > span {
-    grid-column: 1 / -1;
-    color: #9aa4c8;
-    font-size: 12px;
-}
-
 .erreurs-editeur {
     margin: 0 0 0.5rem;
     padding: 0.4rem 0.6rem 0.4rem 1.2rem;
@@ -2100,6 +2085,15 @@ body {
 .conflit-editeur code {
     font-size: 11px;
     word-break: break-all;
+}
+
+.note-effets-editeur {
+    margin: 0 0 0.5rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: 6px;
+    background: #14283a;
+    color: #b9d7f0;
+    font-size: 12px;
 }
 
 .note-editeur {

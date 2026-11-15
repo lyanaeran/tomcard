@@ -24,8 +24,6 @@ from src.gameplay.carte import (
     CategorieCarte,
     CibleCarte,
     Jouabilite,
-    NatureEffet,
-    PorteeEffet,
     RareteCarte,
     cartes_vers_texte_json,
     charger_cartes,
@@ -98,7 +96,7 @@ _PAIRES_CASES_ENNEMIES = (("AV_G", "AR_G"), ("AV_M", "AR_M"), ("AV_D", "AR_D"))
 
 # Version du contrat entre bridge.py et src/web/app.js : doit etre egale a VERSION_CACHE (app.js),
 # verifie au demarrage par app.js (versionsAccordees) et par tests/test_architecture.py
-VERSION_WEB = "92"
+VERSION_WEB = "93"
 
 combat = None
 # Taille du journal deja transmise : les popups d'une action sont calcules a partir des seules
@@ -760,26 +758,6 @@ def mettre_aux_normes_police_web(partie_json) -> str:
 # Aucune regle ici non plus : les listes de choix viennent des enumerations du jeu, la validation
 # et l'apercu de Carte.depuis_dict / description_affichee, l'ecriture de cartes_vers_texte_json.
 
-# Libelles en clair des natures et portees d'effet (presentation seulement)
-LIBELLES_NATURES = {
-    "DEGATS": "Dégâts",
-    "BOUCLIER": "Bouclier",
-    "REPARATION": "Réparation",
-    "INCENDIE": "Incendie",
-    "VULNERABILITE": "Vulnérabilité",
-    "REDUCTION_DEGATS": "Réduction de dégâts",
-    "ANNULATION_PROCHAINE_ATTAQUE": "Leurre (annule la prochaine attaque)",
-    "REDIRECTION_CIBLE": "Tir allié (redirection)",
-    "GAIN_ELECTRICITE": "Gain d'électricité",
-    "PIOCHE": "Pioche",
-    "REPETITION": "Répétition",
-}
-LIBELLES_PORTEES = {
-    "CIBLE": "Cible de la carte",
-    "AUTRES_ENNEMIS": "Autres ennemis",
-    "COLONNE_AVANT_ENNEMIE": "Colonne avant ennemie",
-    "COLONNE_ARRIERE_ENNEMIE": "Colonne arrière ennemie",
-}
 LIBELLES_JOUABLE = {"oui": "Oui", "non": "Non", "supprimee": "Supprimée"}
 
 
@@ -805,17 +783,27 @@ def editeur_reference_web() -> str:
             "categorie": _choix([categorie.value for categorie in CategorieCarte]),
             "cible": _choix([cible.value for cible in CibleCarte]),
             "jouable": _choix([jouabilite.value for jouabilite in Jouabilite], LIBELLES_JOUABLE),
-            "nature": _choix([nature.name for nature in NatureEffet], LIBELLES_NATURES),
-            "portee": _choix([portee.name for portee in PorteeEffet], LIBELLES_PORTEES),
             "modules": [{"valeur": module.id, "libelle": module.nom} for module in modules.values()],
             "images": _choix([image for image in images if image.startswith("assets/cartes/")]),
         },
     }, ensure_ascii=False)
 
 
+def _effets_de_controle(entree: dict) -> list[dict]:
+    """Effets provisoires pour verifier une carte sans ses effets, qui ne se saisissent pas dans
+    l'outil (decision utilisateur : ils se deduisent de la description et sont ecrits par l'agent a
+    l'integration) : un effet neutre par valeur nommee, pour que chaque valeur "serve"."""
+    valeurs = entree.get("valeurs") if isinstance(entree.get("valeurs"), dict) else {}
+    if valeurs:
+        return [{"nature": "DEGATS", "valeur": nom} for nom in valeurs]
+    return [{"nature": "ANNULATION_PROCHAINE_ATTAQUE"}]
+
+
 def editeur_valider_web(json_entrees) -> str:
     """Verifie chaque carte comme au chargement de config/cartes.json (Carte.depuis_dict, modules
-    connus, id unique). Renvoie, dans le meme ordre, {"erreurs": [...], "apercu": texte ou None}."""
+    connus, id unique), SAUF ses effets, verifies a part : des effets qui ne correspondent plus aux
+    valeurs ne bloquent pas l'outil, ils sont a ecrire par l'agent (effets_a_revoir). Renvoie, dans
+    le meme ordre, {"erreurs": [...], "apercu": texte ou None, "effets_a_revoir": bool}."""
     entrees = json.loads(json_entrees)
     ids_modules = charger_modules().keys()
     comptes = {}
@@ -829,12 +817,18 @@ def editeur_valider_web(json_entrees) -> str:
         elif comptes[entree.get("id")] > 1:
             erreurs.append(f"Id {entree.get('id')} utilisé par plusieurs cartes")
         try:
-            carte = Carte.depuis_dict(entree)
+            carte = Carte.depuis_dict(dict(entree, effets=_effets_de_controle(entree)))
             verifier_modules_de_la_carte(carte, ids_modules)
             apercu = carte.description_affichee()
         except (ValueError, TypeError, KeyError, AttributeError, IndexError) as erreur:
             erreurs.append(str(erreur))
-        resultats.append({"erreurs": erreurs, "apercu": apercu})
+        effets_a_revoir = False
+        if not erreurs:
+            try:
+                Carte.depuis_dict(entree)
+            except (ValueError, TypeError, KeyError, AttributeError, IndexError):
+                effets_a_revoir = True
+        resultats.append({"erreurs": erreurs, "apercu": apercu, "effets_a_revoir": effets_a_revoir})
     return json.dumps(resultats, ensure_ascii=False)
 
 
