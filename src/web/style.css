@@ -1758,3 +1758,355 @@ body {
     justify-content: center;
     gap: 1rem;
 }
+
+/* --- Outil d'administration : editeur de cartes (specs/outil-editeur-cartes.md), TEMPORAIRE ---
+   Pense pour un iPhone 17 en paysage (874 x 402 points, environ 760 utiles hors marges de
+   securite) : tableau de 7 colonnes sans defilement horizontal, defilement vertical seul.
+   Fond uni (lisibilite des chiffres) plutot que l'image de fond du jeu. */
+.ecran-editeur {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    background: #0b1020;
+    color: #e8ecff;
+    font-size: 13px;
+    padding-left: max(0.5rem, env(safe-area-inset-left));
+    padding-right: max(0.5rem, env(safe-area-inset-right));
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+#ecran-editeur-carte {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.barre-editeur {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: max(0.35rem, env(safe-area-inset-top)) 0 0.35rem;
+    background: #0b1020;
+    border-bottom: 1px solid #2a3350;
+}
+
+.barre-editeur button,
+.barre-editeur select,
+.ecran-editeur .bouton-petit {
+    font-size: 13px;
+    min-height: 32px;
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+    border: 1px solid #3d4a73;
+    background: #1b2440;
+    color: #e8ecff;
+}
+
+.barre-editeur button:disabled {
+    opacity: 0.45;
+}
+
+.compteur-editeur {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #b8c0dd;
+}
+
+#message-editeur {
+    margin: 0.3rem 0;
+    padding: 0.3rem 0.5rem;
+    border-radius: 6px;
+    background: #1d3b2a;
+}
+
+#message-editeur.message-editeur-erreur {
+    background: #4a1f24;
+}
+
+#secours-copie-editeur {
+    display: flex;
+    gap: 0.4rem;
+    margin: 0.3rem 0;
+}
+
+#zone-copie-editeur {
+    flex: 1;
+    height: 7rem;
+    font: 11px ui-monospace, monospace;
+    background: #10162a;
+    color: #e8ecff;
+}
+
+#conteneur-tableau-editeur {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+#tableau-editeur {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+#tableau-editeur th {
+    position: sticky;
+    top: 0;
+    background: #141b33;
+    text-align: left;
+    font-weight: 600;
+    height: 28px;
+    cursor: pointer;
+    user-select: none;
+}
+
+#tableau-editeur td,
+#tableau-editeur th {
+    padding: 0 0.3rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#tableau-editeur tbody tr {
+    height: 32px;
+    border-bottom: 1px solid #1c2440;
+}
+
+#tableau-editeur tbody tr:active,
+#tableau-editeur tbody tr.ligne-recente {
+    background: #1b2440;
+}
+
+#tableau-editeur tr.ligne-supprimee td {
+    opacity: 0.45;
+}
+
+#tableau-editeur tr.ligne-supprimee .col-nom {
+    text-decoration: line-through;
+}
+
+/* Largeurs en points de la spec (§3.2) ; Valeurs prend le reste */
+#tableau-editeur .col-etat { width: 24px; text-align: center; }
+#tableau-editeur .col-nom { width: 160px; }
+#tableau-editeur .col-cout { width: 48px; }
+#tableau-editeur .col-rarete { width: 80px; }
+#tableau-editeur .col-cible { width: 120px; }
+#tableau-editeur .col-module { width: 110px; }
+
+/* Portrait : 4 colonnes seulement (Etat, Nom, Cout, Valeurs) */
+@media (orientation: portrait) {
+    #tableau-editeur .col-rarete,
+    #tableau-editeur .col-cible,
+    #tableau-editeur .col-module {
+        display: none;
+    }
+}
+
+.pastille-editeur { font-weight: 700; }
+.pastille-modifiee { color: #ff9f40; }
+.pastille-nouvelle { color: #5fd38d; }
+.pastille-erreur { color: #ff5a5f; }
+.pastille-jeu-change { color: #b48cff; }
+
+#contenu-editeur-carte {
+    padding: 0.4rem 0 1.5rem;
+}
+
+#contenu-editeur-carte fieldset {
+    border: 1px solid #2a3350;
+    border-radius: 8px;
+    margin: 0 0 0.6rem;
+    padding: 0.3rem 0.6rem 0.5rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.4rem 0.8rem;
+}
+
+#contenu-editeur-carte legend {
+    color: #b8c0dd;
+    padding: 0 0.3rem;
+}
+
+.champ-editeur {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.champ-editeur > span {
+    color: #9aa4c8;
+    font-size: 12px;
+}
+
+.champ-editeur input[type="text"],
+.champ-editeur textarea,
+.champ-editeur select,
+.ligne-valeur input {
+    font-size: 16px; /* 16 px minimum : Safari iOS zoome sinon sur le champ touche */
+    min-height: 32px;
+    width: 100%;
+    padding: 0.15rem 0.35rem;
+    border-radius: 6px;
+    border: 1px solid #3d4a73;
+    background: #10162a;
+    color: #e8ecff;
+}
+
+.champ-editeur input[readonly] {
+    color: #8a93b5;
+}
+
+.champ-editeur textarea {
+    resize: vertical;
+}
+
+/* Champ different de la carte du jeu (specs/outil-editeur-cartes.md 4.4) */
+.champ-modifie > input,
+.champ-modifie > select,
+.champ-modifie > textarea,
+.champ-modifie.champ-coche,
+.bloc-effet.champ-modifie {
+    border-color: #ff9f40 !important;
+    box-shadow: 0 0 0 1px #ff9f40;
+}
+
+.rappel-jeu {
+    font-size: 11px;
+    color: #ffb877;
+}
+
+.bouton-remettre,
+.bouton-supprimer-valeur,
+.bouton-supprimer-effet {
+    min-width: 28px;
+    min-height: 28px;
+    border-radius: 6px;
+    border: 1px solid #3d4a73;
+    background: #1b2440;
+    color: #e8ecff;
+}
+
+.champ-coche {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.champ-coche input {
+    width: 22px;
+    height: 22px;
+}
+
+.groupe-coches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 0.9rem;
+}
+
+/* Valeurs, effets, aperçu et erreurs : sur toute la largeur du bloc */
+#contenu-editeur-carte fieldset > .champ-editeur:only-child,
+.ligne-image {
+    grid-column: 1 / -1;
+}
+
+.ligne-image {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.6rem;
+}
+
+.ligne-image .champ-editeur {
+    flex: 1;
+}
+
+.vignette-editeur {
+    width: 48px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid #3d4a73;
+}
+
+.ligne-valeur {
+    display: grid;
+    grid-template-columns: 1fr 6rem 2rem;
+    gap: 0.3rem;
+    margin-bottom: 0.3rem;
+}
+
+.bloc-effet {
+    border: 1px solid #2a3350;
+    border-radius: 8px;
+    padding: 0.3rem 0.5rem;
+    margin-bottom: 0.4rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.3rem 0.6rem;
+}
+
+.titre-effet {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #b8c0dd;
+}
+
+.sous-bloc-editeur {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.3rem 0.6rem;
+}
+
+.sous-bloc-editeur > span {
+    grid-column: 1 / -1;
+    color: #9aa4c8;
+    font-size: 12px;
+}
+
+.erreurs-editeur {
+    margin: 0 0 0.5rem;
+    padding: 0.4rem 0.6rem 0.4rem 1.2rem;
+    border-radius: 6px;
+    background: #4a1f24;
+    color: #ffd6d8;
+}
+
+.apercu-editeur {
+    margin: 0 0 0.5rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: 6px;
+    background: #141b33;
+}
+
+.conflit-editeur {
+    margin: 0 0 0.5rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: 6px;
+    background: #2b2150;
+}
+
+.conflit-editeur code {
+    font-size: 11px;
+    word-break: break-all;
+}
+
+.note-editeur {
+    font-size: 11px;
+    color: #ffb877;
+}
+
+.id-editeur {
+    color: #8a93b5;
+}

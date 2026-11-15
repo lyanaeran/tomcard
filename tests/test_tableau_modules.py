@@ -16,11 +16,12 @@ def test_le_tableau_des_modules_est_a_jour_avec_le_json():
     )
 
 
-def test_une_carte_absente_de_cartes_json_est_une_erreur(tmp_path):
+def test_un_module_qui_liste_encore_ses_cartes_est_refuse(tmp_path):
+    """Ancien format : c'est desormais la carte qui dit a quels modules elle appartient."""
     donnees = json.loads(FICHIER_JSON.read_text(encoding="utf-8"))
-    donnees["modules"][1]["cartes"].append("CRT_99")
+    donnees["modules"][1]["cartes"] = ["CRT_9"]
     fichier = tmp_path / "modules.json"
     fichier.write_text(json.dumps(donnees), encoding="utf-8")
 
-    with pytest.raises(ValueError, match="CRT_99"):
+    with pytest.raises(ValueError, match="cles inconnues"):
         tableau_markdown(fichier)

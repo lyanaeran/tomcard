@@ -8,8 +8,7 @@
       "principal": true,
       "pv_max": 60,
       "jouable": true,
-      "refonte": true,
-      "cartes": ["CRT_7", "CRT_10", "CRT_11", "CRT_12", "CRT_8", "CRT_45", "CRT_46", "CRT_47", "CRT_48", "CRT_49", "CRT_50"]
+      "refonte": true
     },
     {
       "id": "MOD_2",
@@ -19,8 +18,7 @@
       "principal": false,
       "pv_max": 20,
       "jouable": true,
-      "refonte": true,
-      "cartes": ["CRT_13", "CRT_14", "CRT_9", "CRT_16", "CRT_15", "CRT_17", "CRT_18", "CRT_19"]
+      "refonte": true
     }
   ]
 }

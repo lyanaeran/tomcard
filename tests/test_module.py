@@ -240,3 +240,34 @@ def test_les_methodes_de_combat_refusent_un_module_hors_combat():
 
     with pytest.raises(ValueError, match="hors combat"):
         principal.subir_degats(5)
+
+
+# --- Cartes calculees a partir du champ `modules` des cartes ---
+
+
+def _fichier_cartes(tmp_path, modifier):
+    from src.gameplay.carte import FICHIER_CARTES
+
+    donnees = json.loads(FICHIER_CARTES.read_text(encoding="utf-8"))
+    modifier(donnees["cartes"])
+    fichier = tmp_path / "cartes.json"
+    fichier.write_text(json.dumps(donnees), encoding="utf-8")
+    return fichier
+
+
+def test_les_cartes_d_un_module_viennent_du_champ_modules_des_cartes(tmp_path):
+    def commune_aux_deux(cartes):
+        next(carte for carte in cartes if carte["id"] == "CRT_9")["modules"] = ["MOD_1", "MOD_2"]
+
+    modules = charger_modules(fichier_cartes=_fichier_cartes(tmp_path, commune_aux_deux))
+
+    assert "CRT_9" in modules["MOD_1"].cartes and "CRT_9" in modules["MOD_2"].cartes
+
+
+def test_une_carte_qui_cite_un_module_inconnu_est_refusee(tmp_path):
+    def module_inconnu(cartes):
+        cartes[0]["modules"] = ["MOD_9"]
+
+    with pytest.raises(ValueError, match="CRT_7 : module inconnu 'MOD_9'"):
+        charger_modules(fichier_cartes=_fichier_cartes(tmp_path, module_inconnu))
+

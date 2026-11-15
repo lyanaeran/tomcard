@@ -24,7 +24,7 @@ ENTETE = """# Cartes (refonte) — tableau généré
 """
 
 COLONNES = [
-    "Id", "Nom", "Rareté", "Catégorie", "Cible", "Coût", "Munitions", "Lancements", "Persistante",
+    "Id", "Nom", "Rareté", "Catégorie", "Cible", "Modules", "Coût", "Munitions", "Lancements", "Persistante",
     "Jouable", "Refonte", "Description affichée", "Valeurs", "Effets",
 ]
 
@@ -49,11 +49,12 @@ def _ligne(entree: dict, carte: Carte) -> list[str]:
         entree["rarete"],
         entree["categorie"],
         entree["cible"],
+        ", ".join(entree.get("modules", [])) or "—",
         str(entree["cout"]),
         "Illimitées" if entree.get("munition") is None else str(entree["munition"]),
         str(entree.get("lancements", 1)),
         _oui_non(entree.get("persistante", False)),
-        _oui_non(entree.get("jouable", True)),
+        {"oui": "Oui", "non": "Non", "supprimee": "Supprimée"}[carte.jouabilite.value],
         _oui_non(entree.get("refonte", False)),
         carte.description_affichee(),
         f"`{_compact(entree.get('valeurs', {}))}`",

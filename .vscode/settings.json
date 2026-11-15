@@ -1,0 +1,9 @@
+{
+    // Bouton "Executer" (Run Python File) sur un chemin avec une espace ("Document Parent") :
+    // l'extension "Python Environments" double les guillemets ('"…/main.py"') et Python ne
+    // trouve plus le fichier. On rend la main a l'extension Python classique, qui les met
+    // correctement (python.useEnvironmentsExtension, valeur explicite du projet).
+    "python.useEnvironmentsExtension": false,
+    // Lancer depuis la racine du projet, quel que soit le fichier ouvert (main.py y est)
+    "python.terminal.executeInFileDir": false
+}

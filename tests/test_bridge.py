@@ -161,3 +161,47 @@ def test_la_station_dit_pourquoi_une_action_est_refusee(bridge):
     partie["argent"] = 100
     reussi = json.loads(bridge.ameliorer_module_web(json.dumps(partie), "base"))
     assert (reussi["succes"], reussi["raison"]) == (True, "OK")
+
+
+# --- Outil d'administration : editeur de cartes (specs/outil-editeur-cartes.md) ---
+
+
+def test_editeur_reference_cartes_du_fichier_et_listes_du_jeu(bridge):
+    reference = json.loads(bridge.editeur_reference_web())
+    cartes_fichier = json.loads((FICHIER_BRIDGE.parents[2] / "config" / "cartes.json").read_text(encoding="utf-8"))["cartes"]
+
+    assert reference["cartes"] == cartes_fichier
+    listes = reference["listes"]
+    assert [choix["valeur"] for choix in listes["jouable"]] == ["oui", "non", "supprimee"]
+    assert [choix["valeur"] for choix in listes["modules"]] == ["MOD_1", "MOD_2"]
+    assert "Ennemi Unique" in [choix["valeur"] for choix in listes["cible"]]
+    assert {"valeur": "DEGATS", "libelle": "Dégâts"} in listes["nature"]
+
+
+def test_editeur_valide_comme_le_jeu_et_donne_l_apercu(bridge):
+    cartes = json.loads(bridge.editeur_reference_web())["cartes"]
+    cartes[0]["modules"] = ["MOD_9"]
+    cartes[1]["jouable"] = True
+    cartes[3]["id"] = cartes[2]["id"]
+
+    resultats = json.loads(bridge.editeur_valider_web(json.dumps(cartes)))
+
+    assert resultats[0]["erreurs"] == ["Carte CRT_7 : module inconnu 'MOD_9' (absent de config/modules.json)"]
+    assert "jouable doit valoir" in resultats[1]["erreurs"][0]
+    assert "utilisé par plusieurs cartes" in resultats[2]["erreurs"][0] and resultats[3]["erreurs"]
+    assert resultats[4] == {"erreurs": [], "apercu": cartes[4]["description"].format(**cartes[4]["valeurs"])}
+
+
+def test_editeur_exporte_le_fichier_dans_sa_mise_en_forme(bridge):
+    cartes = json.loads(bridge.editeur_reference_web())["cartes"]
+    cartes[0]["valeurs"]["degats"] = 7
+
+    texte = json.loads(bridge.editeur_exporter_web(json.dumps(cartes)))
+
+    original = (FICHIER_BRIDGE.parents[2] / "config" / "cartes.json").read_text(encoding="utf-8")
+    assert texte == original.replace('"valeurs": { "degats": 6 }', '"valeurs": { "degats": 7 }', 1)
+
+
+def test_est_admin_web(bridge):
+    assert json.loads(bridge.est_admin_web("Thomas")) is True
+    assert json.loads(bridge.est_admin_web("Paul")) is False

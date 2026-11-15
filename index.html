@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
     <title>Space Fight</title>
-    <link rel="stylesheet" href="src/web/style.css?v=67">
+    <link rel="stylesheet" href="src/web/style.css?v=68">
     <link rel="manifest" href="src/web/manifest.json?v=53">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -56,6 +56,7 @@
             <button id="bouton-voir-deck-partie">Voir le deck</button>
         </div>
         <button id="bouton-nouvelle-partie" class="cachee">Nouvelle partie</button>
+        <button id="bouton-admin" class="cachee">Admin</button>
     </div>
     <div id="app" class="cachee">
         <div id="conseil-rotation">Tourne ton téléphone en mode paysage pour l'affichage complet</div>
@@ -163,7 +164,32 @@
         <button id="bouton-retour-journal-combat">Retour</button>
         <div id="liste-journal-combat"></div>
     </div>
+    <!-- Outil d'administration : editeur de cartes (specs/outil-editeur-cartes.md), TEMPORAIRE -->
+    <div id="ecran-editeur-liste" class="cachee ecran-editeur">
+        <div class="barre-editeur">
+            <button id="bouton-retour-editeur">← Jeu</button>
+            <span id="compteur-editeur" class="compteur-editeur"></span>
+            <select id="filtre-editeur" aria-label="Filtre"></select>
+            <button id="bouton-nouvelle-carte-editeur" title="Nouvelle carte">+</button>
+            <button id="bouton-copier-editeur">Copier</button>
+        </div>
+        <div id="message-editeur" class="cachee"></div>
+        <div id="secours-copie-editeur" class="cachee">
+            <textarea id="zone-copie-editeur" readonly></textarea>
+            <button id="bouton-fermer-secours-editeur">Fermer</button>
+        </div>
+        <div id="conteneur-tableau-editeur"><table id="tableau-editeur"></table></div>
+    </div>
+    <div id="ecran-editeur-carte" class="cachee ecran-editeur">
+        <div class="barre-editeur">
+            <button id="bouton-fermer-carte-editeur">Fermer</button>
+            <span id="titre-editeur-carte" class="compteur-editeur"></span>
+            <button id="bouton-annuler-editeur"></button>
+        </div>
+        <div id="contenu-editeur-carte"></div>
+    </div>
     <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
-    <script src="src/web/app.js?v=91"></script>
+    <script src="src/web/app.js?v=92"></script>
+    <script src="src/web/editeur.js?v=92"></script>
 </body>
 </html>

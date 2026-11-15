@@ -15,6 +15,7 @@ from src.gameplay.carte import (
     CibleCarte,
     Effet,
     FiltreCartes,
+    Jouabilite,
     NatureEffet,
     PorteeEffet,
     FICHIER_CARTES,
@@ -358,3 +359,51 @@ def test_un_id_de_carte_en_double_est_refuse(tmp_path):
 
     with pytest.raises(ValueError, match="en double"):
         charger_cartes(fichier)
+
+
+# --- Modules de la carte et jouabilite a trois valeurs (specs/outil-editeur-cartes.md 10) ---
+
+
+def test_chaque_carte_dit_a_quels_modules_elle_appartient():
+    cartes = charger_cartes()
+
+    assert cartes["CRT_7"].modules == ("MOD_1",)
+    assert cartes["CRT_9"].modules == ("MOD_2",)
+
+
+def test_jouable_a_trois_valeurs_supprimee_compte_comme_non():
+    for valeur, attendu in (("oui", True), ("non", False), ("supprimee", False)):
+        carte = Carte.depuis_dict(dict(_entree("CRT_7"), jouable=valeur))
+        assert carte.jouabilite == Jouabilite(valeur) and carte.jouable is attendu
+
+
+def test_l_ancien_format_booleen_de_jouable_est_refuse():
+    with pytest.raises(ValueError, match="^Carte CRT_7 : jouable doit valoir"):
+        Carte.depuis_dict(dict(_entree("CRT_7"), jouable=True))
+
+
+def test_modules_doit_etre_une_liste_d_ids():
+    with pytest.raises(ValueError, match="CRT_7 : modules doit etre une liste"):
+        Carte.depuis_dict(dict(_entree("CRT_7"), modules=[1]))
+
+
+
+# --- Ecriture de config/cartes.json (outil d'edition des cartes) ---
+
+
+def test_l_ecriture_reproduit_cartes_json_a_l_identique():
+    from src.gameplay.carte import cartes_vers_texte_json
+
+    texte = FICHIER_CARTES.read_text(encoding="utf-8")
+
+    assert cartes_vers_texte_json(json.loads(texte)["cartes"]) == texte
+
+
+def test_l_ecriture_remet_les_cles_dans_l_ordre_du_fichier():
+    from src.gameplay.carte import cartes_vers_texte_json
+
+    entree = _entree("CRT_49")
+    melangee = dict(reversed(list(entree.items())))
+    melangee["effets"] = [dict(reversed(list(effet.items()))) for effet in entree["effets"]]
+
+    assert cartes_vers_texte_json([melangee]) == cartes_vers_texte_json([entree])

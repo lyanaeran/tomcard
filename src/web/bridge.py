@@ -17,10 +17,22 @@ import sys
 sys.path.insert(0, "/repo")
 
 from src.gameplay import deroulement
-from src.gameplay.carte import Camp, Carte, charger_cartes
+from src.gameplay.carte import (
+    FICHIER_CARTES,
+    Camp,
+    Carte,
+    CategorieCarte,
+    CibleCarte,
+    Jouabilite,
+    NatureEffet,
+    PorteeEffet,
+    RareteCarte,
+    cartes_vers_texte_json,
+    charger_cartes,
+)
 from src.gameplay.combat import ELECTRICITE_PAR_TOUR, NatureEvenement
 from src.gameplay.ennemi import CibleEffetEnnemi, Ennemi
-from src.gameplay.module import Module, charger_modules
+from src.gameplay.module import Module, charger_modules, verifier_modules_de_la_carte
 from src.gameplay.parcours import TypeEtape
 from src.gameplay.partie import (
     COUT_ACTION_STATION_SERVICE,
@@ -38,6 +50,7 @@ from src.gameplay.partie import (
     deck_de_la_partie,
     demarrer_aventure_police,
     deplacer_module,
+    est_admin,
     detourner_aventure_police,
     lire_sauvegarde,
     marquer_terminee,
@@ -85,7 +98,7 @@ _PAIRES_CASES_ENNEMIES = (("AV_G", "AR_G"), ("AV_M", "AR_M"), ("AV_D", "AR_D"))
 
 # Version du contrat entre bridge.py et src/web/app.js : doit etre egale a VERSION_CACHE (app.js),
 # verifie au demarrage par app.js (versionsAccordees) et par tests/test_architecture.py
-VERSION_WEB = "91"
+VERSION_WEB = "92"
 
 combat = None
 # Taille du journal deja transmise : les popups d'une action sont calcules a partir des seules
@@ -741,3 +754,91 @@ def mettre_aux_normes_police_web(partie_json) -> str:
     partie = partie_depuis_json(partie_json)
     succes = payer_mise_aux_normes(partie)
     return json.dumps({"partie": _partie_json(partie), "succes": succes})
+
+
+# --- Outil d'administration : editeur de cartes (specs/outil-editeur-cartes.md) ---
+# Aucune regle ici non plus : les listes de choix viennent des enumerations du jeu, la validation
+# et l'apercu de Carte.depuis_dict / description_affichee, l'ecriture de cartes_vers_texte_json.
+
+# Libelles en clair des natures et portees d'effet (presentation seulement)
+LIBELLES_NATURES = {
+    "DEGATS": "Dégâts",
+    "BOUCLIER": "Bouclier",
+    "REPARATION": "Réparation",
+    "INCENDIE": "Incendie",
+    "VULNERABILITE": "Vulnérabilité",
+    "REDUCTION_DEGATS": "Réduction de dégâts",
+    "ANNULATION_PROCHAINE_ATTAQUE": "Leurre (annule la prochaine attaque)",
+    "REDIRECTION_CIBLE": "Tir allié (redirection)",
+    "GAIN_ELECTRICITE": "Gain d'électricité",
+    "PIOCHE": "Pioche",
+    "REPETITION": "Répétition",
+}
+LIBELLES_PORTEES = {
+    "CIBLE": "Cible de la carte",
+    "AUTRES_ENNEMIS": "Autres ennemis",
+    "COLONNE_AVANT_ENNEMIE": "Colonne avant ennemie",
+    "COLONNE_ARRIERE_ENNEMIE": "Colonne arrière ennemie",
+}
+LIBELLES_JOUABLE = {"oui": "Oui", "non": "Non", "supprimee": "Supprimée"}
+
+
+def est_admin_web(nom) -> str:
+    """Le joueur voit-il le bouton Admin (partie.py:est_admin) ?"""
+    return json.dumps(est_admin(str(nom)))
+
+
+def _choix(valeurs, libelles=None) -> list[dict]:
+    return [{"valeur": valeur, "libelle": (libelles or {}).get(valeur, valeur)} for valeur in valeurs]
+
+
+def editeur_reference_web() -> str:
+    """Cartes du jeu telles qu'ecrites dans config/cartes.json (entrees brutes, dans l'ordre du
+    fichier : la reference a laquelle l'outil compare) et listes de choix des champs."""
+    entrees = json.loads(FICHIER_CARTES.read_text(encoding="utf-8"))["cartes"]
+    modules = charger_modules()
+    images = sorted({entree["image"] for entree in entrees} | {module.image for module in modules.values()} - {""})
+    return json.dumps({
+        "cartes": entrees,
+        "listes": {
+            "rarete": _choix([rarete.name.capitalize() for rarete in RareteCarte]),
+            "categorie": _choix([categorie.value for categorie in CategorieCarte]),
+            "cible": _choix([cible.value for cible in CibleCarte]),
+            "jouable": _choix([jouabilite.value for jouabilite in Jouabilite], LIBELLES_JOUABLE),
+            "nature": _choix([nature.name for nature in NatureEffet], LIBELLES_NATURES),
+            "portee": _choix([portee.name for portee in PorteeEffet], LIBELLES_PORTEES),
+            "modules": [{"valeur": module.id, "libelle": module.nom} for module in modules.values()],
+            "images": _choix([image for image in images if image.startswith("assets/cartes/")]),
+        },
+    }, ensure_ascii=False)
+
+
+def editeur_valider_web(json_entrees) -> str:
+    """Verifie chaque carte comme au chargement de config/cartes.json (Carte.depuis_dict, modules
+    connus, id unique). Renvoie, dans le meme ordre, {"erreurs": [...], "apercu": texte ou None}."""
+    entrees = json.loads(json_entrees)
+    ids_modules = charger_modules().keys()
+    comptes = {}
+    for entree in entrees:
+        comptes[entree.get("id")] = comptes.get(entree.get("id"), 0) + 1
+    resultats = []
+    for entree in entrees:
+        erreurs, apercu = [], None
+        if not str(entree.get("id") or "").strip():
+            erreurs.append("Id manquant")
+        elif comptes[entree.get("id")] > 1:
+            erreurs.append(f"Id {entree.get('id')} utilisé par plusieurs cartes")
+        try:
+            carte = Carte.depuis_dict(entree)
+            verifier_modules_de_la_carte(carte, ids_modules)
+            apercu = carte.description_affichee()
+        except (ValueError, TypeError, KeyError, AttributeError, IndexError) as erreur:
+            erreurs.append(str(erreur))
+        resultats.append({"erreurs": erreurs, "apercu": apercu})
+    return json.dumps(resultats, ensure_ascii=False)
+
+
+def editeur_exporter_web(json_entrees) -> str:
+    """Texte complet de config/cartes.json pour ces cartes, dans la mise en forme du fichier."""
+    return json.dumps(cartes_vers_texte_json(json.loads(json_entrees)), ensure_ascii=False)
+

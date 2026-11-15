@@ -34,6 +34,10 @@ L'utilisateur conçoit le jeu ; l'agent propose, documente et code. Préférence
   tel quel.
 - **Réponses courtes et concrètes, en français**, avec des exemples chiffrés plutôt que du jargon ;
   dire clairement ce qui a été testé et ce qui ne l'a pas été.
+- **Cartes modifiées dans l'outil d'administration** (éditeur de cartes web / iPhone,
+  `specs/outil-editeur-cartes.md`) : l'utilisateur colle le `config/cartes.json` complet copié par
+  l'outil. Le remplacer tel quel, régénérer `config/cartes.md` (`python -m outils.tableau_cartes`),
+  lancer `pytest`, et résumer ce qui a changé carte par carte avant la PR.
 - **Revues de PR** : un bot (Claude Code) commente les PR. À la demande de l'utilisateur, lire les
   commentaires (`~/.local/bin/gh api repos/{owner}/{repo}/pulls/<n>/comments`), corriger ce qui
   est juste (avec un test), et répondre sous chaque commentaire (corrigé dans tel commit, ou
@@ -52,7 +56,8 @@ L'utilisateur conçoit le jeu ; l'agent propose, documente et code. Préférence
   `config/cartes.md`, `config/modules.md`, `config/ennemis.md`).
 - **Données de la refonte (décision utilisateur)** :
   - `config/cartes.json` est la **source de vérité des cartes** : format de la refonte
-    (`src/gameplay/carte.py:Carte`), valeurs nommées, effets, champs `jouable` et `refonte`.
+    (`src/gameplay/carte.py:Carte`), valeurs nommées, effets, `modules` (la carte dit à quels
+    modules elle appartient), `jouable` (`"oui"`, `"non"`, `"supprimee"`) et `refonte`.
     C'est là qu'on modifie une carte, puis on régénère `config/cartes.md` (tableau lisible,
     **toujours généré**, jamais modifié à la main) avec `python -m outils.tableau_cartes` ;
     `tests/test_tableau_cartes.py` échoue tant que le tableau n'est pas à jour.

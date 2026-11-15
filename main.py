@@ -14,6 +14,7 @@ ouverte au tick suivant une fermeture (cf. _on_window_close).
 """
 
 import random
+import webbrowser
 
 import pyglet
 
@@ -40,7 +41,7 @@ from src.gameplay.partie import (
     sauvegarder_partie,
 )
 from src.ui.commun import noms_modules
-from src.ui.ecran_accueil_joueur import EcranAccueilJoueur
+from src.ui.ecran_accueil_joueur import URL_OUTIL_ADMIN, EcranAccueilJoueur
 from src.ui.ecran_aventure_asteroides import EcranAventureAsteroides
 from src.ui.ecran_aventure_police import EcranAventurePolice
 from src.ui.ecran_aventure_trois_lunes import EcranAventureTroisLunes
@@ -136,6 +137,10 @@ def _traiter_action(profil: Profil, partie: Partie | None, action: str) -> None:
         _attendre(fenetre, lambda: fenetre.termine, lambda: _ouvrir_accueil(profil))
     elif action == "nouvelle_partie":
         _aller_a(Ecran.CHOIX_MODULE, profil, nouvelle_partie())
+    elif action == "admin":
+        # Outil d'administration (TEMPORAIRE) : page web de l'editeur de cartes dans le navigateur
+        webbrowser.open(URL_OUTIL_ADMIN)
+        _ouvrir_accueil(profil)
 
 
 def _ouvrir_choix_module(profil: Profil, partie: Partie) -> None:
