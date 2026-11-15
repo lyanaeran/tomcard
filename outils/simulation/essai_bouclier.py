@@ -2,7 +2,7 @@
 Essai limite (demande utilisateur, 2026-11-11) : la carte Bouclier (CRT_10) a 3, 4, 5 ou 6, sur les
 memes combats (memes graines, deck de depart, bot de recherche) : 20 combats difficiles et 12
 combats contre des ennemis faibles. Mesure aussi le bouclier maximal atteint (accumulation). Ne
-modifie pas config/carte_new.json : la valeur est changee sur les cartes du combat simule.
+modifie pas config/cartes.json : la valeur est changee sur les cartes du combat simule.
 
     python -m outils.simulation.essai_bouclier
 """
@@ -11,10 +11,10 @@ import random
 import statistics
 from collections import Counter
 
-from outils.simulation.bot_new import BotRecherche, jouer_combat
-from outils.simulation.combats_new import NOMS, construire_combat
-from src.gameplay.combat_new import NatureEvenement
-from src.gameplay.statut_new import Statut
+from outils.simulation.bot import BotRecherche, jouer_combat
+from outils.simulation.combats import NOMS, construire_combat
+from src.gameplay.combat import NatureEvenement
+from src.gameplay.statut import Statut
 
 # Les flottes les plus dures de la campagne du 2026-11-11 (deck de depart), 4 combats chacune
 FLOTTES_DIFFICILES = [

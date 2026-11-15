@@ -1,113 +1,242 @@
 """
-Tests unitaires pour la classe Module.
+Tests unitaires pour src/gameplay/module.py (Module, module de la refonte) et
+config/modules.json.
 """
 
-from src.gameplay.carte import ActionCarte
-from src.gameplay.module import Module
+import json
+
+import pytest
+
+from src.gameplay.carte import charger_cartes
+from src.gameplay.module import FICHIER_MODULES, Module, charger_modules
+from src.gameplay.statut import Statut
 
 
-def test_module_commence_a_pv_max():
-    module = Module(pv_max=15)
-
-    assert module.pv == 15
-    assert module.bouclier == 0
-    assert not module.est_detruit()
+def _entree(id_module: str) -> dict:
+    """Entree brute d'un module dans config/modules.json (pour fabriquer des variantes)."""
+    entrees = json.loads(FICHIER_MODULES.read_text(encoding="utf-8"))["modules"]
+    return json.loads(json.dumps(next(entree for entree in entrees if entree["id"] == id_module)))
 
 
-def test_bouclier_absorbe_les_degats_avant_les_pv():
-    # Exemple de specs.md paragraphe 3.5 : 7 degats vs 5 bouclier -> 2 degats aux PV
-    module = Module(pv_max=15)
-    module.ajouter_bouclier(5)
-
-    module.subir_degats(7)
-
-    assert module.bouclier == 0
-    assert module.pv == 13
+def _exemplaires():
+    """Principal (M1, base) et Lanceur de missiles (M2, avant gauche), exemplaires neufs."""
+    modules = charger_modules()
+    return modules["MOD_1"].nouvel_exemplaire("M1", "base"), modules["MOD_2"].nouvel_exemplaire("M2", "avant_gauche")
 
 
-def test_bouclier_absorbe_totalement_si_superieur_aux_degats():
-    module = Module(pv_max=15)
-    module.ajouter_bouclier(10)
-
-    module.subir_degats(4)
-
-    assert module.bouclier == 6
-    assert module.pv == 15
+# --- config/modules.json ---
 
 
-def test_soigner_ne_depasse_pas_le_pv_max():
-    module = Module(pv_max=15)
-    module.subir_degats(3)  # pv = 12, il manque 3 PV
+def test_modules_json_contient_les_deux_modules_jouables_avec_les_pv_provisoires():
+    modules = charger_modules()
 
-    module.soigner(8)  # un soin de 8 ne doit pas depasser le maximum
-
-    assert module.pv == 15
-
-
-def test_module_detruit_a_zero_pv():
-    module = Module(pv_max=15)
-
-    module.subir_degats(20)
-
-    assert module.pv == 0
-    assert module.est_detruit()
+    assert sorted(modules) == ["MOD_1", "MOD_2"]
+    assert all(module.jouable and module.refonte for module in modules.values())
+    assert (modules["MOD_1"].pv_max_base, modules["MOD_2"].pv_max_base) == (60, 20)
+    assert modules["MOD_1"].principal and not modules["MOD_2"].principal
 
 
-def test_appliquer_buff_declenche_l_effet_immediatement():
-    """Bouclier perpetuel (specs.md 12.3/12.5) : la pose du buff donne du bouclier tout
-    de suite, comme les autres types de carte (pas seulement a partir du tour suivant)."""
-    module = Module(pv_max=15)
+def test_les_cartes_des_modules_existent_dans_cartes_json():
+    cartes = charger_cartes()
 
-    module.appliquer_buff(ActionCarte.BOUCLIER_PAR_TOUR, 10, tours=None)
-
-    assert module.bouclier == 10
-    assert len(module.buffs_actifs) == 1
+    for module in charger_modules().values():
+        assert set(module.cartes) <= cartes.keys(), module.id
 
 
-def test_declencher_buffs_tour_redeclenche_l_effet():
-    module = Module(pv_max=15)
-    module.appliquer_buff(ActionCarte.BOUCLIER_PAR_TOUR, 10, tours=None)
+def test_chaque_carte_revue_appartient_a_un_module():
+    ids_modules = {id_carte for module in charger_modules().values() for id_carte in module.cartes}
 
-    module.declencher_buffs_tour()
-    module.declencher_buffs_tour()
-
-    assert module.bouclier == 30  # 10 a la pose + 10 par declenchement
+    assert ids_modules == charger_cartes().keys()
 
 
-def test_buff_persistant_ne_decompte_jamais():
-    """tours_restants=None (Bouclier perpetuel) : dure tout le combat, jamais retire."""
-    module = Module(pv_max=15)
-    module.appliquer_buff(ActionCarte.BOUCLIER_PAR_TOUR, 10, tours=None)
-
-    for _ in range(10):
-        module.declencher_buffs_tour()
-
-    assert len(module.buffs_actifs) == 1
-    assert module.buffs_actifs[0].tours_restants is None
+# --- Exemplaires ---
 
 
-def test_buff_a_duree_expire_apres_n_tours():
-    module = Module(pv_max=15)
-    module.appliquer_buff(ActionCarte.BOUCLIER_PAR_TOUR, 10, tours=2)
+def test_pv_au_prochain_combat_principal_sauvegardes_secondaire_plein():
+    principal, lanceur = _exemplaires()
+    principal.pv, lanceur.pv = 35, 3
 
-    module.declencher_buffs_tour()
-    assert len(module.buffs_actifs) == 1  # encore actif apres 1 declenchement
-
-    module.declencher_buffs_tour()
-    assert module.buffs_actifs == []  # expire apres 2 declenchements
+    assert principal.pv_au_prochain_combat == principal.copie_pour_combat().pv_combat == 35
+    assert lanceur.pv_au_prochain_combat == lanceur.copie_pour_combat().pv_combat == lanceur.pv_max
 
 
-def test_deux_buffs_du_meme_type_coexistent_et_s_additionnent():
-    module = Module(pv_max=15)
+def test_nouvel_exemplaire_part_des_pv_de_base_et_du_palier_1():
+    principal, lanceur = _exemplaires()
 
-    module.appliquer_buff(ActionCarte.BOUCLIER_PAR_TOUR, 10, tours=None)
-    module.appliquer_buff(ActionCarte.BOUCLIER_PAR_TOUR, 5, tours=1)
+    assert (principal.exemplaire, principal.emplacement, principal.pv_max, principal.pv) == ("M1", "base", 60, 60)
+    assert (lanceur.exemplaire, lanceur.pv_max, lanceur.niveau_maj) == ("M2", 20, 1)
+    assert principal.pv_combat is None  # hors combat
 
-    assert module.bouclier == 15  # 10 + 5 a la pose
-    assert len(module.buffs_actifs) == 2
 
-    module.declencher_buffs_tour()
+def test_deux_exemplaires_du_meme_module_sont_distincts():
+    lanceur = charger_modules()["MOD_2"]
 
-    assert module.bouclier == 30  # +10 (persistant) +5 (dernier declenchement avant expiration)
-    assert len(module.buffs_actifs) == 1
-    assert module.buffs_actifs[0].tours_restants is None
+    assert lanceur.nouvel_exemplaire("M2", "avant_gauche") != lanceur.nouvel_exemplaire("M3", "avant_droite")
+
+
+# --- Copie de combat ---
+
+
+def test_copie_de_combat_principal_garde_ses_pv_secondaire_repart_au_maximum():
+    principal, lanceur = _exemplaires()
+    principal.pv, lanceur.pv = 35, 3  # les PV d'un secondaire ne comptent pas
+
+    assert principal.copie_pour_combat().pv_combat == 35
+    assert lanceur.copie_pour_combat().pv_combat == 20
+
+
+def test_le_combat_ne_modifie_jamais_le_module_de_la_partie():
+    principal, _ = _exemplaires()
+    combat = principal.copie_pour_combat()
+
+    combat.subir_degats(15)
+    combat.statuts.ajouter(Statut.BOUCLIER, 4)
+    combat.statuts.ajouter(Statut.INCENDIE, 2)
+
+    assert principal.pv == 60 and principal.statuts.intensites == {}
+    assert principal.pv_combat is None
+
+
+def test_fin_de_combat_seuls_les_pv_du_principal_sont_reportes():
+    principal, lanceur = _exemplaires()
+    combat_principal, combat_lanceur = principal.copie_pour_combat(), lanceur.copie_pour_combat()
+    combat_principal.subir_degats(12)
+    combat_lanceur.subir_degats(15)
+
+    principal.reporter_combat(combat_principal)
+    lanceur.reporter_combat(combat_lanceur)
+
+    assert principal.pv == 48
+    assert lanceur.pv == 20 and lanceur.copie_pour_combat().pv_combat == 20
+
+
+def test_un_etat_de_combat_ne_passe_pas_d_un_combat_a_l_autre():
+    principal, _ = _exemplaires()
+    premier = principal.copie_pour_combat()
+    premier.statuts.ajouter(Statut.BOUCLIER, 10)
+    premier.statuts.ajouter(Statut.LEURRE, 1)
+
+    second = principal.copie_pour_combat()
+
+    assert second.statuts.intensites == {}
+
+
+# --- Regles de combat ---
+
+
+def test_le_bouclier_absorbe_avant_les_pv_et_baisse_de_un_a_la_fin_du_tour_ennemi():
+    _, lanceur = _exemplaires()
+    combat = lanceur.copie_pour_combat()
+    combat.statuts.ajouter(Statut.BOUCLIER, 5)
+
+    combat.subir_degats(7)
+    assert (combat.statuts[Statut.BOUCLIER], combat.pv_combat) == (0, 18)
+
+    combat.statuts.ajouter(Statut.BOUCLIER, 3)
+    combat.fin_du_tour_ennemi()
+    assert combat.statuts[Statut.BOUCLIER] == 2
+
+
+def test_l_incendie_frappe_le_module_a_la_fin_du_tour_ennemi():
+    _, lanceur = _exemplaires()
+    combat = lanceur.copie_pour_combat()
+    combat.statuts.ajouter(Statut.INCENDIE, 3)
+
+    combat.fin_du_tour_ennemi()
+
+    assert (combat.pv_combat, combat.statuts[Statut.INCENDIE]) == (17, 2)
+
+
+def test_le_leurre_annule_une_seule_attaque():
+    _, lanceur = _exemplaires()
+    combat = lanceur.copie_pour_combat()
+    combat.statuts.ajouter(Statut.LEURRE, 1)
+
+    combat.subir_degats(50)
+    assert combat.pv_combat == 20 and combat.statuts[Statut.LEURRE] == 0
+    combat.subir_degats(25)
+    assert combat.est_detruit()
+
+
+def test_la_reparation_ne_depasse_pas_le_pv_max():
+    principal, _ = _exemplaires()
+    combat = principal.copie_pour_combat()
+    combat.subir_degats(10)
+
+    combat.reparer(25)
+
+    assert combat.pv_combat == 60
+
+
+# --- Lecture du JSON ---
+
+
+def test_une_cle_inconnue_est_refusee():
+    entree = _entree("MOD_2")
+    entree["pv_maxi"] = 20
+
+    with pytest.raises(ValueError, match="^Module MOD_2 : cles inconnues"):
+        Module.depuis_dict(entree)
+
+
+def test_une_cle_manquante_est_signalee_avec_l_id_du_module():
+    entree = _entree("MOD_2")
+    del entree["pv_max"]
+
+    with pytest.raises(ValueError, match="^Module MOD_2 : cle manquante 'pv_max'"):
+        Module.depuis_dict(entree)
+
+
+def test_il_faut_exactement_un_module_principal(tmp_path):
+    entrees = [_entree("MOD_1"), _entree("MOD_2")]
+    entrees[1]["principal"] = True
+    fichier = tmp_path / "modules.json"
+    fichier.write_text(json.dumps({"modules": entrees}), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="exactement un module principal"):
+        charger_modules(fichier)
+
+
+@pytest.mark.parametrize("champs", [{"pv_max_base": 0}, {"niveau_maj": 4}])
+def test_module_invalide_refuse(champs):
+    valeurs = dict(id="TEST", nom="Test", image="test.png", description="", pv_max_base=10)
+    valeurs.update(champs)
+
+    with pytest.raises(ValueError):
+        Module(**valeurs)
+
+
+# --- Corrections de la review de la PR #60 ---
+
+
+def test_la_reparation_ne_ressuscite_pas_un_module_detruit():
+    _, lanceur = _exemplaires()
+    combat = lanceur.copie_pour_combat()
+    combat.subir_degats(20)
+
+    combat.reparer(5)
+
+    assert combat.est_detruit() and combat.pv_combat == 0
+
+
+def test_une_valeur_de_mauvais_type_est_signalee_avec_l_id_du_module():
+    entree = _entree("MOD_2")
+    entree["pv_max"] = "20"
+
+    with pytest.raises(ValueError, match="^Module MOD_2 : "):
+        Module.depuis_dict(entree)
+
+
+def test_un_id_de_module_en_double_est_refuse(tmp_path):
+    fichier = tmp_path / "modules.json"
+    fichier.write_text(json.dumps({"modules": [_entree("MOD_1"), _entree("MOD_2"), _entree("MOD_2")]}), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="MOD_2 en double"):
+        charger_modules(fichier)
+
+
+def test_les_methodes_de_combat_refusent_un_module_hors_combat():
+    principal, _ = _exemplaires()
+
+    with pytest.raises(ValueError, match="hors combat"):
+        principal.subir_degats(5)

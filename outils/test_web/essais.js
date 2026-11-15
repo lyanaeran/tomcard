@@ -98,12 +98,12 @@ async function jouerLeCombat(page) {
 const PREPARATION_PYTHON = `
 import random as _r
 from src.gameplay.partie import nouvelle_partie as _np, equiper_module as _eq, modules_de_la_partie as _mods
-from src.gameplay.module_new import charger_modules_new as _cm
-from src.gameplay.carte_new import charger_cartes_new as _cc
-from src.gameplay.ennemi_new import charger_ennemis_new as _ce
-from src.gameplay.flotte_new import placer_ennemis as _pl, flotte_boss as _fb
-from src.gameplay.combat_new import CombatNew as _CN
-from src.gameplay.deck_new import DECK_DE_DEPART as _DEPART, deck_de_depart as _dd
+from src.gameplay.module import charger_modules as _cm
+from src.gameplay.carte import charger_cartes as _cc
+from src.gameplay.ennemi import charger_ennemis as _ce
+from src.gameplay.flotte import placer_ennemis as _pl, flotte_boss as _fb
+from src.gameplay.combat import Combat as _CN
+from src.gameplay.deck import DECK_DE_DEPART as _DEPART, deck_de_depart as _dd
 def _essai(ids_ennemis, ids_main, ids_lanceur=()):
     partie = _np(_r.Random(3)); _eq(partie, _cm()["MOD_2"])
     modeles = _cc()

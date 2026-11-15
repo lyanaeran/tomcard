@@ -12,9 +12,9 @@ Tout tirage passe par un random.Random injecte (CLAUDE.md).
 import random
 from enum import Enum, auto
 
-from src.gameplay.carte_new import CarteNew, charger_cartes_new
-from src.gameplay.combat_new import CombatNew, EtatCombatNew
-from src.gameplay.module_new import ModuleNew, charger_modules_new
+from src.gameplay.carte import Carte, charger_cartes
+from src.gameplay.combat import Combat, EtatCombat
+from src.gameplay.module import Module, charger_modules
 from src.gameplay.parcours import (
     TypeAventure,
     TypeEtape,
@@ -76,29 +76,29 @@ def ecran_de_reprise(partie: Partie) -> Ecran:
     return Ecran.CHOIX_NIVEAU
 
 
-def candidats_choix_module(partie: Partie) -> list[ModuleNew]:
+def candidats_choix_module(partie: Partie) -> list[Module]:
     """Modeles de modules proposes au Niveau 1 (specs.md 2.3), tires a partir de la graine de la
     partie."""
-    return tirer_candidats_module(modules_equipables(charger_modules_new().values()), random.Random(partie.graine))
+    return tirer_candidats_module(modules_equipables(charger_modules().values()), random.Random(partie.graine))
 
 
-def choisir_module(partie: Partie, modele: ModuleNew, aleatoire: random.Random) -> list[CarteNew]:
+def choisir_module(partie: Partie, modele: Module, aleatoire: random.Random) -> list[Carte]:
     """Equipe un exemplaire du module choisi et renvoie les cartes proposees pour lui (ecran de
     choix de carte, enchaine directement apres le choix du module), deja rattachees au nouvel
     exemplaire. Liste vide si son pool n'a rien a proposer : appeler alors directement
     resoudre_carte_module avec None, sans afficher l'ecran."""
     module = equiper_module(partie, modele)
-    candidats = tirer_candidats_carte_module(module, charger_cartes_new(), aleatoire)
+    candidats = tirer_candidats_carte_module(module, charger_cartes(), aleatoire)
     return [carte.copie(exemplaire_module=module.exemplaire) for carte in candidats]
 
 
-def _ajouter(partie: Partie, carte: CarteNew | None) -> None:
+def _ajouter(partie: Partie, carte: Carte | None) -> None:
     """Ajoute au deck une carte proposee (deja rattachee a son module), rien pour None."""
     if carte is not None:
         ajouter_carte(partie, carte.id, carte.exemplaire_module)
 
 
-def resoudre_carte_module(partie: Partie, carte: CarteNew | None) -> Ecran:
+def resoudre_carte_module(partie: Partie, carte: Carte | None) -> Ecran:
     """Ajoute la carte choisie parmi celles de choisir_module (None = Passer) et passe au niveau
     suivant."""
     _ajouter(partie, carte)
@@ -130,8 +130,8 @@ def terminer_etape(partie: Partie) -> Ecran:
 
 
 def conclure_combat(
-    partie: Partie, combat: CombatNew, aleatoire: random.Random
-) -> list[tuple[ModuleNew, CarteNew | None]]:
+    partie: Partie, combat: Combat, aleatoire: random.Random
+) -> list[tuple[Module, Carte | None]]:
     """A appeler une seule fois, des que le combat se termine : reporte les PV du principal sur la
     partie (reporter_combat). Defaite : la partie est terminee tout de suite. Victoire : ajoute
     l'Argent gagne (specs.md 2.1), renvoie les candidats de recompense (specs.md 6) : un par module
@@ -140,21 +140,21 @@ def conclure_combat(
     if combat.en_cours:
         raise ValueError("Le combat n'est pas termine")
     reporter_combat(partie, combat)
-    if combat.etat != EtatCombatNew.VICTOIRE:
+    if combat.etat != EtatCombat.VICTOIRE:
         marquer_terminee(partie)
         return []
     gagner_argent_combat(partie, combat)
-    candidats = tirer_candidats_recompense(modules_de_la_partie(partie), charger_cartes_new(), aleatoire)
+    candidats = tirer_candidats_recompense(modules_de_la_partie(partie), charger_cartes(), aleatoire)
     partie.recompense = [
         CartePossedee(id=carte.id, module=carte.exemplaire_module) for _module, carte in candidats if carte is not None
     ]
     return candidats
 
 
-def recompense_en_attente(partie: Partie) -> list[tuple[ModuleNew, CarteNew]]:
+def recompense_en_attente(partie: Partie) -> list[tuple[Module, Carte]]:
     """Candidats de recompense notes par conclure_combat et pas encore resolus (reprise sur
     l'ecran de recompense), sous la meme forme que conclure_combat."""
-    cartes = charger_cartes_new()
+    cartes = charger_cartes()
     modules = {module.exemplaire: module for module in modules_de_la_partie(partie)}
     return [
         (modules[possedee.module], cartes[possedee.id].copie(exemplaire_module=possedee.module))
@@ -162,7 +162,7 @@ def recompense_en_attente(partie: Partie) -> list[tuple[ModuleNew, CarteNew]]:
     ]
 
 
-def resoudre_fin_combat(partie: Partie, victoire: bool, carte: CarteNew | None) -> Ecran:
+def resoudre_fin_combat(partie: Partie, victoire: bool, carte: Carte | None) -> Ecran:
     """Ecran de fin de combat ferme : une defaite termine la partie ; une victoire ajoute la carte
     choisie parmi les candidats de conclure_combat (None = aucune ou Passer), puis mene a la
     victoire finale apres le Boss (le run s'arrete au Niveau 10, specs.md 2 : la partie est

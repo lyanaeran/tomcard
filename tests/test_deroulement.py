@@ -7,10 +7,10 @@ import random
 import pytest
 
 from src.gameplay import deroulement
-from src.gameplay.carte_new import charger_cartes_new
-from src.gameplay.combat_new import EtatCombatNew
+from src.gameplay.carte import charger_cartes
+from src.gameplay.combat import EtatCombat
 from src.gameplay.deroulement import Ecran
-from src.gameplay.module_new import charger_modules_new
+from src.gameplay.module import charger_modules
 from src.gameplay.parcours import TypeEtape
 from src.gameplay.partie import (
     ARGENT_DEPART,
@@ -23,7 +23,7 @@ from src.gameplay.partie import (
 
 
 def _carte(id_carte: str, exemplaire: str):
-    return charger_cartes_new()[id_carte].copie(exemplaire_module=exemplaire)
+    return charger_cartes()[id_carte].copie(exemplaire_module=exemplaire)
 
 
 def _partie_au_niveau_2() -> deroulement.Partie:
@@ -94,7 +94,7 @@ def test_conclure_combat_victoire_donne_argent_et_candidats():
     combat = combat_depuis_partie(partie, random.Random(4))
     for ennemi in combat.flotte.ennemis:
         ennemi.pv = 0
-    combat.etat = EtatCombatNew.VICTOIRE
+    combat.etat = EtatCombat.VICTOIRE
 
     candidats = deroulement.conclure_combat(partie, combat, random.Random(5))
 
@@ -108,7 +108,7 @@ def test_conclure_combat_defaite_reporte_les_pv_sans_argent_ni_candidat():
     partie = _partie_au_niveau_2()
     combat = combat_depuis_partie(partie, random.Random(4))
     combat.vaisseau.principal.pv_combat = 7
-    combat.etat = EtatCombatNew.DEFAITE
+    combat.etat = EtatCombat.DEFAITE
 
     assert deroulement.conclure_combat(partie, combat, random.Random(5)) == []
     assert partie.argent == ARGENT_DEPART
@@ -131,7 +131,7 @@ def test_une_partie_quittee_sur_la_recompense_reprend_a_la_recompense():
     combat = combat_depuis_partie(partie, random.Random(4))
     for ennemi in combat.flotte.ennemis:
         ennemi.pv = 0
-    combat.etat = EtatCombatNew.VICTOIRE
+    combat.etat = EtatCombat.VICTOIRE
     candidats = deroulement.conclure_combat(partie, combat, random.Random(5))
 
     assert deroulement.ecran_de_reprise(partie) == Ecran.RECOMPENSE
@@ -183,7 +183,7 @@ def test_terminer_victoire_finale_termine_la_partie():
 
 
 def test_candidats_choix_module_parmi_les_modules_equipables():
-    ids_equipables = {module.id for module in charger_modules_new().values() if not module.principal and module.cartes}
+    ids_equipables = {module.id for module in charger_modules().values() if not module.principal and module.cartes}
 
     candidats = deroulement.candidats_choix_module(nouvelle_partie(random.Random(1)))
 

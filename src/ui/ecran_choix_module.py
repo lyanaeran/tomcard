@@ -10,7 +10,7 @@ Fond de combat reutilise en placeholder (decision utilisateur), a remplacer par 
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.module_new import ModuleNew
+from src.gameplay.module import Module
 from src.gameplay.partie import Partie, deck_de_la_partie
 from src.ui import barre_laterale
 from src.ui.ecran_deck import EcranDeck
@@ -52,13 +52,13 @@ def _point_dans_rectangle(px: float, py: float, x: float, y: float, largeur: flo
 class EcranChoixModule(pyglet.window.Window):
     """Ecran de choix d'un nouveau module parmi 3 candidats (specs.md 2.3, Niveau 1)."""
 
-    def __init__(self, candidats: list[ModuleNew], partie: Partie):
+    def __init__(self, candidats: list[Module], partie: Partie):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.candidats = candidats
         self.partie = partie
         self.index_survole: int | None = None
         self.survole_barre: str | None = None
-        self.module_choisi: ModuleNew | None = None
+        self.module_choisi: Module | None = None
 
     def on_draw(self) -> None:
         self.clear()
@@ -99,7 +99,7 @@ class EcranChoixModule(pyglet.window.Window):
         elements.extend(barre_laterale.dessiner(self.partie, self.survole_barre, lot))
         return elements
 
-    def _dessiner_candidat(self, index: int, total: int, candidat: ModuleNew, lot: pyglet.graphics.Batch) -> list:
+    def _dessiner_candidat(self, index: int, total: int, candidat: Module, lot: pyglet.graphics.Batch) -> list:
         """Une ligne de candidat : image carree a gauche, rectangle de texte (nom + accroche
         narrative, specs.md 5) a droite - meme convention que le choix du prochain niveau."""
         x, y, largeur, hauteur = _rect_candidat(index, total)

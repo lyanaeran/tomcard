@@ -1,66 +1,55 @@
 """
-Tests unitaires pour la classe Vaisseau (grille de modules du joueur).
+Tests unitaires pour src/gameplay/vaisseau.py (modules de la refonte sur la grille du joueur).
 """
 
-from src.gameplay.module import Module
-from src.gameplay.position import Colonne, Rangee
+import pytest
+
+from src.gameplay.module import charger_modules
+from src.gameplay.position import Colonne, Position, Rangee
 from src.gameplay.vaisseau import Vaisseau
 
 
-def _vaisseau_complet() -> Vaisseau:
-    return Vaisseau(
-        base=Module(pv_max=15),
-        avant_gauche=Module(pv_max=12),
-        avant_droite=Module(pv_max=18),
-        arriere_gauche=Module(pv_max=10),
-        arriere_droite=Module(pv_max=9),
-    )
+def _modules():
+    modeles = charger_modules()
+    principal = modeles["MOD_1"].nouvel_exemplaire("M1", "base").copie_pour_combat()
+    lanceur = modeles["MOD_2"].nouvel_exemplaire("M2", "avant_gauche").copie_pour_combat()
+    return principal, lanceur
 
 
-def test_mid_renvoie_toujours_la_base_quelle_que_soit_la_colonne():
-    vaisseau = _vaisseau_complet()
+def test_le_principal_occupe_toute_la_rangee_du_milieu():
+    principal, lanceur = _modules()
+    vaisseau = Vaisseau([principal, lanceur])
 
-    assert vaisseau.module_en(Colonne.AVANT, Rangee.MID) is vaisseau.base
-    assert vaisseau.module_en(Colonne.ARRIERE, Rangee.MID) is vaisseau.base
-
-
-def test_module_en_renvoie_le_module_equipe_correspondant():
-    vaisseau = _vaisseau_complet()
-
-    module = vaisseau.module_en(Colonne.AVANT, Rangee.GAUCHE)
-
-    assert module is not None
-    assert module.pv_max == 12
+    assert vaisseau.principal is principal
+    assert vaisseau.module_en(Position(Colonne.AVANT, Rangee.MID)) is principal
+    assert vaisseau.module_en(Position(Colonne.ARRIERE, Rangee.MID)) is principal
+    assert vaisseau.modules_vivants_de_colonne(Colonne.AVANT) == [principal, lanceur]
+    assert vaisseau.modules_vivants_de_colonne(Colonne.ARRIERE) == [principal]
 
 
-def test_module_en_renvoie_none_pour_un_emplacement_vide():
-    vaisseau = Vaisseau(base=Module(pv_max=15))
+def test_proximite_rangee_de_l_ennemi_puis_voisines():
+    principal, lanceur = _modules()
+    vaisseau = Vaisseau([principal, lanceur])
 
-    assert vaisseau.module_en(Colonne.AVANT, Rangee.GAUCHE) is None
-
-
-def test_module_en_renvoie_none_pour_un_module_detruit():
-    vaisseau = _vaisseau_complet()
-    module = vaisseau.module_en(Colonne.AVANT, Rangee.GAUCHE)
-    module.subir_degats(100)
-
-    assert vaisseau.module_en(Colonne.AVANT, Rangee.GAUCHE) is None
+    assert vaisseau.module_le_plus_proche(Rangee.GAUCHE) is lanceur
+    assert vaisseau.module_le_plus_proche(Rangee.DROITE) is principal
+    lanceur.subir_degats(20)
+    assert vaisseau.module_le_plus_proche(Rangee.GAUCHE) is principal
+    assert vaisseau.module_en(Position(Colonne.AVANT, Rangee.GAUCHE)) is None
 
 
-def test_mid_renvoie_none_si_la_base_est_detruite():
-    vaisseau = _vaisseau_complet()
-    vaisseau.base.subir_degats(100)
+def test_un_module_hors_combat_est_refuse():
+    modeles = charger_modules()
 
-    assert vaisseau.module_en(Colonne.AVANT, Rangee.MID) is None
-    assert vaisseau.est_detruit()
+    with pytest.raises(ValueError, match="copies de combat"):
+        Vaisseau([modeles["MOD_1"].nouvel_exemplaire("M1", "base")])
 
 
-def test_modules_equipes_inclut_les_detruits():
-    vaisseau = _vaisseau_complet()
-    module = vaisseau.module_en(Colonne.AVANT, Rangee.GAUCHE)
-    module.subir_degats(100)
+def test_un_vaisseau_sans_principal_ou_avec_deux_modules_au_meme_endroit_est_refuse():
+    principal, lanceur = _modules()
+    second = charger_modules()["MOD_2"].nouvel_exemplaire("M3", "avant_gauche").copie_pour_combat()
 
-    equipes = vaisseau.modules_equipes()
-
-    assert len(equipes) == 4
-    assert module in equipes.values()
+    with pytest.raises(ValueError, match="pas de module principal"):
+        Vaisseau([lanceur])
+    with pytest.raises(ValueError, match="occupe deux fois"):
+        Vaisseau([principal, lanceur, second])

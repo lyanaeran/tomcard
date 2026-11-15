@@ -1,72 +1,42 @@
 # Space Fight — Modules et cartes (§4 à §7 et §12)
 
 *Partie du document de conception. Index, règles de maintenance et numérotation commune des
-sections : [specs.md](specs.md).*
+sections : [specs.md](specs.md). Décrit le moteur actuel (`src/gameplay/module.py`, `carte.py`,
+`parcours.py`), issu de la refonte de novembre 2026 : la partie codée du brouillon
+`refonte-modules.md` a été reportée ici le 2026-11-14.*
 
 ---
 
 ## 4. Modules
 
-Le vaisseau démarre avec un **module de base**, et en récupère d'autres au fil de l'avancée. Chaque module a son propre deck de cartes (certaines cartes communes entre modules).
+Le vaisseau démarre avec un **module principal** et en récupère d'autres au fil de l'avancée.
+Chaque module a ses propres cartes (une carte peut être commune à plusieurs modules).
 
-**10 modules dans `config/modules.json`** (nom, image, PV, description) : les 6 déjà dotés d'un
-deck de cartes jouable (Principal, Lanceur de missiles, Blindage, Générateur, Soute, Sabotage) et
-4 nouveaux ajoutés avec leur nom/image/description mais **sans deck de cartes pour l'instant**
-(Canon lourd, Contrôle, Atelier — proche de l'archétype "Réparation" ci-dessous, Radar — proche de
-l'archétype "Radar / Ciblage" en §4.3) : exclus du tirage de choix de module tant qu'ils n'ont pas
-de cartes (`modules_equipables`/`specs_equipables`, §5), pour ne jamais planter le tirage du deck.
+**Données** : `config/modules.json` (source de vérité), tableau lisible **généré**
+`config/modules.md` (`python -m outils.tableau_modules`). **Deux modules jouables** pour l'instant
+(décision utilisateur, 2026-11-07) : le **Principal** (60 PV, 11 cartes) et le **Lanceur de
+missiles** (20 PV, 8 cartes). Le choix de module du Niveau 1 ne propose donc que le Lanceur. Les
+autres modules (Blindage, Générateur, Soute, Sabotage, Canon lourd, Contrôle, Atelier, Radar)
+restent des idées, décrites en §4.1 à §4.3, à reprendre un par un ; leurs anciennes données
+(PV, description, cartes) sont gardées dans [archive-cartes-modules.md](archive-cartes-modules.md).
 
-**Refonte des cartes en cours (décision utilisateur, 2026-11-07)** : les cartes du module
-principal et du Lanceur de missiles ont été revues (19 cartes, `config/carte_new.json`, nouvelle
-source de vérité des cartes ; valeurs reportées dans `config/cartes.json`, encore lu par le moteur
-actuel ; l'ancien registre `specs/cartes.xlsx` est archivé en `specs/cartes_legacy.xlsx`). Pendant la refonte, **seuls ces deux modules sont jouables** :
-champ `jouable` de `config/modules.json` (`SpecModule.jouable`), les autres ne sont jamais
-proposés ni équipés (`parcours.modules_equipables` ; depuis la PR 1 du branchement, le champ lu
-est celui de `config/module_new.json`). Le choix de module du Niveau 1 ne
-propose donc que le Lanceur de missiles. Changements principaux :
-- **Deck de départ** (10 cartes) : Laser x4, Bouclier x4, Protéger le vaisseau x1, Réparation x1.
-  *Réparation* revient dans le pool du module principal ; *Laser perçant* devient Commune (plus dans
-  le deck de départ, proposée en récompense).
-- Valeurs : *Bouclier* 5 → 3, *Protéger le vaisseau* 8 → 5, *Blindage ciblé* bouclier de 7 pendant 4 tours → **bouclier simple de 6** (sans durée),
-  *Protocole d'urgence* X 2 → 1, *Bombardement* 4 → 6, *Torpille* Y 6 → 8.
-- **Boucliers remontés (décision utilisateur, 2026-11-11, après simulation)** : *Bouclier* 3 → **4**,
-  *Protéger le vaisseau* 5 → **6**, *Blindage ciblé* 6 → **8**. Les trois montent ensemble pour
-  garder leur hiérarchie. Un premier réglage à 5 / 7 / 8 a été simulé puis jugé trop haut
-  (`outils/simulation/synthese/essai_bouclier_2026-11-11.md`). Le faible taux de jeu de Bouclier
-  vient surtout du manque d'électricité (4 exemplaires, 3 électricité, le Laser passe en premier),
-  pas de sa faiblesse.
-- **Incendie** (nouvelle mécanique, non jouable pour l'instant) : *Tir incendiaire* (4),
-  *Embrasement* (8, un ennemi) et *Guerre nucléaire* (8, tous les ennemis) ajoutent des points
-  d'incendie, équivalent du poison de Slay the Spire (décroissance de 1 par tour).
-- *Bouclier stabilisé* change d'effet : « les Boucliers de base sont lancés X fois de plus »
-  (même famille que *Salve laser* et *Protocole d'urgence*).
-- **Format de `config/carte_new.json`** (validé) : chaque carte a des **valeurs nommées**
-  (`"valeurs": {"degats_cible": 15, "degats_autres": 6}`), une liste d'**effets** qui y renvoient par
-  leur nom (`{"nature": "DEGATS", "valeur": "degats_cible"}`, avec une portée, une durée nommée ou
-  un filtre si besoin), une **description** qui cite les valeurs entre accolades (« Inflige
-  {degats_cible} degats… », remplie par `CarteNew.description_affichee`), et deux booléens
-  `jouable` (le moteur sait l'exécuter) et `refonte` (carte revue). Au chargement, tout nom cité
-  doit exister et toute valeur doit servir à un effet, et **toute clé inconnue du JSON est
-  refusée** (coquilles détectées). Un **filtre de cartes** (Salve laser…) désigne une carte précise
-  par son **id** (`{"id": "CRT_7"}`), jamais par son nom affiché, ou un ensemble par rareté ou
-  catégorie. Chaque exemplaire a ses propres dictionnaires `valeurs` et `valeurs_actuelles`
-  (copie), pour pouvoir un jour modifier les valeurs d'une seule carte. En combat, chaque
-  exemplaire a ses `valeurs_actuelles` (copie des valeurs), base de futurs bonus du type « +2 aux
-  dégâts des cartes à cible unique ».
-- Classe de carte cible de la refonte : `src/gameplay/carte_new.py` (`CarteNew`), **relue et
-  validée par l'utilisateur le 2026-11-08**, pas encore branchée au moteur. Une carte y porte une liste d'effets, un nombre de **lancements** de départ (`lancements_base`, 1 par
-  défaut, 2 pour une carte lancée deux fois ; décision utilisateur), et les effets « les cartes X
-  sont lancées N fois de plus » (*Salve laser*, *Protocole d'urgence*, *Bouclier stabilisé*, X = 1
-  pour ce dernier) **augmentent directement les lancements** des cartes qu'ils désignent, dans
-  toutes les piles, **jusqu'à la fin du combat**, et se cumulent (décision utilisateur ; chaque
-  combat recrée ses cartes, l'augmentation disparaît donc d'elle-même).
-- `CarteNew` ne décrit que les **effets des cartes du joueur** : les mécaniques propres aux ennemis
-  (ex. Augmentation de dégâts du Boss) sont gérées **en dehors des cartes** (décision utilisateur).
-- Textes affichés accentués : *Protéger le vaisseau*, *Réparation* (consigne utilisateur).
-Chaque module a une seule `description` (une phrase, accroche narrative spécifiée par
-l'utilisateur), affichée à l'écran de choix de module et reprise telle quelle dans l'infobulle de
-l'écran Vaisseau au clic/tap sur un module (§2.4) — les decks de cartes détaillés ci-dessous
-restent le plan cible pour les 4 nouveaux modules, à concevoir dans une passe dédiée.
+**Une seule classe `Module`** (décision utilisateur, 2026-11-08) réunit trois niveaux
+d'information :
+
+| Niveau | Contenu | Durée de vie |
+|---|---|---|
+| **Modèle** (le type de module) | id (`MOD_2`), nom, image, description, PV max de base, cartes, `principal`, `jouable` | lu dans le JSON, ne change jamais |
+| **Exemplaire dans la partie** | identifiant d'exemplaire (`M1` pour le principal, puis `M2`, `M3`…), emplacement, PV max (améliorations comprises), palier de mise à jour, PV (principal seulement) | sauvegardé |
+| **État en combat** | PV de combat, statuts (combat.md §3.5) | une **copie par combat** (`copie_pour_combat`), jamais sauvegardée |
+
+- **Seuls les PV du principal persistent** d'un combat à l'autre ; un secondaire repart à ses PV
+  max à chaque combat et peut donc être **sacrifié** (décision utilisateur ; combat.md §3.4).
+- Le module de la partie n'est jamais modifié par un combat : un combat abandonné ne touche pas la
+  partie. À la fin, seuls les PV du principal sont reportés (`reporter_combat`).
+- Chaque module a une `description` (une phrase d'accroche), affichée au choix de module et dans
+  l'écran Vaisseau (parcours.md §2.4).
+- **Doublons autorisés** : deux exemplaires du même type sont deux modules distincts, chacun avec
+  son identifiant et ses cartes.
 
 ### 4.1 Modules d'attaque (spécialisés, pas un seul module générique)
 
@@ -133,128 +103,69 @@ restent le plan cible pour les 4 nouveaux modules, à concevoir dans une passe d
 
 ## 5. Slots de modules équipables
 
-- Début de run : module de base + 1 module (2 slots) — le 2ᵉ module est choisi au Niveau 1 (§2.3)
-- +1 slot débloqué à chaque victoire de boss (rythme lié à la fréquence des boss, voir §2/§2.3)
-- **Plafond proposé : 5 slots** (module de base inclus) — valeur provisoire, encore susceptible de changer
-- Le module de base occupe toujours un slot et reste équipé
-- **Doublons de modules autorisés** (décision utilisateur, remplace l'ancienne proposition
-  "interdire les doublons") : posséder déjà des exemplaires d'un module augmente son poids au
-  tirage lors d'un prochain choix de module — détail en §2.3
-- Un module dont le deck de cartes n'est pas encore conçu (`cartes` vide dans `config/modules.json`,
-  §4) ou marqué `"jouable": false` (refonte des cartes en cours, §4) n'est **jamais proposé** au
-  tirage (`parcours.modules_equipables` l'exclut) : le proposer planterait le
-  tirage du deck (`Deck`/`tirer_cartes` sur une pool vide)
+- Début de run : module principal + 1 module, choisi au Niveau 1 (parcours.md §2.3).
+- Quatre emplacements autour du principal : avant gauche, avant droite, arrière gauche, arrière
+  droite (combat.md §3.1). La Station service peut **déplacer** un module (parcours.md §2.2) ; ses
+  cartes le suivent (§12.4).
+- **Plafond proposé : 5 modules** (principal inclus), valeur provisoire. Le rythme de déblocage
+  des emplacements (idée d'origine : +1 à chaque victoire de boss) n'est pas codé : le run
+  s'arrête au niveau 10.
+- **Doublons autorisés** (décision utilisateur) : détail du tirage en parcours.md §2.3.
+- Un module marqué `"jouable": false` ou sans carte n'est **jamais proposé**
+  (`parcours.modules_equipables`).
 
 ---
 
 ## 6. Progression des modules / cartes
 
-- Après un combat gagné, le joueur gagne une carte, garantie (voir §2.1). Mécanisme : **1 carte
-  candidate par module équipé** (base incluse, au maximum 5 — §5), tirée dans le pool de cartes
-  propre à ce module — le joueur choisit parmi ces N candidates, ce qui attribue implicitement la
-  carte au module correspondant
-  - Le **module principal** pioche sa candidate dans son **propre pool** de cartes jouables non-Base
-    (`config/modules.json:MOD_1.cartes`), exactement comme un module secondaire — **jamais** dans le
-    pool entier du jeu. Corrige un bug (décision utilisateur) où le module principal piochait
-    auparavant dans `pool_toutes_cartes` (toutes les cartes du jeu, tous modules confondus), ce qui
-    pouvait lui proposer en récompense une carte d'un autre module (`parcours.
-    tirer_candidats_recompense`, régression couverte par un test dédié)
-  - Pour un **module secondaire**, sa candidate est tirée dans la **liste de cartes propre à ce module**
-  - La rareté (voir 7.3) pondère chaque tirage individuel : **5% Légendaire, 20% Rare, sinon (75%)
-    Commune** — décision utilisateur. **Les cartes Base ne sont jamais proposées en récompense**
-    (deck de départ uniquement). Si le pool d'un module n'a aucune carte au palier tiré, on
-    redescend au palier inférieur (Légendaire → Rare → Commune) plutôt que de ne rien proposer
-  - Remplace l'ancien mécanisme "1 carte parmi 3 propositions pondérées par rareté, avec choix du module destinataire" : le choix du module destinataire se fait maintenant implicitement en choisissant la candidate
-  - **Bouton Passer** (décision utilisateur) : le joueur n'est jamais obligé de choisir une
-    carte, y compris ici — visible dès qu'il y a au moins un candidat (rien à passer sinon, un clic
-    suffit déjà à continuer). Convention étendue à tous les écrans de choix de carte tranchés à ce
-    jour : ce même écran de fin de combat et le Choix d'une carte de module (§2.4 étape 4) l'ont
-    tous les deux ; la carte offerte d'Astéroïdes (§2.5) avait déjà "Prendre"/"Passer" avant cette
-    décision. **Hors périmètre pour l'instant** (décision utilisateur, faute de temps) : "Bricoler"
-    de l'Aventure Trois lunes et les choix Confiscation/Mettre aux normes de l'Aventure Police
-    (§2.5), qui ne sont pas des écrans de choix de carte à proprement parler (un choix parmi
-    plusieurs actions, pas une carte candidate à accepter ou refuser)
-  - **Implémenté** en écran de fin de combat autonome (Victoire/Défaite), **relié à l'orchestration
-    du parcours** (§2.4) pour une vraie partie : `src/gameplay/parcours.py`
-    (`tirer_candidats_recompense` et les fonctions de tirage par palier), `src/ui/ecran_fin_combat.py`
-    (PC), `main.py:_ouvrir_fin_combat` ; côté web `src/web/bridge.py:conclure_combat_partie_web`/
-    `resoudre_victoire_partie_web` + `src/web/app.js:terminerCombatPartie`/`choisirRecompense`. Reste
-    aussi accessible en démonstration isolée (candidats tirés depuis un vaisseau tiré au sort plutôt
-    qu'une vraie partie) via `src/web/app.js` (`nouvelleVictoire`/`nouvelleDefaite`, exposées sur
-    `window`) + `src/web/bridge.py` (`fin_combat_victoire`), utilisée quand `partieActive` est `null`.
-    Défaite : titre rouge "DEFAITE" + message
-    "Pas d'inquietude : vos restes seront recycles, rien ne se perd dans l'espace." (fond de
-    combat réutilisé en placeholder, décision utilisateur, à remplacer par un fond dédié)
-  - Chaque carte candidate affiche son coût en électricité sous forme d'emoji (⚡N, plutôt qu'un
-    texte "Coût N") et sa description d'effet en toutes lettres, générée depuis ses données
-    (type/cible/action/valeur/durée) : `texte_effet_carte()` dans `src/ui/fenetre.py` côté PC
-    (réutilisable par d'autres écrans, notamment le futur écran de deck complet, §6 plus bas),
-    `texteEffetCarte()` déjà existant dans `src/web/app.js` côté web (réutilisé tel quel, `bridge.py`
-    enrichi des champs `type`/`cible`/`action`/`duree`/`valeur` par candidate)
-- **Écran "deck en entier"** : consultable depuis plusieurs endroits du parcours (pour l'instant
-  uniquement depuis l'Écran de partie via "Voir le deck", §10.3 — pas encore depuis les autres
-  écrans du parcours) — grille de toutes les cartes actuellement possédées par le joueur, regroupées par modèle (une
-  entrée par carte différente, avec un badge ×N si plusieurs exemplaires) plutôt qu'une case par
-  exemplaire individuel
-  - `Deck.toutes_cartes()` (`src/gameplay/deck.py`) réunit pioche + main + défausse + cartes
-    épuisées ; `regrouper_cartes()` (`src/gameplay/carte.py`) transforme une liste de cartes en
-    `(carte, quantité)` par modèle — fonctions gameplay partagées par les deux plateformes. Le
-    modèle est identifié par **l'id de la carte** (`Carte.id`, son id dans `config/cartes.json`,
-    renseigné par `charger_cartes` et conservé par `copie()`), pas par son nom : deux cartes
-    différentes qui porteraient le même nom restent deux entrées distinctes. `Carte.id` sert aussi
-    partout où une carte doit être rattachée au deck d'une partie (`ajouter_carte`/`retirer_carte`),
-    en remplacement de l'ancienne recherche par identité d'objet (`id_de_carte`, supprimée)
-  - **Implémenté** en écran autonome (même situation que les deux écrans précédents, pas encore
-    relié à un vrai bouton dans l'UI) : `src/ui/ecran_deck.py` (PC, grille figée de 8 colonnes,
-    survol d'une carte → panneau de description fixe en bas d'écran plutôt qu'une infobulle
-    ancrée sur la carte, pour éviter tout chevauchement avec la ligne voisine dans une grille
-    dense) ; `src/web/bridge.py` (`etat_deck`, cartes du combat en cours si actif sinon un deck de
-    démonstration tiré au sort) + `src/web/app.js` (`voirDeck`, exposée sur `window` — pas
-    d'infobulle au survol comme le reste de l'UI web, taper une carte affiche sa description
-    dans un popup, même principe que `#info-carte` pour la main en combat)
-- À la Planète commerciale (§2.2), achat direct de cartes contre de l'Argent ; la disponibilité de cartes Rares/Légendaires pour un module dépend de son niveau de mise à jour (Station service, §2.2)
-- **Mettre à jour un module (Station service, §2.2) débloque directement les paliers de rareté
-  disponibles pour ses candidates après combat** (et pour ses cartes à la Planète commerciale) :
-  Niveau 1 = Commune uniquement, Niveau 2 = +Rare, Niveau 3 = +Légendaire (palier maximum) —
-  décision utilisateur, remplace l'ancienne piste encore ouverte de probabilités graduelles.
-  Implique qu'à terme, le tirage de récompense (`tirer_carte_recompense`) devra filtrer le pool par
-  palier débloqué du module concerné plutôt que retomber automatiquement au palier inférieur en cas
-  de pool vide comme aujourd'hui (pas encore implémenté, cf. §2.2 pour l'état d'avancement)
+- **Après un combat gagné**, le joueur gagne une carte (parcours.md §2.1) : **une candidate par
+  module équipé** (principal compris), tirée dans les cartes de ce module ; le joueur en choisit
+  une, ou **passe**. La carte choisie est **rattachée au module qui l'a proposée** (§12.4)
+  (`parcours.tirer_candidats_recompense`).
+  - Rareté de chaque tirage (§7.3) : **5 % Légendaire, 20 % Rare, sinon Commune** (décision
+    utilisateur). Les cartes **Base** ne sont jamais proposées. Si le module n'a aucune carte au
+    palier tiré, on redescend au palier inférieur.
+  - **Palier de mise à jour** du module (Station service, parcours.md §2.2 ; décision utilisateur,
+    appliquée le 2026-11-13) : palier 1 = Communes seulement, palier 2 = + Rares, palier 3 = +
+    Légendaires (`parcours.RARETES_PAR_NIVEAU_MAJ`).
+  - Un module détruit pendant le combat propose quand même sa candidate.
+- **Après le choix de module** (Niveau 1) : jusqu'à 3 cartes distinctes du nouveau module sont
+  proposées, le joueur en prend une ou passe.
+- **Bouton Passer** (décision utilisateur) : le joueur n'est jamais obligé de prendre une carte.
+- **Écran « deck en entier »** : toutes les cartes possédées, regroupées par carte **et par
+  module** (badge ×N), avec le module de chaque carte ; pendant un combat, toutes les cartes du
+  combat, toutes piles confondues. PC : `src/ui/ecran_deck.py` ; web : `afficherDeck`.
+- **Texte d'une carte** : partout (main, récompenses, deck, Aventures), c'est la `description` de
+  `config/cartes.json` avec ses valeurs actuelles (`Carte.description_affichee`), jamais un texte
+  recomposé par l'affichage.
+- **Planète commerciale** (parcours.md §2.2) : achat de cartes, pas encore codé.
 
 ---
 
 ## 7. Types de cartes
 
-### 7.1 Types (par effet)
+### 7.1 Catégories (par effet)
 
-Classification par nature de l'effet — remplace l'ancien découpage par portée/persistance.
+`CategorieCarte` (noms sans accent dans le code et le JSON) :
 
-| Type | Description | Sous-catégories |
+| Catégorie | Description | Cartes actuelles |
 |---|---|---|
-| **Attaque** | Inflige des dégâts | Direct / décalé (dégâts différés) / poison (dégâts sur la durée) |
-| **Defense** | Protège un ou plusieurs modules | Bouclier absolu (x tours), réduction de dégâts en %, régénération de Bouclier sur la durée |
-| **Controle** | Neutralise ou limite un ennemi | Stun, restriction d'action (ex : pas d'attaque ce tour) |
-| **Debuff** | Affaiblit une cible ennemie | Plafond de dégâts infligés, réduction en %, réduction de Bouclier |
-| **Buff** | Renforce le vaisseau ou un module | Augmentation de dégâts, augmentation de Bouclier |
-| **Reparation** | Répare les PV d'un module | (voir aussi module Réparation, §4.2) — remplace l'ancien type "Soin" |
-| **Outils** | Manipule la pioche/défausse ou l'électricité | Piocher, défausser, recycler... ; gagner/convertir de l'électricité |
+| **Attaque** | Inflige des dégâts, directs ou dans la durée (incendie) | Laser, Missiles, Tir incendiaire… |
+| **Defense** | Protège un ou plusieurs modules | Bouclier, Protéger le vaisseau, Blindage ciblé, Leurre |
+| **Reparation** | Rend des PV à un module | Réparation |
+| **Buff** | Renforce le vaisseau ou ses cartes | Salve laser, Protocole d'urgence, Bouclier stabilisé |
+| **Debuff** | Affaiblit un ennemi | aucune (Vulnérabilité, Réduction de dégâts : non codées) |
+| **Outils** | Pioche, électricité | aucune pour l'instant |
+| **Controle** | Neutralise un ennemi (stun…) | aucune, rien de codé |
 
-Noms de type volontairement **sans accent** (Defense, Controle, Reparation), pour correspondre
-directement aux futures valeurs de l'enum `TypeCarte` côté code (§10). Le moteur actuel n'implémente
-encore qu'un sous-ensemble : voir §12.5 pour l'état d'implémentation par type.
+La catégorie sert aussi de filtre aux effets de répétition (§12.5).
 
 ### 7.2 Cible
 
-Troisième axe, indépendant du type — n'importe quel type (pas seulement Attaque) peut cibler différents camps/motifs : une Défense peut protéger un allié unique ou tout le vaisseau, un Debuff peut viser un ennemi unique ou tout un rang, etc.
-
-| Cible | Description |
-|---|---|
-| **Soi** | Le module qui joue la carte |
-| **Allié unique** | Un module ami au choix (parfois avec contrainte : adjacent, à portée...) |
-| **Alliés multiples / vaisseau entier** | Plusieurs modules ciblés, ou tout le vaisseau |
-| **Ennemi unique** | Une cible ennemie, avec contraintes de rang possibles (rang avant uniquement, n'importe quel rang...) |
-| **Ennemis multiples** | Motif fixe (ligne, colonne, rang entier) ou aléatoire, jusqu'à tous les ennemis |
-| **Ligne ennemie** | Cas particulier d'"ennemis multiples" pour les cartes perçantes (§3.1) : touche l'avant et l'arrière de la rangée de la cible cliquée (2 ennemis au plus) |
+Axe indépendant de la catégorie. Les neuf cibles (`CibleCarte`) et ce que chacune touche sont
+décrits en combat.md §3.8.2 : Ennemi Unique, Colonne, Avant, Arrière, Tous ; Module Unique,
+Principal, Avant, Tous. **Toutes** demandent un clic de confirmation sur une case valide, même
+quand la case ne change rien à l'effet (interface.md §8.3).
 
 ### 7.3 Rareté
 
@@ -272,222 +183,121 @@ Axe indépendant du type et de la cible — une carte a un type, une cible **et*
 
 ### 7.4 Munitions
 
-Axe indépendant du type, de la cible et de la rareté — une carte a, en plus de son coût en
-électricité, un nombre de munitions : soit **illimité** (comportement par défaut, cf. §3.6), soit un
-nombre fixe qui se consomme au fil du combat et se réinitialise au combat suivant. Voir §3.6 pour le
-détail du fonctionnement (pile "cartes épuisées", compteur par exemplaire).
+Axe indépendant de la catégorie, de la cible et de la rareté : une carte a, en plus de son coût,
+des munitions **illimitées** (par défaut) ou un nombre fixe qui se consomme pendant le combat et
+revient au combat suivant. Fonctionnement : combat.md §3.6. Exemples : Réparation (2), Tir
+incendiaire (3), Salve laser (2).
 
-- Sert à limiter des effets ponctuellement très forts (ex : Bouclier perpétuel, §4.2) sans les
-  rendre indéfiniment répétables dans un même combat
-- Rôle par rapport à la rareté : deux axes différents, une carte Commune peut avoir des munitions
-  limitées et une carte Légendaire des munitions illimitées, ou l'inverse — pas de règle systématique
-  pour l'instant (voir §9.1)
+Sert à limiter des effets ponctuellement très forts sans les rendre répétables à volonté. Pas de
+règle systématique entre rareté et munitions (a-trancher.md §9.1).
 
 ---
 
-## 12. Mécaniques de carte : référence d'implémentation et manques restants
+## 12. Modèle de carte et mécaniques
 
-En important le tableau de conception de cartes de l'utilisateur dans `config/cartes.json` (voir la
-PR "config : import des cartes Module principal, Lanceur de missiles, Blindage"), seules 6 des 38
-cartes du tableau correspondaient à ce que le moteur (`src/gameplay/carte.py`, `combat.py`) savait
-exécuter à l'époque. Ce nombre a augmenté au fil des mécaniques ajoutées, groupées ci-dessous par
-nature plutôt que par carte : la plupart sont désormais **implémentées** (détail par mécanique dans
-chaque sous-section) ; les cartes dont la mécanique ne l'est pas encore restent stockées pour
-référence (champ `_non_jouable`) mais inertes en jeu.
+`src/gameplay/carte.py` (`Carte`), relu et validé par l'utilisateur le 2026-11-08. Données :
+`config/cartes.json` (**source de vérité** : c'est là qu'on change une carte), tableau lisible
+**généré** `config/cartes.md` (`python -m outils.tableau_cartes`). **19 cartes**, toutes jouables.
+`Carte` ne décrit que les cartes du joueur : les ennemis ont leur propre modèle (combat.md §13).
 
-**Reste à implémenter** (résumé — le détail de chaque mécanique déjà en place est dans les
-sous-sections ci-dessous, ce résumé ne liste que ce qui manque encore) :
+### 12.1 Format d'une carte
 
-- Effets à deux valeurs X/Y sur une même carte : cible cliquée + splash différencié (*Missiles*),
-  deux zones différentes en une carte (*Torpille*) — §12.2
-- Effets à durée : dégâts répétés pendant Y tours (*Embrasement, Guerre nucléaire, Tir
-  incendiaire* — Module principal, carte ajoutée depuis, nom inventé), pioche bonus pendant Y tours
-  (*Multi fonction*) — §12.3
-- Transfert des dégâts subis vers un autre module désigné (*Transfert*) — §12.6. Le renvoi des
-  dégâts subis à l'attaquant (*Renvoie*) est désormais **implémenté**, la carte a été repensée
-  (décision utilisateur) pour utiliser directement le Bouclier miroir déjà existant côté ennemi
-  (§13.2) plutôt qu'un renvoi de dégâts brut inédit — renommée *Renvoi*, jouable, cf. §12.6
-- Méta-effets : changer le coût en électricité de toutes les cartes d'une catégorie (*Optimisation
-  des boucliers, Attaques performantes*), dupliquer l'effet de toutes les cartes d'une catégorie ou
-  d'une carte précise (*Double défense, Circuit parallèle, Salve laser, Protocole d'urgence* — ces
-  deux dernières ajoutées depuis pour le Module principal, noms inventés) — bloque aussi certaines
-  cartes à munitions limitées (§12.10) qui en dépendent — §12.7
-- Bloquer la dissipation naturelle du Bouclier en début de tour (§3.5) : *Bouclier stabilisé*
-  (Module principal, carte ajoutée depuis, nom inventé) — mécanique inédite, aucune carte existante
-  n'en avait besoin jusqu'ici — §12.5
-- Gain d'électricité en échange d'une défausse (*Manque de jus, Cannibalisme*) — §12.8
-- Manipulation de pioche/main/défausse : piocher puis défausser (*Changement d'outil*), tout
-  défausser puis repiocher (*Grand remplacement*), défausser une quantité choisie entre X et Y
-  (*Cannibalisme*, nécessite un sous-choix de quantité au moment de jouer la carte) — §12.9
-- Type Controle (stun, restriction d'action) : aucune carte taguée Controle dans le tableau pour
-  l'instant, rien à implémenter tant qu'aucune n'existe — §12.5
+- Des **valeurs nommées** : `"valeurs": {"degats_cible": 15, "degats_autres": 6}`.
+- Une liste d'**effets** qui y renvoient par leur nom : `{"nature": "DEGATS", "valeur":
+  "degats_cible"}`, avec une portée (§12.3), une durée nommée ou un filtre (§12.5) si besoin.
+- Une **description** qui cite les valeurs entre accolades (« Inflige {degats_cible} dégâts… »),
+  remplie par `Carte.description_affichee`.
+- `cout`, `rarete`, `categorie`, `cible`, `munitions`, `lancements`, `persistante`, et deux
+  booléens : `jouable` (le moteur sait l'exécuter) et `refonte` (carte revue).
+- **Au chargement** : tout nom cité doit exister, toute valeur doit servir, et **toute clé
+  inconnue est refusée** (coquilles détectées).
+- Chaque **exemplaire** a ses propres valeurs (`valeurs`, et `valeurs_actuelles` en combat), base
+  de futurs bonus du type « +2 aux dégâts des cartes à cible unique ».
+- Textes affichés accentués (consigne utilisateur) ; identifiants et clés sans accent.
 
-### 12.1 Cibles fixes ou par rang — entièrement implémenté
+### 12.2 Natures d'effet (`NatureEffet`)
 
-- **Module Principal** — cible toujours le module de base, sans choix du joueur — **implémenté**
-  (`CibleCarte.MODULE_PRINCIPAL`, sans clic) : *Protéger le vaisseau, Réparation, Blindage maximal*
-  jouables
-- **Ennemi Avant** / **Ligne avant** ennemie, **Ennemi Arrière** / **Ligne arrière** — **implémenté**
-  (`CibleCarte.COLONNE_AVANT_ENNEMIE` / `COLONNE_ARRIERE_ENNEMIE`, colonne fixée par la carte, un
-  clic sur l'autre colonne est refusé) : *Ligne avant, Ligne arrière* jouables
-- **Module Avant** — colonne avant alliée : avant-gauche + avant-droite, **et le module
-  principal** (qui occupe la rangée mid et compte donc à la fois comme avant et comme arrière,
-  décision utilisateur — contrairement à une première version qui l'excluait) — **implémenté**
-  (`CibleCarte.COLONNE_AVANT_ALLIEE`, même principe que les colonnes ennemies : un clic sur un
-  module de cette colonne précise, ou sur le module principal, confirme) : *Protéger l'avant
-  poste* jouable
+| Nature | Effet | État |
+|---|---|---|
+| `DEGATS` | Attaque de la valeur sur chaque ennemi touché | codé |
+| `BOUCLIER` | Pose le statut Bouclier | codé |
+| `REPARATION` | Rend des PV, sans dépasser le PV max | codé |
+| `INCENDIE` | Pose le statut Incendie (le « poison » du jeu) | codé |
+| `ANNULATION_PROCHAINE_ATTAQUE` | Pose le statut Leurre | codé |
+| `GAIN_ELECTRICITE` | Électricité en plus pour ce tour | codé, aucune carte |
+| `PIOCHE` | Pioche en plus | codé, aucune carte |
+| `REPETITION` | Les cartes désignées sont lancées N fois de plus (§12.5) | codé |
+| `VULNERABILITE`, `REDUCTION_DEGATS`, `REDIRECTION_CIBLE` | Statuts à durée, Tir allié | **non codé** : une carte qui en porte n'est pas jouable |
 
-Ces cibles par rang se résolvent par un **clic sur une case du rang visé**, comme la Ligne ennemie
-perçante (§3.1, §7.2), et non automatiquement comme Alliés/Ennemis multiples.
+Règles des statuts : combat.md §3.5. Résolution d'une carte : combat.md §3.8. Le **renvoi** n'est
+pas une nature de carte : seul l'ennemi Miroir le pose (la carte *Renvoi* du Blindage sera revue
+avec son module).
 
-### 12.2 Effets à deux valeurs (X et Y) sur une même carte
+### 12.3 Portée d'un effet (`PorteeEffet`)
 
-- Cible unique + splash différencié : X à la cible cliquée, Y à toutes les autres (*Missiles*)
-- Deux zones différentes en une carte : X sur la ligne avant ennemie, Y sur la ligne arrière
-  (*Torpille*)
+Par rapport à la cible de la carte : `CIBLE` (la cible, ou tout l'ensemble visé),
+`AUTRES_ENNEMIS` (Missiles : X sur la cible, Y sur les autres), `COLONNE_AVANT_ENNEMIE` et
+`COLONNE_ARRIERE_ENNEMIE` (Torpille : X à l'avant, Y à l'arrière). C'est ce qui permet deux
+valeurs sur une même carte.
 
-### 12.3 Effets à durée (plusieurs tours)
+### 12.4 Rattachement à un module et mot-clé Persistante
 
-Debuff actif pendant Y tours (chaque application ajoutée à la liste `Ennemi.buffs_actifs`, comme
-une instance indépendante avec sa propre durée ; décrémentée à chaque tour ennemi écoulé même si
-l'ennemi concerné n'a pas agi, et retirée de la liste à 0) — **implémenté** pour les debuffs
-(§12.4/§12.5) : *Boucliers hors service* jouable. Depuis §13, cette liste est **partagée avec les
-buffs** posés par les Actions des ennemis eux-mêmes (ex. Petit Jean se pose du bouclier) : buffs et
-debuffs ne sont plus que des cas d'usage du même modèle `BuffActif` (`carte.py`), qu'ils s'appliquent
-à un `Module` ou à un `Ennemi`.
+**Chaque carte du deck est rattachée à un exemplaire de module** (décision utilisateur,
+2026-11-08) : le deck sauvegardé est une liste de couples `{"id": "CRT_9", "module": "M2"}`
+(`partie.CartePossedee`, `Carte.exemplaire_module`).
 
-Même mécanique côté allié (`Module.buffs_actifs`), avec en plus la possibilité d'une durée **nulle**
-(`tours_restants=None`) pour un buff **persistant** qui ne décompte jamais et dure tout le combat —
-**implémenté** (§12.5) : *Bouclier perpétuel* (persistant) et *Blindage maximal* (durée limitée,
-même mécanisme `BOUCLIER_PAR_TOUR` avec `duree` finie plutôt que nulle) jouables — les deux seules
-cartes Buff à effet périodique simple (les 3 autres cartes Buff restantes sont des méta-effets, cf.
-§12.5/§12.7). L'effet d'un buff se déclenche une première fois immédiatement à la pose de la carte
-(comme les autres types de carte), puis se redéclenche à chaque début de tour joueur tant qu'il
-reste actif. Pour un buff `BOUCLIER_PAR_TOUR`, ce redéclenchement pose du Bouclier frais
-**après** la dissipation naturelle du tour (§3.5), qui ne fait que diviser par deux la valeur
-existante tant qu'elle dépasse le seuil : le Bouclier peut donc croître au-dessus de la valeur du
-buff avant de se stabiliser à un palier plus élevé (cf. §3.5 pour l'exemple chiffré).
+- Un **identifiant d'exemplaire** plutôt que l'emplacement : la Station service déplace les
+  modules, les cartes suivent sans rien faire.
+- **Si le module est détruit en combat, ses cartes partent en pile Hors service** (combat.md
+  §3.4) : c'est ce qui donne un coût à la perte d'un module. Les dégâts renvoyés par un ennemi
+  vont au module de la carte jouée (combat.md §3.8.5).
 
-Un buff persistant cible toujours le **module principal** plutôt qu'un module au choix du joueur
-(déviation assumée de la cible "Module Unique" du tableau de conception, décision utilisateur) : lui
-seul est garanti de survivre tout le combat (§3.4), donc le seul module où un effet censé durer
-jusqu'à la fin a du sens. Sur un module, les buffs à durée limitée et les buffs persistants sont
-affichés **séparément** (deux pastilles distinctes avec un compte chacune, jamais additionnées ; deux
-groupes distincts dans l'infobulle), pour que le joueur distingue d'un coup d'œil ce qui va expirer
-de ce qui ne bougera plus jusqu'à la fin du combat.
+| Origine de la carte | Module de rattachement |
+|---|---|
+| Deck de départ | le principal |
+| Carte choisie après le choix de module | le module qui vient d'être équipé |
+| Récompense de combat | le module qui a proposé la carte |
+| Aventure, Planète commerciale | **le principal pour l'instant** (décision utilisateur, 2026-11-11) ; question ouverte, a-trancher.md §9.1 |
 
-Reste manquant pour les autres effets à durée :
+**Persistante** (`"persistante": true`) : la carte reste jouable même si son module est détruit.
+Réservée à quelques cartes Rares ou Légendaires, **0 ou 1 par module** (validé), sinon la perte
+d'un module ne coûte plus rien. Aucune carte ne le porte encore. Affichée par un bandeau sur la
+carte.
 
-- Dégâts répétés pendant Y tours (*Embrasement, Guerre nucléaire*)
-- Pioche bonus pendant Y tours (*Multi fonction*)
+- **Candidates naturelles** : des cartes dont le thème survit au module, par exemple *Leurre* (un
+  leurre déjà largué), et les **cartes de résurrection**, qui doivent pouvoir ressusciter leur
+  propre module. **Sans Persistante, une carte de résurrection d'un module mort serait elle-même
+  hors service : à proscrire** (contrainte de conception, refonte-destruction.md §5).
 
-### 12.4 Effets en pourcentage — entièrement implémenté
+### 12.5 Lancements et répétition
 
-**Implémenté pour les debuffs** (somme des `valeur` des debuffs `VULNERABILITE` actifs dans
-`Ennemi.buffs_actifs`, majore les dégâts subis d'une attaque du joueur) : *Brèche, Ligne avant,
-Boucliers endommagés, Boucliers hors service* jouables. **Implémenté aussi côté allié**
-(`ActionCarte.BOUCLIER_POURCENTAGE_PV` sur une carte Defense : bouclier = `valeur`% des PV **max**
-de la cible cliquée — les PV actuels varieraient trop selon les dégâts déjà subis, l'effet doit
-rester prévisible — arrondi à l'entier le plus proche) : *Bouclier adaptatif* jouable.
+- Une carte est lancée `lancements_base` fois (1 par défaut) : coût payé une fois, tous les effets
+  appliqués à chaque lancement (combat.md §3.8.3).
+- Un effet `REPETITION` **augmente les lancements** des cartes que désigne son **filtre**, dans
+  toutes les piles, **jusqu'à la fin du combat**, et se cumule (décision utilisateur). Le filtre
+  désigne une carte par son **id** (`{"id": "CRT_7"}`, jamais par son nom), ou un ensemble par
+  rareté ou catégorie.
+- Cartes : *Salve laser* (les Laser), *Protocole d'urgence* (les cartes Base), *Bouclier
+  stabilisé* (les Bouclier de base).
 
-### 12.5 Types de carte absents du moteur
+### 12.6 Mécaniques envisagées, non codées
 
-Déjà nommés en §7.1. État d'implémentation dans `combat.py` :
+Idées des anciennes cartes, à reprendre avec les modules concernés. **Les 44 cartes de l'ancien
+moteur** (dont 25 qui n'existent plus dans le jeu : Mode défensif, Transfert, Renvoi, Tir allié,
+Boost, Cannibalisme…), avec leurs dernières valeurs, sont dans
+[archive-cartes-modules.md](archive-cartes-modules.md) ; leur première version, dans
+`specs/cartes_legacy.xlsx` (archivé). Mécaniques correspondantes :
 
-- **Reparation** — **implémenté** (renommage de l'ancien type `SOIN`, même logique)
-- **Debuff** — **implémenté** (`TypeCarte.DEBUFF`, trois actions : `REDUCTION_DEGATS`,
-  `VULNERABILITE` et `REDIRECTION_CIBLE`, cf. §12.1/§12.3/§12.4/§12.6) : *Tordre le canon, Brèche,
-  Ligne avant, Boucliers endommagés, Boucliers hors service, Tir allié* jouables — les 6 cartes du
-  module Sabotage sont maintenant toutes jouables
-- **Buff** — **implémenté** (`TypeCarte.BUFF`, une action : `BOUCLIER_PAR_TOUR`, cf. §12.3) :
-  *Bouclier perpétuel, Blindage maximal, Blindage cible* (Module principal, carte ajoutée depuis,
-  nom inventé — même mécanique que *Blindage maximal*, cible Module Unique au lieu de Module
-  Principal) jouables. *Optimisation des boucliers, Attaques performantes* (modification du coût
-  d'une catégorie de cartes), *Double défense, Circuit parallèle, Salve laser, Protocole d'urgence*
-  (duplication d'effet, cf. §12.7) et *Bouclier stabilisé* (blocage de la dissipation naturelle du
-  Bouclier, Module principal, carte ajoutée depuis, nom inventé — aucune mécanique existante à
-  réutiliser, `combat._dissiper_bouclier`/§3.5 s'applique inconditionnellement pour l'instant)
-  restent non jouables, ce sont des méta-effets ou des mécaniques inédites, pas de simples buffs sur
-  un module
-- **Outils** — **implémenté** (`TypeCarte.OUTILS`, cf. §12.9) pour trois actions (`GAIN_ELECTRICITE`,
-  `GAIN_ELECTRICITE_PAR_MODULE`, `PIOCHE_SUPPLEMENTAIRE`) : *Surcharge temporaire, Fonds de tiroir,
-  Boost* jouables. Le reste demande encore une logique dédiée (*Changement d'outil, Manque de jus,
-  Cannibalisme, Grand remplacement, Multi fonction*)
-- **Controle** : toujours aucune carte taguée Controle dans le tableau ; type prévu en §7.1 (stun,
-  restriction d'action) mais rien à implémenter pour l'instant
-
-### 12.6 Altération / redirection des dégâts
-
-- Transfert des dégâts subis vers un autre module désigné (*Transfert*)
-- Renvoi des dégâts subis à l'attaquant — **implémenté** (décision utilisateur : la carte, renommée
-  *Renvoi* (ex-*Renvoie*), pose un Bouclier miroir sur le module cible plutôt qu'un renvoi de
-  dégâts brut inédit, en réutilisant directement `ActionCarte.BOUCLIER_MIROIR`/
-  `Combat._consommer_bouclier_miroir` déjà écrits pour l'ennemi Miroir (§13.2) — ces fonctions
-  étaient déjà génériques `Module | Ennemi`, aucun changement moteur nécessaire) : *Renvoi* jouable
-- Annulation totale de la prochaine attaque sur une cible, différent d'un bouclier classique
-  (*Leurre*) — **implémenté** (`ActionCarte.ANNULATION_PROCHAINE_ATTAQUE`, sur une carte Defense) :
-  *Leurre* jouable. Un flag `Module.leurre_actif` (pas un buff : pas de redéclenchement
-  périodique, pas de durée en tours) rend la **toute prochaine** attaque reçue totalement nulle
-  (0 dégât, y compris si elle dépasserait PV+bouclier cumulés), puis se consomme — dès la première
-  attaque reçue après la pose, même si plusieurs ennemis attaquent ce module dans le même tour —
-  seule la **première** attaque résolue sur ce module est annulée, dans l'ordre de résolution du
-  tour ennemi (`Combat._tour_ennemi` : colonne Avant de haut en bas puis colonne
-  Arrière de haut en bas), les suivantes s'appliquent normalement. L'intention affichée au
-  survol/tap d'un ennemi montre toujours sa **vraie** attaque, jamais 0 à cause d'un
-  leurre potentiellement actif sur sa cible : elle reflète ce que cet ennemi ferait pris
-  isolément, pas le résultat final après résolution de tout le tour (qui dépend de l'ordre).
-  Pastille dédiée (cyan) distincte des pastilles de buff, affichée tant que le leurre n'a pas
-  encore été consommé
-- Détournement de la cible d'un ennemi vers un de ses voisins — mécanique déjà anticipée comme
-  *Piratage* en §4.2 — **implémenté** (`ActionCarte.REDIRECTION_CIBLE`) : *Tir allié* jouable. Le
-  "voisin" est **n'importe quel autre ennemi vivant** (pas de restriction géométrique d'adjacence,
-  décision prise avec l'utilisateur) — l'ennemi debuffé attaque un allié à lui tiré au hasard parmi
-  les ennemis vivants restants, plutôt qu'un module du joueur, à son prochain tour ; sans autre
-  ennemi vivant, il attaque normalement (rien à rediriger vers). Le tirage au hasard n'a lieu qu'à
-  la résolution réelle du tour (`Combat._cible_redirection`), jamais lors d'un simple survol/tap de
-  prévisualisation (`Combat.previsualiser_cible`), pour ne pas consommer l'aléa à chaque redessin —
-  l'UI affiche alors "Vise un allié au hasard" plutôt qu'une cible précise, tant que le tour n'est
-  pas résolu
-
-### 12.7 Modification des règles d'autres cartes (méta-effets)
-
-- Changer le coût en électricité de toutes les cartes d'une catégorie pour le reste du combat
-  (*Optimisation des boucliers, Attaques performantes*)
-- Dupliquer l'effet de toutes les cartes d'une catégorie X fois (*Double défense, Circuit
-  parallèle*), d'une carte précise nommément (*Salve laser* — Module principal, carte ajoutée
-  depuis, nom inventé, cible *Laser*) ou de toute une rareté (*Protocole d'urgence* — Module
-  principal, carte ajoutée depuis, nom inventé, cible les cartes Base) — même famille de mécanique
-  non implémentée, sous des granularités différentes (une catégorie entière, une carte nommée, une
-  rareté entière)
-
-### 12.8 Gain d'électricité via une carte
-
-- Gain fixe (*Surcharge temporaire*) — **implémenté** (`ActionCarte.GAIN_ELECTRICITE`)
-- Gain proportionnel au nombre de modules actifs (*Fonds de tiroir*) — **implémenté**
-  (`ActionCarte.GAIN_ELECTRICITE_PAR_MODULE`, `valeur` x nombre de modules alliés vivants, base
-  incluse - mêmes modules que `Combat._modules_vivants()`, déjà utilisé pour Alliés multiples §7.2)
-- Gain en échange d'une défausse (*Manque de jus, Cannibalisme*)
-
-### 12.9 Manipulation de pioche / main / défausse via une carte
-
-- Piocher des cartes supplémentaires — **implémenté** (`ActionCarte.PIOCHE_SUPPLEMENTAIRE`,
-  `Deck.piocher_cartes()`) : *Boost* jouable. Manque encore la durée pour *Multi fonction*
-- Piocher puis défausser en une carte (*Changement d'outil*)
-- Défausser toute la main puis repiocher autant (*Grand remplacement*)
-- Défausser une **quantité choisie par le joueur** entre X et Y (*Cannibalisme*) — nécessite un
-  sous-choix de quantité au moment de jouer la carte, en plus du ciblage habituel
-
-### 12.10 Munitions limitées
-
-Déjà spécifiées en §3.6/§7.4 (mécanique de jeu tranchée) — **implémenté** (`Carte.munitions_max`/
-`munitions_restantes`, pile `Deck.cartes_epuisees`) : *Réparation* jouable. Reste bloqué par
-d'autres mécaniques manquantes pour les autres cartes à munitions (*Bouclier perpétuel,
-Optimisation des boucliers, Attaques performantes*, qui ont toutes en plus besoin du type Buff).
-
-### 12.11 Note annexe : cible des cartes Soute
-
-Les 6 cartes du module Soute (pioche/défausse/électricité) portaient une cible "Ennemi Tous" dans le
-tableau source, incohérente pour des cartes qui ne visent aucun ennemi. Corrigé dans
-`config/cartes.json` : elles se jouent en cliquant **n'importe quel module allié**, dont l'identité
-n'a aucune influence sur l'effet (celui-ci porte sur le deck ou l'électricité, ressources communes
-au vaisseau, pas sur le module cliqué).
+- **Statuts à durée** : Vulnérabilité (% de dégâts subis en plus), Réduction de dégâts, Tir allié
+  (un ennemi attaque un de ses alliés) ; réflexion dans
+  [refonte-buffs-debuffs.md](refonte-buffs-debuffs.md).
+- **Effet à la destruction, résurrection, sacrifice** :
+  [refonte-destruction.md](refonte-destruction.md).
+- **Bouclier en % des PV max**, transfert des dégâts vers un autre module, renvoi posé par une
+  carte.
+- **Méta-effets** : changer le coût de toutes les cartes d'une catégorie.
+- **Électricité** : gain par module vivant, gain en échange d'une défausse.
+- **Pioche / défausse** : piocher puis défausser, tout défausser puis repiocher, défausser une
+  quantité choisie (demande un sous-choix au moment de jouer), pioche bonus pendant plusieurs
+  tours.
+- **Contrôle** : stun, restriction d'action.

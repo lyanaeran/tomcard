@@ -11,7 +11,7 @@ ecrans du parcours), a remplacer par un fond dedie.
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.module_new import ModuleNew
+from src.gameplay.module import Module
 from src.gameplay.partie import Partie, Profil
 from src.ui.commun import image_case_module
 from src.ui.fenetre import FOND_IMAGE, HAUTEUR_FENETRE, LARGEUR_FENETRE, _sprite_ajuste, _sprite_etire
@@ -117,7 +117,7 @@ class EcranAccueilJoueur(pyglet.window.Window):
         return x, Y_HAUT_GRILLE - HAUTEUR_CARTE_MODULE, LARGEUR_CARTE_MODULE, HAUTEUR_CARTE_MODULE
 
     def _dessiner_module(
-        self, index: int, libelle: str, etat: ModuleNew | None, lot: pyglet.graphics.Batch
+        self, index: int, libelle: str, etat: Module | None, lot: pyglet.graphics.Batch
     ) -> list:
         x, y, largeur, hauteur = self._rect_module(index)
         cx = x + largeur / 2

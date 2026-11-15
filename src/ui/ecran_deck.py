@@ -10,7 +10,7 @@ Fond de combat reutilise en placeholder (decision utilisateur), a remplacer par 
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.carte_new import CarteNew
+from src.gameplay.carte import Carte
 from src.ui.commun import chemin_image, regrouper_cartes, texte_carte
 from src.ui.fenetre import (
     COULEUR_ETOILE_RARETE,
@@ -85,7 +85,7 @@ class EcranDeck(pyglet.window.Window):
     carte et module (carte, quantite). Survol d'une carte : sa description complete et le module
     auquel elle est rattachee (`noms_modules` : exemplaire -> nom)."""
 
-    def __init__(self, cartes: list[CarteNew], noms_modules: dict[str, str] | None = None):
+    def __init__(self, cartes: list[Carte], noms_modules: dict[str, str] | None = None):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.groupes = regrouper_cartes(cartes)
         self.noms_modules = noms_modules or {}
@@ -138,7 +138,7 @@ class EcranDeck(pyglet.window.Window):
         )
         return [rectangle, texte]
 
-    def _dessiner_carte(self, index: int, carte: CarteNew, quantite: int, lot: pyglet.graphics.Batch) -> list:
+    def _dessiner_carte(self, index: int, carte: Carte, quantite: int, lot: pyglet.graphics.Batch) -> list:
         x, y, largeur, hauteur = _rect_carte(index)
         survole = index == self.index_survole
         cadre = shapes.BorderedRectangle(
@@ -206,7 +206,7 @@ class EcranDeck(pyglet.window.Window):
             )
         return elements
 
-    def _dessiner_panneau_description(self, carte: CarteNew, lot: pyglet.graphics.Batch) -> list:
+    def _dessiner_panneau_description(self, carte: Carte, lot: pyglet.graphics.Batch) -> list:
         """Description complete de la carte survolee, dans un panneau fixe en bas de l'ecran
         (evite tout chevauchement avec la grille, dense)."""
         cx = LARGEUR_FENETRE / 2

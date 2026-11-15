@@ -1,5 +1,5 @@
 """
-Genere config/ennemi_new.md, tableau lisible des ennemis, a partir de config/ennemi_new.json
+Genere config/ennemis.md, tableau lisible des ennemis, a partir de config/ennemis.json
 (seule source de verite). Ne jamais modifier le tableau a la main : relancer ce script apres
 chaque modification du JSON (tests/test_tableau_ennemis.py echoue sinon).
 
@@ -8,15 +8,15 @@ chaque modification du JSON (tests/test_tableau_ennemis.py echoue sinon).
 
 from pathlib import Path
 
-from src.gameplay.ennemi_new import EffetEnnemi, EnnemiNew, ValeurEnnemi, charger_ennemis_new
+from src.gameplay.ennemi import EffetEnnemi, Ennemi, ValeurEnnemi, charger_ennemis
 
 RACINE = Path(__file__).resolve().parents[1]
-FICHIER_JSON = RACINE / "config" / "ennemi_new.json"
-FICHIER_TABLEAU = RACINE / "config" / "ennemi_new.md"
+FICHIER_JSON = RACINE / "config" / "ennemis.json"
+FICHIER_TABLEAU = RACINE / "config" / "ennemis.md"
 
 ENTETE = """# Ennemis (refonte) — tableau généré
 
-> **Fichier généré automatiquement à partir de `config/ennemi_new.json`, ne pas le modifier à la
+> **Fichier généré automatiquement à partir de `config/ennemis.json`, ne pas le modifier à la
 > main** : toute modification se fait dans le JSON, puis `python -m outils.tableau_ennemis`
 > régénère ce tableau (un test échoue tant qu'il n'est pas à jour).
 >
@@ -54,7 +54,7 @@ def _effet(effet: EffetEnnemi) -> str:
     return f"{NATURES[effet.nature.name]} {{{effet.valeur}}}{fois}, {CIBLES[effet.cible.name]}"
 
 
-def _evolution(ennemi: EnnemiNew) -> str:
+def _evolution(ennemi: Ennemi) -> str:
     """Valeurs aux tours 1 a 6, coefficient 1."""
     return "<br>".join(
         f"{nom} : " + ", ".join(str(valeur.au_tour(tour)) for tour in range(1, 7))
@@ -63,8 +63,8 @@ def _evolution(ennemi: EnnemiNew) -> str:
 
 
 def tableau_markdown(fichier_json: Path = FICHIER_JSON) -> str:
-    """Contenu complet de config/ennemi_new.md pour ce fichier JSON."""
-    ennemis = charger_ennemis_new(fichier_json).values()
+    """Contenu complet de config/ennemis.md pour ce fichier JSON."""
+    ennemis = charger_ennemis(fichier_json).values()
     lignes = ["| " + " | ".join(COLONNES) + " |", "|" + "|".join("---" for _ in COLONNES) + "|"]
     for ennemi in ennemis:
         cycle = "<br>".join(

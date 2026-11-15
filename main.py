@@ -24,9 +24,9 @@ import pyglet
 pyglet.options.dpi_scaling = "stretch"
 
 from src.gameplay import deroulement
-from src.gameplay.combat_new import CombatNew, EtatCombatNew
+from src.gameplay.combat import Combat, EtatCombat
 from src.gameplay.deroulement import Ecran
-from src.gameplay.module_new import ModuleNew
+from src.gameplay.module import Module
 from src.gameplay.parcours import TypeEtape
 from src.gameplay.partie import (
     Partie,
@@ -147,7 +147,7 @@ def _ouvrir_choix_module(profil: Profil, partie: Partie) -> None:
     )
 
 
-def _ouvrir_choix_carte_module(profil: Profil, partie: Partie, modele: ModuleNew) -> None:
+def _ouvrir_choix_carte_module(profil: Profil, partie: Partie, modele: Module) -> None:
     """Cartes proposees pour le module qui vient d'etre equipe ; ecran saute si rien a proposer."""
     candidats = deroulement.choisir_module(partie, modele, random.Random())
     if not candidats:
@@ -191,7 +191,7 @@ def _ouvrir_aventure_asteroides(profil: Profil, partie: Partie) -> None:
     _attendre(fenetre, lambda: fenetre.combat_demande or fenetre.termine, suite)
 
 
-def _ouvrir_combat(profil: Profil, partie: Partie, combat: CombatNew | None = None) -> None:
+def _ouvrir_combat(profil: Profil, partie: Partie, combat: Combat | None = None) -> None:
     """`combat` : deja construit pour un combat scripte (Aventure Asteroides) ; None pour un
     Prime/Boss normal (combat_depuis_partie)."""
     combat = combat or combat_depuis_partie(partie)
@@ -207,7 +207,7 @@ def _ouvrir_combat(profil: Profil, partie: Partie, combat: CombatNew | None = No
         # Sauvegarde des la fin du combat : PV, Argent et recompense en attente sont notes, la
         # partie reprendra sur l'ecran de recompense (jamais sur le combat deja joue)
         sauvegarder_partie(profil.id, partie)
-        _ouvrir_fin_combat(profil, partie, combat.etat == EtatCombatNew.VICTOIRE, candidats)
+        _ouvrir_fin_combat(profil, partie, combat.etat == EtatCombat.VICTOIRE, candidats)
 
     _attendre(fenetre, lambda: fenetre.quitte_demandee or not combat.en_cours, suite)
 

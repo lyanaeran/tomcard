@@ -15,22 +15,22 @@ from concurrent.futures import ProcessPoolExecutor
 from dataclasses import asdict
 
 from src.gameplay import deroulement
-from src.gameplay.module_new import charger_modules_new
+from src.gameplay.module import charger_modules
 from src.gameplay.parcours import modules_equipables
 from src.gameplay.partie import combat_depuis_partie, nouvelle_partie
 
-from outils.simulation.bot_new import BotAleatoire, BotRecherche, jouer_combat
+from outils.simulation.bot import BotAleatoire, BotRecherche, jouer_combat
 from outils.simulation.partie_auto import jouer_partie
 
 # Modules secondaires testables : ceux que le jeu peut proposer (jouables et avec des cartes)
-MODULES_TESTES = [module.id for module in modules_equipables(charger_modules_new().values())]
+MODULES_TESTES = [module.id for module in modules_equipables(charger_modules().values())]
 NIVEAUX_COMBATS_ISOLES = (3, 7, 10)
 
 
 def _combat_isole(module_id: str, niveau: int, graine: int, bot: str, validation: bool) -> dict:
     """Combat au niveau donne, avec le deck de depart et le module equipe au Niveau 1."""
     partie = nouvelle_partie(random.Random(graine))
-    cartes = deroulement.choisir_module(partie, charger_modules_new()[module_id], random.Random(graine))
+    cartes = deroulement.choisir_module(partie, charger_modules()[module_id], random.Random(graine))
     carte = max(cartes, key=lambda c: c.rarete.value) if cartes else None
     deroulement.resoudre_carte_module(partie, carte)
     partie.niveau = niveau

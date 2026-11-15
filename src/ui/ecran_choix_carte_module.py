@@ -11,7 +11,7 @@ ecran_choix_module.py/ecran_fin_combat.py.
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.carte_new import CarteNew
+from src.gameplay.carte import Carte
 from src.gameplay.partie import Partie, deck_de_la_partie
 from src.ui import barre_laterale
 from src.ui.ecran_deck import EcranDeck
@@ -66,7 +66,7 @@ def _point_dans_rectangle(px: float, py: float, x: float, y: float, largeur: flo
 class EcranChoixCarteModule(pyglet.window.Window):
     """Choix d'une carte candidate du module fraichement equipe (specs.md 2.3), ou Passer."""
 
-    def __init__(self, nom_module: str, candidats: list[CarteNew], partie: Partie):
+    def __init__(self, nom_module: str, candidats: list[Carte], partie: Partie):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.nom_module = nom_module
         self.candidats = candidats
@@ -74,7 +74,7 @@ class EcranChoixCarteModule(pyglet.window.Window):
         self.index_survole: int | None = None
         self.survole_passer = False
         self.survole_barre: str | None = None
-        self.carte_choisie: CarteNew | None = None
+        self.carte_choisie: Carte | None = None
         # True une fois qu'un choix (carte ou Passer) a ete fait - seul signal a surveiller par
         # l'appelant, meme convention que EcranFinCombat.termine.
         self.termine: bool = False
@@ -119,7 +119,7 @@ class EcranChoixCarteModule(pyglet.window.Window):
         elements.extend(barre_laterale.dessiner(self.partie, self.survole_barre, lot))
         return elements
 
-    def _dessiner_candidat(self, index: int, total: int, carte: CarteNew, lot: pyglet.graphics.Batch) -> list:
+    def _dessiner_candidat(self, index: int, total: int, carte: Carte, lot: pyglet.graphics.Batch) -> list:
         x, y, largeur, hauteur = _rect_candidat(index, total)
         survole = index == self.index_survole
         cadre = shapes.BorderedRectangle(

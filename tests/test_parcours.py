@@ -5,8 +5,8 @@ Tests unitaires pour la logique du parcours (src/gameplay/parcours.py).
 import dataclasses
 import random
 
-from src.gameplay.carte_new import RareteCarte, charger_cartes_new
-from src.gameplay.module_new import charger_modules_new
+from src.gameplay.carte import RareteCarte, charger_cartes
+from src.gameplay.module import charger_modules
 from src.gameplay.parcours import (
     TypeAventure,
     TypeEtape,
@@ -50,7 +50,7 @@ def _modules_fictifs(nombre: int = 4):
     """Modeles de modules : le principal, le Lanceur, et `nombre` copies jouables du Lanceur sous
     d'autres ids, pour tester le tirage parmi plusieurs modules (un seul secondaire jouable pour
     l'instant)."""
-    modeles = charger_modules_new()
+    modeles = charger_modules()
     lanceur = modeles["MOD_2"]
     fictifs = [dataclasses.replace(lanceur, id=f"MOD_TEST_{i}") for i in range(nombre)]
     sans_cartes = dataclasses.replace(lanceur, id="MOD_SANS_CARTE", cartes=())
@@ -59,7 +59,7 @@ def _modules_fictifs(nombre: int = 4):
 
 
 def test_modules_equipables_seul_le_lanceur_est_jouable_pendant_la_refonte():
-    assert [module.id for module in modules_equipables(charger_modules_new().values())] == ["MOD_2"]
+    assert [module.id for module in modules_equipables(charger_modules().values())] == ["MOD_2"]
 
 
 def test_modules_equipables_exclut_le_principal_les_non_jouables_et_les_modules_sans_cartes():
@@ -87,7 +87,7 @@ def test_tirer_candidats_module_est_deterministe_pour_une_meme_graine():
 
 
 def test_tirer_candidats_module_moins_de_candidats_si_la_pool_est_petite():
-    candidats = tirer_candidats_module(modules_equipables(charger_modules_new().values()), random.Random(1))
+    candidats = tirer_candidats_module(modules_equipables(charger_modules().values()), random.Random(1))
 
     assert [candidat.id for candidat in candidats] == ["MOD_2"]
 
@@ -110,7 +110,7 @@ def test_tirer_rarete_recompense_respecte_les_bornes():
     assert tirer_rarete_recompense(_AleatoireFixe(0.999)) == RareteCarte.COMMUNE
 
 
-_MODELES = charger_cartes_new()
+_MODELES = charger_cartes()
 CARTE_COMMUNE = dataclasses.replace(_MODELES["CRT_8"], id="TEST_C")
 CARTE_RARE = dataclasses.replace(_MODELES["CRT_15"], id="TEST_R")
 CARTE_BASE = dataclasses.replace(_MODELES["CRT_7"], id="TEST_B")
@@ -129,7 +129,7 @@ def test_tirer_carte_recompense_renvoie_none_si_pool_vide():
 
 
 def _lanceur_avec_cartes(*ids: str):
-    return dataclasses.replace(charger_modules_new()["MOD_2"], cartes=ids)
+    return dataclasses.replace(charger_modules()["MOD_2"], cartes=ids)
 
 
 def test_pool_module_exclut_les_cartes_base_et_non_jouables():
@@ -145,12 +145,12 @@ def test_pool_toutes_cartes_exclut_les_cartes_base_et_non_jouables():
 
 
 def _exemplaires_principal_et_lanceur():
-    modeles = charger_modules_new()
+    modeles = charger_modules()
     return [modeles["MOD_1"].nouvel_exemplaire("M1", "base"), modeles["MOD_2"].nouvel_exemplaire("M2", "avant_gauche")]
 
 
 def test_tirer_candidats_recompense_un_par_module_rattache_a_son_exemplaire():
-    cartes = charger_cartes_new()
+    cartes = charger_cartes()
     modules = _exemplaires_principal_et_lanceur()
 
     for graine in range(20):
@@ -170,8 +170,8 @@ def test_tirer_candidats_recompense_un_par_module_rattache_a_son_exemplaire():
 
 
 def test_tirer_candidats_carte_module_renvoie_3_cartes_distinctes_du_pool_module():
-    cartes = charger_cartes_new()
-    lanceur = charger_modules_new()["MOD_2"]
+    cartes = charger_cartes()
+    lanceur = charger_modules()["MOD_2"]
 
     candidats = tirer_candidats_carte_module(lanceur, cartes, random.Random(1))
 
@@ -181,7 +181,7 @@ def test_tirer_candidats_carte_module_renvoie_3_cartes_distinctes_du_pool_module
 
 
 def test_tirer_candidats_carte_module_respecte_la_quantite_demandee():
-    candidats = tirer_candidats_carte_module(charger_modules_new()["MOD_2"], charger_cartes_new(), random.Random(1), quantite=2)
+    candidats = tirer_candidats_carte_module(charger_modules()["MOD_2"], charger_cartes(), random.Random(1), quantite=2)
 
     assert len(candidats) == 2
 
@@ -200,8 +200,8 @@ def test_tirer_candidats_carte_module_moins_de_candidats_si_pool_plus_petit():
 def test_le_palier_de_mise_a_jour_ouvre_les_raretes_proposees():
     """Decision utilisateur (2026-11-13) : palier 1 Commune, palier 2 + Rare, palier 3 +
     Legendaire (Station service, specs.md 2.2/6)."""
-    cartes = charger_cartes_new()
-    lanceur = charger_modules_new()["MOD_2"]
+    cartes = charger_cartes()
+    lanceur = charger_modules()["MOD_2"]
     attendu = {
         1: {RareteCarte.COMMUNE},
         2: {RareteCarte.COMMUNE, RareteCarte.RARE},

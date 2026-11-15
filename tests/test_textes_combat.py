@@ -3,16 +3,16 @@ sans pyglet."""
 
 import random
 
-from src.gameplay.carte_new import charger_cartes_new
-from src.gameplay.combat_new import CombatNew, Evenement, NatureEvenement
-from src.gameplay.ennemi_new import CibleEffetEnnemi, NatureEffetEnnemi
+from src.gameplay.carte import charger_cartes
+from src.gameplay.combat import Combat, Evenement, NatureEvenement
+from src.gameplay.ennemi import CibleEffetEnnemi, NatureEffetEnnemi
 from src.gameplay.partie import combat_depuis_partie, nouvelle_partie
-from src.gameplay.statut_new import Statut
+from src.gameplay.statut import Statut
 from src.ui import textes_combat
 from src.ui.commun import regrouper_cartes
 
 
-def _combat(niveau: int = 2) -> CombatNew:
+def _combat(niveau: int = 2) -> Combat:
     partie = nouvelle_partie(random.Random(1))
     partie.niveau = niveau
     return combat_depuis_partie(partie, random.Random(2))
@@ -106,7 +106,7 @@ def test_compteurs_hors_service_seulement_si_non_vide():
 
 
 def test_regrouper_cartes_par_carte_et_module():
-    modeles = charger_cartes_new()
+    modeles = charger_cartes()
     laser = next(iter(modeles.values()))
     cartes = [laser.copie(exemplaire_module="M1"), laser.copie(exemplaire_module="M1"), laser.copie(exemplaire_module="M2")]
     groupes = regrouper_cartes(cartes)

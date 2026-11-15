@@ -4,12 +4,11 @@ Deckbuilder roguelike (thème vaisseaux spatiaux) inspiré de Slay the Spire. Le
 et le **parcours** (boucle de run) s'enchaîne écran par écran jusqu'au Boss du niveau 10
 (specs.md §2.4), sur les deux versions : `main.py` côté PC, `src/web/app.js` côté web.
 
-**Une refonte est en cours** (cartes, modules, ennemis, statuts, combat) : un **nouveau moteur**
-(fichiers `*_new.py`, `config/*_new.json`) est codé et testé **à côté de l'ancien**. Son
-**branchement** se fait en 4 PR (`specs/refonte-branchement.md`) : le gameplay du parcours
-(partie, sauvegarde, déroulement, simulateur) l'utilise depuis la PR 1, la version web depuis la
-PR 2, la version PC depuis la PR 3 ; il reste la PR 4 (suppression de l'ancien moteur, que plus
-rien n'utilise dans le jeu).
+**Le jeu tourne sur le moteur issu de la refonte** (cartes, modules, ennemis, statuts, combat),
+branché en 4 PR (`specs/refonte-branchement.md`). L'ancien moteur est supprimé et les fichiers de
+la refonte ont perdu leur suffixe `_new` (2026-11-14) : `carte_new.py` → `carte.py`, `CarteNew` →
+`Carte`, `config/carte_new.json` → `config/cartes.json`… Un nom en `_new` dans un vieux document
+(`refonte-branchement.md`, synthèses de simulation) désigne le fichier actuel.
 **Lire `specs/refonte.md` en premier** : état des lieux, où est quoi, ce qui reste à faire.
 
 ## Langue
@@ -50,25 +49,23 @@ L'utilisateur conçoit le jeu ; l'agent propose, documente et code. Préférence
   les brouillons de refonte et la conception d'outils (ex. `specs/simulation.md` pour
   `outils/simulation/`), et sont listés dans l'index `specs/specs.md`. Seules exceptions : les
   `CLAUDE.md`, `README.md`, et les fichiers générés (ex. synthèses de simulation,
-  `config/carte_new.md`, `config/module_new.md`, `config/ennemi_new.md`).
+  `config/cartes.md`, `config/modules.md`, `config/ennemis.md`).
 - **Données de la refonte (décision utilisateur)** :
-  - `config/carte_new.json` est la **source de vérité des cartes** : format de la refonte
-    (`src/gameplay/carte_new.py:CarteNew`), valeurs nommées, effets, champs `jouable` et `refonte`.
-    C'est là qu'on modifie une carte, puis on régénère `config/carte_new.md` (tableau lisible,
+  - `config/cartes.json` est la **source de vérité des cartes** : format de la refonte
+    (`src/gameplay/carte.py:Carte`), valeurs nommées, effets, champs `jouable` et `refonte`.
+    C'est là qu'on modifie une carte, puis on régénère `config/cartes.md` (tableau lisible,
     **toujours généré**, jamais modifié à la main) avec `python -m outils.tableau_cartes` ;
     `tests/test_tableau_cartes.py` échoue tant que le tableau n'est pas à jour.
-  - `config/cartes.json` est l'ancien format, lu seulement par l'ancien affichage jusqu'à la PR 4
-    du branchement, puis supprimé. Le parcours ne le lit plus : une
-    valeur de carte se change dans `carte_new.json` seulement.
-  - **Modules, même principe** : `config/module_new.json` (`src/gameplay/module_new.py:ModuleNew`)
+  - **Modules, même principe** : `config/modules.json` (`src/gameplay/module.py:Module`)
     est la source de vérité des modules de la refonte (pour l'instant les deux modules jouables),
-    avec son tableau **généré** `config/module_new.md` (`python -m outils.tableau_modules`,
-    `tests/test_tableau_modules.py`). `config/modules.json` reste lu par le moteur actuel jusqu'au
-    branchement.
-  - **Ennemis, même principe** : `config/ennemi_new.json` (`src/gameplay/ennemi_new.py:EnnemiNew`)
+    avec son tableau **généré** `config/modules.md` (`python -m outils.tableau_modules`,
+    `tests/test_tableau_modules.py`).
+  - **Ennemis, même principe** : `config/ennemis.json` (`src/gameplay/ennemi.py:Ennemi`)
     est la source de vérité des ennemis de la refonte, avec son tableau **généré**
-    `config/ennemi_new.md` (`python -m outils.tableau_ennemis`, `tests/test_tableau_ennemis.py`).
-    `config/ennemis.json` reste lu par le moteur actuel jusqu'au branchement.
+    `config/ennemis.md` (`python -m outils.tableau_ennemis`, `tests/test_tableau_ennemis.py`).
+  - `specs/archive-cartes-modules.md` : **toutes les cartes et tous les modules de l'ancien
+    moteur** (dernière version des anciens JSON, en tableaux), gardés comme réserve d'idées
+    (décision utilisateur, 2026-11-15) ; archive, ne décrit pas le jeu actuel.
   - `specs/cartes_legacy.xlsx` : ancien registre (onglets Cartes, Aventures, Ennemis, Modules),
     **archivé, plus maintenu**.
 
@@ -126,18 +123,19 @@ Séparation stricte (specs.md §10) :
   utilisateur) : PC (`main.py:_aller_a`), web (`src/web/app.js:allerA`) et simulation ne font
   qu'afficher ou suivre l'`Ecran` qu'il renvoie
 - `outils/simulation/` — simulateurs d'équilibrage (conception : `specs/simulation.md`), qui jouent
-  des combats et des parties sans affichage en appelant `src/gameplay` : un pour l'ancien moteur,
-  un pour le combat de la refonte
-- `outils/tableau_*.py` — génèrent les tableaux lisibles `config/*_new.md` à partir des JSON
+  des combats et des parties sans affichage en appelant `src/gameplay` : un pour les parties
+  complètes, un pour les combats isolés
+- `outils/tableau_*.py` — génèrent les tableaux lisibles `config/*.md` à partir des JSON
 - `outils/test_web/essais.js` — essais de la version web dans Chromium (cf. `src/web/CLAUDE.md`) ;
   `.github/workflows/tests.yml` lance `pytest` et la syntaxe du web à chaque PR
 - `index.html` (à la racine : c'est l'adresse servie par GitHub Pages) + `src/web/` — version web
   (dossier déplacé de `web/` vers `src/web/` le 2026-11-14, décision utilisateur) ;
   `src/web/bridge.py` importe `src/gameplay/` sans le modifier
 - `config/*.json` — contenu déclaratif (modules, ennemis, cartes), chargé par
-  `src/gameplay/donnees.py` (PC) et fetché directement par `src/web/app.js` (web)
-- `assets/` — images ; `tests/` — un fichier de test par module de `src/gameplay/` (ancien et
-  `_new`), plus `test_animation.py`, `test_architecture.py`, les tests des tableaux générés et des
+  `charger_cartes`, `charger_modules`, `charger_ennemis` ; `src/web/app.js` les monte
+  dans Pyodide pour que le même code les lise
+- `assets/` — images ; `tests/` — un fichier de test par module de `src/gameplay/`,
+  plus `test_animation.py`, `test_architecture.py`, les tests des tableaux générés et des
   simulateurs
 
 **`src/ui` et `src/web/` ne possèdent jamais de règle de jeu ni d'état de session** (uniquement la

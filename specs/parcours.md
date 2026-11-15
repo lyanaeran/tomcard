@@ -28,135 +28,66 @@ sections : [specs.md](specs.md).*
 
 ### 2.1 Argent et récompenses de combat
 
-- Après chaque combat gagné, le joueur gagne de l'**Argent** — nouvelle ressource de run, distincte
-  de l'Électricité (ressource de combat, voir §3). **Implémenté** : 5 € galactiques par ennemi de la
-  flotte affrontée (`ARGENT_PAR_ENNEMI_TUE`, `src/gameplay/partie.py:gagner_argent_combat`), appelée
-  juste après `synchroniser_vaisseau_depuis_combat` (§2.2) — `main.py:_ouvrir_combat` (PC),
-  `src/web/bridge.py:resoudre_victoire_partie_web` (web). Compte un ennemi par case de la flotte
-  (`Flotte.positions()`), pas de fusion des ennemis L sur 2 cases pour l'instant (§3.2/§9.1). Une
-  partie démarre avec `ARGENT_DEPART` = 7 € (`nouvelle_partie`). Montants inventés faute de spec
-  précise à l'origine de cette décision — à ajuster en playtest si besoin, comme les autres
-  valeurs numériques du même type (§13)
-- Il gagne aussi une carte : voir §6 pour le mécanisme de choix (candidate par module équipé). **Récompense garantie** à chaque victoire (pas probabiliste) — écran de fin de combat implémenté, voir §6
-- En cas de défaite, écran dédié avec message de défaite (pas de choix de carte) — implémenté, voir §6
-- Le joueur choisit ensuite l'étape suivante parmi celles qui apparaissent (Prime, Station service, Planète commerciale ou Aventure) — l'offre n'est pas forcément la même à chaque fois (voir §9.1)
+- Après chaque combat gagné, le joueur gagne de l'**Argent**, ressource de run distincte de
+  l'Électricité (combat.md §3.3) : **5 €** par ennemi détruit (`ARGENT_PAR_ENNEMI_TUE`,
+  `partie.gagner_argent_combat`). Une partie démarre avec **7 €** (`ARGENT_DEPART`). Montants
+  inventés, à ajuster.
+- Il gagne aussi une **carte**, garantie : une candidate par module équipé, ou Passer
+  (modules-cartes.md §6).
+- **Défaite** : écran dédié, pas de carte ; la partie est terminée.
+- Tout cela est appliqué **une seule fois, dès la fin du combat**, par
+  `deroulement.conclure_combat` : PV du principal reportés (`partie.reporter_combat`), Argent,
+  candidats de récompense notés dans la partie (`Partie.recompense`) et sauvegardés. Une partie
+  quittée sur l'écran de récompense **reprend à cet écran**, jamais au combat déjà gagné
+  (`Ecran.RECOMPENSE`, §2.4).
+- Le joueur choisit ensuite l'étape suivante (§2.3).
 
 ### 2.2 Station service (garage)
 
-Quatre actions indépendantes, appliquées à un module choisi par le joueur (voir écran ci-dessous) :
+Quatre actions, **20 € chacune** (`COUT_ACTION_STATION_SERVICE`, valeur inventée) :
 
-> **Refonte branchée côté gameplay (PR 1, 2026-11-12, décision utilisateur du 2026-11-11 n° 2,
-> [refonte-branchement.md](refonte-branchement.md) §2)** : seuls les PV du **principal** persistent
-> d'un combat à l'autre, un secondaire repart à ses PV max. **Réparer ne vise plus que le principal**
-> (`partie.reparer_principal`, remplace `reparer_module`) ; Améliorer (+10 PV max, sur tout module),
-> Mettre à jour et Déplacer sont inchangés (Déplacer met aussi à jour l'emplacement de l'exemplaire,
-> ses cartes y restent rattachées). Les modules de la partie sont des `ModuleNew` (`EtatModule`
-> supprimé), les PV de fin de combat sont reportés par `partie.reporter_combat` (remplace
-> `synchroniser_vaisseau_depuis_combat`). Les écrans PC et web ne sont pas encore adaptés (PR 2 et 3).
->
-> **Corrections du 2026-11-13** (après relecture du code) :
-> - **Mettre à jour a enfin un effet** (décision utilisateur, 2026-11-13 : la règle ci-dessous est
->   appliquée) : un module ne propose en récompense, et au choix de carte du Niveau 1, que les
->   raretés ouvertes par son palier (`parcours.RARETES_PAR_NIVEAU_MAJ` : 1 Commune, 2 + Rare,
->   3 + Légendaire). Avant, le palier était sauvegardé mais jamais lu : l'action coûtait 20 € pour
->   rien. La carte offerte par les Astéroïdes n'a pas de palier (toutes raretés).
-> - **Une action sans effet est refusée sans payer** (proposition) : Réparer quand le principal a
->   tous ses PV, Mettre à jour au palier 3. Les actions renvoient un `partie.ResultatStation` (OK,
->   ARGENT_INSUFFISANT, INUTILE) ; l'écran affiche « Argent insuffisant ! » ou « Déjà au maximum ! »
->   d'après cette raison, sans revérifier la condition.
+- **Réparer** : rend **20 PV au module principal** (plafonné à son PV max). Toujours le
+  principal, **sans sélection** : c'est le seul module dont les PV persistent d'un combat à
+  l'autre, un secondaire repart à ses PV max (décision utilisateur, 2026-11-11 ; combat.md §3.4).
+- **Améliorer** : +10 au PV max du module sélectionné (et +10 PV pour le principal). Sur tout
+  module ; plafond éventuel à trancher (a-trancher.md §9.1).
+- **Mettre à jour** : fait monter le **palier** du module sélectionné (1 → 2 → 3), qui ouvre les
+  raretés qu'il propose en récompense : palier 1 Communes, palier 2 + Rares, palier 3 +
+  Légendaires (modules-cartes.md §6 ; décision utilisateur, appliquée le 2026-11-13).
+- **Déplacer** : change l'emplacement d'un module secondaire (jamais le principal). Vers un
+  emplacement vide, il y est déplacé ; vers un emplacement occupé, les deux modules échangent
+  leur place. Ses cartes le suivent (modules-cartes.md §12.4).
 
-- **Réparer** : restaure 20 PV au module sélectionné (plafonné à son pv_max)
-- **Améliorer** : augmente le pv_max du module sélectionné de 10, et ses PV actuels du même montant
-  (pas seulement le plafond — un module endommagé regagne aussi 10 PV immédiats)
-- **Mettre à jour** : fait progresser le palier de cartes proposées pour ce module, en récompense de
-  combat (§6) et à la Planète commerciale (§2.2 ci-dessus) :
-  **Niveau 1** (valeur de départ, Commune uniquement) → **Niveau 2** (+Rare) → **Niveau 3** (+Légendaire,
-  niveau maximum, cohérent avec les 3 paliers de rareté de §7.3)
-- **Déplacer** : change la position d'un module sur la grille d'équipement (§3.1/§5). Le joueur
-  sélectionne le module à déplacer, clique "Déplacer", puis clique l'emplacement de destination :
-  vide, le module y est simplement déplacé ; occupé, les deux modules échangent leur position
+Règles communes (`src/gameplay/partie.py` : `reparer_principal`, `ameliorer_module`,
+`mettre_a_jour_module`, `deplacer_module`) :
 
-**Chaque action coûte `COUT_ACTION_STATION_SERVICE` = 20 €** (`src/gameplay/partie.py`, valeur
-inventée faute de spec précise, à ajuster en playtest si besoin), déduits de
-`partie.argent` au moment où l'action s'applique (Déplacer : au clic de destination, pas à
-l'armement). Si l'Argent est insuffisant, l'action est refusée sans rien modifier — les 4 fonctions
-(`reparer_module`/`ameliorer_module`/`mettre_a_jour_module`/`deplacer_module`) renvoient un booléen
-de succès plutôt que la `Partie` (rétro-incompatibilité assumée, aucun appelant n'utilisait la valeur
-de retour). Écran Station service (PC et web) : prix affiché sous chaque action, icône grisée
-(condition d'affichage seulement, `partie.argent < COUT_ACTION_STATION_SERVICE`) et popup rouge
-"Argent insuffisant !" **si l'appel de l'action correspondante renvoie `False`** — PC et web
-n'effectuent plus leur propre pré-vérification du seuil avant d'appeler l'action (le popup dépend
-uniquement du booléen déjà calculé par le gameplay, jamais d'une condition dupliquée dans
-`src/ui`/`src/web/app.js`, cf. CLAUDE.md, corrigé après relecture) ; Déplacer s'arme donc
-inconditionnellement au clic sur son icône, et c'est l'appel de `deplacer_module` au clic de
-destination qui peut échouer et afficher le popup, plutôt qu'un blocage supposé à l'armement. Argent
-total affiché dans le titre de l'écran ("... - Niveau N - X €"). Côté web,
-`COUT_ACTION_STATION_SERVICE` est exposé par `src/web/bridge.py:cout_action_station_service_web()`
-plutôt que dupliqué en dur dans `src/web/app.js` (CLAUDE.md, valeur de seuil partagée — seule la
-condition de gating a été dédupliquée).
+- Chaque action renvoie un **`ResultatStation`** : `OK`, `ARGENT_INSUFFISANT` ou `INUTILE`. Dans
+  les deux derniers cas, rien n'est modifié ni payé.
+- **Une action sans effet est refusée sans payer** (proposition, 2026-11-13) : Réparer quand le
+  principal a tous ses PV, Mettre à jour au palier 3.
+- L'écran affiche « Argent insuffisant ! » ou « Déjà au maximum ! » **d'après cette raison**, sans
+  jamais revérifier la condition lui-même.
+- Améliorer et Mettre à jour progressent **par exemplaire** de module : deux exemplaires du même
+  type peuvent avoir des PV max et des paliers différents.
 
-- Réparer/Améliorer/Mettre à jour s'appliquent au **module principal** comme aux modules équipés.
-  Déplacer ne s'applique pas au principal (toujours en position Mid, pas d'emplacement équivalent à
-  échanger)
-- Améliorer/Mettre à jour progressent **par exemplaire équipé**, pas par type de module : deux
-  exemplaires du même module peuvent avoir des PV max et des paliers de mise à jour différents —
-  cohérent avec les doublons de modules autorisés (§2.3/§5)
-- **Les dégâts subis en combat persistent d'un combat à l'autre** (décision utilisateur — sinon
-  Réparer n'aurait aucune utilité) : un module endommagé le reste au niveau suivant tant qu'il n'a
-  pas été réparé. Format et couche de persistance hors-combat **implémentés** en §10.3 (`EtatModule`
-  dans `src/gameplay/partie.py` : PV actuels, PV max, niveau de mise à jour, par module équipé),
-  réutilisés directement par les 4 actions ci-dessus (`reparer_module`/`ameliorer_module`/
-  `mettre_a_jour_module`/`deplacer_module`, fonctions pures partagées PC+web)
-- **Report des PV de combat sur la partie sauvegardée** : `combat_depuis_partie()` construit le
-  `Combat` à partir des PV persistés, mais l'opération inverse est nécessaire pour que les dégâts
-  subis *pendant* ce combat soient effectivement conservés — sans elle, la persistance ci-dessus
-  restait inerte en jeu réel (bug constaté par l'utilisateur, corrigé). `synchroniser_vaisseau_depuis_combat(partie, vaisseau)`
-  (`src/gameplay/partie.py`) reporte les PV du `Vaisseau` de combat sur `partie.vaisseau[...]` (pas
-  `pv_max`, ni le bouclier, mécanique de combat éphémère absente d'`EtatModule`) — appelée dès la fin
-  d'un combat gagné, avant tout enchaînement/sauvegarde ultérieur : `main.py:_ouvrir_combat` (PC),
-  `src/web/bridge.py:resoudre_victoire_partie_web` (web, à partir de la variable globale `combat` encore
-  celle du combat qui vient de se terminer à ce stade)
+#### Écran Station service (PC et web)
 
-#### Écran Station service (interface) — **implémenté**, relié à l'orchestration du parcours (§2.4)
-
-- Fond de combat réutilisé en placeholder (comme les autres écrans du parcours), à remplacer par un
-  fond dédié
-- Modules du vaisseau affichés en **ligne de 5 cartes** (principal + 4 équipables, une carte "Emplacement
-  vide" pour un slot non équipé) plutôt que dans la grille 2×2 façon combat envisagée initialement —
-  décision d'implémentation, reprend le layout déjà existant de l'écran d'accueil du joueur
-  (`POSITIONS_AFFICHEES`, §10.3) : le joueur clique une carte de module équipé pour la sélectionner
-  (contour en surbrillance), puis clique une des 4 actions pour l'appliquer au module sélectionné.
-  **Déplacer** : cliquer "Déplacer" arme le mode (icône encadrée en orange) en attendant un clic sur
-  l'emplacement de destination (vide ou occupé) parmi les 4 équipables ; recliquer le module source
-  annule l'armement. Un bouton "J'ai terminé" ferme l'écran → Choix du prochain niveau (étape 3),
-  avec avancement du niveau (comme une étape résolue, §2.4)
-- **Réparer/Améliorer/Mettre à jour** affichent un popup de confirmation sur la carte du module
-  concerné (2 secondes, même mécanisme que les popups +/-N du combat) — `+N PV`/`+N PV max`/
-  `Niveau N`, calculé à partir de l'état avant/après l'action plutôt qu'une valeur de réglage
-  dupliquée côté web (décision utilisateur, feedback demandé pendant les essais manuels). Le module
-  sélectionné est ensuite **désélectionné automatiquement** (le popup suffit à confirmer l'effet) ;
-  **Déplacer** garde son comportement propre (armement/clic de destination, cf. ci-dessus)
-- **Icônes des 4 actions : rangée d'icônes déjà pourvues de leur propre cadre/nom incrusté**
-  (`assets/station_service/avec_texte/reparer.png`/`ameliorer.png`/`mettre_a_jour.png`/
-  `deplacer.png`), affichées seules avec juste le prix en dessous — décision utilisateur : un
-  essai de mise en page "empilée verticalement, image sans texte à gauche + titre/description à
-  droite" (même convention que les choix d'Aventure, §2.5) a été tenté avec les versions sans texte
-  de `assets/station_service/` (celles réutilisées telles quelles par les Aventures Trois
-  lunes/Police), puis abandonné pour cet écran uniquement, jugé moins lisible ; anciennes icônes
-  avec texte restaurées depuis l'historique git dans un sous-dossier dédié (`avec_texte/`) plutôt
-  que redemandées à l'utilisateur — Choix du prochain niveau et Station service ne partagent donc
-  plus la même présentation, contrairement à ce qu'un essai précédent visait
-- La carte du module principal utilise `assets/modules/principal_avant.png` (recadrage sur l'avant
-  du vaisseau, décision utilisateur) plutôt que l'image complète du vaisseau (`config/modules.json`,
-  utilisée telle quelle comme fond du vaisseau en combat) — sinon hors d'échelle par rapport aux
-  cases des autres modules. `src/gameplay/donnees.py:image_case_module()`, réutilisée par l'écran
-  d'accueil du joueur (§10.3) pour la même raison
-- `src/gameplay/partie.py` (`reparer_module`, `ameliorer_module`, `mettre_a_jour_module`,
-  `deplacer_module`, fonctions pures partagées PC+web) ; `src/ui/ecran_station_service.py` (PC) ;
-  `main.py:_ouvrir_etape` (PC) ; côté web `src/web/bridge.py` (`reparer_module_web`/
-  `ameliorer_module_web`/`mettre_a_jour_module_web`/`deplacer_module_web`/
-  `terminer_station_service_web`) + `src/web/app.js` (`ouvrirStationServicePartie` et les fonctions
-  `cliquerModuleStation`/`cliquerActionStation`/`terminerStationServicePartie`)
+- Les cinq emplacements en **ligne** (principal + 4, « Emplacement vide » pour un emplacement
+  libre), les quatre actions en dessous avec leur prix, un bouton « J'ai terminé » qui passe au
+  niveau suivant (§2.4).
+- Le joueur clique un module pour le sélectionner, puis une action. **Réparer** s'applique
+  directement au principal, sans sélection. **Déplacer** : cliquer l'action arme le déplacement,
+  puis cliquer l'emplacement de destination ; recliquer le module source, ou choisir une autre
+  action, l'annule.
+- Chaque action réussie affiche un popup sur le module (« +20 PV », « +10 PV max », « Niveau 2 »),
+  calculé d'après l'état avant et après ; le module est ensuite désélectionné.
+- Les icônes des actions portent leur nom (`assets/station_service/avec_texte/`) ; une action
+  trop chère est grisée (simple affichage : c'est le résultat de l'action qui décide).
+- La carte du principal utilise `assets/modules/principal_avant.png` (recadrage sur l'avant du
+  vaisseau), comme l'accueil du joueur et l'écran Vaisseau.
+- Code : `src/ui/ecran_station_service.py` (PC) ; `src/web/bridge.py` (`reparer_principal_web`,
+  `ameliorer_module_web`, `mettre_a_jour_module_web`, `deplacer_module_web`) et
+  `src/web/app.js` (`cliquerModuleStation`, `cliquerActionStation`).
 
 ### 2.3 Structure par niveaux
 
@@ -165,15 +96,13 @@ remplace les pistes encore ouvertes en §2 pour la Station service et la cadence
 
 - **Niveau 1** — **Choix de module**, obligatoire, pas de tirage d'étape : 3 modules **différents**
   tirés au sort parmi le pool (moins si le pool en compte moins : un seul, le Lanceur de missiles,
-  pendant la refonte des cartes, cf. modules-cartes.md §4), le joueur en choisit un (2ᵉ slot équipé, en plus du module de base —
+  tant que seuls deux modules sont jouables, cf. modules-cartes.md §4), le joueur en choisit un (2ᵉ slot équipé, en plus du module de base —
   voir §5). C'est ce choix qui pourvoit le 2ᵉ des "2 slots" de départ mentionnés en §5.
   **Implémenté** et relié à l'orchestration du parcours (§2.4) pour une vraie partie :
   `src/gameplay/parcours.py` (tirage), `src/ui/ecran_choix_module.py` (PC),
   `main.py:_ouvrir_choix_module` (equipe le module choisi, avance le niveau, sauvegarde) ;
   côté web `src/web/bridge.py:choisir_module_partie_web` + `src/web/app.js:ouvrirChoixModulePartie`/
-  `choisirModule`. Reste aussi accessible en démonstration isolée (candidats tirés indépendamment
-  d'une partie) via `src/web/app.js` (`nouveauChoixModule`, exposée sur `window`) + `src/web/bridge.py`
-  (`nouveau_choix_module`), utilisée quand `partieActive` est `null`. Écran présenté **empilé
+  `choisirModule`. Écran présenté **empilé
   verticalement, image carrée à gauche et rectangle de texte (nom + `description`) à droite**, même
   convention que le choix du prochain niveau (§2.3 ci-dessus) et les choix d'Aventure/Station
   service — voir §4 pour le détail du champ `description` par module et l'exclusion des modules
@@ -191,7 +120,7 @@ remplace les pistes encore ouvertes en §2 pour la Station service et la cadence
   - Reste (5/6) **Prime** (combat)
 - **Nombre d'ennemis en Prime** : 1 seul ennemi jusqu'au niveau 5, puis 2 à partir du niveau 6 —
   s'ajoute au système de tailles S/M/L existant (§3.2, deux axes de difficulté indépendants), ne le
-  remplace pas. **Implémenté** (`flotte_new.flotte_prime`/`nombre_ennemis_prime`, §13.4), de
+  remplace pas. **Implémenté** (`flotte.flotte_prime`/`nombre_ennemis_prime`, §13.4), de
   même que la composition fixe du Boss (§13.4). Progression au-delà de 2 (après le niveau 10 ?)
   pas encore définie
 - **Doublons de modules autorisés** (remplace la piste "interdire les doublons" de §5) : posséder
@@ -255,20 +184,18 @@ terminé à ce stade).
   `.close()` — aucune modification nécessaire à l'orchestration existante de `main.py`. Largeur de
   90px, choisie pour tenir sous la marge la plus étroite des écrans concernés (grille de modules de
   Station service) sans retoucher leur mise en page. En Combat, `FenetreCombat` reçoit `partie` en
-  plus de `combat` (`None` en mode démo POC, où la barre n'a alors rien à afficher) ; la barre y
+  plus de `combat` ; la barre y
   occupe désormais la même position par défaut que sur les autres écrans (plus de bandeau du haut à
   éviter, cf. §8.1/§8.3) — `FenetreCombat` empile juste en dessous ses propres contrôles
   (`_dessiner_controles_combat` : Électricité, tour suivant, Quitter), via `barre_laterale.
-  HAUTEUR_CONTENU` (hauteur exportée du contenu de la barre) plutôt qu'au sommet de la fenêtre en
-  mode démo (`self.partie is None`).
+  HAUTEUR_CONTENU` (hauteur exportée du contenu de la barre).
 - Web (`src/web/app.js` : `actualiserBarreLaterale`/`ouvrirSurvolDeck`/`ouvrirSurvolVaisseau`) :
   `#ecran-deck`/`#ecran-vaisseau` passent en `position: fixed` (classe `.ecran-survol`,
   `src/web/style.css`) pour se superposer à l'écran actuellement affiché sans passer par
   `masquerTousLesEcrans()` (qui le masquerait) — même principe que côté PC, sans fenêtre
   additionnelle puisque le web n'affiche qu'un seul écran DOM visible à la fois. En Combat, un
   élément séparé `#controles-combat` (Électricité/tour suivant/Quitter) s'empile sous
-  `#barre-laterale` quand elle est visible, ou prend sa place par défaut sinon (mode démonstration
-  sans partie active, portrait, écran trop étroit ou chevauchement, cf. juste en dessous) — élément
+  `#barre-laterale` quand elle est visible, ou prend sa place par défaut sinon (portrait, écran trop étroit ou chevauchement, cf. juste en dessous) — élément
   distinct plutôt que nichée dans la barre elle-même, pour que mettre fin à son tour reste possible
   même quand la barre (Niveau/Argent/Deck/Vaisseau, moins essentielle) est masquée. **Simplification
   web** (écart documenté, cf. CLAUDE.md) : barre étroite (52px, choisie expressément pour inclure
@@ -305,9 +232,10 @@ terminé à ce stade).
      affichés. **Continuer** → reprend l'étape exacte où le joueur s'était arrêté, déduite des
      seuls champs déjà présents dans la sauvegarde plutôt que d'une "étape courante" dédiée
      (décision utilisateur) : Niveau 1 sans 2ᵉ module équipé (`vaisseau.avant_gauche` vide) → Choix
-     de module (étape 4) ; sinon → Choix du prochain niveau (étape 3) pour le niveau courant. La
-     flotte ennemie d'un combat repris ainsi reste tirée au hasard (`combat_depuis_partie`, §10.3),
-     cf. "Limites connues" en §10.3
+     de module (étape 4) ; sinon → Choix du prochain niveau (étape 3) pour le niveau courant. Un combat gagné dont la
+     carte de récompense n'a pas encore été choisie reprend à l'écran de récompense
+     (`Ecran.RECOMPENSE`). Un combat quitté en cours n'est pas sauvegardé : il recommence avec un
+     nouveau tirage d'ennemis (a-trancher.md §9.1)
    - Pas de partie en cours : bouton "Nouvelle partie" → Choix de module, Niveau 1 (étape 4)
    - Bouton "Quitter le jeu" (même remarque PC/web qu'à l'étape 1)
 3. **Choix du prochain niveau** (**implémenté** et relié à l'enchaînement — tirage tranché en §2.3,
@@ -347,13 +275,12 @@ terminé à ce stade).
 5. **Combat** (implémenté en écran indépendant, `FenetreCombat`/`#app`, **relié à l'enchaînement**) :
    une fois le combat terminé (victoire ou défaite) → Fin de combat (étape 6)
 6. **Fin de combat** (implémenté en écran autonome, §6, **relié à l'enchaînement**) :
-   - Victoire : choix d'une carte candidate (candidats tirés à partir des modules réellement
-     équipés sur la partie, `specs_utilisees_partie`) met à jour le deck de la partie, puis → Choix
-     du prochain niveau (étape 3), sauf si le combat était un Boss → Victoire finale (étape 11 ; le
-     niveau n'avance pas encore et la partie reste `EN_COURS` à ce stade, cf. étape 11). S'il n'y a
-     aucun candidat (pool vide pour tous les modules équipés), un bouton "Continuer" permet de
-     passer l'écran sans choisir de carte
-   - Défaite : la partie est marquée `TERMINEE` (même statut qu'un abandon, décision utilisateur —
+   - Victoire : choix d'une carte candidate (une par module équipé, déjà rattachée à ce module,
+     §6), ajoutée au deck, puis → Choix du prochain niveau (étape 3), sauf si le combat était un
+     Boss → Victoire finale (étape 11), la partie étant alors **terminée tout de suite** (on ne
+     peut pas rejouer le Boss ; proposition, 2026-11-13). Sans candidat, un bouton « Continuer »
+     passe l'écran
+   - Défaite : la partie est marquée `TERMINEE` **dès la fin du combat** (même statut qu'un abandon, décision utilisateur —
      pas de distinction victoire/défaite/abandon pour l'instant, cf. §10.3) → Écran de partie
      (étape 2), via un bouton "Continuer" (PC : clic n'importe où sur l'écran, cf.
      `src/ui/ecran_fin_combat.py`)
@@ -365,16 +292,8 @@ terminé à ce stade).
    au pipeline Combat (étape 5) via un combat scripté plutôt que d'avancer directement.
    `src/ui/ecran_aventure_trois_lunes.py`/`src/ui/ecran_aventure_asteroides.py`/
    `src/ui/ecran_aventure_police.py` (PC) + `main.py:_ouvrir_etape`/
-   `_ouvrir_aventure_asteroides`/`_ouvrir_aventure_police` ; côté web `src/web/bridge.py`
-   (`constantes_aventure_trois_lunes_web`/`deck_groupe_par_id_partie_web`/
-   `reparer_vaisseau_aventure_web`/`ameliorer_module_aventure_web`/`retirer_carte_aventure_web`/
-   `terminer_aventure_trois_lunes_web` ; `constantes_aventure_asteroides_web`/
-   `subir_degats_module_asteroides_web`/`carte_offerte_asteroides_web`/
-   `prendre_carte_offerte_asteroides_web`/`combat_aventure_asteroides_web`/
-   `terminer_aventure_asteroides_web` ; `constantes_aventure_police_web`/`tirer_carte_police_web`/
-   `confiscation_police_web`/`mettre_aux_normes_police_web`/`terminer_aventure_police_web`) + `src/web/app.js`
-   (`ouvrirAventureTroisLunesPartie`/`ouvrirAventureAsteroidesPartie`/`ouvrirAventurePolicePartie` et
-   fonctions associées)
+   `_ouvrir_aventure_asteroides`/`_ouvrir_aventure_police` ; côté web, les fonctions `*_web` de
+   `src/web/bridge.py` et les fonctions `ouvrirAventure…Partie` de `src/web/app.js`
 8. **Station service** (détaillé en §2.2, **implémenté et relié à l'enchaînement**) : Réparer /
    Améliorer / Mettre à jour / Déplacer un module, un bouton "j'ai terminé" avance le niveau et
    revient au Choix du prochain niveau (étape 3), même principe que la fin d'un combat gagné
@@ -386,16 +305,13 @@ terminé à ce stade).
    `src/web/bridge.py` (`terminer_etape_placeholder_web`) + `src/web/app.js`
    (`ouvrirEtapePlaceholderPartie`/`terminerEtapePlaceholder`)
 10. **Boss** (niveau 10, puis tous les 10 niveaux à terme — §2.3), atteint via la proposition
-    unique "Combattre le Boss !" de l'étape 3 : réutilise l'écran Combat pour l'instant, pas encore
-    d'ennemi de Boss dédié (§9.1) → Victoire : Victoire finale (étape 11) ; Défaite : même
+    unique "Combattre le Boss !" de l'étape 3 : réutilise l'écran Combat, contre le Boss des
+    pirates (combat.md §13.4) → Victoire : Victoire finale (étape 11) ; Défaite : même
     traitement qu'un combat normal (étape 6, branche Défaite)
 11. **Victoire finale** (**implémenté et relié à l'enchaînement**) : félicite le joueur, affiche son
     deck complet (même rendu que l'écran "deck en entier", §6, dupliqué plutôt que réutilisé
     littéralement — même convention que les autres écrans du parcours, chacun avec ses propres
-    petits helpers de disposition) → bouton "Continuer" marque la partie `TERMINEE` (elle était
-    restée `EN_COURS` depuis la résolution de l'étape 6) → Écran de partie (étape 2).
-    `src/ui/ecran_victoire_finale.py` (PC) + `main.py:_ouvrir_victoire_finale` ; côté web
-    `src/web/bridge.py` (`terminer_victoire_finale_web`, `resoudre_victoire_partie_web` renvoie
-    désormais `{"partie": ..., "niveau_boss": bool}` pour signaler à `src/web/app.js` quand ouvrir cet
-    écran plutôt que d'avancer directement) + `src/web/app.js` (`ouvrirVictoireFinalePartie`,
-    `terminerVictoireFinale`)
+    petits helpers de disposition) → bouton "Continuer" → Écran de partie (étape 2) ; la partie est déjà `TERMINEE`
+    depuis l'étape 6. `src/ui/ecran_victoire_finale.py` (PC) + `main.py:_ouvrir_victoire_finale` ;
+    côté web `src/web/bridge.py` (`terminer_victoire_finale_web`) + `src/web/app.js`
+    (`ouvrirVictoireFinalePartie`, `terminerVictoireFinale`)

@@ -1,211 +1,237 @@
 """
-Tests unitaires pour la classe Ennemi et le modele ActionEnnemi (specs.md 13).
+Tests unitaires pour src/gameplay/ennemi.py (Ennemi, ennemi de la refonte) et
+config/ennemis.json.
 """
 
-from src.gameplay.carte import ActionCarte
-from src.gameplay.ennemi import ActionEnnemi, CibleActionEnnemi, Ennemi, TypeActionEnnemi
+import json
+from fractions import Fraction
 
+import pytest
 
-def test_ennemi_commence_a_pv_max():
-    ennemi = Ennemi(pv_max=15)
+from src.gameplay.ennemi import (
+    FICHIER_ENNEMIS, CibleEffetEnnemi, EffetEnnemi, Ennemi, NatureEffetEnnemi, ValeurEnnemi,
+    charger_ennemis,
+)
+from src.gameplay.statut import Statut
 
-    assert ennemi.pv == 15
-    assert ennemi.bouclier == 0
-    assert not ennemi.est_detruit()
 
+def _entree(id_ennemi: str) -> dict:
+    """Entree brute d'un ennemi dans config/ennemis.json (pour fabriquer des variantes)."""
+    entrees = json.loads(FICHIER_ENNEMIS.read_text(encoding="utf-8"))["ennemis"]
+    return json.loads(json.dumps(next(entree for entree in entrees if entree["id"] == id_ennemi)))
 
-def test_ennemi_subit_des_degats():
-    ennemi = Ennemi(pv_max=15)
 
-    ennemi.subir_degats(9)
+def _en_combat(id_ennemi: str, coefficient=1) -> Ennemi:
+    return charger_ennemis()[id_ennemi].pour_combat(coefficient)
 
-    assert ennemi.pv == 6
 
+# --- config/ennemis.json ---
 
-def test_ennemi_detruit_a_zero_pv():
-    ennemi = Ennemi(pv_max=15)
 
-    ennemi.subir_degats(30)
+def test_les_six_ennemis_actuels_sont_dans_le_json():
+    ennemis = charger_ennemis()
 
-    assert ennemi.pv == 0
-    assert ennemi.est_detruit()
+    assert sorted(ennemis) == sorted([
+        "ENM_PAT_LE_PIRATE", "ENM_LE_NETTOYEUR", "ENM_PETIT_JEAN", "ENM_LE_PUZZLE", "ENM_MIROIR", "ENM_BOSS_PIRATES",
+    ])
+    assert ennemis["ENM_BOSS_PIRATES"].emplacements == 2
 
 
-def test_bouclier_absorbe_les_degats_avant_les_pv():
-    ennemi = Ennemi(pv_max=15)
-    ennemi.ajouter_bouclier(5)
+# --- Valeurs : augmentation et coefficient (specs.md 13.1.3, 13.1.4) ---
 
-    ennemi.subir_degats(7)
 
-    assert ennemi.bouclier == 0
-    assert ennemi.pv == 13  # 7 - 5 de bouclier absorbe = 2 degats restants
+def test_exemple_de_la_spec_6_plus_1_tous_les_2_tours_coefficient_1_5():
+    valeur = ValeurEnnemi(base=6, augmentation=1, tous_les=2)
 
+    assert [valeur.au_tour(tour, Fraction("1.5")) for tour in range(1, 6)] == [9, 9, 10, 10, 12]
 
-def test_reduction_degats_diminue_les_degats_infliges():
-    ennemi = Ennemi(pv_max=15)
 
-    ennemi.appliquer_buff(ActionCarte.REDUCTION_DEGATS, 5, tours=1)
+def test_une_augmentation_tous_les_tours_suit_la_formule_de_l_utilisateur():
+    valeur = ValeurEnnemi(base=5, augmentation=2)
 
-    assert ennemi.degats_attaque_effectifs(7) == 2
+    assert [valeur.au_tour(tour) for tour in range(1, 5)] == [5, 7, 9, 11]
 
 
-def test_reduction_degats_ne_descend_jamais_sous_zero():
-    ennemi = Ennemi(pv_max=15)
+def test_le_coefficient_s_applique_aux_pv_et_aux_valeurs_arrondi_a_l_inferieur():
+    boss = _en_combat("ENM_BOSS_PIRATES", 1.5)
 
-    ennemi.appliquer_buff(ActionCarte.REDUCTION_DEGATS, 100, tours=1)
+    assert (boss.pv_max, boss.pv) == (225, 225)
+    assert boss.valeurs_au_tour(1) == {"degats": 7, "bouclier": 15}
 
-    assert ennemi.degats_attaque_effectifs(7) == 0
 
+def test_le_coefficient_ne_souffre_pas_des_erreurs_d_arrondi_des_flottants():
+    # 1.15 x 20 vaut 22.999999999999996 en flottants
+    assert ValeurEnnemi(base=20).au_tour(1, Fraction("1.15")) == 23
 
-def test_augmentation_degats_majore_les_degats_infliges():
-    ennemi = Ennemi(pv_max=15)
 
-    ennemi.appliquer_buff(ActionCarte.AUGMENTATION_DEGATS, 2, tours=None)
+def test_un_coefficient_inferieur_a_1_est_refuse():
+    with pytest.raises(ValueError, match="au moins 1"):
+        _en_combat("ENM_PAT_LE_PIRATE", 0.9)
 
-    assert ennemi.degats_attaque_effectifs(5) == 7
 
+def test_les_valeurs_montent_au_fil_des_tours():
+    pat = _en_combat("ENM_PAT_LE_PIRATE")
 
-def test_augmentation_et_reduction_degats_se_cumulent():
-    ennemi = Ennemi(pv_max=15)
+    assert [pat.valeur("degats", tour) for tour in range(1, 7)] == [5, 5, 5, 6, 6, 6]
 
-    ennemi.appliquer_buff(ActionCarte.AUGMENTATION_DEGATS, 2, tours=None)
-    ennemi.appliquer_buff(ActionCarte.AUGMENTATION_DEGATS, 2, tours=None)
-    ennemi.appliquer_buff(ActionCarte.REDUCTION_DEGATS, 3, tours=1)
 
-    assert ennemi.degats_attaque_effectifs(5) == 6  # 5 + 2 + 2 - 3
+def test_le_modele_n_est_jamais_modifie_par_le_combat():
+    modele = charger_ennemis()["ENM_PETIT_JEAN"]
+    combat = modele.pour_combat(2)
+    combat.subir_degats(30)
+    combat.statuts.ajouter(Statut.BOUCLIER, 6)
+    combat.avancer_cycle()
 
+    assert (modele.pv, modele.etape, modele.coefficient, modele.statuts.intensites) == (None, 0, 1, {})
 
-def test_ennemi_a_un_seul_emplacement_par_defaut():
-    ennemi = Ennemi(pv_max=15)
 
-    assert ennemi.emplacements == 1
+# --- Cycle d'actions ---
 
 
-def test_ennemi_peut_occuper_deux_emplacements():
-    ennemi = Ennemi(pv_max=150, emplacements=2)
+def test_le_cycle_revient_a_la_premiere_etape():
+    boss = _en_combat("ENM_BOSS_PIRATES")
+    natures = []
+    for _ in range(4):
+        natures.append([effet.nature for effet in boss.etape_courante])
+        boss.avancer_cycle()
 
-    assert ennemi.emplacements == 2
+    attaque, bouclier = NatureEffetEnnemi.ATTAQUE, NatureEffetEnnemi.BOUCLIER
+    assert natures == [[attaque], [attaque], [attaque, bouclier], [attaque]]
 
 
-def test_vulnerabilite_majore_les_degats_subis():
-    ennemi = Ennemi(pv_max=15)
+def test_bouclier_et_renvoi_posent_le_statut_du_meme_nom():
+    assert NatureEffetEnnemi.BOUCLIER.statut_pose == Statut.BOUCLIER
+    assert NatureEffetEnnemi.RENVOI.statut_pose == Statut.RENVOI
+    assert NatureEffetEnnemi.ATTAQUE.statut_pose is None
 
-    ennemi.appliquer_buff(ActionCarte.VULNERABILITE, 100, tours=1)
 
-    assert ennemi.degats_subis(6) == 12
+def test_le_nettoyeur_attaque_deux_fois():
+    (effet,) = _en_combat("ENM_LE_NETTOYEUR").etape_courante
 
+    assert (effet.nature, effet.repetitions) == (NatureEffetEnnemi.ATTAQUE, 2)
 
-def test_sans_vulnerabilite_les_degats_ne_changent_pas():
-    ennemi = Ennemi(pv_max=15)
 
-    assert ennemi.degats_subis(6) == 6
+# --- Combat ---
 
 
-def test_bouclier_par_tour_ajoute_du_bouclier_immediatement():
-    """Contrairement a Module.declencher_buffs_tour, ce buff ne se redeclenche jamais tout
-    seul cote ennemi (specs.md 13) : seul l'ajout immediat a la pose est teste ici."""
-    ennemi = Ennemi(pv_max=15)
+def test_le_bouclier_absorbe_puis_baisse_de_un_a_la_fin_du_tour_du_joueur():
+    jean = _en_combat("ENM_PETIT_JEAN")
+    jean.statuts.ajouter(Statut.BOUCLIER, 6)
 
-    ennemi.appliquer_buff(ActionCarte.BOUCLIER_PAR_TOUR, 3, tours=2)
+    jean.subir_degats(4)
+    jean.fin_du_tour_du_joueur()
 
-    assert ennemi.bouclier == 3
-    assert len(ennemi.buffs_actifs) == 1
+    assert (jean.pv, jean.statuts[Statut.BOUCLIER]) == (100, 1)
 
 
-def test_decrementer_buffs_fait_expirer_a_zero():
-    ennemi = Ennemi(pv_max=15)
-    ennemi.appliquer_buff(ActionCarte.REDUCTION_DEGATS, 5, tours=1)
-    ennemi.appliquer_buff(ActionCarte.VULNERABILITE, 100, tours=1)
+def test_l_incendie_frappe_avant_la_baisse_du_bouclier_et_baisse_de_un():
+    pat = _en_combat("ENM_PAT_LE_PIRATE")
+    pat.statuts.ajouter(Statut.BOUCLIER, 3)
+    pat.statuts.ajouter(Statut.INCENDIE, 4)
 
-    ennemi.decrementer_buffs()
+    pat.fin_du_tour_du_joueur()
+    assert (pat.pv, pat.statuts[Statut.BOUCLIER], pat.statuts[Statut.INCENDIE]) == (49, 0, 3)
 
-    assert ennemi.degats_attaque_effectifs(7) == 7
-    assert ennemi.degats_subis(6) == 6
-    assert ennemi.buffs_actifs == []
+    pat.fin_du_tour_du_joueur()
+    assert (pat.pv, pat.statuts[Statut.INCENDIE]) == (46, 2)
 
 
-def test_decrementer_buffs_sur_plusieurs_tours():
-    ennemi = Ennemi(pv_max=15)
-    ennemi.appliquer_buff(ActionCarte.VULNERABILITE, 100, tours=2)
+def test_le_renvoi_renvoie_jusqu_a_sa_valeur_et_le_protege_encaisse_le_reste():
+    pat = _en_combat("ENM_PAT_LE_PIRATE")
+    pat.statuts.ajouter(Statut.RENVOI, 5)
 
-    ennemi.decrementer_buffs()
-    assert ennemi.degats_subis(6) == 12  # encore actif apres 1 tour
+    assert pat.subir_degats(3).renvoyes == 3 and pat.pv == 50
+    assert pat.subir_degats(6).renvoyes == 2 and pat.pv == 46
+    assert pat.subir_degats(4).renvoyes == 0 and pat.pv == 42
 
-    ennemi.decrementer_buffs()
-    assert ennemi.degats_subis(6) == 6  # expire apres 2 tours
 
+def test_les_renvois_s_additionnent_et_durent_jusqu_au_tour_ennemi_suivant():
+    pat = _en_combat("ENM_PAT_LE_PIRATE")
+    pat.statuts.ajouter(Statut.RENVOI, 5)
+    pat.statuts.ajouter(Statut.RENVOI, 5)
+    assert pat.statuts[Statut.RENVOI] == 10
 
-def test_buff_persistant_ne_decompte_jamais():
-    ennemi = Ennemi(pv_max=15)
-    ennemi.appliquer_buff(ActionCarte.BOUCLIER_PAR_TOUR, 3, tours=None)
+    pat.fin_du_tour_du_joueur()
+    assert pat.subir_degats(6).renvoyes == 0 and pat.pv == 44
 
-    for _ in range(5):
-        ennemi.decrementer_buffs()
 
-    assert len(ennemi.buffs_actifs) == 1
-    assert ennemi.buffs_actifs[0].tours_restants is None
+def test_l_ennemi_est_detruit_a_zero_pv():
+    nettoyeur = _en_combat("ENM_LE_NETTOYEUR")
 
+    nettoyeur.subir_degats(40)
 
-def test_deux_buffs_du_meme_type_coexistent_et_s_additionnent():
-    """Un ennemi peut porter plusieurs debuffs Vulnerabilite en meme temps : ils sont
-    independants (aucune fusion ni remplacement) et leurs magnitudes s'additionnent."""
-    ennemi = Ennemi(pv_max=15)
+    assert nettoyeur.pv == 0 and nettoyeur.est_detruit()
 
-    ennemi.appliquer_buff(ActionCarte.VULNERABILITE, 20, tours=1)
-    ennemi.appliquer_buff(ActionCarte.VULNERABILITE, 50, tours=3)
 
-    assert len(ennemi.buffs_actifs) == 2
-    assert ennemi.degats_subis(10) == 17  # +20% et +50% cumules : 10 * 1.70
+# --- Lecture du JSON ---
 
 
-def test_buffs_du_meme_type_expirent_independamment():
-    """Exemple exact demande : (X% pour 1 tour) + (Y% pour 3 tours) -> apres un tour
-    ennemi, seul le debuff Y% (2 tours restants) doit rester actif."""
-    ennemi = Ennemi(pv_max=15)
-    ennemi.appliquer_buff(ActionCarte.VULNERABILITE, 20, tours=1)
-    ennemi.appliquer_buff(ActionCarte.VULNERABILITE, 50, tours=3)
+def test_une_cle_inconnue_est_refusee():
+    entree = _entree("ENM_PAT_LE_PIRATE")
+    entree["points_de_vie"] = 50
 
-    ennemi.decrementer_buffs()
+    with pytest.raises(ValueError, match="^Ennemi ENM_PAT_LE_PIRATE : cles inconnues"):
+        Ennemi.depuis_dict(entree)
 
-    assert len(ennemi.buffs_actifs) == 1
-    assert ennemi.buffs_actifs[0].valeur == 50
-    assert ennemi.buffs_actifs[0].tours_restants == 2
-    assert ennemi.degats_subis(10) == 15  # seul le +50% restant s'applique
 
+def test_une_valeur_citee_par_un_effet_doit_exister():
+    entree = _entree("ENM_PAT_LE_PIRATE")
+    entree["actions"][0][0]["valeur"] = "degat"
 
-def test_buffs_de_types_differents_restent_independants():
-    ennemi = Ennemi(pv_max=15)
+    with pytest.raises(ValueError, match="^Ennemi ENM_PAT_LE_PIRATE : valeur inconnue 'degat'"):
+        Ennemi.depuis_dict(entree)
 
-    ennemi.appliquer_buff(ActionCarte.REDUCTION_DEGATS, 3, tours=1)
-    ennemi.appliquer_buff(ActionCarte.VULNERABILITE, 50, tours=1)
 
-    assert ennemi.degats_attaque_effectifs(7) == 4
-    assert ennemi.degats_subis(10) == 15
+def test_une_erreur_dans_une_valeur_est_signalee_avec_l_id_de_l_ennemi():
+    entree = _entree("ENM_PAT_LE_PIRATE")
+    entree["valeurs"]["degats"]["tous_les"] = 0
 
+    with pytest.raises(ValueError, match="^Ennemi ENM_PAT_LE_PIRATE : tous_les"):
+        Ennemi.depuis_dict(entree)
 
-def test_active_au_tour_frequence_un_se_declenche_tous_les_tours():
-    action = ActionEnnemi(type=TypeActionEnnemi.ATTAQUE, cible=CibleActionEnnemi.PROXIMITE, valeur=5)
 
-    assert [action.active_au_tour(t) for t in range(1, 5)] == [True, True, True, True]
+def test_une_etape_vide_est_refusee():
+    entree = _entree("ENM_PAT_LE_PIRATE")
+    entree["actions"].append([])
 
+    with pytest.raises(ValueError, match="au moins un effet"):
+        Ennemi.depuis_dict(entree)
 
-def test_active_au_tour_respecte_la_frequence_et_le_tour_de_depart():
-    """tour_depart=1, frequence=3 -> actif aux tours 1, 4, 7..."""
-    action = ActionEnnemi(
-        type=TypeActionEnnemi.POSE_BUFF, cible=CibleActionEnnemi.SOI_MEME, valeur=3, frequence=3, tour_depart=1
-    )
 
-    resultats = [action.active_au_tour(t) for t in range(1, 8)]
+@pytest.mark.parametrize("nature, cible", [
+    (NatureEffetEnnemi.ATTAQUE, CibleEffetEnnemi.SOI_MEME),
+    (NatureEffetEnnemi.BOUCLIER, CibleEffetEnnemi.PROXIMITE),
+])
+def test_une_cible_du_mauvais_camp_est_refusee(nature, cible):
+    with pytest.raises(ValueError, match="ne peut pas viser"):
+        EffetEnnemi(nature, "degats", cible)
 
-    assert resultats == [True, False, False, True, False, False, True]
 
+# --- Corrections de la review de la PR #60 ---
 
-def test_active_au_tour_avec_tour_de_depart_different_de_un():
-    """tour_depart=2 : rien au tour 1, puis actif tous les `frequence` tours a partir de 2."""
-    action = ActionEnnemi(
-        type=TypeActionEnnemi.ATTAQUE, cible=CibleActionEnnemi.PROXIMITE, valeur=5, frequence=2, tour_depart=2
-    )
 
-    resultats = [action.active_au_tour(t) for t in range(1, 6)]
+def test_un_tour_inferieur_a_1_est_refuse():
+    with pytest.raises(ValueError, match="tour doit valoir au moins 1"):
+        ValeurEnnemi(base=5, augmentation=2).au_tour(0)
 
-    assert resultats == [False, True, False, True, False]
+
+def test_une_valeur_qui_n_est_pas_un_objet_est_signalee_avec_l_id_de_l_ennemi():
+    entree = _entree("ENM_PAT_LE_PIRATE")
+    entree["valeurs"]["degats"] = 5
+
+    with pytest.raises(ValueError, match="^Ennemi ENM_PAT_LE_PIRATE, valeur 'degats' : objet attendu"):
+        Ennemi.depuis_dict(entree)
+
+
+def test_un_id_d_ennemi_en_double_est_refuse(tmp_path):
+    fichier = tmp_path / "ennemis.json"
+    entrees = [_entree("ENM_PAT_LE_PIRATE"), _entree("ENM_PAT_LE_PIRATE")]
+    fichier.write_text(json.dumps({"ennemis": entrees}), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="ENM_PAT_LE_PIRATE en double"):
+        charger_ennemis(fichier)
+
+
+def test_les_methodes_de_combat_refusent_un_ennemi_hors_combat():
+    with pytest.raises(ValueError, match="hors combat"):
+        charger_ennemis()["ENM_PAT_LE_PIRATE"].subir_degats(5)

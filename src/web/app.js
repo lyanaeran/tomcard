@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "88";
+const VERSION_CACHE = "91";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -39,34 +39,20 @@ const FICHIERS_A_MONTER = [
     "src/__init__.py",
     "src/gameplay/__init__.py",
     "src/gameplay/carte.py",
-    "src/gameplay/carte_new.py",
-    "src/gameplay/ciblage.py",
     "src/gameplay/combat.py",
-    "src/gameplay/combat_new.py",
     "src/gameplay/deck.py",
-    "src/gameplay/deck_new.py",
     "src/gameplay/deroulement.py",
-    "src/gameplay/donnees.py",
     "src/gameplay/ennemi.py",
-    "src/gameplay/ennemi_new.py",
     "src/gameplay/flotte.py",
-    "src/gameplay/flotte_new.py",
-    "src/gameplay/journal.py",
-    "src/gameplay/joueur.py",
     "src/gameplay/module.py",
-    "src/gameplay/module_new.py",
     "src/gameplay/parcours.py",
     "src/gameplay/partie.py",
     "src/gameplay/position.py",
-    "src/gameplay/statut_new.py",
+    "src/gameplay/statut.py",
     "src/gameplay/vaisseau.py",
-    "src/gameplay/vaisseau_new.py",
     "config/cartes.json",
-    "config/carte_new.json",
     "config/ennemis.json",
-    "config/ennemi_new.json",
     "config/modules.json",
-    "config/module_new.json",
 ];
 
 let pyodide = null;
@@ -260,7 +246,7 @@ function appliquerResultat(resultat) {
 }
 
 // Journal de combat (specs/refonte-branchement.md 4.5) : etatCourant.journal est la liste des
-// evenements de CombatNew.journal (des faits : qui, sur qui, combien, detail leurre / renvoi /
+// evenements de Combat.journal (des faits : qui, sur qui, combien, detail leurre / renvoi /
 // bouclier / PV), serialises par bridge.py:_evenement_json. Les fonctions ci-dessous ne font que
 // les mettre en phrase et en couleur, jamais decider de ce qui s'est produit - meme role que le
 // journal cote PC. Les cartes jouees sans effet propre au journal (CARTE_JOUEE) ne donnent pas de
@@ -357,7 +343,7 @@ function fermerJournalCombat() {
 
 function quitterCombat() {
     // Bouton "Quitter" (specs.md 8.1) : ferme le combat sans le reporter ni le sauvegarder - la
-    // partie sauvegardee reste telle qu'elle etait avant ce combat (CombatNew travaille sur des
+    // partie sauvegardee reste telle qu'elle etait avant ce combat (Combat travaille sur des
     // copies), qui repartira de zero au prochain "Continuer".
     partieActive = null;
     joueurCourant = null;
@@ -400,7 +386,7 @@ function carteSelectionnee() {
 }
 
 // Confirme la carte armee sur la case touchee, si c'est une de ses cases valides : ces cases sont
-// decidees par le gameplay (CombatNew.cibles_possibles, via bridge.py), jamais en JS.
+// decidees par le gameplay (Combat.cibles_possibles, via bridge.py), jamais en JS.
 function cliquerCase(idCase, typeCase) {
     const carte = carteSelectionnee();
     if (!carte) return;
@@ -418,7 +404,7 @@ function trouverObjetCase(idCase, typeCase) {
 
 // Texte d'un effet d'ennemi (son prochain tour) : symbole d'attaque 7 x2 -> Lanceur
 // de missiles, symbole de bouclier 10, symbole de renvoi 5 -> un allie. La cible prevue vient du
-// gameplay (CombatNew.intentions).
+// gameplay (Combat.intentions).
 function texteEffetEnnemi(effet) {
     const repetitions = effet.repetitions > 1 ? ` ×${effet.repetitions}` : "";
     const symbole = { ATTAQUE: "⚔", BOUCLIER: "🛡", RENVOI: "↩" }[effet.nature] || "?";
@@ -632,7 +618,7 @@ function texteMunitions(carte) {
 
 // Carte en main (refonte-branchement.md 4.1) : illustration, rarete, cout, munitions, "x2" si
 // elle est lancee plus d'une fois, bandeau Persistante ; grisee si elle n'est pas jouable
-// maintenant (decide par le gameplay : CombatNew.peut_jouer).
+// maintenant (decide par le gameplay : Combat.peut_jouer).
 function rendreMain() {
     return etatCourant.main
         .map((carte) => {
@@ -655,7 +641,7 @@ function rendreMain() {
 }
 
 // Texte d'une carte, partout (combat, recompenses, deck, Aventures) : la description de
-// config/carte_new.json avec ses valeurs actuelles, fournie par le gameplay (description_affichee).
+// config/cartes.json avec ses valeurs actuelles, fournie par le gameplay (description_affichee).
 function texteEffetCarte(carte) {
     return carte.description;
 }

@@ -1,85 +1,68 @@
 """
-Tests unitaires pour la classe Deck.
+Tests unitaires pour src/gameplay/deck.py (piles de cartes d'un combat de la refonte).
 """
 
 import random
 
-from src.gameplay.carte import Carte, CibleCarte, TypeCarte
-from src.gameplay.deck import Deck
+import pytest
 
-CARTE_ATTAQUE = Carte(id="TEST_ATTAQUE", nom="Attaque", image="test.png", type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMI_UNIQUE, cout=1, valeur=7)
-CARTE_BOUCLIER = Carte(id="TEST_BOUCLIER", nom="Bouclier", image="test.png", type=TypeCarte.DEFENSE, cible=CibleCarte.ALLIE_UNIQUE, cout=1, valeur=5)
-CARTE_REPARATION = Carte(id="TEST_SOIN", nom="Soin", image="test.png", type=TypeCarte.REPARATION, cible=CibleCarte.ALLIE_UNIQUE, cout=1, valeur=4)
+from src.gameplay.carte import charger_cartes
+from src.gameplay.deck import TAILLE_MAIN_MAX, Deck, deck_de_depart
 
 
-def _deck_poc() -> Deck:
-    cartes = [CARTE_ATTAQUE] * 5 + [CARTE_BOUCLIER] * 3 + [CARTE_REPARATION]
-    return Deck(cartes=cartes, generateur_aleatoire=random.Random(0))
+def _cartes(id_carte, nombre, module="M1"):
+    modele = charger_cartes()[id_carte]
+    return [modele.copie(exemplaire_module=module) for _ in range(nombre)]
 
 
-def test_deck_commence_avec_une_main_vide():
-    deck = _deck_poc()
+def test_deck_de_depart_dix_cartes_rattachees_au_principal():
+    deck = deck_de_depart(charger_cartes(), "M1")
 
-    assert deck.main == []
-    assert len(deck.pioche) == 9
-    assert deck.defausse == []
-
-
-def test_piocher_debut_de_tour_pioche_cinq_cartes():
-    deck = _deck_poc()
-
-    deck.piocher_debut_de_tour()
-
-    assert len(deck.main) == 5
-    assert len(deck.pioche) == 4
+    assert sorted(carte.id for carte in deck) == sorted(["CRT_7"] * 4 + ["CRT_10"] * 4 + ["CRT_11", "CRT_12"])
+    assert {carte.exemplaire_module for carte in deck} == {"M1"}
 
 
-def test_jouer_une_carte_l_envoie_en_defausse():
-    deck = _deck_poc()
-    deck.piocher_debut_de_tour()
-    carte = deck.main[0]
+def test_la_defausse_est_remelangee_quand_la_pioche_est_vide_jamais_les_epuisees_ni_hors_service():
+    deck = Deck(_cartes("CRT_7", 3), random.Random(0))
+    deck.defausse, deck.pioche = deck.pioche[:2], []
+    deck.epuisees = _cartes("CRT_12", 1)
+    deck.hors_service = _cartes("CRT_9", 1, "M2")
 
-    deck.jouer(carte)
-
-    assert carte not in deck.main
-    assert deck.defausse == [carte]
-
-
-def test_la_defausse_est_remelangee_quand_la_pioche_est_vide():
-    deck = _deck_poc()
-    deck.piocher_debut_de_tour()  # 5 en main, 4 en pioche
-    for carte in list(deck.main):
-        deck.jouer(carte)  # 9 en defausse, pioche vide
-
-    deck.piocher_debut_de_tour()  # doit remelanger la defausse pour pouvoir piocher
-
-    assert len(deck.main) == 5
-    assert len(deck.pioche) + len(deck.main) + len(deck.defausse) == 9
+    assert deck.piocher(5) == 2
+    assert len(deck.epuisees) == len(deck.hors_service) == 1
 
 
-def test_defausser_main_vide_la_main():
-    deck = _deck_poc()
-    deck.piocher_debut_de_tour()
+def test_la_main_est_limitee():
+    deck = Deck(_cartes("CRT_7", TAILLE_MAIN_MAX + 3), random.Random(0))
 
-    deck.defausser_main()
-
-    assert deck.main == []
-    assert len(deck.defausse) == 5
+    assert deck.piocher(TAILLE_MAIN_MAX + 3) == TAILLE_MAIN_MAX
 
 
-def test_la_main_ne_depasse_jamais_la_capacite_maximale():
-    deck = _deck_poc()
-    deck.TAILLE_MAIN_MAX = 3  # capacite reduite pour rendre le test rapide
+def test_module_detruit_ses_cartes_non_persistantes_passent_hors_service_partout():
+    cartes_m2 = _cartes("CRT_9", 3, "M2")
+    persistante = _cartes("CRT_18", 1, "M2")[0]
+    persistante.persistante = True
+    deck = Deck(_cartes("CRT_7", 2) + cartes_m2 + [persistante], random.Random(0))
+    deck.main = [deck.pioche.pop()]
+    deck.defausse = [deck.pioche.pop()]
 
-    deck.piocher_debut_de_tour()
+    deplacees = deck.mettre_hors_service("M2")
 
-    assert len(deck.main) == 3
+    assert sorted(map(id, deplacees)) == sorted(map(id, cartes_m2))
+    assert all(carte.exemplaire_module == "M1" or carte is persistante for carte in deck.pioche + deck.main + deck.defausse)
 
 
-def test_toutes_cartes_regroupe_toutes_les_piles():
-    deck = _deck_poc()
-    deck.piocher_debut_de_tour()
-    deck.jouer(deck.main[0])
+def test_ranger_une_carte_jouee():
+    deck = Deck([], random.Random(0))
+    epuisee, orpheline, normale = _cartes("CRT_7", 3)
 
-    assert len(deck.toutes_cartes()) == 9
-    assert set(deck.toutes_cartes()) == set(deck.pioche) | set(deck.main) | set(deck.defausse)
+    deck.ranger_carte_jouee(epuisee, epuisee=True, module_detruit=True)
+    deck.ranger_carte_jouee(orpheline, epuisee=False, module_detruit=True)
+    deck.ranger_carte_jouee(normale, epuisee=False, module_detruit=False)
+
+    assert (deck.epuisees, deck.hors_service, deck.defausse) == ([epuisee], [orpheline], [normale])
+
+
+def test_retirer_une_carte_absente_de_la_main_est_refuse():
+    with pytest.raises(ValueError, match="pas en main"):
+        Deck([], random.Random(0)).retirer_de_la_main(_cartes("CRT_7", 1)[0])

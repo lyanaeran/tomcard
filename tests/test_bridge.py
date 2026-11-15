@@ -10,11 +10,11 @@ from pathlib import Path
 
 import pytest
 
-from src.gameplay.carte_new import charger_cartes_new
-from src.gameplay.combat_new import CombatNew
-from src.gameplay.ennemi_new import charger_ennemis_new
-from src.gameplay.flotte_new import flotte_boss
-from src.gameplay.module_new import charger_modules_new
+from src.gameplay.carte import charger_cartes
+from src.gameplay.combat import Combat
+from src.gameplay.ennemi import charger_ennemis
+from src.gameplay.flotte import flotte_boss
+from src.gameplay.module import charger_modules
 
 FICHIER_BRIDGE = Path(__file__).resolve().parents[1] / "src" / "web" / "bridge.py"
 
@@ -28,16 +28,16 @@ def bridge():
     return module
 
 
-def _combat_contre_le_boss(ids_main: list[str]) -> CombatNew:
+def _combat_contre_le_boss(ids_main: list[str]) -> Combat:
     """Principal (M1) et Lanceur (M2) contre le Boss, avec ces cartes en main."""
-    modeles = charger_modules_new()
+    modeles = charger_modules()
     modules = [
         modeles["MOD_1"].nouvel_exemplaire("M1", "base").copie_pour_combat(),
         modeles["MOD_2"].nouvel_exemplaire("M2", "avant_gauche").copie_pour_combat(),
     ]
-    cartes = charger_cartes_new()
+    cartes = charger_cartes()
     deck = [cartes[id_carte].copie(exemplaire_module="M1") for id_carte in ids_main]
-    combat = CombatNew(modules, deck, flotte_boss(charger_ennemis_new()), random.Random(1))
+    combat = Combat(modules, deck, flotte_boss(charger_ennemis()), random.Random(1))
     assert sorted(carte.id for carte in combat.deck.main) == sorted(ids_main)
     return combat
 

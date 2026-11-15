@@ -17,18 +17,18 @@ from enum import Enum, auto
 from datetime import datetime
 from pathlib import Path
 
-from src.gameplay.carte_new import CarteNew, charger_cartes_new
-from src.gameplay.combat_new import CombatNew
-from src.gameplay.deck_new import DECK_DE_DEPART
-from src.gameplay.ennemi_new import charger_ennemis_new
-from src.gameplay.flotte_new import FlotteNew, flotte_asteroides, flotte_boss, flotte_prime
-from src.gameplay.module_new import ModuleNew, charger_modules_new
+from src.gameplay.carte import Carte, charger_cartes
+from src.gameplay.combat import Combat
+from src.gameplay.deck import DECK_DE_DEPART
+from src.gameplay.ennemi import charger_ennemis
+from src.gameplay.flotte import Flotte, flotte_asteroides, flotte_boss, flotte_prime
+from src.gameplay.module import Module, charger_modules
 from src.gameplay.parcours import est_niveau_boss, pool_toutes_cartes, tirer_carte_deck, tirer_carte_recompense
 
 RACINE = Path(__file__).resolve().parents[2]
 DOSSIER_SAVES = RACINE / "saves"
 
-# Version du format de sauvegarde d'une partie. 2 : moteur de la refonte (modules ModuleNew,
+# Version du format de sauvegarde d'une partie. 2 : moteur de la refonte (modules Module,
 # cartes rattachees a un exemplaire de module). Une partie d'une autre version est abandonnee a la
 # lecture (refonte-branchement.md 2, decision 1) : aucune conversion.
 VERSION_FORMAT = 2
@@ -51,9 +51,9 @@ class SauvegardeObsolete(ValueError):
 
 @dataclass(frozen=True)
 class CartePossedee:
-    """Une carte du deck possede : l'id de son modele (config/carte_new.json) et l'exemplaire de
+    """Une carte du deck possede : l'id de son modele (config/cartes.json) et l'exemplaire de
     module auquel elle est rattachee ("M1"...), stable meme si la Station deplace le module
-    (refonte-modules.md 3.3)."""
+    (specs.md 12.4)."""
 
     id: str
     module: str
@@ -62,7 +62,7 @@ class CartePossedee:
 @dataclass
 class Partie:
     """Une sauvegarde de partie, rattachee a un profil (specs.md 10.3). `vaisseau` : exemplaire de
-    module (ModuleNew, partie "exemplaire" seulement) de chaque emplacement."""
+    module (Module, partie "exemplaire" seulement) de chaque emplacement."""
 
     id: str
     nom: str
@@ -70,7 +70,7 @@ class Partie:
     graine: int
     niveau: int
     argent: int
-    vaisseau: dict[str, ModuleNew | None]
+    vaisseau: dict[str, Module | None]
     deck: list[CartePossedee]
     version: int = VERSION_FORMAT
     # Cartes proposees apres un combat gagne, tant que le joueur n'a pas choisi (None : aucun
@@ -79,7 +79,7 @@ class Partie:
     recompense: list[CartePossedee] | None = None
 
     @property
-    def principal(self) -> ModuleNew:
+    def principal(self) -> Module:
         return self.vaisseau["base"]
 
 
@@ -101,7 +101,7 @@ def _horodatage() -> str:
 # --- Serialisation (pure, testable sans I/O) ---
 
 
-def _module_vers_dict(module: ModuleNew) -> dict:
+def _module_vers_dict(module: Module) -> dict:
     """Ce qui est sauvegarde d'un exemplaire de module ; l'emplacement est la cle du vaisseau."""
     return {
         "module_id": module.id,
@@ -112,7 +112,7 @@ def _module_vers_dict(module: ModuleNew) -> dict:
     }
 
 
-def _module_depuis_dict(donnees: dict, emplacement: str, modeles: dict[str, ModuleNew]) -> ModuleNew:
+def _module_depuis_dict(donnees: dict, emplacement: str, modeles: dict[str, Module]) -> Module:
     module = modeles[donnees["module_id"]].nouvel_exemplaire(donnees["exemplaire"], emplacement)
     module.pv_max = donnees["pv_max"]
     module.pv = donnees["pv"]
@@ -144,8 +144,8 @@ def _carte_vers_dict(carte: CartePossedee) -> dict:
 
 @functools.cache
 def _ids_cartes() -> frozenset[str]:
-    """Ids des cartes de config/carte_new.json, lus une seule fois."""
-    return frozenset(charger_cartes_new())
+    """Ids des cartes de config/cartes.json, lus une seule fois."""
+    return frozenset(charger_cartes())
 
 
 def _cartes_depuis_dict(entrees: list[dict], exemplaires: set[str]) -> list[CartePossedee]:
@@ -158,13 +158,13 @@ def _cartes_depuis_dict(entrees: list[dict], exemplaires: set[str]) -> list[Cart
 
 
 @functools.cache
-def _modeles_modules() -> dict[str, ModuleNew]:
-    """Modeles de modules lus une seule fois (config/module_new.json) : la partie est relue a
+def _modeles_modules() -> dict[str, Module]:
+    """Modeles de modules lus une seule fois (config/modules.json) : la partie est relue a
     chaque action cote web. Jamais modifies : un exemplaire est une copie (nouvel_exemplaire)."""
-    return charger_modules_new()
+    return charger_modules()
 
 
-def partie_depuis_dict(donnees: dict, modeles: dict[str, ModuleNew] | None = None) -> Partie:
+def partie_depuis_dict(donnees: dict, modeles: dict[str, Module] | None = None) -> Partie:
     """Partie a partir de sa sauvegarde. Leve SauvegardeObsolete pour une autre version du format
     (ancienne sauvegarde, decision 1), ou si elle cite un module ou une carte qui n'existe plus
     dans config/ (proposition : meme traitement, la partie est abandonnee plutot que de planter)."""
@@ -259,10 +259,10 @@ EXEMPLAIRE_PRINCIPAL = "M1"
 def nouvelle_partie(aleatoire: random.Random | None = None) -> Partie:
     """Nouvelle partie au Niveau 1 (specs.md 2.3) : seul le module principal est equipe (le 2e
     slot est pourvu par le choix de module du Niveau 1), avec le deck de depart
-    (deck_new.DECK_DE_DEPART) rattache au principal. Argent a ARGENT_DEPART (specs.md 2.1/9.1)."""
+    (deck.DECK_DE_DEPART) rattache au principal. Argent a ARGENT_DEPART (specs.md 2.1/9.1)."""
     aleatoire = aleatoire or random.Random()
-    modele_principal = next(module for module in charger_modules_new().values() if module.principal)
-    vaisseau: dict[str, ModuleNew | None] = {position: None for position in POSITIONS_VAISSEAU}
+    modele_principal = next(module for module in charger_modules().values() if module.principal)
+    vaisseau: dict[str, Module | None] = {position: None for position in POSITIONS_VAISSEAU}
     vaisseau["base"] = modele_principal.nouvel_exemplaire(EXEMPLAIRE_PRINCIPAL, "base")
     return Partie(
         id=f"partie_{_horodatage()}",
@@ -280,49 +280,49 @@ def nouvelle_partie(aleatoire: random.Random | None = None) -> Partie:
     )
 
 
-def modules_de_la_partie(partie: Partie) -> list[ModuleNew]:
+def modules_de_la_partie(partie: Partie) -> list[Module]:
     """Exemplaires de modules equipes, principal en premier (ordre de POSITIONS_VAISSEAU)."""
     return [partie.vaisseau[position] for position in POSITIONS_VAISSEAU if partie.vaisseau[position] is not None]
 
 
-def deck_de_la_partie(partie: Partie, cartes: dict[str, CarteNew] | None = None) -> list[CarteNew]:
-    """Exemplaires CarteNew independants du deck possede, rattaches a leur module - pour afficher
+def deck_de_la_partie(partie: Partie, cartes: dict[str, Carte] | None = None) -> list[Carte]:
+    """Exemplaires Carte independants du deck possede, rattaches a leur module - pour afficher
     le deck ou le donner a un combat."""
-    cartes = cartes if cartes is not None else charger_cartes_new()
+    cartes = cartes if cartes is not None else charger_cartes()
     return [cartes[carte.id].copie(exemplaire_module=carte.module) for carte in partie.deck]
 
 
-def _combat(partie: Partie, flotte: FlotteNew, aleatoire: random.Random) -> CombatNew:
+def _combat(partie: Partie, flotte: Flotte, aleatoire: random.Random) -> Combat:
     """Combat avec le vaisseau et le deck de la partie : copies de combat des modules (PV
     sauvegardes pour le principal, PV max pour les secondaires), copies des cartes. La partie
     n'est pas modifiee (un combat abandonne ne la touche pas)."""
     if partie.principal.pv <= 0:
-        # Garde-fou : CombatNew ne declare la defaite que sur un nouveau coup, un combat commence
+        # Garde-fou : Combat ne declare la defaite que sur un nouveau coup, un combat commence
         # avec un principal deja detruit ne se terminerait jamais
         raise ValueError("Le principal est detruit : aucun combat ne peut commencer")
     modules = [module.copie_pour_combat() for module in modules_de_la_partie(partie)]
-    return CombatNew(modules, deck_de_la_partie(partie), flotte, aleatoire)
+    return Combat(modules, deck_de_la_partie(partie), flotte, aleatoire)
 
 
-def combat_depuis_partie(partie: Partie, aleatoire: random.Random | None = None) -> CombatNew:
+def combat_depuis_partie(partie: Partie, aleatoire: random.Random | None = None) -> Combat:
     """Combat du niveau courant (specs.md 2.1/2.3/13) : flotte du Boss aux niveaux Boss, sinon
-    flotte Prime (1 ennemi jusqu'au Niveau 5, 2 au-dela), flotte_new.py."""
+    flotte Prime (1 ennemi jusqu'au Niveau 5, 2 au-dela), flotte.py."""
     aleatoire = aleatoire or random.Random(partie.graine + partie.niveau)
-    modeles = charger_ennemis_new()
+    modeles = charger_ennemis()
     flotte = flotte_boss(modeles) if est_niveau_boss(partie.niveau) else flotte_prime(modeles, partie.niveau, aleatoire)
     return _combat(partie, flotte, aleatoire)
 
 
-def combat_aventure_asteroides(partie: Partie, aleatoire: random.Random | None = None) -> CombatNew:
+def combat_aventure_asteroides(partie: Partie, aleatoire: random.Random | None = None) -> Combat:
     """Combat du choix "Affronter les pirates" (Aventure Asteroides, specs.md 2.5) :
     NOMBRE_ENNEMIS_ASTEROIDES ennemis (flotte_asteroides)."""
     aleatoire = aleatoire or random.Random(partie.graine + partie.niveau)
-    return _combat(partie, flotte_asteroides(charger_ennemis_new(), aleatoire), aleatoire)
+    return _combat(partie, flotte_asteroides(charger_ennemis(), aleatoire), aleatoire)
 
 
-def reporter_combat(partie: Partie, combat: CombatNew) -> Partie:
+def reporter_combat(partie: Partie, combat: Combat) -> Partie:
     """Fin de combat (victoire ou defaite) : reporte sur la partie ce qui persiste, c'est-a-dire
-    les PV du principal seulement (ModuleNew.reporter_combat ; un secondaire repart plein au
+    les PV du principal seulement (Module.reporter_combat ; un secondaire repart plein au
     combat suivant). A appeler une fois, par deroulement.conclure_combat. Modifie et renvoie
     `partie`."""
     for module in modules_de_la_partie(partie):
@@ -335,7 +335,7 @@ def reporter_combat(partie: Partie, combat: CombatNew) -> Partie:
 ARGENT_PAR_ENNEMI_TUE = 5
 
 
-def gagner_argent_combat(partie: Partie, combat: CombatNew) -> Partie:
+def gagner_argent_combat(partie: Partie, combat: Combat) -> Partie:
     """Recompense en Argent d'une victoire (specs.md 2.1) : ARGENT_PAR_ENNEMI_TUE par ennemi
     detruit (le Boss, sur deux cases, compte pour un). Modifie et renvoie `partie`."""
     partie.argent += ARGENT_PAR_ENNEMI_TUE * len(combat.ennemis_detruits())
@@ -355,7 +355,7 @@ def _nouvel_exemplaire(partie: Partie) -> str:
     return f"M{max(numeros, default=0) + 1}"
 
 
-def equiper_module(partie: Partie, modele: ModuleNew) -> ModuleNew:
+def equiper_module(partie: Partie, modele: Module) -> Module:
     """Equipe un nouvel exemplaire de ce module sur le premier emplacement libre du vaisseau
     (specs.md 2.3/5), PV pleins. Modifie `partie` et renvoie l'exemplaire equipe."""
     position = next(p for p in POSITIONS_EQUIPABLES if partie.vaisseau[p] is None)
@@ -515,11 +515,11 @@ def subir_degats_principal(partie: Partie, degats: int) -> Partie:
     return partie
 
 
-def second_choc_asteroides(partie: Partie, cartes: dict[str, CarteNew], aleatoire: random.Random) -> CarteNew | None:
+def second_choc_asteroides(partie: Partie, cartes: dict[str, Carte], aleatoire: random.Random) -> Carte | None:
     """2e choc du choix "Traverser" de l'Aventure "Asteroides" (specs.md 2.5) : inflige un second
     DEGATS_ASTEROIDES au principal puis tire une carte gratuite du pool complet de cartes
     jouables (tirer_carte_recompense), rattachee au principal (carte obtenue hors module,
-    refonte-modules.md 3.3) - None si le pool est vide. Decide seule si une carte est offerte :
+    specs.md 12.4) - None si le pool est vide. Decide seule si une carte est offerte :
     PC et web ne font qu'afficher le resultat. Modifie `partie`."""
     subir_degats_principal(partie, DEGATS_ASTEROIDES)
     carte = tirer_carte_recompense(pool_toutes_cartes(cartes), aleatoire)

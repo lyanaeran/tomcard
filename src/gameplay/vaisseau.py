@@ -1,50 +1,82 @@
 """
-Le vaisseau du joueur : le module de base et les modules equipes sur la grille.
+Vaisseau de combat (Vaisseau) : les modules en combat (copies de Module) places sur la
+grille du joueur (specs.md 3.1).
+
+Grille 2 colonnes (avant, arriere) x 3 rangees (gauche, milieu, droite). Le principal occupe toute
+la rangee du milieu (les deux colonnes) ; les quatre autres emplacements correspondent chacun a une
+case.
 """
 
+from collections.abc import Iterable
+
 from src.gameplay.module import Module
-from src.gameplay.position import Colonne, Position, Rangee
+from src.gameplay.position import Colonne, Position, Rangee, ordre_rangees_par_proximite
+
+# Cases occupees par chaque emplacement (Module.emplacement)
+CASES_PAR_EMPLACEMENT = {
+    "base": (Position(Colonne.AVANT, Rangee.MID), Position(Colonne.ARRIERE, Rangee.MID)),
+    "avant_gauche": (Position(Colonne.AVANT, Rangee.GAUCHE),),
+    "arriere_gauche": (Position(Colonne.ARRIERE, Rangee.GAUCHE),),
+    "avant_droite": (Position(Colonne.AVANT, Rangee.DROITE),),
+    "arriere_droite": (Position(Colonne.ARRIERE, Rangee.DROITE),),
+}
 
 
 class Vaisseau:
-    """Regroupe le module de base et les modules equipes sur la grille 2x3 (specs.md 3.1/5)."""
+    """Les modules du joueur pendant un combat, sur leurs cases."""
 
-    def __init__(
-        self,
-        base: Module,
-        avant_gauche: Module | None = None,
-        avant_droite: Module | None = None,
-        arriere_gauche: Module | None = None,
-        arriere_droite: Module | None = None,
-    ):
-        self.base = base
-        self._modules_equipes: dict[Position, Module] = {}
-        if avant_gauche is not None:
-            self._modules_equipes[Position(Colonne.AVANT, Rangee.GAUCHE)] = avant_gauche
-        if avant_droite is not None:
-            self._modules_equipes[Position(Colonne.AVANT, Rangee.DROITE)] = avant_droite
-        if arriere_gauche is not None:
-            self._modules_equipes[Position(Colonne.ARRIERE, Rangee.GAUCHE)] = arriere_gauche
-        if arriere_droite is not None:
-            self._modules_equipes[Position(Colonne.ARRIERE, Rangee.DROITE)] = arriere_droite
+    def __init__(self, modules: Iterable[Module]):
+        self.modules: list[Module] = list(modules)
+        self._par_case: dict[Position, Module] = {}
+        for module in self.modules:
+            if module.pv_combat is None:
+                raise ValueError(f"Module {module.id} : le vaisseau de combat prend des copies de combat")
+            if module.emplacement not in CASES_PAR_EMPLACEMENT:
+                raise ValueError(f"Module {module.id} : emplacement inconnu {module.emplacement!r}")
+            if module.principal != (module.emplacement == "base"):
+                raise ValueError(f"Module {module.id} : le principal, et lui seul, occupe l'emplacement base")
+            for case in CASES_PAR_EMPLACEMENT[module.emplacement]:
+                if case in self._par_case:
+                    raise ValueError(f"Emplacement {module.emplacement} occupe deux fois")
+                self._par_case[case] = module
+        if Position(Colonne.AVANT, Rangee.MID) not in self._par_case:
+            raise ValueError("Le vaisseau n'a pas de module principal")
+        exemplaires = [module.exemplaire for module in self.modules]
+        if None in exemplaires or len(set(exemplaires)) != len(exemplaires):
+            raise ValueError("Chaque module doit avoir un identifiant d'exemplaire unique")
 
-    def module_en(self, colonne: Colonne, rangee: Rangee) -> Module | None:
-        """Renvoie le module vivant occupant cette case, ou None si vide/detruit.
+    @property
+    def principal(self) -> Module:
+        return self._par_case[Position(Colonne.AVANT, Rangee.MID)]
 
-        La rangee MID est toujours occupee par la base (quelle que soit la colonne
-        demandee), tant qu'elle est en vie : elle occupe la rangee Mid en entier.
-        """
-        if rangee == Rangee.MID:
-            return None if self.base.est_detruit() else self.base
-        module = self._modules_equipes.get(Position(colonne, rangee))
-        if module is None or module.est_detruit():
-            return None
-        return module
+    def module_en(self, case: Position) -> Module | None:
+        """Module vivant sur cette case, None si elle est vide ou si son module est detruit."""
+        module = self._par_case.get(case)
+        return None if module is None or module.est_detruit() else module
 
-    def modules_equipes(self) -> dict[Position, Module]:
-        """Renvoie les modules equipes bruts (y compris detruits), pour l'affichage."""
-        return dict(self._modules_equipes)
+    def module_d_exemplaire(self, exemplaire: str) -> Module | None:
+        """Module de cet identifiant d'exemplaire ("M3"), detruit ou non."""
+        return next((module for module in self.modules if module.exemplaire == exemplaire), None)
 
-    def est_detruit(self) -> bool:
-        """Le vaisseau est detruit si le module de base est detruit (specs.md 3.4)."""
-        return self.base.est_detruit()
+    def modules_vivants(self) -> list[Module]:
+        return [module for module in self.modules if not module.est_detruit()]
+
+    def modules_vivants_de_colonne(self, colonne: Colonne) -> list[Module]:
+        """Modules vivants de cette colonne ; le principal est dans les deux."""
+        return [module for module in self.modules_vivants() if any(
+            case.colonne == colonne for case in CASES_PAR_EMPLACEMENT[module.emplacement]
+        )]
+
+    def cases_vivantes(self) -> list[Position]:
+        """Cases occupees par un module vivant."""
+        return [case for case, module in self._par_case.items() if not module.est_detruit()]
+
+    def module_le_plus_proche(self, rangee_ennemi: Rangee) -> Module | None:
+        """Module vise par une attaque PROXIMITE d'un ennemi de cette rangee : sa rangee d'abord
+        (avant puis arriere), puis les rangees voisines (meme regle que ciblage.py)."""
+        for rangee in ordre_rangees_par_proximite(rangee_ennemi):
+            for colonne in (Colonne.AVANT, Colonne.ARRIERE):
+                module = self.module_en(Position(colonne, rangee))
+                if module is not None:
+                    return module
+        return None

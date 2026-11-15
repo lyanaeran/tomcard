@@ -2,15 +2,15 @@
 
 > **En partie dépassé (2026-11-11)** : les décisions prises depuis (bouclier et incendie −1 par
 > tour, statuts partagés, renvoi, retrait du « bouclier par tour ») sont dans
-> [refonte-statuts.md](refonte-statuts.md) et codées dans `src/gameplay/statut_new.py`. Ce fichier
+> [combat.md](combat.md) §3.5 et codées dans `src/gameplay/statut.py`. Ce fichier
 > garde la réflexion d'origine et les pistes non tranchées (Vulnérabilité, Réduction de dégâts,
 > statuts à durée). Vue d'ensemble : [refonte.md](refonte.md).
 
-*Document de travail, pas encore une section numérotée du document de conception (cf.
-[specs.md](specs.md)) : rien ci-dessous n'est décidé ni implémenté. Une fois le modèle tranché, le
-contenu stabilisé ira dans [combat.md](combat.md) (§3.5, §13 point 2) et
-[modules-cartes.md](modules-cartes.md) (§12.3/§12.4/§12.5), et ce fichier sera supprimé. Pointeur
-depuis [a-trancher.md](a-trancher.md) §11 ("Stacks à intensité cumulative").*
+*Document de travail, hors numérotation (cf. [specs.md](specs.md)). Il décrit par endroits
+l'**ancien moteur**, supprimé depuis (`BuffActif`, « bouclier par tour », dissipation du bouclier
+par division) : à lire comme l'historique de la réflexion. Restent utiles : les pistes non codées
+(statuts à durée, boucliers à seuil et à plafond, §4 et §6). Pointeur depuis
+[a-trancher.md](a-trancher.md) §11.*
 
 ---
 
@@ -206,9 +206,10 @@ tel quel sous le nouveau modèle sans décision/ajustement supplémentaire.
 *Cartes connexes non listées ci-dessus* : *Embrasement, Guerre nucléaire, Tir incendiaire* (dégâts
 répétés sur Y tours, `TypeCarte.ATTAQUE`, non jouables) partagent la même famille de problème
 (« une valeur qui doit décroître dans le temps ») — le modèle de la §3 (et l'idée « Stacks à
-intensité façon Poison », déjà notée en [a-trancher.md](a-trancher.md) §11) les débloquerait
-probablement du même coup : un stack de dégâts qui s'inflige chaque tour puis décroît de -1, au
-lieu d'un `duree` fixe à suivre séparément.
+intensité façon Poison ») les débloquerait probablement du même coup : un stack de dégâts qui
+s'inflige chaque tour puis décroît de -1, au lieu d'un `duree` fixe à suivre séparément. **Réalisé
+depuis** : c'est le statut **Incendie**, cumulable et −1 par tour (combat.md §3.5) ; ces trois
+cartes sont jouables.
 
 ---
 
@@ -301,7 +302,7 @@ représente :
 2. **Cumul en intensité** : qui décroît (Poison : *Embrasement*, *Guerre nucléaire*, *Tir
    incendiaire*), ou **sans décroissance** (Force : `AUGMENTATION_DEGATS` du Boss, montée de dégâts
    §7.2). Décision utilisateur : les mécaniques des ennemis seront gérées **en dehors des cartes**
-   (pas dans `CarteNew`) ; côté cartes, le cumul sans décroissance sert aux effets « lancées N fois
+   (pas dans `Carte`) ; côté cartes, le cumul sans décroissance sert aux effets « lancées N fois
    de plus » (*Salve laser*…, modules-cartes.md §4).
 
 Le **bouclier** garde une décroissance **proportionnelle** (moitié comme aujourd'hui, ou un quart
@@ -332,7 +333,7 @@ contenir l'accumulation — à vérifier une fois la montée implémentée.
    (décision utilisateur, 2026-11-07)** : il baisse de 1 par tour et c'est tout, sans notion de
    durée ; l'accumulation (§7.1) est contenue par la montée des dégâts propre à chaque ennemi
    (§7.2). Conséquence : *Blindage ciblé* devient un bouclier simple de 6 (plus de « pendant Y
-   tours »), et `CarteNew` refuse une durée sur un bouclier.
+   tours »), et `Carte` refuse une durée sur un bouclier.
 2. Fixer la montée de dégâts de chaque ennemi (§7.2) et ajouter le champ à `config/ennemis.json`.
 3. Redessiner Petit Jean et le Boss des pirates (§7.4) si `BOUCLIER_PAR_TOUR` est retiré.
 4. Trancher les points ouverts restants de la §3.3 (taux de décroissance %, bouclier miroir).
@@ -344,7 +345,7 @@ contenir l'accumulation — à vérifier une fois la montée implémentée.
    `BOUCLIER_PAR_TOUR` est abandonné.
 8. Renommer les buffs « persistants » (sans durée, `tours_restants = None`) en **« permanents »**
    dans le code et les specs : « Persistante » devient un mot-clé de carte (décision prise dans
-   [refonte-modules.md](refonte-modules.md) §3.5).
+   [modules-cartes.md](modules-cartes.md) §12.4).
 9. Une fois stabilisé : migrer ce contenu dans `combat.md` (§3.5, §13) et `modules-cartes.md`
    (§12.3-§12.5), supprimer ce fichier, mettre à jour la table d'index de `specs.md` si une
    nouvelle section est nécessaire.

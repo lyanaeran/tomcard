@@ -1,6 +1,6 @@
 # Modules (refonte) — tableau généré
 
-> **Fichier généré automatiquement à partir de `config/module_new.json`, ne pas le modifier à la
+> **Fichier généré automatiquement à partir de `config/modules.json`, ne pas le modifier à la
 > main** : toute modification se fait dans le JSON, puis `python -m outils.tableau_modules`
 > régénère ce tableau (un test échoue tant qu'il n'est pas à jour).
 

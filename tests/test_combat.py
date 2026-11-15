@@ -1,1167 +1,593 @@
 """
-Tests unitaires pour le moteur de combat (src/gameplay/combat.py).
+Tests unitaires pour src/gameplay/combat.py (combat de la refonte, specs.md 3).
+
+Vaisseau de test : principal M1 (60 PV, base) et Lanceur de missiles M2 (20 PV, avant gauche).
 """
 
 import random
 
-from src.gameplay.carte import ActionCarte, Carte, CibleCarte, TypeCarte
-from src.gameplay.combat import Combat, EtatCombat
-from src.gameplay.deck import Deck
-from src.gameplay.ennemi import ActionEnnemi, CibleActionEnnemi, Ennemi, TypeActionEnnemi
+import pytest
+
+from src.gameplay.carte import Carte, CategorieCarte, CibleCarte, Effet, NatureEffet, charger_cartes
+from src.gameplay.carte import RareteCarte
+from src.gameplay.combat import Combat, EtatCombat, NatureEvenement
+from src.gameplay.deck import deck_de_depart
+from src.gameplay.ennemi import charger_ennemis
 from src.gameplay.flotte import Flotte
-from src.gameplay.joueur import Joueur
-from src.gameplay.journal import EvenementActionEnnemi, EvenementCarteJouee, EvenementTour
-from src.gameplay.module import Module
+from src.gameplay.module import charger_modules
 from src.gameplay.position import Colonne, Position, Rangee
-from src.gameplay.vaisseau import Vaisseau
+from src.gameplay.statut import Statut
 
-IMG = "test.png"
-CARTE_ATTAQUE = Carte(id="TEST_ATTAQUE", nom="Attaque", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMI_UNIQUE, cout=1, valeur=7)
-CARTE_BOUCLIER = Carte(id="TEST_BOUCLIER", nom="Bouclier", image=IMG, type=TypeCarte.DEFENSE, cible=CibleCarte.ALLIE_UNIQUE, cout=1, valeur=5)
-CARTE_REPARATION = Carte(id="TEST_SOIN", nom="Soin", image=IMG, type=TypeCarte.REPARATION, cible=CibleCarte.ALLIE_UNIQUE, cout=1, valeur=4)
-CARTE_PERCER = Carte(id="TEST_PERCER", nom="Percer", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.LIGNE_ENNEMIE, cout=2, valeur=5)
-CARTE_PROTEGER = Carte(id="TEST_PROTEGER", nom="Proteger", image=IMG, type=TypeCarte.DEFENSE, cible=CibleCarte.ALLIES_MULTIPLES, cout=2, valeur=4)
-CARTE_MITRAILLER = Carte(id="TEST_MITRAILLER", nom="Mitrailler", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMIS_MULTIPLES, cout=2, valeur=3)
-CARTE_REDUCTION_DEGATS = Carte(
-    id="TEST_TORDRE_LE_CANON", nom="Tordre le canon", image=IMG, type=TypeCarte.DEBUFF, cible=CibleCarte.ENNEMI_UNIQUE,
-    cout=1, valeur=5, action=ActionCarte.REDUCTION_DEGATS, duree=1,
-)
-CARTE_VULNERABILITE = Carte(
-    id="TEST_BRECHE", nom="Breche", image=IMG, type=TypeCarte.DEBUFF, cible=CibleCarte.ENNEMI_UNIQUE,
-    cout=2, valeur=100, action=ActionCarte.VULNERABILITE, duree=1,
-)
-CARTE_COLONNE_AVANT = Carte(
-    id="TEST_LIGNE_AVANT", nom="Ligne avant", image=IMG, type=TypeCarte.DEBUFF, cible=CibleCarte.COLONNE_AVANT_ENNEMIE,
-    cout=1, valeur=100, action=ActionCarte.VULNERABILITE, duree=1,
-)
-CARTE_BOUCLIER_PERPETUEL = Carte(
-    id="TEST_BOUCLIER_PERPETUEL", nom="Bouclier perpetuel", image=IMG, type=TypeCarte.BUFF, cible=CibleCarte.MODULE_PRINCIPAL,
-    cout=5, valeur=10, action=ActionCarte.BOUCLIER_PAR_TOUR, duree=None,
-)
-CARTE_TIR_ALLIE = Carte(
-    id="TEST_TIR_ALLIE", nom="Tir allie", image=IMG, type=TypeCarte.DEBUFF, cible=CibleCarte.ENNEMI_UNIQUE,
-    cout=3, valeur=0, action=ActionCarte.REDIRECTION_CIBLE, duree=1,
-)
-CARTE_COLONNE_AVANT_ALLIEE = Carte(
-    id="TEST_PROTEGER_L_AVANT_POSTE", nom="Proteger l'avant poste", image=IMG, type=TypeCarte.DEFENSE, cible=CibleCarte.COLONNE_AVANT_ALLIEE,
-    cout=2, valeur=10,
-)
-CARTE_BLINDAGE_MAXIMAL = Carte(
-    id="TEST_BLINDAGE_MAXIMAL", nom="Blindage maximal", image=IMG, type=TypeCarte.BUFF, cible=CibleCarte.MODULE_PRINCIPAL,
-    cout=2, valeur=8, action=ActionCarte.BOUCLIER_PAR_TOUR, duree=3,
-)
-CARTE_BOUCLIER_ADAPTATIF = Carte(
-    id="TEST_BOUCLIER_ADAPTATIF", nom="Bouclier adaptatif", image=IMG, type=TypeCarte.DEFENSE, cible=CibleCarte.ALLIE_UNIQUE,
-    cout=1, valeur=80, action=ActionCarte.BOUCLIER_POURCENTAGE_PV,
-)
-CARTE_FONDS_DE_TIROIR = Carte(
-    id="TEST_FONDS_DE_TIROIR", nom="Fonds de tiroir", image=IMG, type=TypeCarte.OUTILS, cible=CibleCarte.ALLIES_MULTIPLES,
-    cout=1, valeur=1, action=ActionCarte.GAIN_ELECTRICITE_PAR_MODULE,
-)
-CARTE_LEURRE = Carte(
-    id="TEST_LEURRE", nom="Leurre", image=IMG, type=TypeCarte.DEFENSE, cible=CibleCarte.ALLIE_UNIQUE,
-    cout=3, valeur=0, action=ActionCarte.ANNULATION_PROCHAINE_ATTAQUE,
-)
+AVANT_GAUCHE = Position(Colonne.AVANT, Rangee.GAUCHE)
+AVANT_MID = Position(Colonne.AVANT, Rangee.MID)
+AVANT_DROITE = Position(Colonne.AVANT, Rangee.DROITE)
+ARRIERE_MID = Position(Colonne.ARRIERE, Rangee.MID)
+ARRIERE_DROITE = Position(Colonne.ARRIERE, Rangee.DROITE)
+CARTES = charger_cartes()
+# Valeur de la carte Bouclier (CRT_10), lue dans config/cartes.json pour suivre les reglages
+BOUCLIER_CARTE = CARTES["CRT_10"].valeurs["bouclier"]
 
-POSITION_ENNEMI = Position(Colonne.AVANT, Rangee.GAUCHE)
 
+def _ennemi(id_ennemi="ENM_PAT_LE_PIRATE", coefficient=1):
+    return charger_ennemis()[id_ennemi].pour_combat(coefficient)
 
-def _ennemi_attaque(pv_max: int, degats: int, nom: str = "Ennemi") -> Ennemi:
-    """Ennemi de test simple : une seule Action, ATTAQUE de proximite tous les tours (memes
-    valeurs par defaut que l'ancienne API Ennemi(pv_max=, degats_attaque=))."""
-    action = ActionEnnemi(type=TypeActionEnnemi.ATTAQUE, cible=CibleActionEnnemi.PROXIMITE, valeur=degats)
-    return Ennemi(pv_max=pv_max, actions=[action], nom=nom)
 
+def _ennemis_une_case():
+    """Un exemplaire de combat de chaque ennemi sur une seule case."""
+    return [modele.pour_combat() for modele in charger_ennemis().values() if modele.emplacements == 1]
 
-def _nouveau_combat(
-    pv_base: int = 15,
-    pv_ennemi: int = 15,
-    degats_ennemi: int = 7,
-    ennemis: dict | None = None,
-    vaisseau: Vaisseau | None = None,
-    aleatoire: random.Random | None = None,
-):
-    cartes = [CARTE_ATTAQUE] * 5 + [CARTE_BOUCLIER] * 3 + [CARTE_REPARATION]
-    deck = Deck(cartes=cartes, generateur_aleatoire=random.Random(0))
-    if vaisseau is None:
-        vaisseau = Vaisseau(base=Module(pv_max=pv_base))
-    joueur = Joueur(vaisseau=vaisseau, deck=deck, electricite_par_tour=3)
-    if ennemis is None:
-        ennemis = {POSITION_ENNEMI: _ennemi_attaque(pv_ennemi, degats_ennemi)}
-    flotte = Flotte(ennemis)
-    combat = Combat(joueur=joueur, flotte=flotte, aleatoire=aleatoire)
-    return combat, vaisseau, flotte
 
+def _carte(id_carte, module="M1"):
+    return CARTES[id_carte].copie(exemplaire_module=module)
 
-def _cible_valide_pour(combat: Combat, carte) -> Module | Ennemi | None:
-    """Aide de test : cible valide pour cette carte, peu importe laquelle exactement."""
-    if carte.cible in (CibleCarte.ALLIES_MULTIPLES, CibleCarte.ENNEMIS_MULTIPLES):
-        return None
-    if carte.cible in (CibleCarte.ENNEMI_UNIQUE, CibleCarte.LIGNE_ENNEMIE):
-        return combat.flotte.ennemis_vivants()[0]
-    return combat.joueur.vaisseau.base
 
-
-def test_debut_de_combat_pioche_la_main_et_recharge_l_electricite():
-    combat, _vaisseau, _flotte = _nouveau_combat()
-
-    assert len(combat.joueur.deck.main) == 5
-    assert combat.joueur.electricite == 3
-    assert combat.etat == EtatCombat.EN_COURS
-
-
-def test_jouer_une_carte_attaque_inflige_des_degats_a_l_ennemi():
-    combat, _vaisseau, flotte = _nouveau_combat()
-    ennemi = flotte.ennemis_vivants()[0]
-    combat.joueur.deck.main = [CARTE_ATTAQUE]
-
-    combat.jouer_carte(CARTE_ATTAQUE, ennemi)
-
-    assert ennemi.pv == 15 - CARTE_ATTAQUE.valeur
-    assert combat.joueur.electricite == 3 - CARTE_ATTAQUE.cout
-
-
-def test_jouer_une_carte_bouclier_protege_le_module_choisi():
-    combat, vaisseau, _flotte = _nouveau_combat()
-    combat.joueur.deck.main = [CARTE_BOUCLIER]
-
-    combat.jouer_carte(CARTE_BOUCLIER, vaisseau.base)
-
-    assert vaisseau.base.bouclier == CARTE_BOUCLIER.valeur
-
-
-def test_jouer_une_carte_soin_repare_le_module_choisi():
-    combat, vaisseau, _flotte = _nouveau_combat()
-    combat.joueur.deck.main = [CARTE_REPARATION]
-    vaisseau.base.subir_degats(10)
-
-    combat.jouer_carte(CARTE_REPARATION, vaisseau.base)
-
-    assert vaisseau.base.pv == 15 - 10 + CARTE_REPARATION.valeur
-
-
-def test_jouer_carte_renvoie_le_montant_effectif_applique():
-    combat, vaisseau, flotte = _nouveau_combat()
-    ennemi = flotte.ennemis_vivants()[0]
-    combat.joueur.deck.main = [CARTE_ATTAQUE, CARTE_BOUCLIER]
-
-    resultat_attaque = combat.jouer_carte(CARTE_ATTAQUE, ennemi)
-    resultat_bouclier = combat.jouer_carte(CARTE_BOUCLIER, vaisseau.base)
-
-    assert resultat_attaque == [(ennemi, CARTE_ATTAQUE.valeur)]
-    assert resultat_bouclier == [(vaisseau.base, CARTE_BOUCLIER.valeur)]
-
-
-def test_jouer_une_carte_soin_renvoie_le_montant_effectif_plafonne_au_pv_max():
-    combat, vaisseau, _flotte = _nouveau_combat()
-    combat.joueur.deck.main = [CARTE_REPARATION]
-    vaisseau.base.subir_degats(2)  # il ne manque que 2 PV, la carte en soigne 4
-
-    resultat = combat.jouer_carte(CARTE_REPARATION, vaisseau.base)
-
-    assert resultat == [(vaisseau.base, 2)]
-    assert vaisseau.base.pv == vaisseau.base.pv_max
-
-
-def test_jouer_une_carte_attaque_renvoie_le_montant_effectif_plafonne_aux_pv_restants():
-    combat, _vaisseau, flotte = _nouveau_combat(pv_ennemi=3)  # l'ennemi n'a que 3 PV, la carte fait 7 degats
-    ennemi = flotte.ennemis_vivants()[0]
-    combat.joueur.deck.main = [CARTE_ATTAQUE]
-
-    resultat = combat.jouer_carte(CARTE_ATTAQUE, ennemi)
-
-    assert resultat == [(ennemi, 3)]
-    assert ennemi.pv == 0
-
-
-def test_impossible_de_jouer_une_carte_sans_assez_d_electricite():
-    combat, _vaisseau, flotte = _nouveau_combat()
-    ennemi = flotte.ennemis_vivants()[0]
-    combat.joueur.deck.main = [CARTE_ATTAQUE]
-    combat.joueur.electricite = 0
-
-    combat.jouer_carte(CARTE_ATTAQUE, ennemi)
-
-    assert ennemi.pv == 15
-
-
-def test_impossible_de_jouer_une_carte_avec_une_cible_du_mauvais_type():
-    combat, vaisseau, _flotte = _nouveau_combat()
-    combat.joueur.deck.main = [CARTE_ATTAQUE]
-
-    combat.jouer_carte(CARTE_ATTAQUE, vaisseau.base)  # Attaque cible un ennemi, pas un module
-
-    assert vaisseau.base.pv == 15  # rien ne s'est passe
-
-
-def test_impossible_de_cibler_un_ennemi_deja_detruit():
-    combat, _vaisseau, flotte = _nouveau_combat(pv_ennemi=1)
-    ennemi = flotte.ennemis_vivants()[0]
-    combat.joueur.deck.main = [CARTE_ATTAQUE, CARTE_ATTAQUE]
-    combat.jouer_carte(CARTE_ATTAQUE, ennemi)  # detruit l'ennemi -> victoire, combat termine
-
-    combat.jouer_carte(CARTE_ATTAQUE, ennemi)  # no-op : combat deja termine
-
-    assert combat.etat == EtatCombat.VICTOIRE
-
-
-def test_finir_tour_joueur_declenche_l_attaque_ennemie():
-    combat, vaisseau, _flotte = _nouveau_combat()
-
-    combat.finir_tour_joueur()
-
-    assert vaisseau.base.pv == 15 - 7
-
-
-def test_finir_tour_joueur_pioche_une_nouvelle_main():
-    combat, _vaisseau, _flotte = _nouveau_combat()
-    premiere_carte = combat.joueur.deck.main[0]
-    combat.jouer_carte(premiere_carte, _cible_valide_pour(combat, premiere_carte))
-
-    combat.finir_tour_joueur()
-
-    assert len(combat.joueur.deck.main) == 5
-    assert combat.joueur.electricite == 3
-
-
-def test_victoire_quand_l_ennemi_est_detruit():
-    combat, _vaisseau, flotte = _nouveau_combat(pv_ennemi=7)
-    ennemi = flotte.ennemis_vivants()[0]
-    combat.joueur.deck.main = [CARTE_ATTAQUE]
-
-    combat.jouer_carte(CARTE_ATTAQUE, ennemi)
-
-    assert combat.etat == EtatCombat.VICTOIRE
-
-
-def test_pas_de_victoire_tant_qu_un_ennemi_survit():
-    e1 = _ennemi_attaque(7, 4)
-    e2 = _ennemi_attaque(7, 4)
-    ennemis = {
-        Position(Colonne.AVANT, Rangee.GAUCHE): e1,
-        Position(Colonne.AVANT, Rangee.DROITE): e2,
-    }
-    combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
-    combat.joueur.deck.main = [CARTE_ATTAQUE]
-
-    combat.jouer_carte(CARTE_ATTAQUE, e1)
-
-    assert combat.etat == EtatCombat.EN_COURS
-
-
-def test_victoire_seulement_quand_tous_les_ennemis_sont_detruits():
-    e1 = _ennemi_attaque(7, 4)
-    e2 = _ennemi_attaque(7, 4)
-    ennemis = {
-        Position(Colonne.AVANT, Rangee.GAUCHE): e1,
-        Position(Colonne.AVANT, Rangee.DROITE): e2,
-    }
-    combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
-    combat.joueur.deck.main = [CARTE_ATTAQUE, CARTE_ATTAQUE]
-
-    combat.jouer_carte(CARTE_ATTAQUE, e1)
-    combat.jouer_carte(CARTE_ATTAQUE, e2)
-
-    assert combat.etat == EtatCombat.VICTOIRE
-
-
-def test_defaite_quand_le_module_de_base_est_detruit():
-    combat, _vaisseau, _flotte = _nouveau_combat(pv_base=5)
-
-    combat.finir_tour_joueur()
-
-    assert combat.etat == EtatCombat.DEFAITE
-
-
-def test_defaite_independante_de_la_destruction_d_un_module_non_base():
-    cartes = [CARTE_ATTAQUE] * 5 + [CARTE_BOUCLIER] * 3 + [CARTE_REPARATION]
-    deck = Deck(cartes=cartes, generateur_aleatoire=random.Random(0))
-    module_fragile = Module(pv_max=1)
-    vaisseau = Vaisseau(base=Module(pv_max=15), avant_gauche=module_fragile)
-    joueur = Joueur(vaisseau=vaisseau, deck=deck, electricite_par_tour=3)
-    flotte = Flotte({POSITION_ENNEMI: _ennemi_attaque(15, 7)})
-    combat = Combat(joueur=joueur, flotte=flotte)
-
-    module_fragile.subir_degats(100)  # detruit un module non-base, hors du moteur de combat
-    combat.finir_tour_joueur()  # declenche la verification de fin de combat
-
-    assert module_fragile.est_detruit()
-    assert combat.etat == EtatCombat.EN_COURS  # la base (15 - 7 = 8 PV) est toujours en vie
-
-
-def test_finir_tour_joueur_renvoie_les_attaques_resolues():
-    combat, vaisseau, flotte = _nouveau_combat()
-    ennemi = flotte.ennemis_vivants()[0]
-
-    attaques = combat.finir_tour_joueur()
-
-    assert attaques == [(POSITION_ENNEMI, ennemi, vaisseau.base, 7, "degats")]
-
-
-def test_plusieurs_ennemis_attaquent_dans_le_meme_tour():
-    e1 = _ennemi_attaque(15, 4)
-    e2 = _ennemi_attaque(15, 6)
-    position_e1 = Position(Colonne.AVANT, Rangee.GAUCHE)
-    position_e2 = Position(Colonne.AVANT, Rangee.DROITE)
-    combat, vaisseau, _flotte = _nouveau_combat(ennemis={position_e1: e1, position_e2: e2})
-
-    combat.finir_tour_joueur()
-
-    assert vaisseau.base.pv == 15 - 4 - 6
-
-
-def test_ordre_de_resolution_avant_haut_bas_puis_arriere_haut_bas():
-    """L'ordre de resolution des attaques (cf. Combat._tour_ennemi) determine notamment quelle
-    attaque un Leurre annule quand plusieurs ennemis visent le meme module (specs.md 12.6)."""
-    positions_ordonnees = [
-        Position(Colonne.AVANT, Rangee.GAUCHE),
-        Position(Colonne.AVANT, Rangee.MID),
-        Position(Colonne.AVANT, Rangee.DROITE),
-        Position(Colonne.ARRIERE, Rangee.GAUCHE),
-        Position(Colonne.ARRIERE, Rangee.MID),
-        Position(Colonne.ARRIERE, Rangee.DROITE),
+def _combat(ennemis=None, deck=None):
+    """Combat de test ; `ennemis` : dict case -> ennemi (Pat le Pirate en avant milieu par defaut)."""
+    modeles = charger_modules()
+    modules = [
+        modeles["MOD_1"].nouvel_exemplaire("M1", "base").copie_pour_combat(),
+        modeles["MOD_2"].nouvel_exemplaire("M2", "avant_gauche").copie_pour_combat(),
     ]
-    ennemis = {position: _ennemi_attaque(15, 1, nom=str(position)) for position in positions_ordonnees}
-    combat, _vaisseau, _flotte = _nouveau_combat(vaisseau=_vaisseau_complet(), ennemis=ennemis)
+    deck = deck if deck is not None else deck_de_depart(CARTES, "M1")
+    return Combat(modules, deck, Flotte(ennemis or {AVANT_MID: _ennemi()}), random.Random(0))
 
-    attaques = combat.finir_tour_joueur()
 
-    assert [position for position, _e, _c, _d, _t in attaques] == positions_ordonnees
-
-
-def test_leurre_avec_deux_attaquants_n_annule_que_la_premiere_attaque_resolue():
-    """Cf. test_ordre_de_resolution_avant_haut_bas_puis_arriere_haut_bas : le premier
-    attaquant dans cet ordre est celui dont l'attaque est annulee par le leurre."""
-    e_avant = _ennemi_attaque(15, 5, nom="avant")
-    e_arriere = _ennemi_attaque(15, 3, nom="arriere")
-    ennemis = {
-        Position(Colonne.AVANT, Rangee.GAUCHE): e_avant,
-        Position(Colonne.ARRIERE, Rangee.GAUCHE): e_arriere,
-    }
-    vaisseau = _vaisseau_complet()
-    vaisseau.module_en(Colonne.AVANT, Rangee.GAUCHE).pv = 0  # AVANT-GAUCHE vide : les deux visent ARRIERE-GAUCHE
-    combat, _vaisseau, _flotte = _nouveau_combat(vaisseau=vaisseau, ennemis=ennemis)
-    combat.joueur.deck.main = [CARTE_LEURRE]
-    combat.joueur.electricite = 3
-    arriere_gauche = vaisseau.module_en(Colonne.ARRIERE, Rangee.GAUCHE)
-    combat.jouer_carte(CARTE_LEURRE, arriere_gauche)
+def _en_main(combat, *cartes):
+    """Met ces cartes seules en main, pioche et defausse vides."""
+    combat.deck.main, combat.deck.pioche, combat.deck.defausse = list(cartes), [], []
+    return cartes
 
-    attaques = combat.finir_tour_joueur()
 
-    assert [degats for _p, _e, _c, degats, _t in attaques] == [0, 3]  # avant (premier resolu) annule, arriere non
-    assert arriere_gauche.pv == arriere_gauche.pv_max - 3
+def _evenements(combat, nature):
+    return [evenement for evenement in combat.journal if evenement.nature == nature]
 
 
-def test_arret_immediat_si_la_base_est_detruite_en_cours_de_tour():
-    e1 = _ennemi_attaque(15, 20)  # detruit la base d'un coup
-    e2 = _ennemi_attaque(15, 5)
-    position_e1 = Position(Colonne.AVANT, Rangee.GAUCHE)
-    position_e2 = Position(Colonne.AVANT, Rangee.DROITE)
-    combat, vaisseau, _flotte = _nouveau_combat(pv_base=10, ennemis={position_e1: e1, position_e2: e2})
+# --- Debut du combat et du tour (3.1, 3.2) ---
 
-    attaques = combat.finir_tour_joueur()
 
-    assert combat.etat == EtatCombat.DEFAITE
-    assert attaques == [(position_e1, e1, vaisseau.base, 10, "degats")]  # e2 n'a pas agi, degats plafonnes aux 10 PV restants
+def test_le_combat_commence_au_tour_1_avec_3_electricite_et_5_cartes():
+    combat = _combat()
 
+    assert (combat.tour, combat.electricite, combat.etat) == (1, 3, EtatCombat.EN_COURS)
+    assert (len(combat.deck.main), len(combat.deck.pioche)) == (5, 5)
 
-# --- Cibles multiples (LIGNE_ENNEMIE, ALLIES_MULTIPLES, ENNEMIS_MULTIPLES) ---
 
+def test_une_carte_rattachee_a_un_module_absent_est_refusee():
+    with pytest.raises(ValueError, match="module absent"):
+        _combat(deck=[_carte("CRT_7", "M9")])
 
-def test_ligne_ennemie_touche_l_avant_et_l_arriere_de_la_rangee():
-    avant = _ennemi_attaque(10, 4)
-    arriere = _ennemi_attaque(10, 4)
-    autre_rangee = _ennemi_attaque(10, 4)
-    ennemis = {
-        Position(Colonne.AVANT, Rangee.GAUCHE): avant,
-        Position(Colonne.ARRIERE, Rangee.GAUCHE): arriere,
-        Position(Colonne.AVANT, Rangee.DROITE): autre_rangee,
-    }
-    combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
-    combat.joueur.deck.main = [CARTE_PERCER]
-    combat.joueur.electricite = 2
 
-    combat.jouer_carte(CARTE_PERCER, avant)  # clic sur l'avant de la rangee gauche
+def test_fin_de_tour_main_defaussee_puis_nouveau_tour():
+    combat = _combat()
 
-    assert avant.pv == 10 - 5
-    assert arriere.pv == 10 - 5  # touche aussi, meme rangee
-    assert autre_rangee.pv == 10  # rangee differente, pas touchee
+    combat.finir_tour()
 
+    assert (combat.tour, combat.electricite, len(combat.deck.main)) == (2, 3, 5)
+    assert len(combat.deck.defausse) == 5
 
-def test_ligne_ennemie_ne_plante_pas_si_l_arriere_est_absent():
-    seul = _ennemi_attaque(10, 4)
-    combat, _vaisseau, _flotte = _nouveau_combat(ennemis={Position(Colonne.AVANT, Rangee.GAUCHE): seul})
-    combat.joueur.deck.main = [CARTE_PERCER]
-    combat.joueur.electricite = 2
 
-    combat.jouer_carte(CARTE_PERCER, seul)
+# --- Jouer une carte (4) ---
 
-    assert seul.pv == 10 - 5
 
+def test_laser_inflige_ses_degats_coute_son_electricite_et_part_en_defausse():
+    combat = _combat()
+    (laser,) = _en_main(combat, _carte("CRT_7"))
 
-def test_proteger_donne_du_bouclier_a_tous_les_modules_vivants():
-    module_equipe = Module(pv_max=10)
-    module_detruit = Module(pv_max=5)
-    module_detruit.subir_degats(100)  # detruit, ne doit pas etre affecte
-    vaisseau = Vaisseau(base=Module(pv_max=15), avant_gauche=module_equipe, arriere_gauche=module_detruit)
-    deck = Deck(cartes=[CARTE_PROTEGER], generateur_aleatoire=random.Random(0))
-    joueur = Joueur(vaisseau=vaisseau, deck=deck, electricite_par_tour=3)
-    flotte = Flotte({POSITION_ENNEMI: _ennemi_attaque(15, 7)})
-    combat = Combat(joueur=joueur, flotte=flotte)
-    combat.joueur.deck.main = [CARTE_PROTEGER]
-    combat.joueur.electricite = 2
+    combat.jouer_carte(laser, AVANT_MID)
 
-    combat.jouer_carte(CARTE_PROTEGER)  # pas de cible a fournir
+    pat = combat.flotte.ennemi_en(AVANT_MID)
+    assert (pat.pv, combat.electricite, combat.deck.defausse) == (44, 2, [laser])
+    (attaque,) = _evenements(combat, NatureEvenement.ATTAQUE)
+    assert (attaque.source, attaque.cible, attaque.valeur, attaque.pv_perdus, attaque.pv_restants) == (laser, pat, 6, 6, 44)
 
-    assert vaisseau.base.bouclier == 4
-    assert module_equipe.bouclier == 4
-    assert module_detruit.bouclier == 0
 
+def test_cibles_possibles_selon_la_cible_de_la_carte():
+    combat = _combat()
 
-def test_mitrailler_touche_tous_les_ennemis_vivants():
-    e1 = _ennemi_attaque(15, 4)
-    e2 = _ennemi_attaque(15, 4)
-    ennemis = {
-        Position(Colonne.AVANT, Rangee.GAUCHE): e1,
-        Position(Colonne.AVANT, Rangee.DROITE): e2,
-    }
-    combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
-    combat.joueur.deck.main = [CARTE_MITRAILLER]
-    combat.joueur.electricite = 2
+    assert combat.cibles_possibles(_carte("CRT_7")) == [AVANT_MID]
+    assert set(combat.cibles_possibles(_carte("CRT_11"))) == {AVANT_MID, ARRIERE_MID}  # principal
+    assert combat.cibles_possibles(_carte("CRT_16")) == []  # Ligne arriere : aucun ennemi a l'arriere
 
-    combat.jouer_carte(CARTE_MITRAILLER)  # pas de cible a fournir
 
-    assert e1.pv == 15 - 3
-    assert e2.pv == 15 - 3
+def test_carte_injouable_ou_cible_invalide_refusee():
+    combat = _combat()
+    laser, laser_lourd = _en_main(combat, _carte("CRT_7"), _carte("CRT_47"))
+    combat.electricite = 0
 
+    with pytest.raises(ValueError, match="injouable"):
+        combat.jouer_carte(laser, AVANT_MID)
+    combat.electricite = 3
+    with pytest.raises(ValueError, match="cible invalide"):
+        combat.jouer_carte(laser_lourd, AVANT_GAUCHE)
+    with pytest.raises(ValueError, match="injouable"):
+        combat.jouer_carte(_carte("CRT_7"), AVANT_MID)  # pas en main
 
-def test_cible_sans_clic_refusee_si_une_cible_est_quand_meme_fournie():
-    combat, vaisseau, _flotte = _nouveau_combat()
-    combat.joueur.deck.main = [CARTE_PROTEGER]
-    combat.joueur.electricite = 2
 
-    combat.jouer_carte(CARTE_PROTEGER, vaisseau.base)  # cible superflue -> refuse
-
-    assert vaisseau.base.bouclier == 0
-
-
-# --- Debuff (Sabotage, specs.md 12.1/12.4) ---
-
-
-def test_reduction_degats_diminue_les_degats_de_la_prochaine_attaque():
-    combat, vaisseau, flotte = _nouveau_combat(degats_ennemi=7)
-    ennemi = flotte.ennemis_vivants()[0]
-    combat.joueur.deck.main = [CARTE_REDUCTION_DEGATS]
-    combat.joueur.electricite = 2
-
-    combat.jouer_carte(CARTE_REDUCTION_DEGATS, ennemi)
-    combat.finir_tour_joueur()
-
-    assert vaisseau.base.pv == 15 - (7 - 5)
-
-
-def test_reduction_degats_expire_apres_un_tour():
-    combat, vaisseau, flotte = _nouveau_combat(degats_ennemi=7, pv_base=100)
-    ennemi = flotte.ennemis_vivants()[0]
-    combat.joueur.deck.main = [CARTE_REDUCTION_DEGATS]
-    combat.joueur.electricite = 2
-    combat.jouer_carte(CARTE_REDUCTION_DEGATS, ennemi)
-    combat.finir_tour_joueur()  # 1er tour ennemi : reduction active (-5)
-    pv_apres_premier_tour = vaisseau.base.pv
-
-    combat.finir_tour_joueur()  # 2e tour ennemi : reduction expiree, degats pleins
-
-    assert vaisseau.base.pv == pv_apres_premier_tour - 7
-
-
-def test_vulnerabilite_majore_les_degats_d_une_attaque_du_joueur():
-    combat, _vaisseau, flotte = _nouveau_combat(pv_ennemi=30)
-    ennemi = flotte.ennemis_vivants()[0]
-    combat.joueur.deck.main = [CARTE_VULNERABILITE, CARTE_ATTAQUE]
-    combat.joueur.electricite = 5
-
-    combat.jouer_carte(CARTE_VULNERABILITE, ennemi)
-    resultat = combat.jouer_carte(CARTE_ATTAQUE, ennemi)
-
-    assert resultat == [(ennemi, 14)]  # 7 degats * (1 + 100%)
-    assert ennemi.pv == 30 - 14
-
-
-def test_colonne_avant_ennemie_touche_toute_la_colonne_avant_uniquement():
-    avant_g = _ennemi_attaque(15, 1)
-    avant_d = _ennemi_attaque(15, 1)
-    arriere_g = _ennemi_attaque(15, 1)
-    ennemis = {
-        Position(Colonne.AVANT, Rangee.GAUCHE): avant_g,
-        Position(Colonne.AVANT, Rangee.DROITE): avant_d,
-        Position(Colonne.ARRIERE, Rangee.GAUCHE): arriere_g,
-    }
-    combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
-    combat.joueur.deck.main = [CARTE_COLONNE_AVANT]
-    combat.joueur.electricite = 2
-
-    combat.jouer_carte(CARTE_COLONNE_AVANT, avant_g)  # clic sur un ennemi de la colonne avant
-
-    assert avant_g.buffs_actifs[0].valeur == 100
-    assert avant_d.buffs_actifs[0].valeur == 100
-    assert arriere_g.buffs_actifs == []  # colonne arriere non touchee
-
-
-def test_colonne_avant_ennemie_refuse_un_clic_sur_l_arriere():
-    avant = _ennemi_attaque(15, 1)
-    arriere = _ennemi_attaque(15, 1)
-    ennemis = {
-        Position(Colonne.AVANT, Rangee.GAUCHE): avant,
-        Position(Colonne.ARRIERE, Rangee.GAUCHE): arriere,
-    }
-    combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
-    combat.joueur.deck.main = [CARTE_COLONNE_AVANT]
-    combat.joueur.electricite = 2
-
-    combat.jouer_carte(CARTE_COLONNE_AVANT, arriere)  # clic sur l'arriere -> refuse
-
-    assert arriere.buffs_actifs == []
-    assert avant.buffs_actifs == []
-
-
-# --- Buff (Blindage, specs.md 12.3/12.5) ---
-
-
-def test_buff_bouclier_perpetuel_donne_du_bouclier_immediatement():
-    combat, vaisseau, _flotte = _nouveau_combat()
-    combat.joueur.deck.main = [CARTE_BOUCLIER_PERPETUEL]
-    combat.joueur.electricite = 5
-
-    resultat = combat.jouer_carte(CARTE_BOUCLIER_PERPETUEL, None)  # Module Principal, sans clic
-
-    assert resultat == [(vaisseau.base, 10)]
-    assert vaisseau.base.bouclier == 10
-
-
-def test_buff_bouclier_perpetuel_se_redeclenche_a_chaque_tour_joueur_sans_expirer():
-    """Le buff (persistant) ne s'arrete jamais. La dissipation naturelle du bouclier (specs.md
-    3.5) verifie d'abord si la valeur ACTUELLE est <= SEUIL_DISSIPATION_BOUCLIER (10 > 5 : elle
-    ne disparait pas completement, elle est divisee par deux), puis le buff repose sa valeur
-    par-dessus : le bouclier ne se stabilise donc pas a la valeur du buff, il croit tant qu'il
-    reste au-dessus du seuil apres division (10 -> 5+10=15 -> 8+10=18 -> ...)."""
-    combat, vaisseau, _flotte = _nouveau_combat(degats_ennemi=0)
-    combat.joueur.deck.main = [CARTE_BOUCLIER_PERPETUEL]
-    combat.joueur.electricite = 5
-    combat.jouer_carte(CARTE_BOUCLIER_PERPETUEL, None)
-
-    combat.finir_tour_joueur()
-    assert vaisseau.base.bouclier == 15  # dissipe 10 -> 5 (10 > seuil), puis repose a +10
-
-    combat.finir_tour_joueur()
-    assert vaisseau.base.bouclier == 18  # dissipe 15 -> 8 (ceil(15/2)), puis repose a +10
-    assert len(vaisseau.base.buffs_actifs) == 1
-
-
-# --- Tir allie (Sabotage, specs.md 12.6) ---
-
-
-def test_tir_allie_redirige_l_attaque_vers_un_autre_ennemi_vivant():
-    attaquant = _ennemi_attaque(15, 7)
-    # degats_attaque=0 : isole l'assertion sur le joueur (sinon cible_potentielle
-    # attaquerait aussi normalement le joueur de son cote, ce qui est correct mais
-    # brouillerait l'assertion "attaquant n'a pas touche le joueur").
-    cible_potentielle = _ennemi_attaque(15, 0)
-    ennemis = {
-        Position(Colonne.AVANT, Rangee.GAUCHE): attaquant,
-        Position(Colonne.ARRIERE, Rangee.GAUCHE): cible_potentielle,
-    }
-    combat, vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
-    combat.joueur.deck.main = [CARTE_TIR_ALLIE]
-    combat.joueur.electricite = 3
-
-    combat.jouer_carte(CARTE_TIR_ALLIE, attaquant)
-    combat.finir_tour_joueur()
-
-    assert cible_potentielle.pv == 15 - 7  # a subi l'attaque a la place du joueur
-    assert vaisseau.base.pv == 15  # le joueur n'a pas ete touche
-
-
-def test_tir_allie_sans_autre_ennemi_attaque_normalement():
-    seul = _ennemi_attaque(15, 7)
-    ennemis = {POSITION_ENNEMI: seul}
-    combat, vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
-    combat.joueur.deck.main = [CARTE_TIR_ALLIE]
-    combat.joueur.electricite = 3
-
-    combat.jouer_carte(CARTE_TIR_ALLIE, seul)
-    combat.finir_tour_joueur()
-
-    assert vaisseau.base.pv == 15 - 7  # aucun autre ennemi disponible : attaque normale
-
-
-def test_tir_allie_expire_apres_un_tour():
-    attaquant = _ennemi_attaque(15, 7)
-    autre = _ennemi_attaque(15, 0)
-    ennemis = {
-        Position(Colonne.AVANT, Rangee.GAUCHE): attaquant,
-        Position(Colonne.ARRIERE, Rangee.GAUCHE): autre,
-    }
-    combat, vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
-    combat.joueur.deck.main = [CARTE_TIR_ALLIE]
-    combat.joueur.electricite = 3
-    combat.jouer_carte(CARTE_TIR_ALLIE, attaquant)
-    combat.finir_tour_joueur()  # 1er tour ennemi : redirection active
-    pv_base_apres_premier_tour = vaisseau.base.pv
-
-    combat.finir_tour_joueur()  # 2e tour ennemi : debuff expire, attaque normale
-
-    assert vaisseau.base.pv == pv_base_apres_premier_tour - 7
-
-
-def test_previsualiser_cible_masque_le_module_si_redirection_active():
-    attaquant = _ennemi_attaque(15, 7)
-    autre = _ennemi_attaque(15, 1)
-    ennemis = {
-        Position(Colonne.AVANT, Rangee.GAUCHE): attaquant,
-        Position(Colonne.ARRIERE, Rangee.GAUCHE): autre,
-    }
-    combat, vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
-    combat.joueur.deck.main = [CARTE_TIR_ALLIE]
-    combat.joueur.electricite = 3
-    assert combat.previsualiser_cible(attaquant) is vaisseau.base
-
-    combat.jouer_carte(CARTE_TIR_ALLIE, attaquant)
-
-    # Appele plusieurs fois (comme au survol/redessin repete de l'UI) : ne doit jamais
-    # consommer l'alea ni faire planter, contrairement a la resolution reelle du tour.
-    assert combat.previsualiser_cible(attaquant) is None
-    assert combat.previsualiser_cible(attaquant) is None
-
-
-def test_prochaines_actions_actives_renvoie_toutes_les_actions_du_meme_tour():
-    """Un ennemi comme le Boss des pirates (specs.md 13) attaque a chaque tour ET pose un buff
-    a partir d'un certain tour : les deux doivent apparaitre au meme tour, pas seulement la
-    premiere de la liste (ce que prochaine_action_active, utilisee par previsualiser_cible,
-    renvoie seule - cf. test suivant)."""
-    attaque = ActionEnnemi(type=TypeActionEnnemi.ATTAQUE, cible=CibleActionEnnemi.TOUS_MODULES_JOUEUR, valeur=5)
-    buff = ActionEnnemi(
-        type=TypeActionEnnemi.POSE_BUFF, cible=CibleActionEnnemi.SOI_MEME, valeur=2, frequence=3, tour_depart=2,
-        action_buff=ActionCarte.AUGMENTATION_DEGATS,
+def test_une_nature_laissee_pour_plus_tard_rend_la_carte_injouable():
+    breche = Carte(
+        id="TEST", nom="Breche", image="", rarete=RareteCarte.COMMUNE, categorie=CategorieCarte.DEBUFF,
+        cible=CibleCarte.ENNEMI_UNIQUE, cout=1, description="", valeurs={"vulnerabilite": 100},
+        effets=(Effet(NatureEffet.VULNERABILITE, "vulnerabilite"),), exemplaire_module="M1",
     )
-    boss = Ennemi(pv_max=150, actions=[attaque, buff], nom="Boss")
-    ennemis = {Position(Colonne.AVANT, Rangee.GAUCHE): boss}
-    combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
+    combat = _combat()
+    _en_main(combat, breche)
 
-    assert combat.prochaines_actions_actives(boss) == [attaque]  # tour 1 : le buff n'est pas encore actif
+    assert not combat.peut_jouer(breche)
 
-    combat.finir_tour_joueur()  # ecoule le tour ennemi 1
 
-    assert combat.prochaines_actions_actives(boss) == [attaque, buff]  # tour 2 : les deux
+def test_missiles_degats_sur_la_cible_puis_sur_les_autres():
+    cible, autre = _ennemi(), _ennemi()
+    combat = _combat({AVANT_MID: cible, AVANT_DROITE: autre})
+    (missiles,) = _en_main(combat, _carte("CRT_13", "M2"))
 
+    combat.jouer_carte(missiles, AVANT_MID)
 
-def test_prochaine_action_active_renvoie_la_premiere_des_actions_actives():
-    attaque = ActionEnnemi(type=TypeActionEnnemi.ATTAQUE, cible=CibleActionEnnemi.TOUS_MODULES_JOUEUR, valeur=5)
-    buff = ActionEnnemi(
-        type=TypeActionEnnemi.POSE_BUFF, cible=CibleActionEnnemi.SOI_MEME, valeur=2, frequence=3, tour_depart=2,
-        action_buff=ActionCarte.AUGMENTATION_DEGATS,
-    )
-    boss = Ennemi(pv_max=150, actions=[attaque, buff], nom="Boss")
-    ennemis = {Position(Colonne.AVANT, Rangee.GAUCHE): boss}
-    combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
-    combat.finir_tour_joueur()
+    assert (cible.pv, autre.pv) == (35, 44)
 
-    assert combat.prochaine_action_active(boss) is attaque
 
+def test_torpille_colonne_avant_puis_arriere():
+    avant, arriere = _ennemi(), _ennemi()
+    combat = _combat({AVANT_MID: avant, ARRIERE_DROITE: arriere})
+    (torpille,) = _en_main(combat, _carte("CRT_14", "M2"))
 
-def test_prochaine_action_active_renvoie_none_sans_action_active():
-    buff = ActionEnnemi(
-        type=TypeActionEnnemi.POSE_BUFF, cible=CibleActionEnnemi.SOI_MEME, valeur=3, frequence=2, tour_depart=1,
-        action_buff=ActionCarte.BOUCLIER_PAR_TOUR,
-    )
-    petit_jean = Ennemi(pv_max=100, actions=[buff], nom="Petit Jean")
-    ennemis = {Position(Colonne.AVANT, Rangee.GAUCHE): petit_jean}
-    combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
-    combat.finir_tour_joueur()  # tour 1 ecoule : buff pose (tour_depart=1)
+    combat.jouer_carte(torpille, AVANT_MID)
 
-    assert combat.prochaines_actions_actives(petit_jean) == []  # tour 2 : frequence=2, pas actif
-    assert combat.prochaine_action_active(petit_jean) is None
+    assert (avant.pv, arriere.pv) == (40, 42)
 
 
-# --- Colonne avant alliee (Blindage, specs.md 12.1) ---
+def test_un_ennemi_sur_deux_cases_n_est_touche_qu_une_fois_par_effet():
+    boss = _ennemi("ENM_BOSS_PIRATES")
+    combat = _combat({AVANT_MID: boss, ARRIERE_MID: boss})
+    (bombardement,) = _en_main(combat, _carte("CRT_9", "M2"))
 
+    combat.jouer_carte(bombardement, ARRIERE_MID)
 
-def _vaisseau_complet(pv: int = 15) -> Vaisseau:
-    return Vaisseau(
-        base=Module(pv_max=pv, nom="Base"),
-        avant_gauche=Module(pv_max=pv, nom="AvantGauche"),
-        avant_droite=Module(pv_max=pv, nom="AvantDroite"),
-        arriere_gauche=Module(pv_max=pv, nom="ArriereGauche"),
-        arriere_droite=Module(pv_max=pv, nom="ArriereDroite"),
-    )
+    assert boss.pv == 144
 
 
-def test_colonne_avant_alliee_protege_les_deux_modules_avant_et_le_principal():
-    vaisseau = _vaisseau_complet()
-    combat, _vaisseau, _flotte = _nouveau_combat(vaisseau=vaisseau)
-    combat.joueur.deck.main = [CARTE_COLONNE_AVANT_ALLIEE]
-    combat.joueur.electricite = 2
-    avant_gauche = vaisseau.module_en(Colonne.AVANT, Rangee.GAUCHE)
+# --- Lancements, munitions, repetition (4.3) ---
 
-    combat.jouer_carte(CARTE_COLONNE_AVANT_ALLIEE, avant_gauche)  # clic sur un module avant
 
-    assert vaisseau.module_en(Colonne.AVANT, Rangee.GAUCHE).bouclier == 10
-    assert vaisseau.module_en(Colonne.AVANT, Rangee.DROITE).bouclier == 10
-    assert vaisseau.module_en(Colonne.ARRIERE, Rangee.GAUCHE).bouclier == 0
-    assert vaisseau.module_en(Colonne.ARRIERE, Rangee.DROITE).bouclier == 0
-    # Le module principal occupe la rangee mid, a la fois avant et arriere (specs.md 12.1).
-    assert vaisseau.base.bouclier == 10
+def test_salve_laser_puis_laser_lance_deux_fois():
+    combat = _combat()
+    salve, laser = _en_main(combat, _carte("CRT_49"), _carte("CRT_7"))
 
+    combat.jouer_carte(salve, AVANT_MID)
+    combat.electricite = 3
+    combat.jouer_carte(laser, AVANT_MID)
 
-def test_colonne_avant_alliee_accepte_un_clic_sur_le_module_principal():
-    vaisseau = _vaisseau_complet()
-    combat, _vaisseau, _flotte = _nouveau_combat(vaisseau=vaisseau)
-    combat.joueur.deck.main = [CARTE_COLONNE_AVANT_ALLIEE]
-    combat.joueur.electricite = 2
+    assert combat.flotte.ennemi_en(AVANT_MID).pv == 38
+    assert _evenements(combat, NatureEvenement.REPETITION)[0].valeur == 1
 
-    resultat = combat.jouer_carte(CARTE_COLONNE_AVANT_ALLIEE, vaisseau.base)  # clic sur le principal
 
-    assert vaisseau.base.bouclier == 10
-    assert vaisseau.module_en(Colonne.AVANT, Rangee.GAUCHE).bouclier == 10
-    assert len(resultat) == 3  # avant-gauche, avant-droite, principal
+def test_cible_detruite_au_premier_lancement_les_suivants_sont_perdus():
+    """Decision utilisateur : la cible est choisie une fois, pas de report sur un autre ennemi."""
+    cible, autre = _ennemi(), _ennemi()
+    cible.pv = 6
+    combat = _combat({AVANT_MID: cible, AVANT_DROITE: autre})
+    (laser,) = _en_main(combat, _carte("CRT_7"))
+    laser.lancements_actuels = 2
 
+    combat.jouer_carte(laser, AVANT_MID)
 
-def test_colonne_avant_alliee_refuse_un_clic_sur_l_arriere():
-    vaisseau = _vaisseau_complet()
-    combat, _vaisseau, _flotte = _nouveau_combat(vaisseau=vaisseau)
-    combat.joueur.deck.main = [CARTE_COLONNE_AVANT_ALLIEE]
-    combat.joueur.electricite = 2
-    arriere_gauche = vaisseau.module_en(Colonne.ARRIERE, Rangee.GAUCHE)
+    assert cible.est_detruit() and autre.pv == 50
 
-    resultat_arriere = combat.jouer_carte(CARTE_COLONNE_AVANT_ALLIEE, arriere_gauche)
 
-    assert resultat_arriere == []
-    assert vaisseau.module_en(Colonne.AVANT, Rangee.GAUCHE).bouclier == 0
+def test_une_munition_par_carte_jouee_meme_lancee_plusieurs_fois():
+    combat = _combat()
+    combat.vaisseau.principal.subir_degats(30)
+    (reparation,) = _en_main(combat, _carte("CRT_12"))
+    reparation.lancements_actuels = 2
 
+    combat.jouer_carte(reparation, AVANT_MID)
+    assert (combat.vaisseau.principal.pv_combat, reparation.munitions_restantes) == (46, 1)
 
-# --- Blindage maximal (Blindage, specs.md 12.1/12.3) ---
+    combat.deck.main = [combat.deck.defausse.pop()]
+    combat.jouer_carte(reparation, AVANT_MID)
+    assert combat.deck.epuisees == [reparation]
 
 
-def test_blindage_maximal_donne_du_bouclier_immediatement():
-    combat, vaisseau, _flotte = _nouveau_combat()
-    combat.joueur.deck.main = [CARTE_BLINDAGE_MAXIMAL]
-    combat.joueur.electricite = 2
+# --- Statuts poses par les cartes (4.4) ---
 
-    resultat = combat.jouer_carte(CARTE_BLINDAGE_MAXIMAL, None)  # Module Principal, sans clic
 
-    assert resultat == [(vaisseau.base, 8)]
-    assert vaisseau.base.bouclier == 8
+def test_bouclier_et_leurre_sur_un_module_incendie_sur_un_ennemi():
+    combat = _combat()
+    bouclier, leurre, incendiaire = _en_main(combat, _carte("CRT_10"), _carte("CRT_18", "M2"), _carte("CRT_45"))
+    combat.electricite = 10
 
+    combat.jouer_carte(bouclier, AVANT_GAUCHE)
+    combat.jouer_carte(leurre, AVANT_GAUCHE)
+    combat.jouer_carte(incendiaire, AVANT_MID)
 
-def test_blindage_maximal_expire_apres_3_tours():
-    """La dissipation naturelle du bouclier (specs.md 3.5) verifie d'abord la valeur ACTUELLE
-    contre SEUIL_DISSIPATION_BOUCLIER (8 > 5 : divisee par deux, pas annulee) avant que le buff
-    ne repose sa valeur par-dessus : le bouclier croit tant que le buff est actif
-    (8 -> 4+8=12 -> 6+8=14 -> 7+8=15), puis, une fois le buff expire (3 tours), plus rien ne le
-    repose : seule la dissipation continue de s'appliquer, jusqu'a tomber sous le seuil."""
-    combat, vaisseau, _flotte = _nouveau_combat(degats_ennemi=0)
-    combat.joueur.deck.main = [CARTE_BLINDAGE_MAXIMAL]
-    combat.joueur.electricite = 2
-    combat.jouer_carte(CARTE_BLINDAGE_MAXIMAL, None)
+    lanceur, pat = combat.vaisseau.module_d_exemplaire("M2"), combat.flotte.ennemi_en(AVANT_MID)
+    assert lanceur.statuts.intensites == {Statut.BOUCLIER: BOUCLIER_CARTE, Statut.LEURRE: 1}
+    assert pat.statuts[Statut.INCENDIE] == 4
 
-    combat.finir_tour_joueur()
-    combat.finir_tour_joueur()
-    combat.finir_tour_joueur()
-    assert vaisseau.base.bouclier == 15  # 8 -> 12 -> 14 -> 15 (dissipation puis +8 a chaque tour)
-    assert vaisseau.base.buffs_actifs == []  # buff expire apres ce 3e redeclenchement
 
-    combat.finir_tour_joueur()
-    assert vaisseau.base.bouclier == 8  # plus de buff pour le reposer : ceil(15/2)=8
+def test_l_incendie_frappe_a_la_fin_du_tour_du_joueur_et_peut_gagner_le_combat():
+    pat = _ennemi()
+    combat = _combat({AVANT_MID: pat})
+    pat.statuts.ajouter(Statut.INCENDIE, 4)
+    pat.pv = 4
 
-    combat.finir_tour_joueur()
-    assert vaisseau.base.bouclier == 4  # ceil(8/2)=4
+    combat.finir_tour()
 
-    combat.finir_tour_joueur()
-    assert vaisseau.base.bouclier == 0  # 4 <= SEUIL_DISSIPATION_BOUCLIER
+    assert combat.etat == EtatCombat.VICTOIRE
+    assert _evenements(combat, NatureEvenement.INCENDIE)[0].pv_perdus == 4
 
 
-# --- Dissipation naturelle du bouclier (specs.md 3.5) ---
+# --- Renvoi (4.5) ---
 
 
-def test_bouclier_module_se_dissipe_de_moitie_a_chaque_tour_joueur():
-    """La valeur ACTUELLE est comparee au seuil avant division (specs.md 3.5) : 20 et 10 sont
-    tous deux > SEUIL_DISSIPATION_BOUCLIER, ils sont donc divises par deux ; seul 5 (<= seuil)
-    disparait completement plutot que d'etre divise."""
-    combat, vaisseau, _flotte = _nouveau_combat(degats_ennemi=0)
-    vaisseau.base.ajouter_bouclier(20)
+def test_les_degats_renvoyes_vont_au_module_de_la_carte():
+    miroir = _ennemi("ENM_MIROIR")
+    combat = _combat({AVANT_MID: miroir})
+    miroir.statuts.ajouter(Statut.RENVOI, 5)
+    (laser,) = _en_main(combat, _carte("CRT_7", "M2"))
 
-    combat.finir_tour_joueur()
-    assert vaisseau.base.bouclier == 10  # 20 > seuil : ceil(20/2)
+    combat.jouer_carte(laser, AVANT_MID)
 
-    combat.finir_tour_joueur()
-    assert vaisseau.base.bouclier == 5  # 10 > seuil : ceil(10/2)
+    lanceur = combat.vaisseau.module_d_exemplaire("M2")
+    assert (miroir.pv, miroir.statuts[Statut.RENVOI], lanceur.pv_combat) == (49, 0, 15)
+    assert _evenements(combat, NatureEvenement.RENVOI)[0].cible is lanceur
 
-    combat.finir_tour_joueur()
-    assert vaisseau.base.bouclier == 0  # 5 <= SEUIL_DISSIPATION_BOUCLIER : dissipe completement
 
+def test_les_degats_renvoyes_sont_une_attaque_que_le_leurre_annule():
+    miroir = _ennemi("ENM_MIROIR")
+    combat = _combat({AVANT_MID: miroir})
+    miroir.statuts.ajouter(Statut.RENVOI, 5)
+    combat.vaisseau.principal.statuts.ajouter(Statut.LEURRE, 1)
+    (laser,) = _en_main(combat, _carte("CRT_7"))
 
-def test_bouclier_module_au_ou_sous_le_seuil_dissipe_completement_en_un_tour():
-    combat, vaisseau, _flotte = _nouveau_combat(degats_ennemi=0)
-    vaisseau.base.ajouter_bouclier(5)
+    combat.jouer_carte(laser, AVANT_MID)
 
-    combat.finir_tour_joueur()
+    assert combat.vaisseau.principal.pv_combat == 60
 
-    assert vaisseau.base.bouclier == 0  # 5 <= SEUIL_DISSIPATION_BOUCLIER : pas de division
 
+def test_module_de_la_carte_detruit_le_renvoi_va_au_principal():
+    miroir = _ennemi("ENM_MIROIR")
+    combat = _combat({AVANT_MID: miroir})
+    miroir.statuts.ajouter(Statut.RENVOI, 5)
+    persistante = _carte("CRT_7", "M2")
+    persistante.persistante = True
+    _en_main(combat, persistante)
+    combat.vaisseau.module_d_exemplaire("M2").subir_degats(20)
 
-def test_bouclier_module_au_dessus_du_seuil_diminue_sans_disparaitre():
-    combat, vaisseau, _flotte = _nouveau_combat(degats_ennemi=0)
-    vaisseau.base.ajouter_bouclier(12)
+    combat.jouer_carte(persistante, AVANT_MID)
 
-    combat.finir_tour_joueur()
+    assert combat.vaisseau.principal.pv_combat == 55
 
-    assert vaisseau.base.bouclier == 6  # 12 > SEUIL_DISSIPATION_BOUCLIER : ceil(12/2)=6
 
+def test_carte_dont_le_module_meurt_pendant_qu_elle_est_jouee_part_hors_service():
+    miroir = _ennemi("ENM_MIROIR")
+    combat = _combat({AVANT_MID: miroir})
+    miroir.statuts.ajouter(Statut.RENVOI, 20)
+    (laser_lourd,) = _en_main(combat, _carte("CRT_47", "M2"))
 
-def test_bouclier_ennemi_se_dissipe_a_chaque_tour_ennemi():
-    combat, _vaisseau, flotte = _nouveau_combat(degats_ennemi=0)
-    ennemi = flotte.ennemis_vivants()[0]
-    ennemi.ajouter_bouclier(20)
+    combat.jouer_carte(laser_lourd, AVANT_MID)
 
-    combat.finir_tour_joueur()
-    assert ennemi.bouclier == 10  # 20 > seuil : ceil(20/2)
+    assert combat.vaisseau.module_d_exemplaire("M2").pv_combat == 8
+    combat.electricite = 3
+    combat.deck.main = [laser_lourd2 := _carte("CRT_47", "M2")]
+    combat.jouer_carte(laser_lourd2, AVANT_MID)
+    assert combat.vaisseau.module_d_exemplaire("M2").est_detruit()
+    assert laser_lourd2 in combat.deck.hors_service and laser_lourd in combat.deck.hors_service
 
-    combat.finir_tour_joueur()
-    assert ennemi.bouclier == 5  # 10 > seuil : ceil(10/2)
 
-    combat.finir_tour_joueur()
-    assert ennemi.bouclier == 0  # 5 <= SEUIL_DISSIPATION_BOUCLIER
+# --- Tour ennemi (5) ---
 
 
-# --- Bouclier adaptatif (Blindage, specs.md 12.4) ---
+def test_attaque_au_plus_proche_puis_cycle():
+    pat = _ennemi()
+    combat = _combat({AVANT_GAUCHE: pat})
 
+    combat.finir_tour()
 
-def test_bouclier_adaptatif_donne_un_bouclier_proportionnel_aux_pv_max():
-    combat, vaisseau, _flotte = _nouveau_combat(pv_base=15)
-    combat.joueur.deck.main = [CARTE_BOUCLIER_ADAPTATIF]
-    combat.joueur.electricite = 2
+    assert combat.vaisseau.module_d_exemplaire("M2").pv_combat == 15
+    assert combat.vaisseau.principal.pv_combat == 60
 
-    resultat = combat.jouer_carte(CARTE_BOUCLIER_ADAPTATIF, vaisseau.base)
 
-    assert resultat == [(vaisseau.base, 12)]  # round(15 * 80 / 100)
-    assert vaisseau.base.bouclier == 12
+def test_les_valeurs_des_ennemis_montent_avec_le_tour():
+    combat = _combat()
+    for _ in range(3):
+        combat.finir_tour()
 
+    assert combat.tour == 4
+    assert combat.intentions()[0].effets[0].valeur == 6  # 5, +1 tous les 3 tours
 
-# --- Fonds de tiroir (Generateur, specs.md 12.8) ---
 
+def test_attaque_repetee_cible_choisie_une_fois():
+    """Decision utilisateur : si la cible meurt a la premiere attaque, la seconde est perdue."""
+    nettoyeur = _ennemi("ENM_LE_NETTOYEUR")
+    combat = _combat({AVANT_GAUCHE: nettoyeur})
+    combat.vaisseau.module_d_exemplaire("M2").pv_combat = 7
 
-def test_fonds_de_tiroir_donne_de_l_electricite_par_module_actif():
-    vaisseau = _vaisseau_complet()
-    combat, _vaisseau, _flotte = _nouveau_combat(vaisseau=vaisseau)
-    combat.joueur.deck.main = [CARTE_FONDS_DE_TIROIR]
-    combat.joueur.electricite = 10
+    combat.finir_tour()
 
-    resultat = combat.jouer_carte(CARTE_FONDS_DE_TIROIR, None)  # ALLIES_MULTIPLES, sans clic
+    assert combat.vaisseau.module_d_exemplaire("M2").est_detruit()
+    assert combat.vaisseau.principal.pv_combat == 60
 
-    assert resultat == [(None, 5)]  # 1 x (base + 4 modules equipes)
-    assert combat.joueur.electricite == 14  # 10 - 1 (cout) + 5 (gain)
 
+def test_le_boss_frappe_tous_les_modules_et_se_protege_a_la_troisieme_etape():
+    boss = _ennemi("ENM_BOSS_PIRATES")
+    combat = _combat({AVANT_MID: boss, ARRIERE_MID: boss})
+    for _ in range(3):
+        combat.finir_tour()
 
-def test_fonds_de_tiroir_ignore_les_modules_detruits():
-    vaisseau = _vaisseau_complet()
-    vaisseau.module_en(Colonne.AVANT, Rangee.GAUCHE).pv = 0
-    combat, _vaisseau, _flotte = _nouveau_combat(vaisseau=vaisseau)
-    combat.joueur.deck.main = [CARTE_FONDS_DE_TIROIR]
-    combat.joueur.electricite = 10
+    assert combat.vaisseau.principal.pv_combat == 45
+    assert combat.vaisseau.module_d_exemplaire("M2").pv_combat == 5
+    assert boss.statuts[Statut.BOUCLIER] == 10
 
-    resultat = combat.jouer_carte(CARTE_FONDS_DE_TIROIR, None)
 
-    assert resultat == [(None, 4)]  # 4 modules vivants sur 5
+def test_miroir_pose_un_renvoi_sur_un_allie_de_la_colonne_avant():
+    miroir, pat = _ennemi("ENM_MIROIR"), _ennemi()
+    combat = _combat({AVANT_MID: pat, ARRIERE_DROITE: miroir})
 
+    combat.finir_tour()
 
-# --- Leurre (Lanceur de missiles, specs.md 12.6) ---
+    assert pat.statuts[Statut.RENVOI] == 5 and miroir.statuts[Statut.RENVOI] == 0
 
 
-def test_leurre_pose_le_flag_sans_toucher_au_bouclier():
-    combat, vaisseau, _flotte = _nouveau_combat()
-    combat.joueur.deck.main = [CARTE_LEURRE]
-    combat.joueur.electricite = 3
+def test_le_renvoi_dure_jusqu_au_tour_ennemi_suivant():
+    miroir = _ennemi("ENM_MIROIR")
+    combat = _combat({AVANT_MID: miroir})
+    combat.finir_tour()
+    assert miroir.statuts[Statut.RENVOI] == 5  # pose pendant le tour ennemi, protege ce tour-ci
 
-    resultat = combat.jouer_carte(CARTE_LEURRE, vaisseau.base)
+    _en_main(combat)
+    combat.finir_tour()
+    assert miroir.statuts[Statut.RENVOI] == 5  # retire a la fin du tour du joueur, puis repose
 
-    assert resultat == [(vaisseau.base, 0)]
-    assert vaisseau.base.leurre_actif is True
-    assert vaisseau.base.bouclier == 0
 
+def test_intentions_etape_courante_valeur_du_tour_et_cible_prevue():
+    pat = _ennemi()
+    combat = _combat({AVANT_GAUCHE: pat})
 
-def test_leurre_annule_totalement_la_prochaine_attaque_puis_se_consomme():
-    combat, vaisseau, flotte = _nouveau_combat()
-    ennemi = flotte.ennemis_vivants()[0]
-    combat.joueur.deck.main = [CARTE_LEURRE]
-    combat.joueur.electricite = 3
-    combat.jouer_carte(CARTE_LEURRE, vaisseau.base)
+    (intention,) = combat.intentions()
 
-    attaques = combat.finir_tour_joueur()
+    assert intention.ennemi is pat
+    assert (intention.effets[0].valeur, intention.effets[0].cible_prevue) == (5, combat.vaisseau.module_d_exemplaire("M2"))
 
-    assert attaques == [(POSITION_ENNEMI, ennemi, vaisseau.base, 0, "degats")]
-    assert vaisseau.base.pv == 15  # aucun degat, meme sans bouclier
-    assert vaisseau.base.leurre_actif is False  # consomme par cette attaque
 
-    attaques_suivantes = combat.finir_tour_joueur()
+def test_modules_vises_proximite_tous_et_aucun():
+    pat = _ennemi()
+    combat = _combat({AVANT_GAUCHE: pat})
+    (intention,) = combat.intentions()
+    assert combat.modules_vises(intention.effets[0]) == [combat.vaisseau.module_d_exemplaire("M2")]
 
-    assert attaques_suivantes == [(POSITION_ENNEMI, ennemi, vaisseau.base, 7, "degats")]  # plus de leurre : degats normaux
-    assert vaisseau.base.pv == 15 - 7
+    for ennemi in _ennemis_une_case():
+        combat = _combat({AVANT_GAUCHE: ennemi})
+        for effet in combat.intentions()[0].effets:
+            vises = combat.modules_vises(effet)
+            if effet.effet.cible.name == "TOUS_MODULES":
+                assert vises == combat.vaisseau.modules_vivants()
+            elif effet.effet.cible.name == "PROXIMITE":
+                assert vises == [effet.cible_prevue]
+            else:
+                assert vises == []
 
 
-# --- Ennemi a plusieurs emplacements (specs.md 3.2, ex. Boss des pirates) ---
+# --- Destruction et fin du combat (6, 7) ---
 
-CARTE_COLONNE_ARRIERE = Carte(
-    id="TEST_LIGNE_ARRIERE", nom="Ligne arriere", image=IMG, type=TypeCarte.DEBUFF, cible=CibleCarte.COLONNE_ARRIERE_ENNEMIE,
-    cout=1, valeur=100, action=ActionCarte.VULNERABILITE, duree=1,
-)
 
+def test_module_detruit_ses_cartes_passent_hors_service():
+    pat = _ennemi()
+    deck = deck_de_depart(CARTES, "M1") + [_carte("CRT_9", "M2"), _carte("CRT_15", "M2")]
+    combat = _combat({AVANT_GAUCHE: pat}, deck=deck)
+    combat.vaisseau.module_d_exemplaire("M2").pv_combat = 5
 
-def _boss_deux_emplacements(pv_max: int = 150, actions: list | None = None) -> dict[Position, Ennemi]:
-    """Un ennemi range aux 2 Positions Avant/Arriere de la rangee du milieu (specs.md 3.2)."""
-    boss = Ennemi(pv_max=pv_max, actions=actions or [], nom="Boss", emplacements=2)
-    return {
-        Position(Colonne.AVANT, Rangee.MID): boss,
-        Position(Colonne.ARRIERE, Rangee.MID): boss,
-    }
+    combat.finir_tour()
 
+    assert sorted(carte.id for carte in combat.deck.hors_service) == ["CRT_15", "CRT_9"]
+    assert combat.etat == EtatCombat.EN_COURS  # un secondaire detruit n'est pas une defaite
+    assert _evenements(combat, NatureEvenement.CARTES_HORS_SERVICE)[0].valeur == 2
 
-def test_ennemis_multiples_ne_touche_qu_une_fois_un_ennemi_a_2_emplacements():
-    ennemis = _boss_deux_emplacements()
-    combat, _vaisseau, flotte = _nouveau_combat(ennemis=ennemis)
-    combat.joueur.deck.main = [CARTE_MITRAILLER]
-    combat.joueur.electricite = 2
-    boss = flotte.ennemis_vivants()[0]
 
-    resultat = combat.jouer_carte(CARTE_MITRAILLER)  # CIBLES_SANS_CLIC, pas de cible cliquee
+def test_principal_detruit_defaite_immediate():
+    combat = _combat()
+    combat.vaisseau.principal.pv_combat = 5
 
-    assert len(resultat) == 1
-    assert boss.pv == boss.pv_max - CARTE_MITRAILLER.valeur
+    combat.finir_tour()
 
+    assert combat.etat == EtatCombat.DEFAITE and combat.tour == 1
+    with pytest.raises(ValueError, match="termine"):
+        combat.finir_tour()
 
-def test_ligne_ennemie_ne_touche_qu_une_fois_un_ennemi_a_2_emplacements():
-    ennemis = _boss_deux_emplacements()
-    combat, _vaisseau, flotte = _nouveau_combat(ennemis=ennemis)
-    combat.joueur.deck.main = [CARTE_PERCER]
-    combat.joueur.electricite = 2
-    boss = flotte.ennemis_vivants()[0]
 
-    resultat = combat.jouer_carte(CARTE_PERCER, boss)
+def test_dernier_ennemi_detruit_victoire():
+    pat = _ennemi()
+    pat.pv = 6
+    combat = _combat({AVANT_MID: pat})
+    (laser,) = _en_main(combat, _carte("CRT_7"))
 
-    assert len(resultat) == 1
-    assert boss.pv == boss.pv_max - CARTE_PERCER.valeur
+    combat.jouer_carte(laser, AVANT_MID)
 
+    assert combat.etat == EtatCombat.VICTOIRE
+    assert combat.ennemis_detruits() == [pat]
+    assert [e.nature for e in combat.journal[-2:]] == [NatureEvenement.ENNEMI_DETRUIT, NatureEvenement.VICTOIRE]
 
-def test_colonne_avant_ennemie_accepte_un_clic_sur_un_ennemi_a_2_emplacements():
-    ennemis = _boss_deux_emplacements()
-    combat, _vaisseau, flotte = _nouveau_combat(ennemis=ennemis)
-    combat.joueur.deck.main = [CARTE_COLONNE_AVANT]
-    combat.joueur.electricite = 2
-    boss = flotte.ennemis_vivants()[0]
 
-    resultat = combat.jouer_carte(CARTE_COLONNE_AVANT, boss)
+# --- Journal detaille (degats absorbes, PV perdus et restants) ---
 
-    assert len(resultat) == 1
-    assert any(buff.action == ActionCarte.VULNERABILITE for buff in boss.buffs_actifs)
 
+def test_journal_d_une_attaque_ennemie_bouclier_puis_pv():
+    pat = _ennemi()
+    combat = _combat({AVANT_GAUCHE: pat})
+    lanceur = combat.vaisseau.module_d_exemplaire("M2")
+    lanceur.statuts.ajouter(Statut.BOUCLIER, 3)
 
-def test_colonne_arriere_ennemie_accepte_aussi_un_clic_sur_le_meme_ennemi():
-    """Un ennemi a 2 emplacements occupe l'Avant ET l'Arriere de sa rangee (specs.md 3.2) : un
-    clic dessus doit etre une cible valide pour les deux cartes de colonne, pas seulement une."""
-    ennemis = _boss_deux_emplacements()
-    combat, _vaisseau, flotte = _nouveau_combat(ennemis=ennemis)
-    combat.joueur.deck.main = [CARTE_COLONNE_ARRIERE]
-    combat.joueur.electricite = 2
-    boss = flotte.ennemis_vivants()[0]
+    combat.finir_tour()
 
-    resultat = combat.jouer_carte(CARTE_COLONNE_ARRIERE, boss)
+    (attaque,) = _evenements(combat, NatureEvenement.ATTAQUE)
+    assert (attaque.source, attaque.cible) == (pat, lanceur)
+    assert (attaque.valeur, attaque.absorbes_bouclier, attaque.annules_leurre, attaque.renvoyes) == (5, 3, 0, 0)
+    assert (attaque.pv_perdus, attaque.pv_restants) == (2, 18)
 
-    assert len(resultat) == 1
 
+def test_journal_d_une_attaque_annulee_par_le_leurre():
+    combat = _combat({AVANT_GAUCHE: _ennemi()})
+    combat.vaisseau.module_d_exemplaire("M2").statuts.ajouter(Statut.LEURRE, 1)
 
-def test_tour_ennemi_n_execute_qu_une_fois_les_actions_d_un_ennemi_a_2_emplacements():
-    action = ActionEnnemi(type=TypeActionEnnemi.ATTAQUE, cible=CibleActionEnnemi.TOUS_MODULES_JOUEUR, valeur=5)
-    ennemis = _boss_deux_emplacements(actions=[action])
-    vaisseau = _vaisseau_complet(pv=50)
-    combat, vaisseau, _flotte = _nouveau_combat(ennemis=ennemis, vaisseau=vaisseau)
+    combat.finir_tour()
 
-    combat.finir_tour_joueur()
+    (attaque,) = _evenements(combat, NatureEvenement.ATTAQUE)
+    assert (attaque.annules_leurre, attaque.pv_perdus, attaque.pv_restants) == (5, 0, 20)
 
-    # 5 modules (base + 4 equipes) x 5 degats chacun - le double si l'action se declenchait
-    # deux fois (une par emplacement occupe) au lieu d'une seule.
-    assert vaisseau.base.pv == 45
-    assert vaisseau.module_en(Colonne.AVANT, Rangee.GAUCHE).pv == 45
 
+def test_journal_du_renvoi_et_de_ses_degats():
+    miroir = _ennemi("ENM_MIROIR")
+    combat = _combat({AVANT_MID: miroir})
+    miroir.statuts.ajouter(Statut.RENVOI, 5)
+    miroir.statuts.ajouter(Statut.BOUCLIER, 2)
+    (laser,) = _en_main(combat, _carte("CRT_7"))
 
-# --- Bouclier miroir sur un ennemi allie (specs.md 13, ennemi Miroir - pose desormais sur un
-# allie ennemi plutot que sur un module du joueur) ---
+    combat.jouer_carte(laser, AVANT_MID)
 
-
-def _pose_bouclier_miroir_ennemie() -> ActionEnnemi:
-    return ActionEnnemi(
-        type=TypeActionEnnemi.POSE_BUFF,
-        cible=CibleActionEnnemi.COLONNE_AVANT_SINON_ARRIERE_ENNEMIE,
-        valeur=5,
-        action_buff=ActionCarte.BOUCLIER_MIROIR,
+    (attaque,) = _evenements(combat, NatureEvenement.ATTAQUE)
+    assert (attaque.renvoyes, attaque.absorbes_bouclier, attaque.pv_perdus, attaque.pv_restants) == (5, 1, 0, 50)
+    (renvoi,) = _evenements(combat, NatureEvenement.RENVOI)
+    assert (renvoi.source, renvoi.cible, renvoi.valeur, renvoi.pv_perdus, renvoi.pv_restants) == (
+        miroir, combat.vaisseau.principal, 5, 5, 55,
     )
 
 
-def test_pose_bouclier_miroir_cible_un_ennemi_en_priorite_avant():
-    miroir = Ennemi(pv_max=50, actions=[_pose_bouclier_miroir_ennemie()], nom="Miroir")
-    protege_avant = Ennemi(pv_max=20, nom="Protege avant")
-    ennemis = {
-        Position(Colonne.ARRIERE, Rangee.GAUCHE): miroir,
-        Position(Colonne.AVANT, Rangee.DROITE): protege_avant,
-    }
-    combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis, aleatoire=random.Random(1))
+def test_journal_de_l_incendie_absorbe_par_le_bouclier():
+    pat = _ennemi()
+    combat = _combat({AVANT_MID: pat})
+    pat.statuts.ajouter(Statut.INCENDIE, 4)
+    pat.statuts.ajouter(Statut.BOUCLIER, 1)
 
-    combat.finir_tour_joueur()
+    combat.finir_tour()
 
-    assert any(buff.action == ActionCarte.BOUCLIER_MIROIR for buff in protege_avant.buffs_actifs)
-    assert not any(buff.action == ActionCarte.BOUCLIER_MIROIR for buff in miroir.buffs_actifs)
+    (incendie,) = _evenements(combat, NatureEvenement.INCENDIE)
+    assert (incendie.valeur, incendie.absorbes_bouclier, incendie.pv_perdus, incendie.pv_restants) == (4, 1, 3, 47)
 
 
-def test_pose_bouclier_miroir_se_cible_lui_meme_si_seul_ennemi_vivant():
-    miroir = Ennemi(pv_max=50, actions=[_pose_bouclier_miroir_ennemie()], nom="Miroir")
-    ennemis = {Position(Colonne.AVANT, Rangee.GAUCHE): miroir}
-    combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis, aleatoire=random.Random(1))
+def test_journal_pv_perdus_plafonnes_par_les_pv_restants():
+    pat = _ennemi()
+    pat.pv = 4
+    pat2 = _ennemi()
+    combat = _combat({AVANT_MID: pat, AVANT_DROITE: pat2})
+    (laser,) = _en_main(combat, _carte("CRT_7"))
 
-    combat.finir_tour_joueur()
+    combat.jouer_carte(laser, AVANT_MID)
 
-    assert any(buff.action == ActionCarte.BOUCLIER_MIROIR for buff in miroir.buffs_actifs)
-
-
-def test_bouclier_miroir_choisit_le_module_de_reflet_des_la_pose():
-    """Le module qui recevra les degats renvoyes est tire au moment de la pose (tour ennemi),
-    pas a la resolution de l'attaque joueur - il doit etre visible dans l'infobulle avant meme
-    que le joueur n'attaque (decision utilisateur)."""
-    miroir = Ennemi(pv_max=50, actions=[_pose_bouclier_miroir_ennemie()], nom="Miroir")
-    ennemis = {Position(Colonne.AVANT, Rangee.GAUCHE): miroir}
-    vaisseau = _vaisseau_complet(pv=20)
-    combat, vaisseau, _flotte = _nouveau_combat(ennemis=ennemis, vaisseau=vaisseau, aleatoire=random.Random(1))
-
-    combat.finir_tour_joueur()
-
-    buff = next(b for b in miroir.buffs_actifs if b.action == ActionCarte.BOUCLIER_MIROIR)
-    modules_possibles = [vaisseau.base, *vaisseau.modules_equipes().values()]
-    assert buff.cible_reflet in modules_possibles
+    (attaque,) = _evenements(combat, NatureEvenement.ATTAQUE)
+    assert (attaque.valeur, attaque.pv_perdus, attaque.pv_restants) == (6, 4, 0)
 
 
-def test_bouclier_miroir_renvoie_les_degats_de_l_attaque_joueur_vers_le_module_tire():
-    miroir = Ennemi(pv_max=50, nom="Miroir")
-    cible_reflet = Module(pv_max=20, nom="Cible")
-    miroir.appliquer_buff(ActionCarte.BOUCLIER_MIROIR, 5, tours=None, cible_reflet=cible_reflet)
-    ennemis = {Position(Colonne.AVANT, Rangee.GAUCHE): miroir}
-    combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
-    combat.joueur.deck.main = [CARTE_ATTAQUE]  # ENNEMI_UNIQUE, valeur 7
-    combat.joueur.electricite = 3
-
-    resultat = combat.jouer_carte(CARTE_ATTAQUE, miroir)
-
-    # 5 renvoyes vers cible_reflet (bouclier entierement consomme), 2 restants a Miroir.
-    assert cible_reflet.pv == 20 - 5
-    assert miroir.pv == 50 - 2
-    assert (cible_reflet, 5) in resultat
-    assert (miroir, 2) in resultat
-    assert not any(buff.action == ActionCarte.BOUCLIER_MIROIR for buff in miroir.buffs_actifs)
+# --- Lancements multiples : un seul cout, tous les effets a chaque lancement (4.3) ---
 
 
-def test_bouclier_miroir_absorbe_totalement_si_inferieur_a_sa_valeur():
-    miroir = Ennemi(pv_max=50, nom="Miroir")
-    cible_reflet = Module(pv_max=20, nom="Cible")
-    miroir.appliquer_buff(ActionCarte.BOUCLIER_MIROIR, 10, tours=None, cible_reflet=cible_reflet)
-    ennemis = {Position(Colonne.AVANT, Rangee.GAUCHE): miroir}
-    combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
-    combat.joueur.deck.main = [CARTE_ATTAQUE]  # valeur 7
-    combat.joueur.electricite = 3
+def test_carte_lancee_deux_fois_un_seul_cout_et_effets_a_chaque_lancement():
+    combat = _combat()
+    laser, bouclier = _en_main(combat, _carte("CRT_47"), _carte("CRT_10"))
+    laser.lancements_actuels = bouclier.lancements_actuels = 2
 
-    combat.jouer_carte(CARTE_ATTAQUE, miroir)
+    combat.jouer_carte(laser, AVANT_MID)
+    combat.jouer_carte(bouclier, AVANT_MID)
 
-    assert cible_reflet.pv == 20 - 7
-    assert miroir.pv == 50  # rien subi, tout absorbe
-    buff = next(b for b in miroir.buffs_actifs if b.action == ActionCarte.BOUCLIER_MIROIR)
-    assert buff.valeur == 3  # 10 - 7 restant, buff toujours actif
+    assert combat.electricite == 1  # 3 - 1 - 1
+    assert combat.flotte.ennemi_en(AVANT_MID).pv == 26  # 50 - 12 - 12
+    assert combat.vaisseau.principal.statuts[Statut.BOUCLIER] == 2 * BOUCLIER_CARTE
 
 
-def test_bouclier_miroir_plusieurs_instances_renvoient_chacune_vers_son_propre_module():
-    miroir = Ennemi(pv_max=50, nom="Miroir")
-    module_a = Module(pv_max=20, nom="A")
-    module_b = Module(pv_max=20, nom="B")
-    miroir.appliquer_buff(ActionCarte.BOUCLIER_MIROIR, 3, tours=None, cible_reflet=module_a)
-    miroir.appliquer_buff(ActionCarte.BOUCLIER_MIROIR, 3, tours=None, cible_reflet=module_b)
-    ennemis = {Position(Colonne.AVANT, Rangee.GAUCHE): miroir}
-    combat, _vaisseau, _flotte = _nouveau_combat(ennemis=ennemis)
-    carte = Carte(id="TEST_GROS_COUP", nom="Gros coup", image=IMG, type=TypeCarte.ATTAQUE, cible=CibleCarte.ENNEMI_UNIQUE, cout=1, valeur=8)
-    combat.joueur.deck.main = [carte]
-    combat.joueur.electricite = 3
+def test_pioche_et_gain_d_electricite_a_chaque_lancement():
+    boost = Carte(
+        id="TEST", nom="Boost", image="", rarete=RareteCarte.COMMUNE, categorie=CategorieCarte.OUTILS,
+        cible=CibleCarte.MODULE_PRINCIPAL, cout=1, description="", valeurs={"pioche": 1, "electricite": 1},
+        effets=(Effet(NatureEffet.PIOCHE, "pioche"), Effet(NatureEffet.GAIN_ELECTRICITE, "electricite")),
+        exemplaire_module="M1", lancements_actuels=2,
+    )
+    combat = _combat()
+    _en_main(combat, boost)
+    combat.deck.pioche = [_carte("CRT_7"), _carte("CRT_7"), _carte("CRT_7")]
 
-    combat.jouer_carte(carte, miroir)
+    combat.jouer_carte(boost, AVANT_MID)
 
-    assert module_a.pv == 20 - 3
-    assert module_b.pv == 20 - 3
-    assert miroir.pv == 50 - 2  # 8 - 3 - 3 = 2 restant
+    assert (len(combat.deck.main), len(combat.deck.pioche)) == (2, 1)
+    assert combat.electricite == 4  # 3 - 1 + 1 + 1
 
 
-def test_journal_commence_par_le_marqueur_du_tour_1():
-    combat, _vaisseau, _flotte = _nouveau_combat()
-
-    assert combat.journal == [EvenementTour(1)]
+# --- Corrections de la review de la PR #61 ---
 
 
-def test_jouer_carte_avec_effet_ajoute_un_evenement_carte_jouee_au_journal():
-    combat, _vaisseau, flotte = _nouveau_combat()
-    ennemi = flotte.ennemis_vivants()[0]
-    combat.joueur.deck.main = [CARTE_ATTAQUE]
+def test_le_combat_ne_modifie_pas_les_cartes_du_deck_de_la_partie():
+    deck = deck_de_depart(CARTES, "M1")
+    combat = _combat(deck=deck)
+    reparation = next(carte for carte in combat.deck.toutes_les_cartes() if carte.id == "CRT_12")
+    combat.deck.main = [reparation]
 
-    combat.jouer_carte(CARTE_ATTAQUE, ennemi)
+    combat.jouer_carte(reparation, AVANT_MID)
 
-    assert combat.journal == [EvenementTour(1), EvenementCarteJouee(CARTE_ATTAQUE, ennemi)]
-
-
-def test_jouer_carte_sans_effet_n_ajoute_rien_au_journal():
-    combat, vaisseau, _flotte = _nouveau_combat()
-    combat.joueur.deck.main = [CARTE_ATTAQUE]
-
-    # Cible du mauvais camp (un module pour une carte ciblant ENNEMI_UNIQUE) : refusee par
-    # _cible_valide, jouer_carte renvoie [] avant tout effet - rien a journaliser.
-    resultat = combat.jouer_carte(CARTE_ATTAQUE, vaisseau.base)
-
-    assert resultat == []
-    assert combat.journal == [EvenementTour(1)]
+    assert not any(carte is originale for carte in combat.deck.toutes_les_cartes() for originale in deck)
+    assert next(carte for carte in deck if carte.id == "CRT_12").munitions_restantes == 2
+    assert reparation.munitions_restantes == 1
 
 
-def test_finir_tour_joueur_ajoute_un_evenement_par_action_ennemie_puis_le_marqueur_du_tour_suivant():
-    combat, vaisseau, flotte = _nouveau_combat(degats_ennemi=4)
-    ennemi = flotte.ennemis_vivants()[0]
+def test_une_nature_appliquee_au_mauvais_camp_est_refusee_avant_toute_modification():
+    degats_sur_module = Carte(
+        id="TEST", nom="Erreur", image="", rarete=RareteCarte.COMMUNE, categorie=CategorieCarte.ATTAQUE,
+        cible=CibleCarte.MODULE_UNIQUE, cout=1, description="", valeurs={"degats": 5},
+        effets=(Effet(NatureEffet.DEGATS, "degats"),), exemplaire_module="M1",
+    )
+    combat = _combat()
+    _en_main(combat, degats_sur_module)
 
-    evenements = combat.finir_tour_joueur()
-
-    assert len(evenements) == 1
-    _position, _ennemi, cible, valeur, type_evenement = evenements[0]
-    assert combat.journal == [
-        EvenementTour(1),
-        EvenementActionEnnemi(ennemi, cible, valeur, type_evenement),
-        EvenementTour(2),
-    ]
-    assert cible is vaisseau.base
-    assert valeur == 4
+    assert not combat.peut_jouer(degats_sur_module)
+    with pytest.raises(ValueError, match="injouable"):
+        combat.jouer_carte(degats_sur_module, AVANT_MID)
+    assert combat.electricite == 3 and combat.deck.main == [degats_sur_module]
 
 
-def test_finir_tour_joueur_n_ajoute_pas_de_marqueur_de_tour_si_le_combat_se_termine():
-    combat, _vaisseau, _flotte = _nouveau_combat(pv_base=5)
+def test_un_module_detruit_perd_ses_statuts():
+    combat = _combat({AVANT_GAUCHE: _ennemi()})
+    lanceur = combat.vaisseau.module_d_exemplaire("M2")
+    lanceur.pv_combat = 1
+    lanceur.statuts.ajouter(Statut.INCENDIE, 3)
 
-    combat.finir_tour_joueur()
+    combat.finir_tour()
 
-    assert combat.etat == EtatCombat.DEFAITE
-    # L'action ennemie qui a mis fin au combat est bien journalisee, mais aucun marqueur de
-    # tour suivant : il n'y en aura pas, le combat est termine.
-    assert combat.journal[-1] != EvenementTour(2)
-    assert any(isinstance(evenement, EvenementActionEnnemi) for evenement in combat.journal)
+    assert lanceur.est_detruit() and lanceur.statuts.intensites == {}
 
 
-def test_cibles_possibles_selon_le_type_de_cible_de_la_carte():
-    combat, vaisseau, flotte = _nouveau_combat()
+def test_un_ennemi_detruit_pendant_son_etape_ne_joue_pas_la_suite():
+    jean = _ennemi("ENM_PETIT_JEAN")
+    jean.pv = 2
+    combat = _combat({AVANT_GAUCHE: jean})
+    combat.vaisseau.module_d_exemplaire("M2").statuts.ajouter(Statut.RENVOI, 10)
 
-    assert combat.cibles_possibles(CARTE_ATTAQUE) == flotte.ennemis_vivants()
-    assert combat.cibles_possibles(CARTE_BOUCLIER) == [vaisseau.base]
-    assert combat.cibles_possibles(CARTE_PROTEGER) == [None]
-    for cible in combat.cibles_possibles(CARTE_PERCER):
-        assert combat._cible_valide(CARTE_PERCER, cible)
+    combat.finir_tour()
+
+    assert jean.est_detruit() and combat.etat == EtatCombat.VICTOIRE
+    assert not _evenements(combat, NatureEvenement.STATUT_POSE)  # son bouclier n'est pas pose
+
+
+
+def test_remplacer_aleatoire_change_aussi_les_melanges_du_deck():
+    combat = _combat()
+    nouveau = random.Random(42)
+
+    combat.remplacer_aleatoire(nouveau)
+
+    assert combat.aleatoire is nouveau and combat.deck.aleatoire is nouveau

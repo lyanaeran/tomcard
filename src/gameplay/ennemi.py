@@ -1,146 +1,308 @@
 """
-Les ennemis affrontes en combat : points de vie, bouclier, buffs/debuffs actifs, et la liste
-d'Actions qui determine leur comportement au tour ennemi (specs.md paragraphe 13).
+Ennemi (Ennemi) : modele de donnees issu de la refonte des
+ennemis (specs.md 13). Source de verite : config/ennemis.json
+(charger_ennemis). Seul modele d'ennemi du jeu depuis la suppression de l'ancien moteur (PR 4
+du branchement).
+
+Principes :
+- un CYCLE D'ACTIONS remplace la frequence et le tour de depart : une etape par tour ennemi, dans
+  l'ordre, puis retour a la premiere ; une etape est une liste d'effets joues le meme tour ;
+  l'intention affichee est simplement l'etape courante ;
+- les effets renvoient a des VALEURS NOMMEES de l'ennemi, comme les cartes ; chaque valeur a une
+  augmentation (de combien, tous les combien de tours) et un COEFFICIENT de difficulte (>= 1,
+  donne a la creation pour le combat) multiplie base, augmentations et PV, arrondi a l'inferieur ;
+- bouclier, incendie et renvoi sont des STATUTS (statut.py, specs.md 3.5),
+  partages avec Module ; ils s'eteignent a la fin du tour du joueur (fin_du_tour_du_joueur) ;
+- Miroir pose un RENVOI (plus un bouclier) : cumulable, il dure jusqu'au debut du tour ennemi
+  suivant.
+
+Comme Module, la meme classe sert de modele (lu dans le JSON) et d'ennemi en combat : le combat
+travaille sur une copie (pour_combat), le modele n'est jamais modifie. Le numero de tour n'est pas
+dans l'ennemi : c'est le combat qui le tient (il passe au tour suivant au debut du tour du joueur,
+a partir du tour 2) et le donne pour lire une valeur (valeur, valeurs_au_tour).
 """
 
-from dataclasses import dataclass
+import dataclasses
+import json
+import math
+from dataclasses import dataclass, field
 from enum import Enum, auto
+from fractions import Fraction
+from pathlib import Path
 
-from src.gameplay.carte import ActionCarte, BuffActif
+from src.gameplay.statut import Encaissement, Statut, Statuts
+
+FICHIER_ENNEMIS = Path(__file__).resolve().parents[2] / "config" / "ennemis.json"
+
+# Cles autorisees dans config/ennemis.json : une cle inconnue est refusee au chargement
+CLES_ENNEMI = {"id", "nom", "image", "taille", "emplacements", "placement", "pv", "valeurs", "actions"}
+CLES_VALEUR = {"base", "augmentation", "tous_les"}
+CLES_EFFET = {"nature", "valeur", "cible", "repetitions"}
 
 
-class TypeActionEnnemi(Enum):
-    """Nature de l'effet d'une Action ennemie (specs.md 13)."""
+def _verifier_cles(entree: dict, autorisees: set[str], ou: str) -> None:
+    inconnues = entree.keys() - autorisees
+    if inconnues:
+        raise ValueError(f"{ou} : cles inconnues {sorted(inconnues)}")
 
+
+class PlacementEnnemi(Enum):
+    """Colonne preferee de l'ennemi dans la flotte (specs.md 3.2) ; absent si indifferent."""
+
+    # Se place devant un autre ennemi pour le proteger (Petit Jean)
+    PROTECTEUR_AVANT = auto()
+    # Se place derriere un autre ennemi, protege (Le nettoyeur)
+    PROTEGE_ARRIERE = auto()
+
+
+class NatureEffetEnnemi(Enum):
+    """Ce que fait un effet d'ennemi ; `valeur` designe la valeur nommee de l'ennemi utilisee."""
+
+    # Inflige `valeur` degats a chaque module touche (apres son bouclier)
     ATTAQUE = auto()
-    POSE_BUFF = auto()
+    # Pose le statut BOUCLIER d'intensite `valeur`
+    BOUCLIER = auto()
+    # Pose le statut RENVOI d'intensite `valeur` (Miroir)
+    RENVOI = auto()
+
+    @property
+    def statut_pose(self) -> Statut | None:
+        """Statut pose sur la cible, None pour une attaque."""
+        return {NatureEffetEnnemi.BOUCLIER: Statut.BOUCLIER, NatureEffetEnnemi.RENVOI: Statut.RENVOI}.get(self)
 
 
-class CibleActionEnnemi(Enum):
-    """Qui une Action ennemie touche (specs.md 13).
+class CibleEffetEnnemi(Enum):
+    """Ce que touche un effet d'ennemi."""
 
-    PROXIMITE : meme regle que le ciblage historique (ciblage.py:module_cible_par_ennemi) - la
-    rangee de l'ennemi d'abord, puis les rangees voisines si elle est vide.
-    TOUS_MODULES_JOUEUR : tous les modules du joueur encore en vie (attaque de zone).
-    COLONNE_AVANT_SINON_ARRIERE_JOUEUR : un module du joueur tire au hasard dans la colonne
-    avant (base incluse) si elle compte au moins un module vivant, sinon dans la colonne
-    arriere.
-    COLONNE_AVANT_SINON_ARRIERE_ENNEMIE : un ennemi de la flotte tire au hasard (l'ennemi qui
-    execute l'action y compris, specs.md 13 - ex. Miroir peut se cibler lui-meme) dans la
-    colonne avant si elle compte au moins un ennemi vivant, sinon dans la colonne arriere.
-    SOI_MEME : l'ennemi qui execute l'action.
-    """
-
+    # Le module vivant le plus proche (meme regle que ciblage.py:module_cible_par_ennemi)
     PROXIMITE = auto()
-    TOUS_MODULES_JOUEUR = auto()
-    COLONNE_AVANT_SINON_ARRIERE_JOUEUR = auto()
-    COLONNE_AVANT_SINON_ARRIERE_ENNEMIE = auto()
+    # Tous les modules vivants du joueur
+    TOUS_MODULES = auto()
+    # L'ennemi qui joue l'effet
     SOI_MEME = auto()
+    # Un ennemi de la colonne avant de la flotte (lui-meme compris), sinon de la colonne arriere
+    # (Miroir : il se protege lui-meme s'il est seul)
+    ALLIE_AVANT_SINON_ARRIERE = auto()
+
+    @property
+    def vise_le_joueur(self) -> bool:
+        return self in (CibleEffetEnnemi.PROXIMITE, CibleEffetEnnemi.TOUS_MODULES)
 
 
 @dataclass(frozen=True)
-class ActionEnnemi:
-    """Une action du comportement d'un ennemi (specs.md 13) : declenchee tous les `frequence`
-    tours ennemi a partir de `tour_depart` (tour 1 = premier tour ennemi du combat, cf.
-    active_au_tour), repetee `repetitions` fois a chaque declenchement (dans le meme tour).
-    `action_buff`/`duree_buff` ne s'appliquent qu'a type=POSE_BUFF : quel ActionCarte poser
-    (cf. carte.py, ex. BOUCLIER_PAR_TOUR/BOUCLIER_MIROIR), et sa duree (None = persistant)."""
+class ValeurEnnemi:
+    """Une valeur nommee d'un ennemi (degats, bouclier...) et son augmentation avec le temps."""
 
-    type: TypeActionEnnemi
-    cible: CibleActionEnnemi
-    valeur: int
-    frequence: int = 1
-    tour_depart: int = 1
+    # Valeur au tour 1, avant coefficient
+    base: int
+    # Ajout a chaque palier (0 : valeur fixe)
+    augmentation: int = 0
+    # Nombre de tours entre deux paliers (rythme, jamais multiplie par le coefficient)
+    tous_les: int = 1
+
+    def __post_init__(self):
+        if self.base < 0 or self.augmentation < 0:
+            raise ValueError("base et augmentation doivent etre positives ou nulles")
+        if self.tous_les < 1:
+            raise ValueError("tous_les doit valoir au moins 1")
+
+    def au_tour(self, tour: int, coefficient: Fraction = Fraction(1)) -> int:
+        """Valeur au tour donne (1 = premier tour du combat) : arrondi_inferieur((base +
+        augmentation x paliers) x coefficient), paliers = (tour - 1) // tous_les
+        (specs.md 13.1.3)."""
+        if tour < 1:
+            raise ValueError(f"tour doit valoir au moins 1 ({tour})")
+        paliers = (tour - 1) // self.tous_les
+        return math.floor((self.base + self.augmentation * paliers) * coefficient)
+
+
+@dataclass(frozen=True)
+class EffetEnnemi:
+    """Un effet d'une etape du cycle. Ne contient aucun nombre a part les repetitions : `valeur`
+    est le NOM d'une valeur de l'ennemi, lue au moment de jouer (Ennemi.valeur)."""
+
+    nature: NatureEffetEnnemi
+    # Nom de la valeur de l'ennemi utilisee par l'effet
+    valeur: str
+    cible: CibleEffetEnnemi
+    # Nombre de fois que l'effet est joue dans l'etape, avec la meme valeur (Le nettoyeur : 2)
     repetitions: int = 1
-    action_buff: ActionCarte | None = None
-    duree_buff: int | None = None
 
-    def active_au_tour(self, tour: int) -> bool:
-        """Indique si cette action se declenche a ce tour ennemi (1 = premier tour ennemi du
-        combat) : a partir de tour_depart, puis tous les `frequence` tours."""
-        return tour >= self.tour_depart and (tour - self.tour_depart) % self.frequence == 0
+    def __post_init__(self):
+        if self.repetitions < 1:
+            raise ValueError("repetitions doit valoir au moins 1")
+        if (self.nature == NatureEffetEnnemi.ATTAQUE) != self.cible.vise_le_joueur:
+            raise ValueError(f"{self.nature.name} ne peut pas viser {self.cible.name}")
+
+    @classmethod
+    def depuis_dict(cls, entree: dict) -> "EffetEnnemi":
+        """Effet a partir d'une entree d'une etape de "actions" dans config/ennemis.json."""
+        _verifier_cles(entree, CLES_EFFET, f"Effet {entree.get('nature')}")
+        return cls(
+            nature=NatureEffetEnnemi[entree["nature"]],
+            valeur=entree["valeur"],
+            cible=CibleEffetEnnemi[entree["cible"]],
+            repetitions=entree.get("repetitions", 1),
+        )
 
 
+@dataclass(eq=False)
 class Ennemi:
-    """Represente un ennemi affronte en combat."""
+    """Un ennemi de la refonte. eq=False : deux ennemis du meme type dans une flotte sont
+    distincts."""
 
-    def __init__(
-        self,
-        pv_max: int,
-        actions: list[ActionEnnemi] | None = None,
-        nom: str = "Ennemi",
-        image: str | None = None,
-        taille: str = "S",
-        emplacements: int = 1,
-    ):
-        self.pv_max = pv_max
-        self.pv = pv_max
-        self.bouclier = 0
-        self.nom = nom
-        self.image = image
-        self.taille = taille
-        # Nombre de cases de la grille ennemie occupees par cet ennemi (specs.md 3.2) : 1 dans
-        # tous les cas actuels sauf le Boss des pirates (2, une case Avant + une Arriere de la
-        # meme rangee) - independant de `taille`, purement informatif (cf. donnees.py). C'est
-        # Flotte qui materialise cette occupation (le meme objet Ennemi range a 2 Positions).
-        self.emplacements = emplacements
-        self.actions = actions or []
-        self.buffs_actifs: list[BuffActif] = []
+    # --- Modele : lu dans config/ennemis.json ---
+
+    # Identifiant du type d'ennemi (ex. "ENM_PAT_LE_PIRATE")
+    id: str
+    # Nom affiche en jeu (texte affiche : accents autorises, cf. CLAUDE.md)
+    nom: str
+    # Chemin de l'image (assets/ennemis/)
+    image: str
+    # PV avant coefficient
+    pv_base: int
+    # Valeurs nommees (ex. {"degats": ValeurEnnemi(5, 1, 3)})
+    valeurs: dict[str, ValeurEnnemi]
+    # Cycle d'actions : une etape (tuple d'effets) par tour ennemi, puis retour a la premiere
+    actions: tuple[tuple[EffetEnnemi, ...], ...]
+    # Taille S/M/L, informative (combat.md 3.2)
+    taille: str = "S"
+    # Nombre de cases occupees dans la flotte (Boss des pirates : 2)
+    emplacements: int = 1
+    # Colonne preferee, None si indifferent
+    placement: PlacementEnnemi | None = None
+
+    # --- Etat en combat : sur la copie de combat seulement ---
+
+    # Coefficient de difficulte (>= 1), fixe a la creation de la copie de combat
+    coefficient: Fraction = Fraction(1)
+    # PV max et PV du combat (pv_base x coefficient, arrondi a l'inferieur) ; None hors combat
+    pv_max: int | None = None
+    pv: int | None = None
+    # Position dans le cycle d'actions : index dans `actions` de l'etape jouee au prochain tour
+    # ennemi (l'intention affichee), avance par avancer_cycle
+    etape: int = 0
+    # Statuts en cours (bouclier, incendie, renvoi...), partages avec les modules (statut.py)
+    statuts: Statuts = field(default_factory=Statuts)
+
+    def __post_init__(self):
+        self.actions = tuple(tuple(etape) for etape in self.actions)
+        if self.pv_base < 1:
+            raise ValueError(f"Ennemi {self.id} : pv doit valoir au moins 1")
+        if self.emplacements < 1:
+            raise ValueError(f"Ennemi {self.id} : emplacements doit valoir au moins 1")
+        if not self.actions or not all(self.actions):
+            raise ValueError(f"Ennemi {self.id} : le cycle et chacune de ses etapes doivent avoir au moins un effet")
+        for etape in self.actions:
+            for effet in etape:
+                if effet.valeur not in self.valeurs:
+                    raise ValueError(f"Ennemi {self.id} : valeur inconnue '{effet.valeur}'")
+
+    # --- Creation pour un combat ---
+
+    def pour_combat(self, coefficient: float | Fraction = 1) -> "Ennemi":
+        """Copie de cet ennemi pour un combat, avec son coefficient de difficulte (au moins 1,
+        decision utilisateur) : PV pleins, debut du cycle, aucun etat de combat."""
+        # Fraction(str(...)) : 1.15 x 20 vaut exactement 23, sans erreur d'arrondi des flottants
+        coefficient = Fraction(str(coefficient))
+        if coefficient < 1:
+            raise ValueError(f"Ennemi {self.id} : le coefficient doit valoir au moins 1 ({coefficient})")
+        pv_max = math.floor(self.pv_base * coefficient)
+        return dataclasses.replace(
+            self, coefficient=coefficient, pv_max=pv_max, pv=pv_max, etape=0, statuts=Statuts(),
+        )
+
+    # --- Valeurs et cycle ---
+
+    def valeur(self, nom: str, tour: int) -> int:
+        """Valeur nommee au tour donne du combat (tenu par le combat, pas par l'ennemi),
+        augmentation et coefficient compris."""
+        return self.valeurs[nom].au_tour(tour, self.coefficient)
+
+    def valeurs_au_tour(self, tour: int) -> dict[str, int]:
+        return {nom: self.valeur(nom, tour) for nom in self.valeurs}
+
+    @property
+    def etape_courante(self) -> tuple[EffetEnnemi, ...]:
+        """Etape jouee au prochain tour ennemi : c'est l'intention affichee au joueur."""
+        return self.actions[self.etape]
+
+    def avancer_cycle(self) -> None:
+        """Apres avoir joue l'etape courante : passe a la suivante, ou revient a la premiere."""
+        self.etape = (self.etape + 1) % len(self.actions)
+
+    # --- Combat ---
 
     def est_detruit(self) -> bool:
-        """Renvoie True si l'ennemi n'a plus de points de vie."""
-        return self.pv <= 0
+        return self.pv is not None and self.pv <= 0
 
-    def subir_degats(self, degats: int) -> None:
-        """Applique des degats, en absorbant d'abord avec le bouclier (specs.md 3.5, meme
-        principe que Module.subir_degats - les ennemis peuvent desormais en avoir, specs.md 13)."""
-        degats_restants = max(0, degats - self.bouclier)
-        self.bouclier = max(0, self.bouclier - degats)
-        self.pv = max(0, self.pv - degats_restants)
+    def _verifier_en_combat(self) -> None:
+        """Les methodes de combat ne s'appellent que sur une copie de combat (pour_combat)."""
+        if self.pv is None:
+            raise ValueError(f"Ennemi {self.id} : hors combat, utiliser sa copie de combat (pour_combat)")
 
-    def ajouter_bouclier(self, valeur: int) -> None:
-        """Ajoute du bouclier a l'ennemi."""
-        self.bouclier += valeur
+    def subir_degats(self, degats: int) -> Encaissement:
+        """Encaisse une attaque a travers les statuts (leurre, renvoi, bouclier : Statuts.
+        encaisser_attaque). Renvoie le detail, dont les degats a renvoyer a l'attaquant."""
+        self._verifier_en_combat()
+        encaissement = self.statuts.encaisser_attaque(degats)
+        self._perdre_pv(encaissement.degats_pv)
+        return encaissement
 
-    def appliquer_buff(
-        self, action: ActionCarte, valeur: int, tours: int | None, cible_reflet=None
-    ) -> None:
-        """Ajoute un nouveau buff/debuff actif (specs.md 13 - meme liste pour les deux, la
-        distinction n'est que semantique) et declenche son effet immediat si BOUCLIER_PAR_TOUR
-        (ajoute du bouclier). Contrairement a Module, aucun redeclenchement automatique a
-        chaque tour ennemi : c'est la frequence de l'Action qui pose ce buff qui decide quand
-        il est repose (cf. ActionEnnemi.active_au_tour). Independant des buffs deja actifs :
-        n'ecrase ni ne fusionne rien, meme un buff du meme type deja present. cible_reflet
-        (uniquement pour BOUCLIER_MIROIR, cf. carte.py:BuffActif) : module du joueur qui
-        recevra les degats renvoyes quand le joueur attaquera cet ennemi."""
-        buff = BuffActif(action=action, valeur=valeur, tours_restants=tours, cible_reflet=cible_reflet)
-        self.buffs_actifs.append(buff)
-        if action == ActionCarte.BOUCLIER_PAR_TOUR:
-            self.ajouter_bouclier(valeur)
+    def _perdre_pv(self, degats: int) -> None:
+        self.pv = max(0, self.pv - degats)
 
-    def _somme_buffs(self, action: ActionCarte) -> int:
-        return sum(buff.valeur for buff in self.buffs_actifs if buff.action == action)
+    def fin_du_tour_du_joueur(self) -> Encaissement:
+        """L'incendie frappe puis les statuts s'eteignent (Statuts.fin_de_tour). Renvoie le detail
+        des degats d'incendie."""
+        self._verifier_en_combat()
+        encaissement = self.statuts.fin_de_tour()
+        self._perdre_pv(encaissement.degats_pv)
+        return encaissement
 
-    def degats_attaque_effectifs(self, valeur_brute: int) -> int:
-        """Degats reellement infliges par une Action ATTAQUE de cet ennemi (valeur_brute =
-        ActionEnnemi.valeur) : la somme des augmentations actives (specs.md 13, Boss des
-        pirates) est ajoutee, celle des reductions actives est soustraite."""
-        augmentation = self._somme_buffs(ActionCarte.AUGMENTATION_DEGATS)
-        reduction = self._somme_buffs(ActionCarte.REDUCTION_DEGATS)
-        return max(0, valeur_brute + augmentation - reduction)
+    # --- Lecture JSON (format de config/ennemis.json) ---
 
-    def degats_subis(self, degats: int) -> int:
-        """Degats bruts d'une carte, majores par la somme des vulnerabilites actives de cet ennemi."""
-        vulnerabilite = self._somme_buffs(ActionCarte.VULNERABILITE)
-        if vulnerabilite:
-            return round(degats * (1 + vulnerabilite / 100))
-        return degats
+    @classmethod
+    def depuis_dict(cls, entree: dict) -> "Ennemi":
+        """Modele d'ennemi a partir d'une entree de config/ennemis.json ; toute erreur de
+        lecture est signalee avec l'id de l'ennemi."""
+        ennemi = f"Ennemi {entree.get('id', '?')}"
+        _verifier_cles(entree, CLES_ENNEMI, ennemi)
+        try:
+            valeurs = {}
+            for nom, valeur in entree["valeurs"].items():
+                if not isinstance(valeur, dict):
+                    raise ValueError(f"{ennemi}, valeur '{nom}' : objet attendu, ex. {{\"base\": 5}}")
+                _verifier_cles(valeur, CLES_VALEUR, f"{ennemi}, valeur '{nom}'")
+                valeurs[nom] = ValeurEnnemi(**valeur)
+            placement = entree.get("placement")
+            return cls(
+                id=entree["id"],
+                nom=entree["nom"],
+                image=entree["image"],
+                pv_base=entree["pv"],
+                valeurs=valeurs,
+                actions=tuple(tuple(EffetEnnemi.depuis_dict(effet) for effet in etape) for etape in entree["actions"]),
+                taille=entree.get("taille", "S"),
+                emplacements=entree.get("emplacements", 1),
+                placement=PlacementEnnemi[placement] if placement else None,
+            )
+        except KeyError as erreur:
+            raise ValueError(f"{ennemi} : cle manquante ou inconnue {erreur}") from erreur
+        except (TypeError, ValueError) as erreur:
+            if str(erreur).startswith(ennemi):
+                raise
+            raise ValueError(f"{ennemi} : {erreur}") from erreur
 
-    def decrementer_buffs(self) -> None:
-        """A appeler une fois par tour ennemi ecoule : fait expirer les buffs/debuffs a duree
-        (specs.md 12.1/12.4/13 - chaque instance decompte independamment, meme si l'ennemi n'a
-        pas agi). Les buffs persistants (tours_restants=None) ne decomptent jamais."""
-        for buff in self.buffs_actifs:
-            if buff.tours_restants is not None:
-                buff.tours_restants -= 1
-        self.buffs_actifs = [buff for buff in self.buffs_actifs if buff.tours_restants is None or buff.tours_restants > 0]
+
+def charger_ennemis(fichier: Path = FICHIER_ENNEMIS) -> dict[str, Ennemi]:
+    """Charge config/ennemis.json. Renvoie un dict id d'ennemi -> modele d'ennemi ; un id en
+    double est refuse."""
+    donnees = json.loads(fichier.read_text(encoding="utf-8"))
+    ennemis = {}
+    for entree in donnees["ennemis"]:
+        ennemi = Ennemi.depuis_dict(entree)
+        if ennemi.id in ennemis:
+            raise ValueError(f"config/ennemis.json : ennemi {ennemi.id} en double")
+        ennemis[ennemi.id] = ennemi
+    return ennemis

@@ -1,7 +1,6 @@
 """
-Statuts de la refonte (buffs, debuffs, bouclier) portes en combat par un module (ModuleNew) ou un
-ennemi (EnnemiNew) : specs/refonte-statuts.md. Remplace carte.py:BuffActif et les champs
-bouclier de l'ancien moteur.
+Statuts (buffs, debuffs, bouclier) portes en combat par un module (Module) ou un
+ennemi (Ennemi) : specs.md 3.5.
 
 Un statut est un nombre (son intensite) range dans un dictionnaire Statut -> intensite ; absent
 signifie 0. Chaque Statut declare sa regle (RegleStatut) : comment une nouvelle pose se cumule
@@ -61,7 +60,7 @@ class Statut(Enum):
 
 # Decisions utilisateur : bouclier et incendie -1 par tour, cumulables ; renvoi cumulable, valable
 # jusqu'au tour suivant (2026-11-11, pose seulement par l'ennemi Miroir pour l'instant) ; leurre
-# consomme par la premiere attaque (specs/refonte-statuts.md 3).
+# consomme par la premiere attaque (specs.md 3.5).
 REGLES_STATUT = {
     Statut.BOUCLIER: RegleStatut(CumulStatut.ADDITION, ExtinctionStatut.MOINS_UN_PAR_TOUR),
     Statut.INCENDIE: RegleStatut(CumulStatut.ADDITION, ExtinctionStatut.MOINS_UN_PAR_TOUR),

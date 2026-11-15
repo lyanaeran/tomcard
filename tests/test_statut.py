@@ -1,9 +1,9 @@
 """
-Tests unitaires pour src/gameplay/statut_new.py (statuts de la refonte : bouclier, incendie,
+Tests unitaires pour src/gameplay/statut.py (statuts de la refonte : bouclier, incendie,
 renvoi, leurre).
 """
 
-from src.gameplay.statut_new import REGLES_STATUT, Statut, Statuts
+from src.gameplay.statut import REGLES_STATUT, Statut, Statuts
 
 
 def test_chaque_statut_a_une_regle():

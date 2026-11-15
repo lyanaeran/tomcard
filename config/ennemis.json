@@ -3,98 +3,97 @@
     {
       "id": "ENM_PAT_LE_PIRATE",
       "nom": "Pat le Pirate",
-      "taille": "S",
       "image": "assets/ennemis/pat_le_pirate.png",
-      "points_de_vie": 50,
-      "placement": null,
+      "taille": "S",
+      "pv": 50,
+      "valeurs": {
+        "degats": { "base": 5, "augmentation": 1, "tous_les": 3 }
+      },
       "actions": [
-        {"type": "ATTAQUE", "cible": "PROXIMITE", "valeur": 5}
+        [ { "nature": "ATTAQUE", "valeur": "degats", "cible": "PROXIMITE" } ]
       ]
     },
     {
       "id": "ENM_LE_NETTOYEUR",
       "nom": "Le nettoyeur",
-      "taille": "S",
       "image": "assets/ennemis/le_nettoyeur.png",
-      "points_de_vie": 25,
+      "taille": "S",
       "placement": "PROTEGE_ARRIERE",
+      "pv": 25,
+      "valeurs": {
+        "degats": { "base": 7, "augmentation": 1, "tous_les": 3 }
+      },
       "actions": [
-        {"type": "ATTAQUE", "cible": "PROXIMITE", "valeur": 7, "repetitions": 2}
+        [ { "nature": "ATTAQUE", "valeur": "degats", "cible": "PROXIMITE", "repetitions": 2 } ]
       ]
     },
     {
       "id": "ENM_PETIT_JEAN",
       "nom": "Petit Jean",
-      "taille": "S",
       "image": "assets/ennemis/petit_jean.png",
-      "points_de_vie": 100,
+      "taille": "S",
       "placement": "PROTECTEUR_AVANT",
+      "pv": 100,
+      "valeurs": {
+        "degats": { "base": 2, "augmentation": 1, "tous_les": 3 },
+        "bouclier": { "base": 6 }
+      },
       "actions": [
-        {"type": "ATTAQUE", "cible": "PROXIMITE", "valeur": 2},
-        {
-          "type": "POSE_BUFF",
-          "cible": "SOI_MEME",
-          "valeur": 3,
-          "frequence": 2,
-          "action_buff": "BOUCLIER_PAR_TOUR",
-          "duree_buff": 2
-        }
+        [
+          { "nature": "ATTAQUE", "valeur": "degats", "cible": "PROXIMITE" },
+          { "nature": "BOUCLIER", "valeur": "bouclier", "cible": "SOI_MEME" }
+        ],
+        [ { "nature": "ATTAQUE", "valeur": "degats", "cible": "PROXIMITE" } ]
       ]
     },
     {
       "id": "ENM_LE_PUZZLE",
       "nom": "Le puzzle",
-      "taille": "S",
       "image": "assets/ennemis/le_puzzle.png",
-      "points_de_vie": 50,
-      "placement": null,
+      "taille": "S",
+      "pv": 50,
+      "valeurs": {
+        "degats": { "base": 5, "augmentation": 1, "tous_les": 3 }
+      },
       "actions": [
-        {"type": "ATTAQUE", "cible": "TOUS_MODULES_JOUEUR", "valeur": 5}
+        [ { "nature": "ATTAQUE", "valeur": "degats", "cible": "TOUS_MODULES" } ]
       ]
     },
     {
       "id": "ENM_MIROIR",
       "nom": "Miroir",
-      "taille": "S",
       "image": "assets/ennemis/miroir.png",
-      "points_de_vie": 50,
-      "placement": null,
+      "taille": "S",
+      "pv": 50,
+      "valeurs": {
+        "degats": { "base": 2, "augmentation": 1, "tous_les": 3 },
+        "renvoi": { "base": 5 }
+      },
       "actions": [
-        {"type": "ATTAQUE", "cible": "PROXIMITE", "valeur": 2},
-        {
-          "type": "POSE_BUFF",
-          "cible": "COLONNE_AVANT_SINON_ARRIERE_ENNEMIE",
-          "valeur": 5,
-          "action_buff": "BOUCLIER_MIROIR"
-        }
+        [
+          { "nature": "ATTAQUE", "valeur": "degats", "cible": "PROXIMITE" },
+          { "nature": "RENVOI", "valeur": "renvoi", "cible": "ALLIE_AVANT_SINON_ARRIERE" }
+        ]
       ]
     },
     {
       "id": "ENM_BOSS_PIRATES",
       "nom": "Le Boss des pirates",
+      "image": "assets/ennemis/boss_pirates.png",
       "taille": "M",
       "emplacements": 2,
-      "image": "assets/ennemis/boss_pirates.png",
-      "points_de_vie": 150,
-      "placement": null,
+      "pv": 150,
+      "valeurs": {
+        "degats": { "base": 5, "augmentation": 2, "tous_les": 3 },
+        "bouclier": { "base": 10 }
+      },
       "actions": [
-        {"type": "ATTAQUE", "cible": "TOUS_MODULES_JOUEUR", "valeur": 5},
-        {
-          "type": "POSE_BUFF",
-          "cible": "SOI_MEME",
-          "valeur": 2,
-          "frequence": 3,
-          "tour_depart": 2,
-          "action_buff": "AUGMENTATION_DEGATS"
-        },
-        {
-          "type": "POSE_BUFF",
-          "cible": "SOI_MEME",
-          "valeur": 5,
-          "frequence": 3,
-          "tour_depart": 3,
-          "action_buff": "BOUCLIER_PAR_TOUR"
-        }
+        [ { "nature": "ATTAQUE", "valeur": "degats", "cible": "TOUS_MODULES" } ],
+        [ { "nature": "ATTAQUE", "valeur": "degats", "cible": "TOUS_MODULES" } ],
+        [
+          { "nature": "ATTAQUE", "valeur": "degats", "cible": "TOUS_MODULES" },
+          { "nature": "BOUCLIER", "valeur": "bouclier", "cible": "SOI_MEME" }
+        ]
       ]
     }
   ]

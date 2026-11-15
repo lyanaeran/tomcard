@@ -4,7 +4,7 @@ dans le navigateur via Pyodide. Aucune regle de jeu ici : ce fichier ne fait que
 du gameplay en JSON (presentation comprise : popups, phrases du journal mises en forme cote JS a
 partir des memes champs) et router les actions du joueur.
 
-Combat : moteur de la refonte (CombatNew, specs/refonte-combat.md), branche au parcours depuis la
+Combat : moteur de la refonte (Combat, specs.md 3), branche au parcours depuis la
 PR 1 (specs/refonte-branchement.md). Le combat de demonstration n'existe plus : on ne joue que par
 le parcours (decision utilisateur, 2026-11-12).
 """
@@ -17,10 +17,10 @@ import sys
 sys.path.insert(0, "/repo")
 
 from src.gameplay import deroulement
-from src.gameplay.carte_new import Camp, CarteNew, charger_cartes_new
-from src.gameplay.combat_new import ELECTRICITE_PAR_TOUR, NatureEvenement
-from src.gameplay.ennemi_new import CibleEffetEnnemi, EnnemiNew
-from src.gameplay.module_new import ModuleNew, charger_modules_new
+from src.gameplay.carte import Camp, Carte, charger_cartes
+from src.gameplay.combat import ELECTRICITE_PAR_TOUR, NatureEvenement
+from src.gameplay.ennemi import CibleEffetEnnemi, Ennemi
+from src.gameplay.module import Module, charger_modules
 from src.gameplay.parcours import TypeEtape
 from src.gameplay.partie import (
     COUT_ACTION_STATION_SERVICE,
@@ -56,8 +56,8 @@ from src.gameplay.partie import (
     subir_degats_principal,
 )
 from src.gameplay.position import Colonne, Position, Rangee
-from src.gameplay.statut_new import Statut
-from src.gameplay.vaisseau_new import CASES_PAR_EMPLACEMENT
+from src.gameplay.statut import Statut
+from src.gameplay.vaisseau import CASES_PAR_EMPLACEMENT
 
 # Image du principal recadree pour une case de la taille des autres modules (Station service,
 # accueil joueur) ; dans le combat, le principal garde son image entiere (le vaisseau)
@@ -71,7 +71,7 @@ IDS_MODULES = {
     "AR_D": Position(Colonne.ARRIERE, Rangee.DROITE),
 }
 CASE_PRINCIPAL = Position(Colonne.AVANT, Rangee.MID)
-# Emplacement d'un module (ModuleNew.emplacement) -> id de case
+# Emplacement d'un module (Module.emplacement) -> id de case
 IDS_PAR_EMPLACEMENT = {"base": "base", "avant_gauche": "AV_G", "avant_droite": "AV_D", "arriere_gauche": "AR_G", "arriere_droite": "AR_D"}
 IDS_ENNEMIS = {
     "AV_G": Position(Colonne.AVANT, Rangee.GAUCHE),
@@ -85,7 +85,7 @@ _PAIRES_CASES_ENNEMIES = (("AV_G", "AR_G"), ("AV_M", "AR_M"), ("AV_D", "AR_D"))
 
 # Version du contrat entre bridge.py et src/web/app.js : doit etre egale a VERSION_CACHE (app.js),
 # verifie au demarrage par app.js (versionsAccordees) et par tests/test_architecture.py
-VERSION_WEB = "88"
+VERSION_WEB = "91"
 
 combat = None
 # Taille du journal deja transmise : les popups d'une action sont calcules a partir des seules
@@ -96,10 +96,10 @@ etat_aventure_police = None
 
 
 @functools.cache
-def _modeles_cartes() -> dict[str, CarteNew]:
-    """Modeles de cartes lus une seule fois (config/carte_new.json). Jamais modifies : chaque
-    carte affichee ou ajoutee est une copie (CarteNew.copie)."""
-    return charger_cartes_new()
+def _modeles_cartes() -> dict[str, Carte]:
+    """Modeles de cartes lus une seule fois (config/cartes.json). Jamais modifies : chaque
+    carte affichee ou ajoutee est une copie (Carte.copie)."""
+    return charger_cartes()
 
 
 def _noms_modules_partie(partie) -> dict[str, str]:
@@ -110,8 +110,8 @@ def _noms_modules_partie(partie) -> dict[str, str]:
 # --- Cartes (hors combat et en combat) ---
 
 
-def _carte_json(carte: CarteNew, nom_module: str | None = None) -> dict:
-    """Une carte, telle que l'affichent tous les ecrans : texte de carte_new.json avec les valeurs
+def _carte_json(carte: Carte, nom_module: str | None = None) -> dict:
+    """Une carte, telle que l'affichent tous les ecrans : texte de cartes.json avec les valeurs
     actuelles (description_affichee), cout, munitions, lancements, mot-cle Persistante."""
     return {
         "id_carte": carte.id,
@@ -129,9 +129,9 @@ def _carte_json(carte: CarteNew, nom_module: str | None = None) -> dict:
     }
 
 
-def _cartes_regroupees_json(cartes: list[CarteNew], noms_modules: dict[str, str]) -> list[dict]:
+def _cartes_regroupees_json(cartes: list[Carte], noms_modules: dict[str, str]) -> list[dict]:
     """Regroupe les exemplaires identiques (meme carte, meme module) en une entree avec quantite."""
-    groupes: dict[tuple[str, str | None], list[CarteNew]] = {}
+    groupes: dict[tuple[str, str | None], list[Carte]] = {}
     for carte in cartes:
         groupes.setdefault((carte.id, carte.exemplaire_module), []).append(carte)
     resultat = []
@@ -142,7 +142,7 @@ def _cartes_regroupees_json(cartes: list[CarteNew], noms_modules: dict[str, str]
     return resultat
 
 
-def _carte_proposee(id_carte: str, exemplaire_module: str) -> CarteNew:
+def _carte_proposee(id_carte: str, exemplaire_module: str) -> Carte:
     """Carte choisie par le joueur parmi celles proposees (JS renvoie son id et son module)."""
     return _modeles_cartes()[id_carte].copie(exemplaire_module=exemplaire_module)
 
@@ -150,11 +150,11 @@ def _carte_proposee(id_carte: str, exemplaire_module: str) -> CarteNew:
 # --- Combat : cases ---
 
 
-def _id_case_module(module: ModuleNew) -> str | None:
+def _id_case_module(module: Module) -> str | None:
     return IDS_PAR_EMPLACEMENT.get(module.emplacement)
 
 
-def _id_case_ennemi(ennemi: EnnemiNew) -> str | None:
+def _id_case_ennemi(ennemi: Ennemi) -> str | None:
     """Case Avant de la rangee pour un ennemi sur deux cases (le Boss), sinon sa case."""
     cases = combat.flotte.cases_de(ennemi)
     case = next((c for c in cases if c.colonne == Colonne.AVANT), cases[0])
@@ -162,13 +162,13 @@ def _id_case_ennemi(ennemi: EnnemiNew) -> str | None:
 
 
 def _id_case_entite(entite) -> tuple[str | None, str]:
-    if isinstance(entite, ModuleNew):
+    if isinstance(entite, Module):
         return _id_case_module(entite), "allie"
     return _id_case_ennemi(entite), "ennemi"
 
 
-def _position_case(id_case: str, camp: str, carte: CarteNew) -> Position:
-    """Position a passer a CombatNew.jouer_carte pour la case touchee. Une entite sur deux cases
+def _position_case(id_case: str, camp: str, carte: Carte) -> Position:
+    """Position a passer a Combat.jouer_carte pour la case touchee. Une entite sur deux cases
     (principal, Boss) n'a qu'un id de case cote affichage : on prend celle de ses cases que le
     gameplay accepte pour cette carte (cibles_possibles ; ex. Ligne arriere sur le Boss = sa case
     Arriere), sinon sa case affichee."""
@@ -214,7 +214,7 @@ def _statuts_json(entite) -> dict:
 
 def _menaces(intentions) -> dict[int, list[dict]]:
     """Attaques prevues au prochain tour ennemi, par module vise (id de l'objet module), d'apres
-    CombatNew.modules_vises. Sert a marquer les modules vises."""
+    Combat.modules_vises. Sert a marquer les modules vises."""
     menaces: dict[int, list[dict]] = {}
     for intention in intentions:
         for effet in intention.effets:
@@ -225,7 +225,7 @@ def _menaces(intentions) -> dict[int, list[dict]]:
     return menaces
 
 
-def _module_json(module: ModuleNew | None, id_case: str, menaces: dict | None = None) -> dict | None:
+def _module_json(module: Module | None, id_case: str, menaces: dict | None = None) -> dict | None:
     if module is None:
         return None
     hors_service = sum(carte.exemplaire_module == module.exemplaire for carte in combat.deck.hors_service)
@@ -244,7 +244,7 @@ def _module_json(module: ModuleNew | None, id_case: str, menaces: dict | None = 
     }
 
 
-def _effet_ennemi_json(effet, valeur: int, ennemi: EnnemiNew, cible_prevue=None) -> dict:
+def _effet_ennemi_json(effet, valeur: int, ennemi: Ennemi, cible_prevue=None) -> dict:
     """Un effet d'etape ennemie avec sa valeur au tour en cours. `cible` : "MODULE" (module prevu,
     nom et case), "TOUS" (tous les modules), "SOI" (l'ennemi lui-meme), "ALLIE" (un allie tire au
     moment de jouer) ; cible_nom / cible_id renseignes seulement pour un module prevu."""
@@ -264,13 +264,13 @@ def _effet_ennemi_json(effet, valeur: int, ennemi: EnnemiNew, cible_prevue=None)
         "cible_nom": None,
         "cible_id": None,
     }
-    if cible == "MODULE" and isinstance(cible_prevue, ModuleNew):
+    if cible == "MODULE" and isinstance(cible_prevue, Module):
         resultat["cible_nom"] = cible_prevue.nom
         resultat["cible_id"] = _id_case_module(cible_prevue)
     return resultat
 
 
-def _ennemi_json(ennemi: EnnemiNew | None, id_case: str, intentions: dict, fusionne: bool = False) -> dict | None:
+def _ennemi_json(ennemi: Ennemi | None, id_case: str, intentions: dict, fusionne: bool = False) -> dict | None:
     if ennemi is None:
         return None
     intention = intentions.get(id(ennemi))
@@ -308,30 +308,30 @@ def _ennemis_json(intentions_du_tour: list) -> list:
     return [resultat[id_case] for id_case in IDS_ENNEMIS]
 
 
-def _carte_en_main_json(carte: CarteNew, index: int) -> dict:
+def _carte_en_main_json(carte: Carte, index: int) -> dict:
     module = combat.vaisseau.module_d_exemplaire(carte.exemplaire_module)
     entree = _carte_json(carte, module.nom if module else None)
     entree["index"] = index
     entree["camp"] = "allie" if carte.cible.camp == Camp.JOUEUR else "ennemi"
     entree["jouable"] = combat.peut_jouer(carte)
-    # Cases ou confirmer la carte (refonte-combat.md 4.2) : decidees par le gameplay, jamais en JS
+    # Cases ou confirmer la carte (specs.md 3.8.2) : decidees par le gameplay, jamais en JS
     entree["cases"] = _ids_cases(combat.cibles_possibles(carte), carte.cible.camp) if entree["jouable"] else []
     return entree
 
 
 def _nom_source(source) -> tuple[str | None, str | None]:
     """(nom, genre) d'une source d'evenement : carte, ennemi, module, ou None (incendie)."""
-    if isinstance(source, CarteNew):
+    if isinstance(source, Carte):
         return source.nom, "carte"
-    if isinstance(source, EnnemiNew):
+    if isinstance(source, Ennemi):
         return source.nom, "ennemi"
-    if isinstance(source, ModuleNew):
+    if isinstance(source, Module):
         return source.nom, "module"
     return None, None
 
 
 def _evenement_json(evenement) -> dict:
-    """Une entree du journal (des faits, combat_new.Evenement), mise en phrase par app.js."""
+    """Une entree du journal (des faits, combat.Evenement), mise en phrase par app.js."""
     source_nom, source_genre = _nom_source(evenement.source)
     cible_nom, cible_genre = _nom_source(evenement.cible)
     return {
@@ -439,7 +439,7 @@ def _demarrer_combat(nouveau) -> str:
 
 
 def jouer_carte(index_carte: int, id_case: str) -> str:
-    """Joue la carte en main a cet index sur la case touchee (refonte-combat.md 4)."""
+    """Joue la carte en main a cet index sur la case touchee (specs.md 3.8)."""
     carte = combat.deck.main[index_carte]
     camp = "allie" if carte.cible.camp == Camp.JOUEUR else "ennemi"
     combat.jouer_carte(carte, _position_case(id_case, camp, carte))
@@ -538,7 +538,7 @@ def choisir_module_partie_web(partie_json, module_id) -> str:
     exemplaire. `candidats` vide : src/web/app.js appelle directement resoudre_carte_module_web avec
     None, sans afficher l'ecran (comme le PC)."""
     partie = partie_depuis_json(partie_json)
-    modele = charger_modules_new()[module_id]
+    modele = charger_modules()[module_id]
     candidats = deroulement.choisir_module(partie, modele, random.Random())
     return json.dumps({
         "partie": _partie_json(partie),

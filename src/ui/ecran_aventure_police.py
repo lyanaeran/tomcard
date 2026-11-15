@@ -11,8 +11,8 @@ import random
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.carte_new import CarteNew
-from src.gameplay.carte_new import charger_cartes_new
+from src.gameplay.carte import Carte
+from src.gameplay.carte import charger_cartes
 from src.gameplay.partie import (
     RACINE,
     COUT_METTRE_AUX_NORMES,
@@ -109,7 +109,7 @@ class EcranAventurePolice(pyglet.window.Window):
         super().__init__(width=LARGEUR_FENETRE, height=HAUTEUR_FENETRE, caption="Space Fight")
         self.partie = partie
         # Modeles de cartes, lus une seule fois
-        self.cartes = charger_cartes_new()
+        self.cartes = charger_cartes()
         # Instance explicite (jamais le module random global directement, cf. CLAUDE.md
         # "Determinisme du tirage aleatoire"), injectable pour un test reproductible.
         self.aleatoire = aleatoire or random.Random()
@@ -127,7 +127,7 @@ class EcranAventurePolice(pyglet.window.Window):
         self.survole_barre: str | None = None
         self.termine: bool = False
 
-    def _carte_actuelle(self) -> CarteNew:
+    def _carte_actuelle(self) -> Carte:
         """Carte tiree (EtatAventurePolice.carte_actuelle), rattachee a son module."""
         possedee = self.etat_police.carte_actuelle
         return self.cartes[possedee.id].copie(exemplaire_module=possedee.module)

@@ -1,32 +1,37 @@
-# Refonte du jeu — vue d'ensemble
+# Le moteur du jeu — vue d'ensemble (refonte de novembre 2026)
 
 *Document de travail, hors numérotation (cf. [specs.md](specs.md)). **À lire en premier** pour
 comprendre l'état du projet : une refonte des cartes, des modules, des ennemis, des statuts et du
-combat est en cours, avec un **nouveau moteur codé à côté de l'ancien**. **Branchement en cours** :
+combat a été faite avec un **nouveau moteur codé à côté de l'ancien**, puis branchée au jeu :
 le gameplay du parcours (partie, sauvegarde, déroulement, Station, Aventures, simulateur de parties)
 utilise le nouveau moteur depuis la PR 1 (2026-11-12), la version web depuis la PR 2, la version
-PC depuis la PR 3 (2026-11-14) : **le jeu est de nouveau jouable sur PC et sur le web**. Il reste
-la PR 4 (suppression de l'ancien moteur). Mis à jour le 2026-11-14.*
+PC depuis la PR 3 (2026-11-14) : **le jeu est jouable sur PC et sur le web**. **L'ancien moteur
+est supprimé (PR 4, 2026-11-14).** Mis à jour le 2026-11-14.*
 
 ---
 
-## 1. Deux moteurs coexistent
+## 1. Un seul moteur
 
-| | Ancien moteur (le jeu actuel) | Moteur de la refonte (`_new`) |
+L'ancien moteur (code, données, tests) est **supprimé** depuis la PR 4 du branchement. Le moteur de
+la refonte est le seul, et ses fichiers ont perdu leur suffixe `_new` (2026-11-14, décision
+utilisateur) :
+
+| | Aujourd'hui | Nom pendant la refonte |
 |---|---|---|
-| **Utilisé par** | plus rien dans le jeu (seulement ses propres tests), supprimé à la PR 4 | le parcours (`deroulement.py`, `partie.py`, `parcours.py`, `flotte_new.py`), l'affichage PC (`main.py`, `src/ui/`) et web (`src/web/`), le simulateur de parties (`partie_auto.py`, `etudes.py`) et celui des combats (`bot_new.py`, `combats_new.py`) |
-| **Code** | `carte.py`, `module.py`, `ennemi.py`, `combat.py`, `deck.py`, `flotte.py`, `vaisseau.py`, `joueur.py`, `ciblage.py`, `donnees.py` | `carte_new.py`, `module_new.py`, `ennemi_new.py`, `statut_new.py`, `combat_new.py`, `deck_new.py`, `flotte_new.py`, `vaisseau_new.py` |
-| **Données** | `config/cartes.json`, `config/modules.json`, `config/ennemis.json` | `config/carte_new.json`, `config/module_new.json`, `config/ennemi_new.json` (**sources de vérité**), avec leurs tableaux générés `.md` |
-| **Spec** | `combat.md`, `modules-cartes.md`, `interface.md`… (§2 à §13) | les brouillons `refonte-*.md` (§3 ci-dessous) |
+| **Code** (`src/gameplay/`) | `carte.py`, `module.py`, `ennemi.py`, `statut.py`, `combat.py`, `deck.py`, `flotte.py`, `vaisseau.py` | `carte_new.py`, `module_new.py`… |
+| **Classes** | `Carte`, `Module`, `Ennemi`, `Combat`, `Deck`, `Flotte`, `Vaisseau`, `CibleCarte`, `EtatCombat` | `CarteNew`, `ModuleNew`… |
+| **Données** | `config/cartes.json`, `config/modules.json`, `config/ennemis.json` (**sources de vérité**), avec leurs tableaux générés `.md` | `config/carte_new.json`… |
+| **Simulateur de combats** | `outils/simulation/bot.py`, `combats.py` | `bot_new.py`, `combats_new.py` |
 
-- **Le « branchement »** (§5) remplace l'ancien moteur par le nouveau dans le parcours, la
-  sauvegarde et l'affichage, puis supprimera l'ancien. Le parcours (PR 1), le web (PR 2) et le PC
-  (PR 3) sont branchés ; il reste à supprimer l'ancien moteur (PR 4).
-- **Une valeur de carte se change dans `config/carte_new.json` seulement** : depuis la PR 1, le
-  parcours ne lit plus `config/cartes.json` (encore lu par l'ancien affichage, supprimé à la PR
-  4).
-- Les fichiers `_new` sont déjà montés côté web (`FICHIERS_A_MONTER` de `src/web/app.js`, exigé par
-  `tests/test_architecture.py`) même s'ils ne sont pas utilisés.
+- **Utilisé par** : le parcours (`deroulement.py`, `partie.py`, `parcours.py`), l'affichage PC
+  (`main.py`, `src/ui/`) et web (`src/web/`), les deux simulateurs.
+- Un nom en `_new` ou en `…New` dans un document plus ancien (`refonte-branchement.md`, synthèses
+  de simulation) désigne le fichier ou la classe d'aujourd'hui.
+- **Le « branchement »** a remplacé l'ancien moteur dans le parcours (PR 1), le web (PR 2), le PC
+  (PR 3), puis l'a supprimé (PR 4) : historique dans
+  [refonte-branchement.md](refonte-branchement.md).
+- **Une valeur de carte se change dans `config/cartes.json`**, puis on régénère
+  `config/cartes.md`.
 - Seuls **deux modules sont jouables** dans les deux moteurs : le module **principal** (`MOD_1`)
   et le **Lanceur de missiles** (`MOD_2`). Les autres modules et leurs cartes ne sont pas encore
   revus.
@@ -57,16 +62,20 @@ la PR 4 (suppression de l'ancien moteur). Mis à jour le 2026-11-14.*
 
 | Sujet | Spec (décisions) | Code | Données | Tests |
 |---|---|---|---|---|
-| Cartes | `modules-cartes.md` §4 (valeurs revues), `refonte-modules.md` §3 | `carte_new.py` (`CarteNew`) | `config/carte_new.json` (19 cartes), tableau `config/carte_new.md` | `test_carte_new.py`, `test_tableau_cartes.py` |
-| Modules | `refonte-modules.md` (§3 Hors service et Persistante, §8 modèle) | `module_new.py` (`ModuleNew`) | `config/module_new.json`, `config/module_new.md` | `test_module_new.py`, `test_tableau_modules.py` |
-| Ennemis | `refonte-ennemis.md` | `ennemi_new.py` (`EnnemiNew`) | `config/ennemi_new.json`, `config/ennemi_new.md` | `test_ennemi_new.py`, `test_tableau_ennemis.py` |
-| Statuts | `refonte-statuts.md` | `statut_new.py` | — | `test_statut_new.py` |
-| Combat | `refonte-combat.md` (§11 : choix faits en codant) | `combat_new.py`, `vaisseau_new.py`, `flotte_new.py`, `deck_new.py` | — | `test_combat_new.py`, `test_vaisseau_new.py`, `test_flotte_new.py`, `test_deck_new.py` |
-| Simulation | `simulation.md` §12 | `outils/simulation/bot_new.py`, `combats_new.py`, `essai_bouclier.py` | — | `test_simulation_combats_new.py` |
-| Buff Destruction | `refonte-destruction.md` (**en attente**) | — | — | — |
-| Réflexion d'origine sur les buffs | `refonte-buffs-debuffs.md` (en partie dépassé par `refonte-statuts.md`) | — | — | — |
+| Cartes | `modules-cartes.md` §6, §7, §12 | `carte.py` (`Carte`) | `config/cartes.json` (19 cartes), tableau `config/cartes.md` | `test_carte.py`, `test_tableau_cartes.py` |
+| Modules | `modules-cartes.md` §4, §5 ; destruction : `combat.md` §3.4 | `module.py` (`Module`) | `config/modules.json`, `config/modules.md` | `test_module.py`, `test_tableau_modules.py` |
+| Ennemis, flottes | `combat.md` §13 | `ennemi.py` (`Ennemi`), `flotte.py` | `config/ennemis.json`, `config/ennemis.md` | `test_ennemi.py`, `test_flotte.py`, `test_tableau_ennemis.py` |
+| Statuts | `combat.md` §3.5 | `statut.py` | — | `test_statut.py` |
+| Combat | `combat.md` §3 | `combat.py`, `vaisseau.py`, `deck.py` | — | `test_combat.py`, `test_vaisseau.py`, `test_deck.py` |
+| Parcours, Station, Aventures, sauvegarde | `parcours.md`, `aventures.md`, `architecture.md` §10.3 | `partie.py`, `parcours.py`, `deroulement.py` | — | `test_partie.py`, `test_parcours.py`, `test_deroulement.py` |
+| Écran de combat | `interface.md` §8 | `src/ui/fenetre.py`, `textes_combat.py` ; `src/web/app.js`, `bridge.py` | — | `test_textes_combat.py`, `test_bridge.py`, `outils/test_web/essais.js` |
+| Simulation | `simulation.md` | `outils/simulation/` | — | `test_simulation.py`, `test_simulation_combats.py` |
+| Destruction, résurrection, sacrifice | `refonte-destruction.md` (**pistes non codées**) | — | — | — |
+| Réflexion d'origine sur les buffs | `refonte-buffs-debuffs.md` (historique, pistes non codées) | — | — | — |
+| Historique du branchement | `refonte-branchement.md` | — | — | — |
+| Anciennes cartes et anciens modules | `archive-cartes-modules.md` (**archive**) | — | — | — |
 
-Les tableaux `config/*_new.md` sont **générés** (`python -m outils.tableau_cartes`,
+Les tableaux `config/*.md` sont **générés** (`python -m outils.tableau_cartes`,
 `tableau_modules`, `tableau_ennemis`), jamais modifiés à la main ; un test échoue s'ils ne sont pas
 à jour.
 
@@ -84,26 +93,27 @@ Les tableaux `config/*_new.md` sont **générés** (`python -m outils.tableau_ca
 
 **Branchement** (plan validé le 2026-11-11 : [refonte-branchement.md](refonte-branchement.md),
 quatre PR, web avant PC) :
-1. ~~Gameplay : sauvegarde (`ModuleNew`, cartes rattachées), flottes, `CombatNew` dans le parcours,
-   Station et Aventures, simulateur de parties~~ : **fait (PR 1, 2026-11-12)**, choix à valider dans
-   refonte-branchement.md §5.1.
-2. ~~Affichage web (`src/web/bridge.py`, `src/web/app.js`)~~ : **fait (PR 2, 2026-11-12)**, maquette à
-   valider (refonte-branchement.md §5.2).
-3. ~~Affichage PC (`src/ui/`, `main.py`) : il lit tout dans l'API de `CombatNew` (`combat.deck`,
+1. ~~Gameplay : sauvegarde (`Module`, cartes rattachées), flottes, `Combat` dans le parcours,
+   Station et Aventures, simulateur de parties~~ : **fait (PR 1, 2026-11-12)**, refonte-branchement.md §5.1.
+2. ~~Affichage web (`src/web/bridge.py`, `src/web/app.js`)~~ : **fait (PR 2, 2026-11-12)**, refonte-branchement.md §5.2.
+3. ~~Affichage PC (`src/ui/`, `main.py`) : il lit tout dans l'API de `Combat` (`combat.deck`,
    `cibles_possibles`, `intentions`, `journal`), jamais dans le deck de la partie~~ : **fait (PR 3,
-   2026-11-14)**, écarts avec le web à valider (refonte-branchement.md §5.4).
-4. Suppression de l'ancien moteur et des anciens `config/*.json`.
+   2026-11-14)**, écarts avec le web à valider (interface.md §8.4).
+4. ~~Suppression de l'ancien moteur et des anciens `config/*.json`~~ : **fait (PR 4, 2026-11-14)**.
+   Suffixe `_new` retiré le même jour (refonte-branchement.md §5.5).
 
-**Design encore ouvert** :
-- Flottes par niveau (les niveaux 2 à 5 sont trop faciles), éventuels nouveaux ennemis
-  (`refonte-ennemis.md` §5).
-- Rattachement des cartes obtenues hors module (`refonte-modules.md` §3.3).
-- Buff Destruction, résurrection, sacrifice volontaire (`refonte-destruction.md`,
-  `refonte-modules.md` §4 à §6).
-- Vulnérabilité, Réduction de dégâts, Tir allié : refusés par `CombatNew` pour l'instant
-  (`refonte-combat.md` §1.2).
-- Revue des autres modules et de leurs cartes (seuls principal et Lanceur sont revus).
+**Brouillons reportés (2026-11-14)** : `refonte-combat.md`, `refonte-statuts.md`,
+`refonte-ennemis.md` et la partie codée de `refonte-modules.md` sont maintenant dans les sections
+numérotées (`combat.md` §3 et §13, `modules-cartes.md` §4 et §12, `interface.md` §8) et ont été
+supprimés. Restent hors numérotation : ce fichier, l'historique du branchement, et deux documents
+de pistes non codées.
+
+**Design encore ouvert** (liste complète : [a-trancher.md](a-trancher.md)) :
+- Flottes par niveau (les niveaux 2 à 5 sont trop faciles), nouveaux ennemis.
+- Rattachement des cartes obtenues hors module.
+- Buff Destruction, résurrection, sacrifice volontaire
+  ([refonte-destruction.md](refonte-destruction.md)).
+- Vulnérabilité, Réduction de dégâts, Tir allié : non codés (`combat.md` §3.8.4).
+- Revue des autres modules et de leurs cartes (seuls le principal et le Lanceur sont revus).
 - Accumulation du bouclier à surveiller (`essai_bouclier_2026-11-11.md`).
-
-Une fois la refonte stabilisée et branchée, son contenu ira dans les sections numérotées
-(`combat.md`, `modules-cartes.md`…) et les fichiers `refonte-*.md` seront supprimés.
+- Écarts d'affichage entre PC et web à valider (`interface.md` §8.4).

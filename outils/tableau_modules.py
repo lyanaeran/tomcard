@@ -1,5 +1,5 @@
 """
-Genere config/module_new.md, tableau lisible des modules, a partir de config/module_new.json
+Genere config/modules.md, tableau lisible des modules, a partir de config/modules.json
 (seule source de verite). Ne jamais modifier le tableau a la main : relancer ce script apres
 chaque modification du JSON (tests/test_tableau_modules.py echoue sinon).
 
@@ -8,16 +8,16 @@ chaque modification du JSON (tests/test_tableau_modules.py echoue sinon).
 
 from pathlib import Path
 
-from src.gameplay.carte_new import charger_cartes_new
-from src.gameplay.module_new import charger_modules_new
+from src.gameplay.carte import charger_cartes
+from src.gameplay.module import charger_modules
 
 RACINE = Path(__file__).resolve().parents[1]
-FICHIER_JSON = RACINE / "config" / "module_new.json"
-FICHIER_TABLEAU = RACINE / "config" / "module_new.md"
+FICHIER_JSON = RACINE / "config" / "modules.json"
+FICHIER_TABLEAU = RACINE / "config" / "modules.md"
 
 ENTETE = """# Modules (refonte) — tableau généré
 
-> **Fichier généré automatiquement à partir de `config/module_new.json`, ne pas le modifier à la
+> **Fichier généré automatiquement à partir de `config/modules.json`, ne pas le modifier à la
 > main** : toute modification se fait dans le JSON, puis `python -m outils.tableau_modules`
 > régénère ce tableau (un test échoue tant qu'il n'est pas à jour).
 
@@ -36,15 +36,15 @@ def _oui_non(valeur: bool) -> str:
 
 
 def tableau_markdown(fichier_json: Path = FICHIER_JSON) -> str:
-    """Contenu complet de config/module_new.md pour ce fichier JSON. Passe par le chargeur
-    (lecture stricte) ; une carte absente de config/carte_new.json est une erreur."""
-    modules = charger_modules_new(fichier_json).values()
-    noms_cartes = {id_carte: carte.nom for id_carte, carte in charger_cartes_new().items()}
+    """Contenu complet de config/modules.md pour ce fichier JSON. Passe par le chargeur
+    (lecture stricte) ; une carte absente de config/cartes.json est une erreur."""
+    modules = charger_modules(fichier_json).values()
+    noms_cartes = {id_carte: carte.nom for id_carte, carte in charger_cartes().items()}
     lignes = ["| " + " | ".join(COLONNES) + " |", "|" + "|".join("---" for _ in COLONNES) + "|"]
     for module in modules:
         inconnues = [id_carte for id_carte in module.cartes if id_carte not in noms_cartes]
         if inconnues:
-            raise ValueError(f"Module {module.id} : cartes absentes de config/carte_new.json {inconnues}")
+            raise ValueError(f"Module {module.id} : cartes absentes de config/cartes.json {inconnues}")
         cartes = "<br>".join(f"{id_carte} {noms_cartes[id_carte]}" for id_carte in module.cartes)
         valeurs = [
             module.id, module.nom, _oui_non(module.principal), str(module.pv_max_base),

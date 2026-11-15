@@ -1,556 +1,462 @@
 """
-Moteur du combat entre le vaisseau du joueur et une flotte d'ennemis (cf. specs.md paragraphe 8).
+Combat (Combat) : fait jouer ensemble Carte, Module, Ennemi et les
+statuts (specs.md 3, seule reference de ce fichier). Gameplay seulement : aucune
+dependance d'affichage, une API d'actions (jouer_carte, finir_tour) et de consultations (etat,
+cibles_possibles, intentions, journal), utilisee par le parcours (partie.py), l'affichage PC et
+web, le simulateur et les tests.
 """
 
 import random
+from dataclasses import dataclass
 from enum import Enum, auto
 
-from src.gameplay.carte import CIBLES_SANS_CLIC, ActionCarte, Carte, CibleCarte, TypeCarte
-from src.gameplay.ciblage import module_cible_par_ennemi
-from src.gameplay.ennemi import ActionEnnemi, CibleActionEnnemi, Ennemi, TypeActionEnnemi
+from src.gameplay.carte import Camp, Carte, CibleCarte, Effet, NatureEffet, PorteeEffet, appliquer_repetition
+from src.gameplay.deck import CARTES_PIOCHEES_PAR_TOUR, Deck
+from src.gameplay.ennemi import CibleEffetEnnemi, EffetEnnemi, Ennemi, NatureEffetEnnemi
 from src.gameplay.flotte import Flotte
-from src.gameplay.joueur import Joueur
-from src.gameplay.journal import EvenementActionEnnemi, EvenementCarteJouee, EvenementTour
 from src.gameplay.module import Module
-from src.gameplay.position import Colonne, Position, Rangee
+from src.gameplay.position import Colonne, Position
+from src.gameplay.statut import Encaissement, Statut, Statuts
+from src.gameplay.vaisseau import Vaisseau
+
+# Electricite rendue au debut de chaque tour du joueur (combat.md 3.3)
+ELECTRICITE_PAR_TOUR = 3
+
+# Natures d'effet de carte laissees pour plus tard (specs.md 3.8.4) : une carte qui en porte
+# est refusee
+NATURES_NON_GEREES = {NatureEffet.VULNERABILITE, NatureEffet.REDUCTION_DEGATS, NatureEffet.REDIRECTION_CIBLE}
+
+# Natures qui agissent sur le joueur lui-meme (electricite, pioche, cartes), pas sur une entite
+NATURES_GLOBALES = {NatureEffet.GAIN_ELECTRICITE, NatureEffet.PIOCHE, NatureEffet.REPETITION}
+
+# Camp que chaque nature d'effet peut toucher : une carte qui l'applique a l'autre camp est
+# injouable (verifie avant toute modification du combat)
+CAMP_PAR_NATURE = {
+    NatureEffet.DEGATS: Camp.ENNEMI,
+    NatureEffet.INCENDIE: Camp.ENNEMI,
+    NatureEffet.BOUCLIER: Camp.JOUEUR,
+    NatureEffet.REPARATION: Camp.JOUEUR,
+    NatureEffet.ANNULATION_PROCHAINE_ATTAQUE: Camp.JOUEUR,
+}
+
+Entite = Module | Ennemi
 
 
 class EtatCombat(Enum):
-    """Etat courant du combat."""
-
     EN_COURS = auto()
     VICTOIRE = auto()
     DEFAITE = auto()
 
 
-def _degats_effectifs(cible: Module | Ennemi, degats: int) -> int:
-    """Combien de PV+bouclier une cible va reellement perdre pour ces degats, sans
-    depasser ce qu'il lui reste (specs.md paragraphe 3.5 : le bouclier absorbe en premier).
-    Un leurre actif (specs.md 12.6) annule totalement l'attaque : 0 degats, quel que soit
-    le montant."""
-    if getattr(cible, "leurre_actif", False):
-        return 0
-    return min(degats, cible.pv + getattr(cible, "bouclier", 0))
+class NatureEvenement(Enum):
+    """Ce qu'enregistre une entree du journal (des faits, sans texte affiche)."""
+
+    # Debut d'un tour du joueur (valeur : numero de tour)
+    DEBUT_TOUR = auto()
+    # Carte jouee (carte, cible : entite de la case choisie)
+    CARTE_JOUEE = auto()
+    # Attaque (source : carte ou ennemi, cible, valeur : degats, et le detail des degats)
+    ATTAQUE = auto()
+    # Attaque des degats renvoyes par un renvoi (source : entite protegee, cible : qui les recoit,
+    # valeur : degats renvoyes, et le detail des degats)
+    RENVOI = auto()
+    # Statut pose (cible, statut, valeur : intensite posee)
+    STATUT_POSE = auto()
+    # Reparation (cible, valeur : PV rendus, pv_restants)
+    REPARATION = auto()
+    # Incendie en fin de tour (cible, valeur : intensite, et le detail des degats)
+    INCENDIE = auto()
+    # Electricite gagnee, cartes piochees, cartes dont les lancements augmentent (valeur)
+    ELECTRICITE = auto()
+    PIOCHE = auto()
+    REPETITION = auto()
+    # Destruction (cible) ; CARTES_HORS_SERVICE : valeur = nombre de cartes deplacees
+    MODULE_DETRUIT = auto()
+    ENNEMI_DETRUIT = auto()
+    CARTES_HORS_SERVICE = auto()
+    VICTOIRE = auto()
+    DEFAITE = auto()
 
 
-# Seuil de dissipation naturelle du bouclier (specs.md 3.5) : en dessous ou egal a cette valeur,
-# le bouclier disparait entierement au lieu d'etre divise par deux - evite qu'il continue a
-# decliner indefiniment (ceil(1/2) = 1 ne convergerait jamais vers 0 sans ce seuil).
-SEUIL_DISSIPATION_BOUCLIER = 5
+@dataclass(frozen=True)
+class Evenement:
+    """Une entree du journal de combat. Pour des degats (ATTAQUE, RENVOI, INCENDIE) : valeur =
+    annules_leurre + renvoyes + absorbes_bouclier + degats sur les PV ; pv_perdus est plafonne par
+    les PV qui restaient ; pv_restants : PV de la cible apres l'evenement."""
+
+    nature: NatureEvenement
+    tour: int
+    source: object = None
+    cible: object = None
+    valeur: int | None = None
+    statut: Statut | None = None
+    # Detail des degats recus
+    annules_leurre: int | None = None
+    renvoyes: int | None = None
+    absorbes_bouclier: int | None = None
+    pv_perdus: int | None = None
+    pv_restants: int | None = None
 
 
-def _dedupe_ennemis(ennemis) -> list[Ennemi]:
-    """Deduplique une sequence d'ennemis par identite, en conservant l'ordre (specs.md 3.2) :
-    un ennemi a plusieurs emplacements (ex. Boss des pirates) ne doit jamais etre touche deux
-    fois par un meme effet de zone/colonne/rangee qui recoupe ses cases."""
-    resultat: list[Ennemi] = []
-    for ennemi in ennemis:
-        if not any(existant is ennemi for existant in resultat):
-            resultat.append(ennemi)
-    return resultat
+@dataclass(frozen=True)
+class IntentionEffet:
+    """Un effet de la prochaine etape d'un ennemi, avec sa valeur au tour en cours. `cible_prevue` :
+    module vise par une attaque PROXIMITE si rien ne change, l'ennemi lui-meme pour SOI_MEME, None
+    sinon (tous les modules, ou allie tire au hasard au moment de jouer)."""
+
+    effet: EffetEnnemi
+    valeur: int
+    cible_prevue: Entite | None
 
 
-def _dissiper_bouclier(entite: Module | Ennemi) -> None:
-    """Dissipation naturelle du bouclier a chaque tour (specs.md 3.5, meme regle pour un module
-    et un ennemi) : si sa valeur actuelle ne depasse pas SEUIL_DISSIPATION_BOUCLIER, il disparait
-    completement ; sinon il est divise par deux (arrondi au-dessus). Appelee une fois par tour
-    pour chaque camp (modules au debut de chaque tour joueur, ennemis au debut de chaque tour
-    ennemi), avant que les buffs de ce tour ne reposent eventuellement du bouclier frais
-    par-dessus."""
-    if entite.bouclier <= SEUIL_DISSIPATION_BOUCLIER:
-        entite.bouclier = 0
-    else:
-        entite.bouclier = (entite.bouclier + 1) // 2
+@dataclass(frozen=True)
+class Intention:
+    ennemi: Ennemi
+    effets: tuple[IntentionEffet, ...]
 
 
 class Combat:
-    """Orchestre le deroulement du combat entre le joueur et la flotte ennemie."""
+    """Un combat de la refonte. Le combat commence au debut du tour 1 du joueur."""
 
-    def __init__(self, joueur: Joueur, flotte: Flotte, aleatoire: random.Random | None = None):
-        self.joueur = joueur
+    def __init__(self, modules: list[Module], deck: list[Carte], flotte: Flotte, aleatoire: random.Random):
+        self.vaisseau = Vaisseau(modules)
         self.flotte = flotte
+        self.aleatoire = aleatoire
+        for carte in deck:
+            if carte.exemplaire_module is None or self.vaisseau.module_d_exemplaire(carte.exemplaire_module) is None:
+                raise ValueError(f"Carte {carte.id} : rattachee a un module absent ({carte.exemplaire_module})")
+        # Copie de chaque carte, comme les modules et les ennemis : munitions et lancements
+        # repartent de leur base, et le deck de la partie n'est jamais modifie (7)
+        self.deck = Deck([carte.copie() for carte in deck], aleatoire)
         self.etat = EtatCombat.EN_COURS
-        # Utilise pour le tirage au sort de Tir allie et de la cible du Bouclier miroir
-        # (specs.md 12.6/13) - jamais le module random global directement, cf. CLAUDE.md
-        # "Determinisme du tirage aleatoire".
-        self.aleatoire = aleatoire or random.Random()
-        # Numero du tour ennemi ecoule (0 = aucun tour ennemi encore joue), incremente au debut
-        # de chaque _tour_ennemi() - determine quelles Actions ennemies se declenchent ce tour
-        # (specs.md 13, ActionEnnemi.active_au_tour).
-        self.tour_ennemi_actuel = 0
-        # Historique du combat (specs.md 8.1, journal.py) : cartes jouees, actions ennemies
-        # resolues, marqueurs de tour - alimente uniquement ici et dans jouer_carte/
-        # finir_tour_joueur, jamais par l'UI (PC ou web), qui n'en fait que la mise en forme.
-        self.journal: list[EvenementCarteJouee | EvenementActionEnnemi | EvenementTour] = [EvenementTour(1)]
-        self.joueur.debut_de_tour()
-        self._declencher_buffs_debut_de_tour()
+        self.tour = 1
+        self.electricite = 0
+        self.journal: list[Evenement] = []
+        # Entites deja traitees comme detruites (pile Hors service faite, journal note)
+        self._detruits: list[Entite] = []
+        self._debut_tour_joueur()
 
-    def jouer_carte(self, carte: Carte, cible: Module | Ennemi | None = None) -> list[tuple[Module | Ennemi, int]]:
-        """Applique l'effet d'une carte jouee par le joueur.
+    def remplacer_aleatoire(self, aleatoire: random.Random) -> None:
+        """Remplace le generateur de tout le combat (melanges du deck compris) : un bot qui essaie
+        des coups sur une copie ne doit pas connaitre a l'avance les vrais tirages."""
+        self.aleatoire = aleatoire
+        self.deck.aleatoire = aleatoire
 
-        cible est ignoree pour les cartes de CIBLES_SANS_CLIC (elles touchent tout
-        un camp) et obligatoire sinon. Renvoie, pour chaque cible effectivement
-        touchee, le montant reellement applique (degats/bouclier/soin, qui peut etre
-        inferieur a carte.valeur : cf. `_appliquer_effet_simple`) - peut inclure un
-        module du joueur en plus de la cible visee, si celle-ci portait un Bouclier
-        miroir actif (specs.md 13) ; liste vide si la carte n'a pas ete jouee.
-        """
-        if self.etat != EtatCombat.EN_COURS:
+    # --- Consultations ---
+
+    @property
+    def en_cours(self) -> bool:
+        return self.etat == EtatCombat.EN_COURS
+
+    def ennemis_detruits(self) -> list[Ennemi]:
+        return [ennemi for ennemi in self.flotte.ennemis if ennemi.est_detruit()]
+
+    def cibles_possibles(self, carte: Carte) -> list[Position]:
+        """Cases valides pour jouer cette carte (specs.md 3.8.2) : une case vivante du bon
+        camp, de la bonne colonne pour Avant/Arriere, celle du principal pour Module Principal."""
+        cible = carte.cible
+        if cible.camp == Camp.ENNEMI:
+            cases = self.flotte.cases_vivantes()
+            if cible == CibleCarte.ENNEMI_AVANT:
+                return [case for case in cases if case.colonne == Colonne.AVANT]
+            if cible == CibleCarte.ENNEMI_ARRIERE:
+                return [case for case in cases if case.colonne == Colonne.ARRIERE]
+            return cases
+        cases = self.vaisseau.cases_vivantes()
+        if cible == CibleCarte.MODULE_PRINCIPAL:
+            return [case for case in cases if self.vaisseau.module_en(case) is self.vaisseau.principal]
+        if cible == CibleCarte.MODULE_AVANT:
+            return [case for case in cases if case.colonne == Colonne.AVANT]
+        return cases
+
+    def peut_jouer(self, carte: Carte) -> bool:
+        """En main, electricite suffisante, effets geres, au moins une cible."""
+        return bool(self._cases_jouables(carte))
+
+    def _cases_jouables(self, carte: Carte) -> list[Position]:
+        """Cases ou la carte peut etre jouee maintenant ; vide si elle est injouable (hors main,
+        electricite, nature laissee pour plus tard ou appliquee au mauvais camp, aucune cible)."""
+        if not (
+            self.en_cours
+            and any(carte is en_main for en_main in self.deck.main)
+            and carte.cout <= self.electricite
+            and all(self._effet_gere(carte, effet) for effet in carte.effets)
+        ):
             return []
-        if not self.joueur.peut_jouer(carte):
-            return []
-        if not self._cible_valide(carte, cible):
-            return []
-        self.joueur.depenser_electricite(carte.cout)
-        self.joueur.deck.jouer(carte)
-        cibles_touchees = self._appliquer_effet(carte, cible)
-        if cibles_touchees:
-            self.journal.append(EvenementCarteJouee(carte, cible))
-        self._verifier_fin_de_combat()
-        return cibles_touchees
+        return self.cibles_possibles(carte)
 
-    def finir_tour_joueur(self) -> list[tuple[Position, Ennemi, Module | Ennemi, int, str]]:
-        """Termine le tour du joueur (defausse la main restante) et enchaine sur le tour ennemi.
+    @staticmethod
+    def _effet_gere(carte: Carte, effet: Effet) -> bool:
+        if effet.nature in NATURES_NON_GEREES:
+            return False
+        camp = CAMP_PAR_NATURE.get(effet.nature)
+        if camp is None:
+            return True
+        camp_touche = effet.portee.camp or carte.cible.camp
+        return camp == camp_touche
 
-        Renvoie la liste des evenements resolus - (position et ennemi a l'origine de l'action,
-        cible touchee - un module, un autre ennemi si Tir allie est actif (specs.md 12.6), ou
-        l'ennemi lui-meme en cas de renvoi par un Bouclier miroir (specs.md 13) -, montant
-        reellement applique, et son type : "degats" ou "bouclier") - pour permettre a l'UI
-        d'animer chaque action."""
-        if self.etat != EtatCombat.EN_COURS:
-            return []
-        self.joueur.deck.defausser_main()
-        evenements = self._tour_ennemi()
-        for _position, ennemi, cible, valeur, type_evenement in evenements:
-            self.journal.append(EvenementActionEnnemi(ennemi, cible, valeur, type_evenement))
-        if self.etat == EtatCombat.EN_COURS:
-            self.joueur.debut_de_tour()
-            self._declencher_buffs_debut_de_tour()
-            self.journal.append(EvenementTour(self.tour_ennemi_actuel + 1))
-        return evenements
-
-    def _declencher_buffs_debut_de_tour(self) -> None:
-        """Dissipe le bouclier restant de chaque module vivant (specs.md 3.5) puis redeclenche
-        l'effet de chaque buff actif et decompte sa duree (specs.md 12.3/12.5) - meme principe
-        que decrementer_buffs()/_dissiper_bouclier() cote ennemi, mais au debut de chaque tour
-        joueur plutot qu'a chaque tour ennemi. Dissipation avant redeclenchement : un buff
-        Bouclier qui se repose ce tour n'est jamais rogne par la dissipation du reste de
-        l'ancien bouclier."""
-        for module in self._modules_vivants():
-            _dissiper_bouclier(module)
-            module.declencher_buffs_tour()
-
-    def prochaines_actions_actives(self, ennemi: Ennemi) -> list[ActionEnnemi]:
-        """Toutes les Actions de cet ennemi qui se declencheront a son prochain tour (specs.md
-        13), dans l'ordre de sa liste - plusieurs peuvent l'etre le meme tour (ex. le Boss des
-        pirates, qui attaque ET pose un buff au meme tour) : l'affichage de son intention
-        (survol/tap) doit toutes les montrer, pas seulement la premiere. Liste vide si aucune
-        n'est active a ce tour-la."""
-        prochain_tour = self.tour_ennemi_actuel + 1
-        return [action for action in ennemi.actions if action.active_au_tour(prochain_tour)]
-
-    def prochaine_action_active(self, ennemi: Ennemi) -> ActionEnnemi | None:
-        """Premiere des Actions actives de cet ennemi au prochain tour (specs.md 13,
-        cf. prochaines_actions_actives) - utilisee par previsualiser_cible, qui ne s'interesse
-        qu'a une eventuelle Attaque de proximite ; None si aucune de ses actions n'est active a
-        ce tour-la."""
-        actions = self.prochaines_actions_actives(ennemi)
-        return actions[0] if actions else None
-
-    def previsualiser_cible(self, ennemi: Ennemi) -> Module | None:
-        """Renvoie le module que cet ennemi attaquerait a son prochain tour si sa prochaine
-        action est une Attaque a cible PROXIMITE (pour le survol UI) - None si sa prochaine
-        action n'est pas de ce type, si aucun module n'est a portee, OU si un debuff Tir allie
-        est actif (specs.md 12.6) : dans ce cas la cible reelle (un autre ennemi tire au hasard)
-        n'est determinee qu'a la resolution du tour (_tour_ennemi/_cible_redirection), jamais
-        ici, pour ne pas consommer l'alea a chaque survol/redessin (appele en boucle par l'UI,
-        cf. CLAUDE.md determinisme du tirage aleatoire)."""
-        action = self.prochaine_action_active(ennemi)
-        if action is None or action.type != TypeActionEnnemi.ATTAQUE or action.cible != CibleActionEnnemi.PROXIMITE:
-            return None
-        position = self._position_de_ennemi(ennemi)
-        if position is None or self._redirection_active(ennemi):
-            return None
-        return module_cible_par_ennemi(self.joueur.vaisseau, position.rangee)
-
-    def _modules_vivants(self) -> list[Module]:
-        """Tous les modules du joueur encore en vie (base incluse)."""
-        modules = [self.joueur.vaisseau.base, *self.joueur.vaisseau.modules_equipes().values()]
-        return [m for m in modules if not m.est_detruit()]
-
-    def _position_de_module(self, module: Module) -> Position | None:
-        """Retrouve la position d'un module equipe dans le vaisseau, ou None (base incluse,
-        car la base n'a pas de position de colonne/rangee equipee - cf. Vaisseau.module_en)."""
-        for position, occupant in self.joueur.vaisseau.modules_equipes().items():
-            if occupant is module:
-                return position
-        return None
-
-    def cibles_possibles(self, carte: Carte) -> list[Module | Ennemi | None]:
-        """Cibles valides pour cette carte en l'etat ([None] pour une carte sans clic de ciblage)
-        - pour un joueur automatique (outils/simulation), meme regle que _cible_valide."""
-        if carte.cible in CIBLES_SANS_CLIC:
-            return [None]
-        candidates = [*self.flotte.ennemis_vivants(), *self._modules_vivants()]
-        return [cible for cible in candidates if self._cible_valide(carte, cible)]
-
-    def _cible_valide(self, carte: Carte, cible: Module | Ennemi | None) -> bool:
-        """Verifie que la cible correspond au type de carte et est bien vivante dans ce combat."""
-        if carte.cible in CIBLES_SANS_CLIC:
-            return cible is None
-        if carte.cible == CibleCarte.ENNEMI_UNIQUE:
-            return isinstance(cible, Ennemi) and cible in self.flotte.ennemis_vivants()
-        if carte.cible == CibleCarte.ALLIE_UNIQUE:
-            return isinstance(cible, Module) and cible in self._modules_vivants()
-        if carte.cible == CibleCarte.LIGNE_ENNEMIE:
-            return isinstance(cible, Ennemi) and cible in self.flotte.ennemis_vivants()
-        if carte.cible == CibleCarte.COLONNE_AVANT_ENNEMIE:
-            return isinstance(cible, Ennemi) and cible in self.flotte.ennemis_vivants() and self._ennemi_occupe_colonne(cible, Colonne.AVANT)
-        if carte.cible == CibleCarte.COLONNE_ARRIERE_ENNEMIE:
-            return isinstance(cible, Ennemi) and cible in self.flotte.ennemis_vivants() and self._ennemi_occupe_colonne(cible, Colonne.ARRIERE)
-        if carte.cible == CibleCarte.COLONNE_AVANT_ALLIEE:
-            if not (isinstance(cible, Module) and cible in self._modules_vivants()):
-                return False
-            if cible is self.joueur.vaisseau.base:
-                return True  # la base occupe la rangee mid, a la fois avant et arriere
-            position = self._position_de_module(cible)
-            return position is not None and position.colonne == Colonne.AVANT
-        return False
-
-    def _appliquer_effet(self, carte: Carte, cible: Module | Ennemi | None) -> list[tuple[Module | Ennemi, int]]:
-        """Applique l'effet d'une carte selon sa cible (specs.md 7.1/7.2).
-
-        Renvoie, pour chaque cible effectivement touchee, le montant reellement applique -
-        y compris, en plus de la cible visee par la carte, un module du joueur touche par un
-        renvoi de Bouclier miroir (specs.md 13, ennemi Miroir desormais pose sur un allie
-        ennemi plutot que sur le joueur) si la cible en portait un actif (cf.
-        _appliquer_effet_simple).
-        """
-        if carte.type == TypeCarte.OUTILS:
-            # Une carte Outils ne touche jamais de module/ennemi : sa cible ne sert qu'a
-            # valider un clic eventuel (specs.md 12.11), l'effet s'applique une seule fois
-            # quel que soit le nombre de modules/ennemis vivants.
-            return [(None, self._appliquer_outils(carte))]
-        if carte.cible == CibleCarte.ALLIES_MULTIPLES:
-            cibles = self._modules_vivants()
-        elif carte.cible == CibleCarte.ENNEMIS_MULTIPLES:
-            cibles = self.flotte.ennemis_vivants()
-        elif carte.cible == CibleCarte.MODULE_PRINCIPAL:
-            cibles = [self.joueur.vaisseau.base]
-        elif carte.cible == CibleCarte.LIGNE_ENNEMIE:
-            position = self._position_de_ennemi(cible)
-            occupants = (self.flotte.ennemi_en(colonne, position.rangee) for colonne in (Colonne.AVANT, Colonne.ARRIERE))
-            # Deduplique (specs.md 3.2) : un ennemi a 2 emplacements sur cette rangee (Avant et
-            # Arriere) apparaitrait sinon deux fois dans occupants.
-            cibles = _dedupe_ennemis(occupant for occupant in occupants if occupant is not None)
-        elif carte.cible in (CibleCarte.COLONNE_AVANT_ENNEMIE, CibleCarte.COLONNE_ARRIERE_ENNEMIE):
-            colonne = Colonne.AVANT if carte.cible == CibleCarte.COLONNE_AVANT_ENNEMIE else Colonne.ARRIERE
-            occupants = (self.flotte.ennemi_en(colonne, rangee) for rangee in (Rangee.GAUCHE, Rangee.MID, Rangee.DROITE))
-            cibles = _dedupe_ennemis(occupant for occupant in occupants if occupant is not None)
-        elif carte.cible == CibleCarte.COLONNE_AVANT_ALLIEE:
-            # Rangee.MID (la base) est incluse : elle occupe la rangee mid, a la fois avant
-            # et arriere (specs.md 12.1), contrairement aux colonnes ennemies ou la base n'a
-            # pas d'equivalent.
-            occupants = (
-                self.joueur.vaisseau.module_en(Colonne.AVANT, rangee) for rangee in (Rangee.GAUCHE, Rangee.MID, Rangee.DROITE)
-            )
-            cibles = [occupant for occupant in occupants if occupant is not None]
-        else:
-            cibles = [cible]
-        resultats: list[tuple[Module | Ennemi, int]] = []
-        for une_cible in cibles:
-            valeur_effective, renvois = self._appliquer_effet_simple(carte, une_cible)
-            resultats.append((une_cible, valeur_effective))
-            resultats.extend(renvois)
-        return resultats
-
-    def _appliquer_effet_simple(self, carte: Carte, cible: Module | Ennemi) -> tuple[int, list[tuple[Module, int]]]:
-        """Applique l'effet d'une carte a une seule cible, selon son type (specs.md 7.1).
-
-        Renvoie (montant reellement applique a `cible`, qui peut etre inferieur a carte.valeur -
-        les degats sont plafonnes par les PV+bouclier restants de la cible, le soin par son PV
-        max, le bouclier n'etant lui jamais plafonne -, [(module, montant)...] pour chaque
-        module du joueur touche par un renvoi de Bouclier miroir actif sur `cible`, vide dans
-        tous les autres cas - specs.md 13, ennemi Miroir).
-        """
-        renvois: list[tuple[Module, int]] = []
-        if carte.type == TypeCarte.ATTAQUE:
-            degats_bruts = cible.degats_subis(carte.valeur) if isinstance(cible, Ennemi) else carte.valeur
-            if isinstance(cible, Ennemi):
-                degats_bruts, renvois_bruts = self._consommer_bouclier_miroir_vers_joueur(cible, degats_bruts)
-                for module, montant in renvois_bruts:
-                    degats_module = _degats_effectifs(module, montant)
-                    module.subir_degats(montant)
-                    renvois.append((module, degats_module))
-            valeur_effective = _degats_effectifs(cible, degats_bruts)
-            cible.subir_degats(degats_bruts)
-        elif carte.type == TypeCarte.DEFENSE:
-            if carte.action == ActionCarte.BOUCLIER_POURCENTAGE_PV:
-                valeur_effective = round(cible.pv_max * carte.valeur / 100)
-                cible.ajouter_bouclier(valeur_effective)
-            elif carte.action == ActionCarte.ANNULATION_PROCHAINE_ATTAQUE:
-                cible.leurre_actif = True
-                valeur_effective = 0
-            else:
-                valeur_effective = carte.valeur
-                cible.ajouter_bouclier(valeur_effective)
-        elif carte.type == TypeCarte.DEBUFF:
-            valeur_effective = self._appliquer_buff_ou_debuff(carte, cible)
-        elif carte.type == TypeCarte.BUFF:
-            valeur_effective = self._appliquer_buff_ou_debuff(carte, cible)
-        else:
-            valeur_effective = min(carte.valeur, cible.pv_max - cible.pv)
-            cible.soigner(carte.valeur)
-        return valeur_effective, renvois
-
-    def _appliquer_buff_ou_debuff(self, carte: Carte, cible: Module | Ennemi) -> int:
-        """Applique un buff/debuff d'une carte a une cible (specs.md 12.1/12.3/12.4/12.5/13) :
-        meme liste sur Module et Ennemi (BuffActif), la distinction n'est que semantique.
-        Independant des buffs deja actifs sur cette cible : s'ajoute a la liste plutot que de
-        les remplacer."""
-        cible.appliquer_buff(carte.action, carte.valeur, carte.duree)
-        return carte.valeur
-
-    def _appliquer_outils(self, carte: Carte) -> int:
-        """Applique l'effet d'une carte Outils (specs.md 12.9) : n'affecte pas la cible
-        cliquee (celle-ci n'a qu'un role de clic obligatoire, cf. specs.md 12.11), mais
-        une ressource commune au joueur (electricite ou pioche)."""
-        if carte.action == ActionCarte.GAIN_ELECTRICITE:
-            self.joueur.electricite += carte.valeur
-            return carte.valeur
-        if carte.action == ActionCarte.GAIN_ELECTRICITE_PAR_MODULE:
-            gain = carte.valeur * len(self._modules_vivants())
-            self.joueur.electricite += gain
-            return gain
-        if carte.action == ActionCarte.PIOCHE_SUPPLEMENTAIRE:
-            self.joueur.deck.piocher_cartes(carte.valeur)
-        return carte.valeur
-
-    def _tour_ennemi(self) -> list[tuple[Position, Ennemi, Module | Ennemi, int, str]]:
-        """Chaque ennemi vivant execute ses Actions eligibles ce tour (specs.md 13 : frequence/
-        tour_depart/repetitions, cf. ActionEnnemi.active_au_tour), dans l'ordre de la grille -
-        la colonne Avant de haut en bas (Gauche, Mid, Droite), puis la colonne Arriere de haut
-        en bas, ordre garanti par Flotte.ennemis_vivants() (dict construit dans cet ordre par
-        creer_flotte(), cf. config_poc.POSITIONS_ENNEMIES ; un ennemi a plusieurs emplacements,
-        specs.md 3.2, n'y apparait qu'une fois) - puis dans l'ordre de sa propre liste
-        d'actions. Cet ordre determine notamment quelle attaque est annulee quand un Leurre
-        (specs.md 12.6) protege une cible visee par plusieurs actions dans le meme tour : seule
-        la premiere resolue sur cette cible est annulee."""
-        self.tour_ennemi_actuel += 1
+    def intentions(self) -> list[Intention]:
+        """Ce que chaque ennemi vivant jouera a son prochain tour (specs.md 13.2.3)."""
+        resultat = []
         for ennemi in self.flotte.ennemis_vivants():
-            _dissiper_bouclier(ennemi)
-        evenements = []
-        for ennemi in self.flotte.ennemis_vivants():
-            position = self._position_de_ennemi(ennemi)
-            for action in ennemi.actions:
-                if not action.active_au_tour(self.tour_ennemi_actuel):
-                    continue
-                for _ in range(action.repetitions):
-                    evenements.extend(self._executer_action_ennemi(ennemi, position, action))
-                    self._verifier_fin_de_combat()
-                    if self.etat != EtatCombat.EN_COURS:
-                        return evenements
-        for ennemi in self.flotte.ennemis_vivants():
-            ennemi.decrementer_buffs()
-        return evenements
+            effets = []
+            for effet in ennemi.etape_courante:
+                if effet.cible == CibleEffetEnnemi.PROXIMITE:
+                    prevue = self.vaisseau.module_le_plus_proche(self.flotte.rangee_de(ennemi))
+                elif effet.cible == CibleEffetEnnemi.SOI_MEME:
+                    prevue = ennemi
+                else:
+                    prevue = None
+                effets.append(IntentionEffet(effet, ennemi.valeur(effet.valeur, self.tour), prevue))
+            resultat.append(Intention(ennemi, tuple(effets)))
+        return resultat
 
-    def _executer_action_ennemi(
-        self, ennemi: Ennemi, position: Position, action: ActionEnnemi
-    ) -> list[tuple[Position, Ennemi, Module | Ennemi, int, str]]:
-        """Execute une occurrence d'une Action ennemie (specs.md 13), selon son type."""
-        if action.type == TypeActionEnnemi.ATTAQUE:
-            return self._executer_attaque(ennemi, position, action)
-        if action.type == TypeActionEnnemi.POSE_BUFF:
-            return self._executer_pose_buff(ennemi, position, action)
+    def modules_vises(self, effet: IntentionEffet) -> list[Module]:
+        """Modules que toucherait cet effet d'intention si rien ne change : le module prevu d'une
+        attaque PROXIMITE, tous les modules vivants pour TOUS_MODULES, aucun pour un effet qui ne
+        vise pas le joueur. Sert a l'affichage a marquer les modules vises (PC et web)."""
+        if effet.effet.cible == CibleEffetEnnemi.TOUS_MODULES:
+            return self.vaisseau.modules_vivants()
+        if effet.effet.cible == CibleEffetEnnemi.PROXIMITE and effet.cible_prevue is not None:
+            return [effet.cible_prevue]
         return []
 
-    def _executer_attaque(
-        self, ennemi: Ennemi, position: Position, action: ActionEnnemi
-    ) -> list[tuple[Position, Ennemi, Module | Ennemi, int, str]]:
-        """Determine la ou les cibles d'une Action ATTAQUE (specs.md 13) et resout les degats
-        sur chacune. PROXIMITE reutilise le ciblage historique (module_cible_par_ennemi), sujet
-        a Tir allie (specs.md 12.6) ; TOUS_MODULES_JOUEUR touche tous les modules vivants du
-        joueur (attaque de zone, ennemi Le puzzle) - jamais redirigee par Tir allie (l'attaque
-        de zone n'a pas de cible individuelle a rediriger)."""
-        if action.cible == CibleActionEnnemi.PROXIMITE:
-            cible_redirigee = self._cible_redirection(ennemi)
-            cible = cible_redirigee or module_cible_par_ennemi(self.joueur.vaisseau, position.rangee)
-            cibles = [cible] if cible is not None else []
-        elif action.cible == CibleActionEnnemi.TOUS_MODULES_JOUEUR:
-            cibles = self._modules_vivants()
-        else:
-            cibles = []
-        degats = ennemi.degats_attaque_effectifs(action.valeur)
-        evenements = []
-        for cible in cibles:
-            evenements.extend(self._resoudre_attaque(ennemi, position, cible, degats))
-        return evenements
+    # --- Actions ---
 
-    def _resoudre_attaque(
-        self, attaquant: Ennemi, position: Position, cible: Module | Ennemi, degats: int
-    ) -> list[tuple[Position, Ennemi, Module | Ennemi, int, str]]:
-        """Applique `degats` a `cible`, en tenant compte d'un Bouclier miroir actif dessus
-        (specs.md 13, ennemi Miroir) : jusqu'a sa valeur est renvoyee a `attaquant` (qui subit
-        ces degats a la place, la cible ne subit rien pour cette part), le reste s'applique
-        normalement a `cible`."""
-        reflete = self._consommer_bouclier_miroir(cible, degats)
-        evenements = []
-        if reflete > 0:
-            degats_attaquant = _degats_effectifs(attaquant, reflete)
-            attaquant.subir_degats(reflete)
-            evenements.append((position, attaquant, attaquant, degats_attaquant, "degats"))
-        restant = degats - reflete
-        if reflete == 0 or restant > 0:
-            degats_cible = _degats_effectifs(cible, restant)
-            cible.subir_degats(restant)
-            evenements.append((position, attaquant, cible, degats_cible, "degats"))
-        return evenements
+    def jouer_carte(self, carte: Carte, case: Position) -> None:
+        """Joue une carte de la main sur la case choisie (specs.md 3.8). Refuse une action
+        invalide (ValueError)."""
+        cases = self._cases_jouables(carte)
+        if not cases:
+            raise ValueError(f"Carte {carte.id} : injouable maintenant")
+        if case not in cases:
+            raise ValueError(f"Carte {carte.id} : cible invalide {case}")
+        cible_choisie = self._entite_en(carte, case)
+        self.deck.retirer_de_la_main(carte)
+        self.electricite -= carte.cout
+        epuisee = carte.consommer_munition()
+        self._noter(NatureEvenement.CARTE_JOUEE, source=carte, cible=cible_choisie)
+        # Cibles choisies une fois pour tous les lancements (decision utilisateur, 4.3) : une
+        # cible detruite par un lancement ne recoit plus les suivants
+        cibles_par_effet = [self._cibles_de_l_effet(carte, effet, case) for effet in carte.effets]
+        for _ in range(carte.lancements_actuels):
+            for effet, cibles in zip(carte.effets, cibles_par_effet):
+                if not self.en_cours:
+                    break
+                self._appliquer_effet_de_carte(carte, effet, cibles)
+        module_de_la_carte = self.vaisseau.module_d_exemplaire(carte.exemplaire_module)
+        self.deck.ranger_carte_jouee(carte, epuisee, module_de_la_carte.est_detruit())
 
-    def _consommer_bouclier_miroir(self, cible: Module | Ennemi, degats: int) -> int:
-        """Combien des `degats` sont renvoyes a l'attaquant a cause d'un Bouclier miroir actif
-        sur `cible` (specs.md 13) - consomme les buffs BOUCLIER_MIROIR actifs dans l'ordre de
-        pose jusqu'a epuiser les degats ou les buffs disponibles (chaque instance depuis sa
-        propre valeur, comme un bouclier classique)."""
-        restant = degats
-        total_reflete = 0
-        for buff in cible.buffs_actifs:
-            if buff.action != ActionCarte.BOUCLIER_MIROIR or restant <= 0:
+    def finir_tour(self) -> None:
+        """Termine le tour du joueur, joue le tour ennemi et commence le tour suivant (3.2, 3.3)."""
+        if not self.en_cours:
+            raise ValueError("Le combat est termine")
+        self.deck.defausser_main()
+        for ennemi in self.flotte.ennemis_vivants():
+            self._fin_de_tour_d_entite(ennemi, ennemi.fin_du_tour_du_joueur)
+            if not self.en_cours:
+                return
+        self._tour_ennemi()
+        if not self.en_cours:
+            return
+        for module in self.vaisseau.modules_vivants():
+            self._fin_de_tour_d_entite(module, module.fin_du_tour_ennemi)
+            if not self.en_cours:
+                return
+        self.tour += 1
+        self._debut_tour_joueur()
+
+    # --- Deroulement ---
+
+    def _debut_tour_joueur(self) -> None:
+        self.electricite = ELECTRICITE_PAR_TOUR
+        self.deck.piocher(CARTES_PIOCHEES_PAR_TOUR)
+        self._noter(NatureEvenement.DEBUT_TOUR, valeur=self.tour)
+
+    def _fin_de_tour_d_entite(self, entite: Entite, fin_de_tour) -> None:
+        """Fin de tour d'un module ou d'un ennemi : incendie (note au journal) puis extinction des
+        statuts, puis destruction eventuelle."""
+        pv_avant = self._pv(entite)
+        encaissement = fin_de_tour()
+        if encaissement.degats:
+            self._noter_degats(NatureEvenement.INCENDIE, None, entite, encaissement, pv_avant)
+        self._traiter_destruction(entite)
+
+    def _tour_ennemi(self) -> None:
+        """Chaque ennemi vivant joue son etape courante, dans l'ordre de jeu (5.1), puis avance."""
+        for ennemi in self.flotte.ennemis_vivants():
+            if ennemi.est_detruit():
                 continue
-            consomme = min(buff.valeur, restant)
-            buff.valeur -= consomme
-            total_reflete += consomme
-            restant -= consomme
-        cible.buffs_actifs = [
-            buff for buff in cible.buffs_actifs if not (buff.action == ActionCarte.BOUCLIER_MIROIR and buff.valeur <= 0)
-        ]
-        return total_reflete
+            for effet in ennemi.etape_courante:
+                self._jouer_effet_ennemi(ennemi, effet)
+                if not self.en_cours:
+                    return
+                if ennemi.est_detruit():
+                    # Detruit pendant son etape (renvoi d'un module) : il ne joue plus
+                    break
+            else:
+                ennemi.avancer_cycle()
 
-    def _consommer_bouclier_miroir_vers_joueur(self, cible: Ennemi, degats: int) -> tuple[int, list[tuple[Module, int]]]:
-        """Variante de _consommer_bouclier_miroir pour une attaque du JOUEUR (une carte, pas
-        une Action ennemie) sur `cible` : il n'y a pas d'"attaquant" a qui renvoyer les degats
-        (une carte n'est liee a aucun module), donc chaque instance de Bouclier miroir les
-        renvoie plutot vers SON PROPRE module cible, tire au hasard une bonne fois pour toutes
-        a la pose du buff (BuffActif.cible_reflet, cf. _executer_pose_buff) plutot qu'ici.
-        Renvoie (degats restants apres reflet, [(module, montant brut renvoye), ...] dans
-        l'ordre de pose des instances consommees - montant brut, pas encore plafonne par les
-        PV+bouclier du module receveur, cf. appelant)."""
-        restant = degats
-        renvois: list[tuple[Module, int]] = []
-        for buff in cible.buffs_actifs:
-            if buff.action != ActionCarte.BOUCLIER_MIROIR or restant <= 0 or buff.cible_reflet is None:
-                continue
-            consomme = min(buff.valeur, restant)
-            buff.valeur -= consomme
-            renvois.append((buff.cible_reflet, consomme))
-            restant -= consomme
-        cible.buffs_actifs = [
-            buff for buff in cible.buffs_actifs if not (buff.action == ActionCarte.BOUCLIER_MIROIR and buff.valeur <= 0)
-        ]
-        return restant, renvois
-
-    def _executer_pose_buff(
-        self, ennemi: Ennemi, position: Position, action: ActionEnnemi
-    ) -> list[tuple[Position, Ennemi, Module | Ennemi, int, str]]:
-        """Pose le buff d'une Action POSE_BUFF (specs.md 13) sur sa cible - SOI_MEME (l'ennemi
-        lui-meme, ex. Petit Jean se met du bouclier), COLONNE_AVANT_SINON_ARRIERE_JOUEUR (un
-        module du joueur tire au hasard) ou COLONNE_AVANT_SINON_ARRIERE_ENNEMIE (un ennemi de
-        la flotte tire au hasard, lui-meme inclus - ex. Miroir pose un Bouclier miroir sur un
-        allie plutot que sur le joueur). Pour un BOUCLIER_MIROIR, tire aussi une bonne fois
-        pour toutes, ici a la pose (jamais a la resolution, cf. determinisme du survol/tap), le
-        module du joueur qui recevra les degats renvoyes (BuffActif.cible_reflet) - affiche des
-        la pose dans l'infobulle de l'ennemi protege, contrairement a Tir allie dont la cible
-        reelle n'est decouverte qu'a la resolution du tour."""
-        if action.cible == CibleActionEnnemi.SOI_MEME:
-            cible = ennemi
-        elif action.cible == CibleActionEnnemi.COLONNE_AVANT_SINON_ARRIERE_JOUEUR:
-            cible = self._cible_ligne_avant_ou_arriere_joueur()
-        elif action.cible == CibleActionEnnemi.COLONNE_AVANT_SINON_ARRIERE_ENNEMIE:
-            cible = self._cible_ligne_avant_ou_arriere_ennemie()
+    def _jouer_effet_ennemi(self, ennemi: Ennemi, effet: EffetEnnemi) -> None:
+        """Un effet d'etape ennemie. Cible choisie une seule fois, puis l'effet est repete sur elle
+        (decision utilisateur, 5.2) : une cible detruite ne recoit plus les repetitions."""
+        valeur = ennemi.valeur(effet.valeur, self.tour)
+        if effet.nature == NatureEffetEnnemi.ATTAQUE:
+            if effet.cible == CibleEffetEnnemi.PROXIMITE:
+                proche = self.vaisseau.module_le_plus_proche(self.flotte.rangee_de(ennemi))
+                cibles = [proche] if proche is not None else []
+            else:
+                cibles = self.vaisseau.modules_vivants()
+            for _ in range(effet.repetitions):
+                for module in cibles:
+                    if module.est_detruit():
+                        continue
+                    self._attaquer(ennemi, module, valeur, renvoi_vers=ennemi)
+                    if not self.en_cours:
+                        return
+            return
+        if effet.cible == CibleEffetEnnemi.SOI_MEME:
+            allie = ennemi
         else:
-            cible = None
-        if cible is None:
+            candidats = (
+                self.flotte.ennemis_vivants_de_colonne(Colonne.AVANT)
+                or self.flotte.ennemis_vivants_de_colonne(Colonne.ARRIERE)
+            )
+            allie = self.aleatoire.choice(candidats)
+        for _ in range(effet.repetitions):
+            self._poser_statut(allie, effet.nature.statut_pose, valeur)
+
+    # --- Cartes ---
+
+    def _entite_en(self, carte: Carte, case: Position) -> Entite | None:
+        if carte.cible.camp == Camp.ENNEMI:
+            return self.flotte.ennemi_en(case)
+        return self.vaisseau.module_en(case)
+
+    def _cibles_de_la_carte(self, carte: Carte, case: Position) -> list[Entite]:
+        """Ce que touche la cible de la carte pour la case choisie (tableau du 4.2)."""
+        cible = carte.cible
+        if cible in (CibleCarte.ENNEMI_UNIQUE, CibleCarte.MODULE_UNIQUE):
+            return [self._entite_en(carte, case)]
+        if cible == CibleCarte.ENNEMI_COLONNE:
+            return self.flotte.ennemis_vivants_de_colonne(case.colonne)
+        if cible == CibleCarte.ENNEMI_AVANT:
+            return self.flotte.ennemis_vivants_de_colonne(Colonne.AVANT)
+        if cible == CibleCarte.ENNEMI_ARRIERE:
+            return self.flotte.ennemis_vivants_de_colonne(Colonne.ARRIERE)
+        if cible == CibleCarte.ENNEMI_TOUS:
+            return self.flotte.ennemis_vivants()
+        if cible == CibleCarte.MODULE_PRINCIPAL:
+            return [self.vaisseau.principal]
+        if cible == CibleCarte.MODULE_AVANT:
+            return self.vaisseau.modules_vivants_de_colonne(Colonne.AVANT)
+        return self.vaisseau.modules_vivants()
+
+    def _cibles_de_l_effet(self, carte: Carte, effet: Effet, case: Position) -> list[Entite]:
+        """Entites touchees par un effet selon sa portee (4.3) ; vide pour une nature globale."""
+        if effet.nature in NATURES_GLOBALES:
             return []
-        cible_reflet = None
-        if action.action_buff == ActionCarte.BOUCLIER_MIROIR:
-            cible_reflet = self._cible_ligne_avant_ou_arriere_joueur()
-        cible.appliquer_buff(action.action_buff, action.valeur, action.duree_buff, cible_reflet=cible_reflet)
-        return [(position, ennemi, cible, action.valeur, "bouclier")]
+        if effet.portee == PorteeEffet.CIBLE:
+            return self._cibles_de_la_carte(carte, case)
+        if effet.portee == PorteeEffet.AUTRES_ENNEMIS:
+            choisi = self.flotte.ennemi_en(case)
+            return [ennemi for ennemi in self.flotte.ennemis_vivants() if ennemi is not choisi]
+        colonne = Colonne.AVANT if effet.portee == PorteeEffet.COLONNE_AVANT_ENNEMIE else Colonne.ARRIERE
+        return self.flotte.ennemis_vivants_de_colonne(colonne)
 
-    def _cible_ligne_avant_ou_arriere_ennemie(self) -> Ennemi | None:
-        """Tire au hasard un ennemi de la flotte (l'ennemi qui pose l'action y compris, specs.md
-        13 - ex. Miroir peut se cibler lui-meme) dans la colonne avant si elle compte au moins
-        un ennemi vivant, sinon dans la colonne arriere - None si la flotte n'a plus aucun
-        ennemi vivant (combat deja termine dans ce cas)."""
-        avant = _dedupe_ennemis(
-            occupant
-            for occupant in (self.flotte.ennemi_en(Colonne.AVANT, rangee) for rangee in (Rangee.GAUCHE, Rangee.MID, Rangee.DROITE))
-            if occupant is not None
+    def _appliquer_effet_de_carte(self, carte: Carte, effet: Effet, cibles: list[Entite]) -> None:
+        """Un lancement d'un effet de carte (tableau du 4.4)."""
+        valeur = carte.valeur_de(effet)
+        nature = effet.nature
+        if nature == NatureEffet.GAIN_ELECTRICITE:
+            self.electricite += valeur
+            self._noter(NatureEvenement.ELECTRICITE, source=carte, valeur=valeur)
+        elif nature == NatureEffet.PIOCHE:
+            piochees = self.deck.piocher(valeur)
+            self._noter(NatureEvenement.PIOCHE, source=carte, valeur=piochees)
+        elif nature == NatureEffet.REPETITION:
+            modifiees = appliquer_repetition(effet, valeur, self.deck.toutes_les_cartes() + [carte])
+            self._noter(NatureEvenement.REPETITION, source=carte, valeur=modifiees)
+        for cible in cibles:
+            if cible.est_detruit() or not self.en_cours:
+                continue
+            if nature == NatureEffet.DEGATS:
+                if not isinstance(cible, Ennemi):
+                    raise ValueError(f"Carte {carte.id} : degats sur un module non geres")
+                self._attaquer(carte, cible, valeur, renvoi_vers=self._module_qui_recoit_le_renvoi(carte))
+            elif nature == NatureEffet.REPARATION:
+                pv_avant = cible.pv_combat
+                cible.reparer(valeur)
+                self._noter(
+                    NatureEvenement.REPARATION, source=carte, cible=cible, valeur=cible.pv_combat - pv_avant,
+                    pv_restants=cible.pv_combat,
+                )
+            elif nature.statut_pose is not None:
+                # Le leurre n'a pas de valeur : intensite 1
+                self._poser_statut(cible, nature.statut_pose, valeur if valeur is not None else 1, source=carte)
+
+    def _module_qui_recoit_le_renvoi(self, carte: Carte) -> Module:
+        """Module de la carte jouee, ou le principal s'il est detruit (decision utilisateur, 4.5)."""
+        module = self.vaisseau.module_d_exemplaire(carte.exemplaire_module)
+        return self.vaisseau.principal if module.est_detruit() else module
+
+    # --- Resolution commune ---
+
+    def _attaquer(self, source: object, cible: Entite, degats: int, renvoi_vers: Entite) -> None:
+        """Une attaque de `degats` sur `cible` ; les degats renvoyes sont une nouvelle attaque sur
+        `renvoi_vers` (decision utilisateur, 4.5), qui ne renvoie rien a son tour."""
+        pv_avant = self._pv(cible)
+        encaissement = cible.subir_degats(degats)
+        self._noter_degats(NatureEvenement.ATTAQUE, source, cible, encaissement, pv_avant)
+        self._traiter_destruction(cible)
+        if encaissement.renvoyes and not renvoi_vers.est_detruit() and self.en_cours:
+            pv_avant = self._pv(renvoi_vers)
+            # Les degats renvoyes ne sont jamais renvoyes a leur tour : leur propre renvoi est ignore
+            renvoi = renvoi_vers.subir_degats(encaissement.renvoyes)
+            self._noter_degats(NatureEvenement.RENVOI, cible, renvoi_vers, renvoi, pv_avant)
+            self._traiter_destruction(renvoi_vers)
+
+    def _noter_degats(self, nature: NatureEvenement, source: object, cible: Entite, encaissement: Encaissement, pv_avant: int) -> None:
+        """Note des degats recus avec leur detail : leurre, renvoi, bouclier, PV perdus et restants."""
+        self._noter(
+            nature, source=source, cible=cible, valeur=encaissement.degats,
+            annules_leurre=encaissement.annules_leurre, renvoyes=encaissement.renvoyes,
+            absorbes_bouclier=encaissement.absorbes_bouclier, pv_perdus=pv_avant - self._pv(cible),
+            pv_restants=self._pv(cible),
         )
-        candidats = avant or _dedupe_ennemis(
-            occupant
-            for occupant in (self.flotte.ennemi_en(Colonne.ARRIERE, rangee) for rangee in (Rangee.GAUCHE, Rangee.MID, Rangee.DROITE))
-            if occupant is not None
-        )
-        if not candidats:
-            return None
-        return self.aleatoire.choice(candidats)
 
-    def _cible_ligne_avant_ou_arriere_joueur(self) -> Module | None:
-        """Tire au hasard un module du joueur dans la colonne avant (base incluse, specs.md
-        12.1) si elle compte au moins un module vivant, sinon dans la colonne arriere (specs.md
-        13, ennemi Miroir) - None si le joueur n'a plus aucun module vivant (combat deja
-        termine dans ce cas)."""
-        avant = [
-            module
-            for module in (self.joueur.vaisseau.module_en(Colonne.AVANT, rangee) for rangee in (Rangee.GAUCHE, Rangee.MID, Rangee.DROITE))
-            if module is not None
-        ]
-        candidats = avant or [
-            module
-            for module in (self.joueur.vaisseau.module_en(Colonne.ARRIERE, rangee) for rangee in (Rangee.GAUCHE, Rangee.MID, Rangee.DROITE))
-            if module is not None
-        ]
-        if not candidats:
-            return None
-        return self.aleatoire.choice(candidats)
+    def _poser_statut(self, cible: Entite, statut: Statut, valeur: int, source: object = None) -> None:
+        cible.statuts.ajouter(statut, valeur)
+        self._noter(NatureEvenement.STATUT_POSE, source=source, cible=cible, valeur=valeur, statut=statut)
 
-    def _redirection_active(self, ennemi: Ennemi) -> bool:
-        """Indique si Tir allie (specs.md 12.6) est actif sur cet ennemi ET qu'un autre
-        ennemi est vivant pour en recevoir l'effet - sans tirer au sort lequel (cf.
-        previsualiser_cible/_cible_redirection)."""
-        a_le_debuff = any(buff.action == ActionCarte.REDIRECTION_CIBLE for buff in ennemi.buffs_actifs)
-        if not a_le_debuff:
-            return False
-        return any(autre is not ennemi for autre in self.flotte.ennemis_vivants())
+    def _traiter_destruction(self, entite: Entite) -> None:
+        """Destruction d'un module (6) ou d'un ennemi, et fin de combat eventuelle (7)."""
+        if not entite.est_detruit() or any(entite is deja for deja in self._detruits):
+            return
+        self._detruits.append(entite)
+        # Ses statuts sont perdus (6)
+        entite.statuts = Statuts()
+        if isinstance(entite, Module):
+            self._noter(NatureEvenement.MODULE_DETRUIT, cible=entite)
+            deplacees = self.deck.mettre_hors_service(entite.exemplaire)
+            if deplacees:
+                self._noter(NatureEvenement.CARTES_HORS_SERVICE, cible=entite, valeur=len(deplacees))
+            if entite.principal:
+                self.etat = EtatCombat.DEFAITE
+                self._noter(NatureEvenement.DEFAITE)
+            return
+        self._noter(NatureEvenement.ENNEMI_DETRUIT, cible=entite)
+        self._verifier_victoire()
 
-    def _cible_redirection(self, ennemi: Ennemi) -> Ennemi | None:
-        """Si Tir allie est actif sur cet ennemi (specs.md 12.6), tire au hasard un autre
-        ennemi vivant pour cibler a sa place ; None sinon. Seule methode qui consomme l'alea
-        pour cette mecanique - previsualiser_cible ne fait que verifier l'eligibilite via
-        _redirection_active, sans tirage, pour rester deterministe au survol/redessin."""
-        if not self._redirection_active(ennemi):
-            return None
-        autres = [autre for autre in self.flotte.ennemis_vivants() if autre is not ennemi]
-        return self.aleatoire.choice(autres)
-
-    def _position_de_ennemi(self, ennemi: Ennemi) -> Position | None:
-        """Retrouve la position "principale" d'un ennemi dans la flotte (la case Avant en
-        priorite s'il occupe aussi l'Arriere de la meme rangee, specs.md 3.2 - ex. le Boss des
-        pirates), ou None s'il n'y est pas."""
-        positions = self.flotte.positions_de(ennemi)
-        if not positions:
-            return None
-        avant = [position for position in positions if position.colonne == Colonne.AVANT]
-        return avant[0] if avant else positions[0]
-
-    def _ennemi_occupe_colonne(self, ennemi: Ennemi, colonne: Colonne) -> bool:
-        """Indique si cet ennemi occupe au moins une case de cette colonne (specs.md 3.2 : un
-        ennemi a 2 emplacements occupe l'Avant ET l'Arriere de sa rangee, donc les deux)."""
-        return any(position.colonne == colonne for position in self.flotte.positions_de(ennemi))
-
-    def _verifier_fin_de_combat(self) -> None:
-        """Met a jour l'etat du combat si la flotte ou le module de base est detruit."""
-        if self.flotte.est_vide():
+    def _verifier_victoire(self) -> bool:
+        if self.en_cours and self.flotte.est_vide():
             self.etat = EtatCombat.VICTOIRE
-        elif self.joueur.vaisseau.est_detruit():
-            self.etat = EtatCombat.DEFAITE
+            self._noter(NatureEvenement.VICTOIRE)
+        return self.etat == EtatCombat.VICTOIRE
+
+    @staticmethod
+    def _pv(entite: Entite) -> int:
+        return entite.pv_combat if isinstance(entite, Module) else entite.pv
+
+    def _noter(self, nature: NatureEvenement, **champs) -> None:
+        self.journal.append(Evenement(nature, self.tour, **champs))

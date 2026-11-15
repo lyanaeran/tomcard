@@ -11,7 +11,7 @@ Fond de combat reutilise en placeholder (decision utilisateur), a remplacer par 
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.module_new import ModuleNew
+from src.gameplay.module import Module
 from src.gameplay.partie import Partie
 from src.ui.animation import AnimationPopup
 from src.ui.commun import image_case_module
@@ -137,7 +137,7 @@ class EcranVaisseau(pyglet.window.Window):
         )
 
     def _dessiner_module(
-        self, index: int, libelle: str, etat: ModuleNew | None, lot: pyglet.graphics.Batch
+        self, index: int, libelle: str, etat: Module | None, lot: pyglet.graphics.Batch
     ) -> list:
         x, y, largeur, hauteur = _rect_module(index)
         cx = x + largeur / 2

@@ -3,10 +3,15 @@
 *Document de travail, hors numérotation (cf. [specs.md](specs.md)). **Plan validé** (décisions du
 §2 et ordre des PR du §5 tranchés le 2026-11-11 ; l'affichage du §4 reste une proposition, à
 valider sur maquette). **PR 1 (gameplay) codée le 2026-11-12** (§5.1) ; **PR 2 (web) codée le
-2026-11-12** (§5.2) ; **PR 3 (PC) codée le 2026-11-14** (§5.4) ; PR 4 à faire. Décrit comment faire passer le jeu (parcours, sauvegarde, affichage
+2026-11-12** (§5.2) ; **PR 3 (PC) codée le 2026-11-14** (§5.4) ; **PR 4 (nettoyage) codée le 2026-11-14** (§5.5). Décrit comment faire passer le jeu (parcours, sauvegarde, affichage
 PC et web) sur le moteur de la refonte (`CombatNew` et les fichiers `*_new.py`), puis supprimer
 l'ancien moteur. Contexte : [refonte.md](refonte.md) ; règles du nouveau combat :
-[refonte-combat.md](refonte-combat.md).*
+`refonte-combat.md` (supprimé, cf. combat.md §3).*
+
+> **Document historique.** Depuis le 2026-11-14, les fichiers de la refonte n'ont plus de suffixe
+> `_new` (`carte_new.py` → `carte.py`, `CarteNew` → `Carte`, `config/carte_new.json` →
+> `config/cartes.json`…). Ce document garde les noms de l'époque : ils désignent les fichiers
+> actuels. L'« ancien moteur » dont il parle n'existe plus.
 
 ---
 
@@ -380,6 +385,34 @@ les captures), déjà utilisé par le PC avant la refonte.
 - Renommage éventuel des `*_new` (à décider : garder les noms, ou `CarteNew` → `Carte`…).
 - Migration des brouillons `refonte-*.md` dans les sections numérotées (`combat.md`,
   `modules-cartes.md`…), mise à jour de `CLAUDE.md` et de `specs/refonte.md`.
+
+### 5.5 PR 4 codée (2026-11-14) : ce qui a été fait, ce qui reste à décider
+
+- **Supprimés** : `carte.py`, `module.py`, `ennemi.py`, `combat.py`, `deck.py`, `flotte.py`,
+  `vaisseau.py`, `joueur.py`, `ciblage.py`, `journal.py`, `donnees.py` (en entier : plus rien n'en
+  lisait une partie), leurs 9 fichiers de test, et `config/cartes.json`, `modules.json`,
+  `ennemis.json`.
+- `RareteCarte` est maintenant définie dans `carte_new.py`.
+- Le rapport du simulateur de parties (`outils/simulation/rapport.py`) lit les noms des modules et
+  des cartes dans les données de la refonte (il lisait encore les anciennes).
+- La version web ne monte plus les fichiers supprimés (version 89).
+- Un test de `test_ennemi_new.py` comparait les ennemis à l'ancien `ennemis.json` : supprimé avec
+  lui.
+
+**Suite, même jour (décision utilisateur : « les 2 »)** :
+
+1. **Suffixe `_new` retiré** partout : fichiers de `src/gameplay/`, classes (`CarteNew` → `Carte`…),
+   fonctions (`charger_cartes_new` → `charger_cartes`…), tests, simulateur de combats (`bot.py`,
+   `combats.py`), données (`config/cartes.json`, `modules.json`, `ennemis.json` et leurs tableaux
+   `.md`).
+2. **Brouillons reportés** dans les sections numérotées : `refonte-combat.md`,
+   `refonte-statuts.md`, `refonte-ennemis.md` → `combat.md` §3 et §13 ; partie codée de
+   `refonte-modules.md` → `combat.md` §3.4, `modules-cartes.md` §4 et §12 ; affichage (§4, §5.2,
+   §5.4 de ce document) → `interface.md` §8. Ces quatre brouillons sont supprimés : les renvois
+   de ce document vers eux se lisent avec cette correspondance. Les passages périmés de
+   `parcours.md`, `aventures.md` et `architecture.md` (ancien moteur, mode démo) sont réécrits.
+   Restent hors numérotation `refonte-destruction.md` (pistes non codées, avec celles de l'ancien
+   `refonte-modules.md`) et `refonte-buffs-debuffs.md`.
 
 ---
 
