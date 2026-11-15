@@ -1,6 +1,6 @@
 """
 Combat (Combat) : fait jouer ensemble Carte, Module, Ennemi et les
-statuts (specs/refonte-combat.md, seule reference de ce fichier). Gameplay seulement : aucune
+statuts (specs.md 3, seule reference de ce fichier). Gameplay seulement : aucune
 dependance d'affichage, une API d'actions (jouer_carte, finir_tour) et de consultations (etat,
 cibles_possibles, intentions, journal), utilisee par le parcours (partie.py), l'affichage PC et
 web, le simulateur et les tests.
@@ -22,7 +22,7 @@ from src.gameplay.vaisseau import Vaisseau
 # Electricite rendue au debut de chaque tour du joueur (combat.md 3.3)
 ELECTRICITE_PAR_TOUR = 3
 
-# Natures d'effet de carte laissees pour plus tard (refonte-combat.md 1.2) : une carte qui en porte
+# Natures d'effet de carte laissees pour plus tard (specs.md 3.8.4) : une carte qui en porte
 # est refusee
 NATURES_NON_GEREES = {NatureEffet.VULNERABILITE, NatureEffet.REDUCTION_DEGATS, NatureEffet.REDIRECTION_CIBLE}
 
@@ -152,7 +152,7 @@ class Combat:
         return [ennemi for ennemi in self.flotte.ennemis if ennemi.est_detruit()]
 
     def cibles_possibles(self, carte: Carte) -> list[Position]:
-        """Cases valides pour jouer cette carte (refonte-combat.md 4.2) : une case vivante du bon
+        """Cases valides pour jouer cette carte (specs.md 3.8.2) : une case vivante du bon
         camp, de la bonne colonne pour Avant/Arriere, celle du principal pour Module Principal."""
         cible = carte.cible
         if cible.camp == Camp.ENNEMI:
@@ -196,7 +196,7 @@ class Combat:
         return camp == camp_touche
 
     def intentions(self) -> list[Intention]:
-        """Ce que chaque ennemi vivant jouera a son prochain tour (refonte-combat.md 5.3)."""
+        """Ce que chaque ennemi vivant jouera a son prochain tour (specs.md 13.2.3)."""
         resultat = []
         for ennemi in self.flotte.ennemis_vivants():
             effets = []
@@ -224,7 +224,7 @@ class Combat:
     # --- Actions ---
 
     def jouer_carte(self, carte: Carte, case: Position) -> None:
-        """Joue une carte de la main sur la case choisie (refonte-combat.md 4). Refuse une action
+        """Joue une carte de la main sur la case choisie (specs.md 3.8). Refuse une action
         invalide (ValueError)."""
         cases = self._cases_jouables(carte)
         if not cases:

@@ -1,6 +1,6 @@
 """
 Fenetre pyglet du combat (grille 2x3, plusieurs modules et ennemis, cf. specs.md paragraphe 8),
-sur le moteur de la refonte (Combat, specs/refonte-combat.md). N'affiche que ce que le gameplay
+sur le moteur de la refonte (Combat, specs.md 3). N'affiche que ce que le gameplay
 decide : cases valides d'une carte (cibles_possibles), carte jouable (peut_jouer), intentions des
 ennemis, journal. Les textes sont dans src/ui/textes_combat.py.
 """

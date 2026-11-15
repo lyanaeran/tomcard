@@ -1,6 +1,6 @@
 """
 Ennemi (Ennemi) : modele de donnees issu de la refonte des
-ennemis (specs/refonte-ennemis.md). Source de verite : config/ennemis.json
+ennemis (specs.md 13). Source de verite : config/ennemis.json
 (charger_ennemis). Seul modele d'ennemi du jeu depuis la suppression de l'ancien moteur (PR 4
 du branchement).
 
@@ -11,7 +11,7 @@ Principes :
 - les effets renvoient a des VALEURS NOMMEES de l'ennemi, comme les cartes ; chaque valeur a une
   augmentation (de combien, tous les combien de tours) et un COEFFICIENT de difficulte (>= 1,
   donne a la creation pour le combat) multiplie base, augmentations et PV, arrondi a l'inferieur ;
-- bouclier, incendie et renvoi sont des STATUTS (statut.py, specs/refonte-statuts.md),
+- bouclier, incendie et renvoi sont des STATUTS (statut.py, specs.md 3.5),
   partages avec Module ; ils s'eteignent a la fin du tour du joueur (fin_du_tour_du_joueur) ;
 - Miroir pose un RENVOI (plus un bouclier) : cumulable, il dure jusqu'au debut du tour ennemi
   suivant.
@@ -109,7 +109,7 @@ class ValeurEnnemi:
     def au_tour(self, tour: int, coefficient: Fraction = Fraction(1)) -> int:
         """Valeur au tour donne (1 = premier tour du combat) : arrondi_inferieur((base +
         augmentation x paliers) x coefficient), paliers = (tour - 1) // tous_les
-        (specs/refonte-ennemis.md 3.3)."""
+        (specs.md 13.1.3)."""
         if tour < 1:
             raise ValueError(f"tour doit valoir au moins 1 ({tour})")
         paliers = (tour - 1) // self.tous_les

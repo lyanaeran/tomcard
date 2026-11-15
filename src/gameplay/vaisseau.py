@@ -1,6 +1,6 @@
 """
 Vaisseau de combat (Vaisseau) : les modules en combat (copies de Module) places sur la
-grille du joueur (specs/refonte-combat.md 2.2).
+grille du joueur (specs.md 3.1).
 
 Grille 2 colonnes (avant, arriere) x 3 rangees (gauche, milieu, droite). Le principal occupe toute
 la rangee du milieu (les deux colonnes) ; les quatre autres emplacements correspondent chacun a une

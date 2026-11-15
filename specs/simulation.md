@@ -17,7 +17,7 @@ pour mesurer l'équilibrage du jeu et produire une synthèse chiffrée :
 - **force comparée des modules** ;
 - **effet des variantes de règles** en discussion (brouillons
   [refonte-buffs-debuffs.md](refonte-buffs-debuffs.md) et
-  [refonte-modules.md](refonte-modules.md)).
+  [modules-cartes.md](modules-cartes.md) §4).
 
 ---
 
@@ -244,12 +244,13 @@ python -m outils.simulation combat --variante bouclier_moins_un --parties 2000
 
 > **Depuis la PR 1 du branchement (2026-11-12)**, le simulateur de parties complètes
 > (`partie_auto.py`, `etudes.py`, `python -m outils.simulation`) joue le **parcours branché sur le
-> combat de la refonte** avec le bot de `bot.py` (§12) ; l'ancien bot (`bot.py`) est supprimé.
+> combat actuel** avec le bot de `bot.py` (§12) ; le bot de l'ancien moteur est supprimé.
 > Les règles décrites ci-dessous restent valables pour la politique hors combat ; les résultats de
 > `analyse_2026-11-07.md` sont ceux de l'ancien moteur.
 
 Implémenté dans `outils/simulation/` (`partie_auto.py`, `etudes.py`, `rapport.py`, `__main__.py`,
-et à l'origine `bot.py`, supprimé à la PR 1 du branchement au profit de `bot.py`), sur les
+et à l'origine un bot pour l'ancien moteur, supprimé à la PR 1 du branchement au profit de
+`bot.py`), sur les
 règles du jeu (aucune variante de règles, décision utilisateur : « on ne mélange pas tout »), celles
 du moteur de la refonte depuis la PR 1. Tests : `tests/test_simulation.py`.
 
@@ -299,8 +300,8 @@ rédigées : `outils/simulation/synthese/analyse_AAAA-MM-JJ.md` (rapports géné
 
 ## 12. Simulateur du combat de la refonte (2026-11-11)
 
-Le combat de la refonte (`Combat`, [refonte-combat.md](refonte-combat.md)) a son propre
-simulateur, à côté de celui des règles actuelles (§11), qui reste inchangé :
+Le combat de la refonte (`Combat`, [combat.md](combat.md) §3) a son propre
+simulateur de combats isolés, à côté de celui des parties complètes (§11) :
 
 - `outils/simulation/bot.py` : bot « recherche » (même faisceau et mêmes poids que §11, plus
   un leurre et l'incendie restant dans l'évaluation) et bot aléatoire, sur l'API de `Combat`

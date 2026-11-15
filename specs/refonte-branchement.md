@@ -6,7 +6,7 @@ valider sur maquette). **PR 1 (gameplay) codée le 2026-11-12** (§5.1) ; **PR 2
 2026-11-12** (§5.2) ; **PR 3 (PC) codée le 2026-11-14** (§5.4) ; **PR 4 (nettoyage) codée le 2026-11-14** (§5.5). Décrit comment faire passer le jeu (parcours, sauvegarde, affichage
 PC et web) sur le moteur de la refonte (`CombatNew` et les fichiers `*_new.py`), puis supprimer
 l'ancien moteur. Contexte : [refonte.md](refonte.md) ; règles du nouveau combat :
-[refonte-combat.md](refonte-combat.md).*
+`refonte-combat.md` (supprimé, cf. combat.md §3).*
 
 > **Document historique.** Depuis le 2026-11-14, les fichiers de la refonte n'ont plus de suffixe
 > `_new` (`carte_new.py` → `carte.py`, `CarteNew` → `Carte`, `config/carte_new.json` →
@@ -405,7 +405,14 @@ les captures), déjà utilisé par le PC avant la refonte.
    fonctions (`charger_cartes_new` → `charger_cartes`…), tests, simulateur de combats (`bot.py`,
    `combats.py`), données (`config/cartes.json`, `modules.json`, `ennemis.json` et leurs tableaux
    `.md`).
-2. **Brouillons `refonte-*.md`** reportés dans les sections numérotées (cf. [specs.md](specs.md)).
+2. **Brouillons reportés** dans les sections numérotées : `refonte-combat.md`,
+   `refonte-statuts.md`, `refonte-ennemis.md` → `combat.md` §3 et §13 ; partie codée de
+   `refonte-modules.md` → `combat.md` §3.4, `modules-cartes.md` §4 et §12 ; affichage (§4, §5.2,
+   §5.4 de ce document) → `interface.md` §8. Ces quatre brouillons sont supprimés : les renvois
+   de ce document vers eux se lisent avec cette correspondance. Les passages périmés de
+   `parcours.md`, `aventures.md` et `architecture.md` (ancien moteur, mode démo) sont réécrits.
+   Restent hors numérotation `refonte-destruction.md` (pistes non codées, avec celles de l'ancien
+   `refonte-modules.md`) et `refonte-buffs-debuffs.md`.
 
 ---
 

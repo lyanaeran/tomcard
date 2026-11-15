@@ -1,5 +1,5 @@
 """
-Joueurs automatiques pour le combat de la refonte (Combat, specs/refonte-combat.md) : meme
+Joueurs automatiques pour le combat de la refonte (Combat, specs.md 3) : meme
 principe que bot.py (bot "recherche" en faisceau et bot aleatoire de reference, specs/simulation.md
 3), adapte a l'API de Combat. Ils ne font que choisir des cartes et des cases ; toutes les
 regles sont appliquees par src/gameplay (Combat.jouer_carte, finir_tour).

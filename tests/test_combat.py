@@ -1,5 +1,5 @@
 """
-Tests unitaires pour src/gameplay/combat.py (combat de la refonte, specs/refonte-combat.md).
+Tests unitaires pour src/gameplay/combat.py (combat de la refonte, specs.md 3).
 
 Vaisseau de test : principal M1 (60 PV, base) et Lanceur de missiles M2 (20 PV, avant gauche).
 """

@@ -53,7 +53,7 @@ class SauvegardeObsolete(ValueError):
 class CartePossedee:
     """Une carte du deck possede : l'id de son modele (config/cartes.json) et l'exemplaire de
     module auquel elle est rattachee ("M1"...), stable meme si la Station deplace le module
-    (refonte-modules.md 3.3)."""
+    (specs.md 12.4)."""
 
     id: str
     module: str
@@ -519,7 +519,7 @@ def second_choc_asteroides(partie: Partie, cartes: dict[str, Carte], aleatoire: 
     """2e choc du choix "Traverser" de l'Aventure "Asteroides" (specs.md 2.5) : inflige un second
     DEGATS_ASTEROIDES au principal puis tire une carte gratuite du pool complet de cartes
     jouables (tirer_carte_recompense), rattachee au principal (carte obtenue hors module,
-    refonte-modules.md 3.3) - None si le pool est vide. Decide seule si une carte est offerte :
+    specs.md 12.4) - None si le pool est vide. Decide seule si une carte est offerte :
     PC et web ne font qu'afficher le resultat. Modifie `partie`."""
     subir_degats_principal(partie, DEGATS_ASTEROIDES)
     carte = tirer_carte_recompense(pool_toutes_cartes(cartes), aleatoire)

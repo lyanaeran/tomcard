@@ -1,6 +1,6 @@
 """
 Module (Module) : modele de donnees issu de la refonte des
-modules (specs/refonte-modules.md, 8). Source de verite : config/modules.json
+modules (specs.md 4). Source de verite : config/modules.json
 (charger_modules). Seul modele de module du jeu depuis la suppression de l'ancien moteur (PR 4
 du branchement).
 
@@ -15,7 +15,7 @@ la partie), et seuls les PV du principal y sont reportes a la fin (reporter_comb
 
 Regles de la refonte : les modules secondaires repartent a leur PV max a chaque combat, seuls les
 PV du principal persistent. Bouclier, leurre, incendie... sont des STATUTS (statut.py,
-specs/refonte-statuts.md), partages avec Ennemi ; ils s'eteignent a la fin du tour ennemi.
+specs.md 3.5), partages avec Ennemi ; ils s'eteignent a la fin du tour ennemi.
 """
 
 import dataclasses
@@ -59,7 +59,7 @@ class Module:
     # --- Exemplaire dans la partie : sauvegarde ---
 
     # Identifiant de l'exemplaire dans la partie (ex. "M3"), None pour un simple modele ; stable
-    # meme si la Station deplace le module, les cartes y sont rattachees (refonte-modules.md 3.3)
+    # meme si la Station deplace le module, les cartes y sont rattachees (specs.md 12.4)
     exemplaire: str | None = None
     # Emplacement sur le vaisseau ("base", "avant_gauche"...), None tant qu'il n'est pas equipe
     emplacement: str | None = None
@@ -139,7 +139,7 @@ class Module:
 
     def reparer(self, valeur: int) -> None:
         """Rend des PV de combat, sans depasser le PV max. Sans effet sur un module detruit : la
-        resurrection est une mecanique a part (refonte-modules.md 5, refonte-combat.md 4.4)."""
+        resurrection est une mecanique a part (specs/refonte-destruction.md 5, specs.md 3.8.4)."""
         self._verifier_en_combat()
         if self.est_detruit():
             return

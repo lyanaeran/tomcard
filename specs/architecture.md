@@ -76,43 +76,34 @@ utilisateur), plus des écrans autonomes non reliés comme les précédents.
   seule a la fois (cf. "un joueur ne peut avoir qu'une seule partie EN_COURS" plus haut : les
   parties `TERMINEE` ne sont pour l'instant pas conservées côté web, contrairement à PC — écart
   volontaire tant qu'aucun écran n'affiche l'historique, voir §9.1)
-- **Format 2 (refonte branchée, PR 1, 2026-11-12)** : `version` vaut 2 ; chaque module du
-  `vaisseau` porte aussi son identifiant d'exemplaire (`{"module_id": "MOD_2", "exemplaire": "M2",
-  "pv": 20, "pv_max": 20, "niveau_maj": 1}`, `pv` ne compte que pour le principal) ; le `deck` est
-  une liste `{"id": "CRT_7", "module": "M1"}` (carte rattachée à un exemplaire de module,
-  `partie.CartePossedee`). **Une partie d'une autre version est abandonnée à la lecture**
-  (décision utilisateur du 2026-11-11 n° 1, aucune conversion) : `partie.lire_partie` renvoie
-  `None`, `partie_en_cours` (PC) efface le fichier **si la partie était EN_COURS** ; une ancienne
-  partie TERMINEE est gardée telle quelle (futures statistiques), mais n'est plus relue ; le profil est gardé (son format ne change
-  pas, `VERSION_PROFIL` = 1). Le web fait de même avec `localStorage` (`partie.lire_sauvegarde`,
-  règle commune). **Ajouts du 2026-11-13**, sans changer de version : champ `recompense`
-  (`null`, ou la liste `{"id", "module"}` des cartes proposées après un combat gagné, tant que le
-  joueur n'a pas choisi : une partie quittée sur l'écran de récompense y revient, cf. parcours
-  §2.4 / `deroulement.ecran_de_reprise`) ; une sauvegarde qui cite une carte ou un module absent
-  de `config/`, ou une sauvegarde abîmée, est abandonnée comme une ancienne version
-  (proposition), au lieu de planter. Ancien
-  format (version 1) :
-- **Contenu** :
+- **Format 2** (depuis le 2026-11-12) :
   ```json
   {
-    "version": 1,
+    "version": 2,
     "id": "partie_20260823_142301",
     "nom": "Partie du 23/08/2026",
     "statut": "EN_COURS",
     "graine": 918273645,
-    "niveau": 1,
-    "argent": 0,
+    "niveau": 2,
+    "argent": 7,
     "vaisseau": {
-      "base":           {"module_id": "MOD_1", "pv": 15, "pv_max": 15, "niveau_maj": 1},
-      "avant_gauche":   null,
+      "base":           {"module_id": "MOD_1", "exemplaire": "M1", "pv": 60, "pv_max": 60, "niveau_maj": 1},
+      "avant_gauche":   {"module_id": "MOD_2", "exemplaire": "M2", "pv": 20, "pv_max": 20, "niveau_maj": 1},
       "avant_droite":   null,
       "arriere_gauche": null,
       "arriere_droite": null
     },
-    "deck": ["CRT_7", "CRT_7", "CRT_7", "CRT_7", "CRT_8", "CRT_9", "CRT_10", "CRT_10", "CRT_10", "CRT_10", "CRT_11", "CRT_12"]
+    "deck": [{"id": "CRT_7", "module": "M1"}, {"id": "CRT_13", "module": "M2"}],
+    "recompense": null
   }
   ```
-  - `version` : version du format, pour d'éventuelles migrations futures
+  - **Une partie d'une autre version est abandonnée à la lecture** (décision utilisateur,
+    2026-11-11, aucune conversion) : `partie.lire_sauvegarde` renvoie `None` ; une partie
+    `EN_COURS` est effacée, une ancienne partie `TERMINEE` est gardée (futures statistiques) mais
+    n'est plus relue ; le profil est gardé (`VERSION_PROFIL` = 1). Même règle sur PC et sur le
+    web. Une sauvegarde qui cite une carte ou un module absent de `config/`, ou une sauvegarde
+    abîmée, est abandonnée de la même façon au lieu de planter (proposition, 2026-11-13).
+  - `version` : version du format
   - `id` : identifiant unique (nom de fichier PC / suffixe de clé localStorage web)
   - `nom` : affiché dans les futurs écrans d'historique (généré automatiquement pour l'instant à
     partir de la date — pas de renommage par le joueur prévu dans un premier temps)
@@ -127,13 +118,16 @@ utilisateur), plus des écrans autonomes non reliés comme les précédents.
     et comme graine de repli pour le combat approximatif du bouton "Continuer" (voir plus bas)
   - `niveau` : niveau courant (1 pour une partie neuve, incrémenté par `avancer_niveau()` à chaque
     étape résolue — choix de module, combat gagné — cf. §2.4)
-  - `vaisseau` : un état par emplacement (base + 4 équipables, §5) — `module_id` (référence
-    `config/modules.json`), `pv`/`pv_max` (§2.2), `niveau_maj` (palier de mise à jour, 1 à 3, §2.2) ;
-    `null` si l'emplacement est vide. Une partie neuve n'a que `base` d'équipé (deck/PV du module
-    principal, `config_poc.ids_deck_module_principal`) — le 2ᵉ emplacement est rempli au choix du
-    Niveau 1 (`equiper_module()`, §2.4)
-  - `deck` : ids de cartes possédées (`config/cartes.json`), doublons répétés dans la liste — même
-    principe que `regrouper_cartes()` (§6) pour l'affichage, mais stockage à plat ici
+  - `vaisseau` : un exemplaire de module (`Module`) par emplacement (principal + 4, §5) ou
+    `null` : type (`module_id`, `config/modules.json`), identifiant d'exemplaire (`M1`, `M2`…,
+    stable même si la Station déplace le module), `pv_max`, `niveau_maj` (palier 1 à 3, §2.2),
+    et `pv`, qui ne compte que pour le principal (un secondaire repart à ses PV max). Une partie
+    neuve n'a que le principal ; le 2ᵉ emplacement est rempli au Niveau 1 (`equiper_module`)
+  - `deck` : les cartes possédées, chacune avec le module auquel elle est rattachée
+    (`partie.CartePossedee`, modules-cartes.md §12.4) ; les doublons sont répétés
+  - `recompense` : `null`, ou les cartes proposées après un combat gagné tant que le joueur n'a
+    pas choisi : une partie quittée sur l'écran de récompense y revient
+    (`deroulement.ecran_de_reprise`, parcours.md §2.4)
 
 #### Écrans (implémentés, PC + web)
 
@@ -163,37 +157,30 @@ fond dédié.
   `nouvelle_partie_web`, `choix_module_partie_web`, `continuer_partie_web`)
 - **Nouvelle partie** → écran de choix de module du Niveau 1 déjà existant (§2.3), candidats tirés à
   partir de la graine de la partie fraîchement créée
-- **Voir le deck** → écran "deck en entier" déjà existant (§6), alimenté par le deck réel de la
-  partie (pas une démonstration aléatoire). L'Écran de partie ayant déjà été fermé/masqué à
+- **Voir le deck** → écran "deck en entier" déjà existant (§6), alimenté par le deck de la partie. L'Écran de partie ayant déjà été fermé/masqué à
   l'ouverture, un bouton **Retour** (PC : `EcranDeck.termine` ; web : `#bouton-retour-deck`) est le
   seul moyen d'y revenir — bug réel corrigé après un premier passage sans lui (aucune fermeture de
   fenêtre native ne rouvrait quoi que ce soit sur PC, et aucune navigation possible sur web)
-- **Continuer** → reprend l'étape exacte où le joueur s'était arrêté (§2.4, étape 2) : Choix de
-  module si Niveau 1 sans 2ᵉ module équipé, sinon Choix du prochain niveau pour le niveau courant.
-  Un combat lancé depuis là (Prime ou Boss) reprend le vaisseau/deck réels de la partie, mais tire
-  toujours une **flotte ennemie au hasard** — l'orchestration ne détermine pas encore précisément
-  quel combat affronter à ce niveau (nombre/taille d'ennemis selon §3.2, voir §10.3 "Limites
-  connues"). `combat_depuis_partie()` dans `src/gameplay/partie.py`
+- **Continuer** → reprend l'étape où le joueur s'était arrêté (`deroulement.ecran_de_reprise`,
+  §2.4) : Choix de module au Niveau 1 sans 2ᵉ module, écran de récompense si un combat gagné
+  attend sa carte, sinon Choix du prochain niveau. Le combat est construit par
+  `partie.combat_depuis_partie` (flotte selon le niveau, combat.md §13.4)
 - **Abandonner la partie** : marque la partie `TERMINEE` (`marquer_terminee()`) et revient à
   l'écran d'accueil, qui affiche alors le bouton "Nouvelle partie"
 - **Enchaînement complet d'une vraie partie** (§2.4, étapes 2 à 6) : décidé par
   `src/gameplay/deroulement.py` (cf. §2.4), affiché par `main.py` (PC, une fonction `_ouvrir_xxx`
   par écran, transitions détectées via `pyglet.clock.schedule_interval`) ; côté web,
-  `src/web/app.js` garde une variable `partieActive` (la `Partie` en cours d'orchestration, ou `null`
-  en mode démonstration) que `choisirModule`/`choisirEtape`/`choisirRecompense` consultent pour
-  choisir entre persistance réelle et comportement de démonstration (`console.log`) inchangé
+  `src/web/app.js` garde une variable `partieActive` (la `Partie` en cours, `null` hors parcours) et
+  suit l'écran renvoyé par le gameplay (`allerA`)
 
 #### Implémentation
 
-- `src/gameplay/partie.py` (nouveau) : dataclasses `Profil`/`Partie`/`EtatModule`, sérialisation
-  JSON pure (`profil_vers_json`/`profil_depuis_json`, `partie_vers_json`/`partie_depuis_json`,
-  testables sans I/O), `nouveau_profil`/`nouvelle_partie`/`combat_depuis_partie`/`marquer_terminee`,
-  et l'I/O fichier PC (`lister_profils`, `creer_profil`, `supprimer_profil`, `sauvegarder_partie`,
-  `partie_en_cours`, `abandonner_partie`, sous `saves/`, nouveau dossier ajouté au `.gitignore`)
-  - Nom `Profil` retenu plutôt que `Joueur` (déjà pris par `src/gameplay/joueur.py`, l'état de
-    combat éphémère vaisseau + deck + électricité, §3.3) — pas de collision
-  - `config_poc.deck_module_principal` factorisé en `ids_deck_module_principal` (renvoie des ids
-    plutôt que des `Carte`) pour être réutilisable par `nouvelle_partie` sans dupliquer la règle
+- `src/gameplay/partie.py` : dataclasses `Profil`, `Partie`, `CartePossedee` ; sérialisation JSON
+  pure (`profil_vers_json`/`profil_depuis_json`, `partie_vers_json`/`partie_depuis_json`,
+  `lire_sauvegarde`, testables sans I/O) ; `nouveau_profil`, `nouvelle_partie`,
+  `combat_depuis_partie`, `reporter_combat`, `marquer_terminee` ; et l'I/O fichier PC
+  (`lister_profils`, `creer_profil`, `supprimer_profil`, `sauvegarder_partie`, `partie_en_cours`,
+  `abandonner_partie`, sous `saves/`, ignoré par git)
 - `src/web/bridge.py` : les fonctions ci-dessus n'effectuent **aucune I/O** (Pyodide n'a pas de FS
   persistante entre rechargements de page) — elles ne font que (dé)sérialiser et appliquer la
   logique pure de `partie.py` ; la lecture/écriture `localStorage` est entièrement gérée côté
@@ -222,11 +209,8 @@ fond dédié.
   L'Aventure a désormais sa propre implémentation pour ses trois variantes (Trois lunes, Astéroïdes,
   Police, §2.5)
 - Le run s'arrête réellement au Niveau 10 dans l'état actuel (décision utilisateur, provisoire,
-  voir §2) : la Victoire finale (§2.4, étape 11) marque la partie `TERMINEE` sans proposer de
+  voir §2) : la victoire contre le Boss termine la partie (§2.4, étapes 6 et 11), sans
   continuation au-delà de ce niveau
-- La flotte ennemie d'un combat (Prime ou Boss) applique désormais les règles de difficulté par
-  niveau (§13.4, `creer_flotte_prime`/`creer_flotte_boss`) : **résolu**, n'est plus un tirage de
-  démonstration
 - Écart PC/web sur la conservation des parties `TERMINEE` (voir "Partie" plus haut) : à corriger si
   un écran d'historique est construit côté web
 - `argent` progresse désormais via les combats gagnés et la Station service (§2.1/§2.2) ; la Planète

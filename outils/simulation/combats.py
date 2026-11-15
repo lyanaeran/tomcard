@@ -1,5 +1,5 @@
 """
-Simulations de combats isoles avec le combat de la refonte (Combat, specs/refonte-combat.md).
+Simulations de combats isoles avec le combat de la refonte (Combat, specs.md 3).
 Deux objectifs (demande utilisateur, 2026-11-11) :
 1. robustesse : verifier a chaque action des invariants du combat (piles de cartes, PV, statuts,
    journal, intentions, fin de combat), avec le bot aleatoire (beaucoup de coups varies) et le

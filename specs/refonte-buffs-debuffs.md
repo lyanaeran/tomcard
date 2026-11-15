@@ -2,15 +2,15 @@
 
 > **En partie dépassé (2026-11-11)** : les décisions prises depuis (bouclier et incendie −1 par
 > tour, statuts partagés, renvoi, retrait du « bouclier par tour ») sont dans
-> [refonte-statuts.md](refonte-statuts.md) et codées dans `src/gameplay/statut.py`. Ce fichier
+> [combat.md](combat.md) §3.5 et codées dans `src/gameplay/statut.py`. Ce fichier
 > garde la réflexion d'origine et les pistes non tranchées (Vulnérabilité, Réduction de dégâts,
 > statuts à durée). Vue d'ensemble : [refonte.md](refonte.md).
 
-*Document de travail, pas encore une section numérotée du document de conception (cf.
-[specs.md](specs.md)) : rien ci-dessous n'est décidé ni implémenté. Une fois le modèle tranché, le
-contenu stabilisé ira dans [combat.md](combat.md) (§3.5, §13 point 2) et
-[modules-cartes.md](modules-cartes.md) (§12.3/§12.4/§12.5), et ce fichier sera supprimé. Pointeur
-depuis [a-trancher.md](a-trancher.md) §11 ("Stacks à intensité cumulative").*
+*Document de travail, hors numérotation (cf. [specs.md](specs.md)). Il décrit par endroits
+l'**ancien moteur**, supprimé depuis (`BuffActif`, « bouclier par tour », dissipation du bouclier
+par division) : à lire comme l'historique de la réflexion. Restent utiles : les pistes non codées
+(statuts à durée, boucliers à seuil et à plafond, §4 et §6). Pointeur depuis
+[a-trancher.md](a-trancher.md) §11.*
 
 ---
 
@@ -344,7 +344,7 @@ contenir l'accumulation — à vérifier une fois la montée implémentée.
    `BOUCLIER_PAR_TOUR` est abandonné.
 8. Renommer les buffs « persistants » (sans durée, `tours_restants = None`) en **« permanents »**
    dans le code et les specs : « Persistante » devient un mot-clé de carte (décision prise dans
-   [refonte-modules.md](refonte-modules.md) §3.5).
+   [modules-cartes.md](modules-cartes.md) §12.4).
 9. Une fois stabilisé : migrer ce contenu dans `combat.md` (§3.5, §13) et `modules-cartes.md`
    (§12.3-§12.5), supprimer ce fichier, mettre à jour la table d'index de `specs.md` si une
    nouvelle section est nécessaire.

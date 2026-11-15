@@ -21,34 +21,28 @@ Un deckbuilder roguelike inspiré de Slay the Spire, où le joueur incarne un va
 |---|---|---|
 | §2 – §2.4 | [parcours.md](parcours.md) | Boucle de run, Argent/récompenses, Station service, structure par niveaux, enchaînement des écrans |
 | §2.5 | [aventures.md](aventures.md) | Aventures (Trois lunes, Astéroïdes, Police) |
-| §3 | [combat.md](combat.md) | Règles de combat : placement/rangs, tailles, électricité/main, destruction, bouclier, munitions |
-| §4 – §7 | [modules-cartes.md](modules-cartes.md) | Modules, slots, progression des modules/cartes (pool de récompense, `Carte.id`), types de cartes |
-| §8 | [interface.md](interface.md) | Écran de combat : disposition, formes visuelles, interaction de jeu d'une carte (§8.3) |
+| §3 | [combat.md](combat.md) | Règles de combat : grille, électricité et piles, destruction de module, statuts (bouclier, incendie, renvoi, leurre), munitions, déroulement d'un tour, jeu d'une carte, fin du combat, API de `combat.py` |
+| §4 – §7 | [modules-cartes.md](modules-cartes.md) | Modules (modèle, idées de modules), emplacements, récompenses de cartes, catégories / cibles / rareté / munitions |
+| §8 | [interface.md](interface.md) | Écran de combat : disposition, formes visuelles, interaction de jeu d'une carte (§8.3), écarts PC / web (§8.4) |
 | §9 | [a-trancher.md](a-trancher.md) | Points encore à trancher (design et technique) |
 | §10 | [architecture.md](architecture.md) | Stack, arborescence, persistance (profils/sauvegardes, transitions de fenêtres PC), conventions |
 | §11 | [a-trancher.md](a-trancher.md) | Idées à explorer plus tard |
-| §12 | [modules-cartes.md](modules-cartes.md) | Mécaniques de carte : référence d'implémentation et manques restants |
-| §13 | [combat.md](combat.md) | Comportement des ennemis (IA), ennemis de `config/ennemis.json`, flottes |
+| §12 | [modules-cartes.md](modules-cartes.md) | Modèle de carte : format, natures d'effet, portées, rattachement à un module et Persistante, répétition, mécaniques non codées |
+| §13 | [combat.md](combat.md) | Ennemis : modèle (cycle, valeurs, coefficient), tour ennemi et intentions, les ennemis de `config/ennemis.json`, flottes, PV des modules |
 
 ## Documents de travail (hors numérotation)
 
-Le jeu tourne sur le **moteur de la refonte** ; l'ancien moteur est supprimé (PR 4 du branchement,
-2026-11-14).
-**Commencer par [refonte.md](refonte.md).** Les sections numérotées ci-dessus décrivent encore, par
-endroits, l'ancien moteur : les brouillons `refonte-*.md` **priment** tant que leur contenu n'y est
-pas reporté (migration à faire, cf. refonte.md).
+Le jeu tourne sur le moteur issu de la **refonte de novembre 2026** ; l'ancien moteur est supprimé
+et les brouillons de la refonte ont été reportés dans les sections numérotées ci-dessus
+(2026-11-14). **Pour une vue d'ensemble, commencer par [refonte.md](refonte.md).**
 
 | Fichier | Contenu |
 |---|---|
-| [refonte.md](refonte.md) | **Vue d'ensemble de la refonte** : les deux moteurs, les grandes décisions, où est quoi (spec, code, données, tests), simulations, ce qui reste à faire |
-| [refonte-buffs-debuffs.md](refonte-buffs-debuffs.md) | Réflexion d'origine sur les buffs/debuffs/bouclier ; en partie dépassée, les décisions sont dans `refonte-statuts.md` |
-| [refonte-modules.md](refonte-modules.md) | Modules secondaires sacrifiables : pile Hors service, Persistante, rattachement des cartes, modèle `Module` (codé, pas encore branché) |
-| [refonte-destruction.md](refonte-destruction.md) | Brouillon du buff « Destruction » (en attente, aucune carte ne le pose encore) |
-| [refonte-statuts.md](refonte-statuts.md) | Statuts (bouclier, incendie, renvoi, leurre…) gérés ensemble pour modules et ennemis : règles de cumul et d'extinction, déroulement ; codé (`statut.py`), pas encore branché au combat |
-| [refonte-ennemis.md](refonte-ennemis.md) | Brouillon de refonte des ennemis : cycle d'actions, valeurs nommées qui augmentent, coefficient de difficulté ; modèle codé (`Ennemi`, `config/ennemis.json`), pas encore branché au combat |
-| [refonte-combat.md](refonte-combat.md) | Spécification du combat de la refonte (`combat`) : entrées, déroulement du tour, jeu d'une carte, tour ennemi, destruction, fin de combat (gameplay seulement) ; codé (`combat.py`), pas encore branché |
-| [refonte-branchement.md](refonte-branchement.md) | **Plan validé** pour brancher la refonte au jeu : décisions, correspondance ancien / nouveau combat pour l'affichage, maquette des nouveautés, plan en 4 PR ; **PR 1 (gameplay) codée**, choix à valider au §5.1 |
-| [simulation.md](simulation.md) | Conception des simulateurs d'équilibrage (`outils/simulation/`) : ancien moteur (§11) et combat de la refonte (§12) |
+| [refonte.md](refonte.md) | **Vue d'ensemble** : les grandes décisions de la refonte, où est quoi (spec, code, données, tests), résultats de simulation, ce qui reste ouvert |
+| [refonte-branchement.md](refonte-branchement.md) | **Historique** du branchement de la refonte en 4 PR : décisions, choix faits en codant, ce qui a été vérifié. Garde les noms `_new` de l'époque |
+| [refonte-destruction.md](refonte-destruction.md) | **Pistes non codées** : buff « Destruction », résurrection, sacrifice volontaire d'un module |
+| [refonte-buffs-debuffs.md](refonte-buffs-debuffs.md) | Réflexion d'origine sur les buffs, debuffs et bouclier : historique, avec des **pistes non codées** (statuts à durée, boucliers à seuil) |
+| [simulation.md](simulation.md) | Conception des simulateurs d'équilibrage (`outils/simulation/`) : parties complètes (§11) et combats isolés (§12) |
 
 ## Quel fichier lire selon la tâche
 
@@ -56,12 +50,13 @@ pas reporté (migration à faire, cf. refonte.md).
 - **Aventure** → `aventures.md`
 - **Règle de combat, ennemi, flotte** → `combat.md`
 - **Nouvelle carte ou mécanique de carte, module** → `modules-cartes.md` (§12 d'abord pour savoir
-  si la mécanique existe déjà dans le moteur)
+  si la mécanique existe déjà dans le moteur) ; valeurs à jour : `config/*.md` (générés)
 - **Affichage ou flux de clics du combat** → `interface.md`
 - **Sauvegarde, profils, structure du code, transitions de fenêtres** → `architecture.md`
 - **Valeur non tranchée ou idée pour plus tard** → `a-trancher.md`
-- **Nouveau moteur (cartes, modules, ennemis, statuts, combat de la refonte)** → `refonte.md`, puis
-  le `refonte-*.md` du sujet
+- **Vue d'ensemble, où est le code de quoi** → `refonte.md`
+- **Idée de mécanique pas encore codée** → `a-trancher.md` §11, `refonte-destruction.md`,
+  `refonte-buffs-debuffs.md`
 - **Équilibrage, simulation** → `simulation.md` et les synthèses `outils/simulation/synthese/`
 
 ## Maintenance

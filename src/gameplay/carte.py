@@ -1,6 +1,6 @@
 """
 Carte (Carte) : modele de donnees issu de la refonte des cartes
-(specs/refonte-buffs-debuffs.md, specs/refonte-modules.md). Source de verite :
+(specs.md 12). Source de verite :
 config/cartes.json (charger_cartes). Relue et validee par l'utilisateur le 2026-11-08.
 Seul modele de carte du jeu depuis la suppression de l'ancien moteur (PR 4 du branchement,
 specs/refonte-branchement.md).
@@ -18,7 +18,7 @@ Principes :
   jusqu'a la fin du combat (appliquer_repetition) ;
 - mot-cle Persistante et rattachement a un exemplaire de module (exemplaire_module) : une carte dont
   le module est detruit part en pile Hors service, sauf si elle est Persistante
-  (specs/refonte-modules.md 3.3 a 3.5) ;
+  (specs.md 3.4, 12.4) ;
 - la cible reprend le vocabulaire du registre des cartes ("Ennemi Unique", "Module Tous"...).
 """
 
@@ -128,7 +128,7 @@ class NatureEffet(Enum):
 NATURES_SANS_VALEUR = {NatureEffet.ANNULATION_PROCHAINE_ATTAQUE, NatureEffet.REDIRECTION_CIBLE}
 
 # Statut pose sur l'entite touchee : ses regles de cumul et d'extinction sont celles de
-# statut.py (une seule source, partagee avec les modules et les ennemis, specs/refonte-statuts.md)
+# statut.py (une seule source, partagee avec les modules et les ennemis, specs.md 3.5)
 STATUT_PAR_NATURE = {
     NatureEffet.BOUCLIER: Statut.BOUCLIER,
     NatureEffet.INCENDIE: Statut.INCENDIE,
@@ -136,7 +136,7 @@ STATUT_PAR_NATURE = {
 }
 
 # Natures dont l'effet peut avoir une duree en tours (statuts a duree, geres plus tard :
-# specs/refonte-statuts.md 5)
+# specs.md 3.5.3)
 NATURES_A_DUREE = {NatureEffet.VULNERABILITE, NatureEffet.REDUCTION_DEGATS, NatureEffet.REDIRECTION_CIBLE}
 
 
@@ -298,7 +298,7 @@ class Carte:
     # Valeurs nommees de la carte (ex. {"degats_cible": 15}), utilisees par les effets ; propres a
     # chaque exemplaire (copie), pour pouvoir un jour modifier les valeurs d'une seule carte
     valeurs: dict[str, int] = field(default_factory=dict)
-    # Mot-cle Persistante : reste jouable si son module est detruit (refonte-modules.md 3.5)
+    # Mot-cle Persistante : reste jouable si son module est detruit (specs.md 12.4)
     persistante: bool = False
     # True si le moteur sait executer tous les effets de la carte
     jouable: bool = True
@@ -321,7 +321,7 @@ class Carte:
     # degats des cartes a cible unique") sans toucher au modele
     valeurs_actuelles: dict[str, int] | None = None
     # Exemplaire de module de la partie auquel cette carte est rattachee (ex. "M3"), None tant
-    # qu'elle ne l'est pas ; stable meme si la Station deplace le module (refonte-modules.md 3.3)
+    # qu'elle ne l'est pas ; stable meme si la Station deplace le module (specs.md 12.4)
     exemplaire_module: str | None = None
 
     def __post_init__(self):
@@ -405,7 +405,7 @@ class Carte:
             self.munitions_restantes -= 1
         return self.est_epuisee
 
-    # --- Module detruit (specs/refonte-modules.md 3.3 a 3.5) ---
+    # --- Module detruit (specs.md 3.4, 12.4) ---
 
     def jouable_si_module_detruit(self) -> bool:
         """False : la carte part en pile Hors service tant que son module est detruit."""

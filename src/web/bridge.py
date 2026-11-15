@@ -4,7 +4,7 @@ dans le navigateur via Pyodide. Aucune regle de jeu ici : ce fichier ne fait que
 du gameplay en JSON (presentation comprise : popups, phrases du journal mises en forme cote JS a
 partir des memes champs) et router les actions du joueur.
 
-Combat : moteur de la refonte (Combat, specs/refonte-combat.md), branche au parcours depuis la
+Combat : moteur de la refonte (Combat, specs.md 3), branche au parcours depuis la
 PR 1 (specs/refonte-branchement.md). Le combat de demonstration n'existe plus : on ne joue que par
 le parcours (decision utilisateur, 2026-11-12).
 """
@@ -85,7 +85,7 @@ _PAIRES_CASES_ENNEMIES = (("AV_G", "AR_G"), ("AV_M", "AR_M"), ("AV_D", "AR_D"))
 
 # Version du contrat entre bridge.py et src/web/app.js : doit etre egale a VERSION_CACHE (app.js),
 # verifie au demarrage par app.js (versionsAccordees) et par tests/test_architecture.py
-VERSION_WEB = "90"
+VERSION_WEB = "91"
 
 combat = None
 # Taille du journal deja transmise : les popups d'une action sont calcules a partir des seules
@@ -314,7 +314,7 @@ def _carte_en_main_json(carte: Carte, index: int) -> dict:
     entree["index"] = index
     entree["camp"] = "allie" if carte.cible.camp == Camp.JOUEUR else "ennemi"
     entree["jouable"] = combat.peut_jouer(carte)
-    # Cases ou confirmer la carte (refonte-combat.md 4.2) : decidees par le gameplay, jamais en JS
+    # Cases ou confirmer la carte (specs.md 3.8.2) : decidees par le gameplay, jamais en JS
     entree["cases"] = _ids_cases(combat.cibles_possibles(carte), carte.cible.camp) if entree["jouable"] else []
     return entree
 
@@ -439,7 +439,7 @@ def _demarrer_combat(nouveau) -> str:
 
 
 def jouer_carte(index_carte: int, id_case: str) -> str:
-    """Joue la carte en main a cet index sur la case touchee (refonte-combat.md 4)."""
+    """Joue la carte en main a cet index sur la case touchee (specs.md 3.8)."""
     carte = combat.deck.main[index_carte]
     camp = "allie" if carte.cible.camp == Camp.JOUEUR else "ennemi"
     combat.jouer_carte(carte, _position_case(id_case, camp, carte))

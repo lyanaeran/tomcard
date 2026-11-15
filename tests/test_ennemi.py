@@ -37,7 +37,7 @@ def test_les_six_ennemis_actuels_sont_dans_le_json():
     assert ennemis["ENM_BOSS_PIRATES"].emplacements == 2
 
 
-# --- Valeurs : augmentation et coefficient (specs/refonte-ennemis.md 3.3, 3.4) ---
+# --- Valeurs : augmentation et coefficient (specs.md 13.1.3, 13.1.4) ---
 
 
 def test_exemple_de_la_spec_6_plus_1_tous_les_2_tours_coefficient_1_5():

@@ -24,7 +24,7 @@ en plusieurs temps (Astéroïdes ci-dessous) reste un **seul écran** dont le co
 mesure que le joueur avance (état interne à l'écran, comme `EcranStationService` se redessine après
 chaque action) plutôt que plusieurs écrans/fenêtres séparés — décision utilisateur : pas de moteur
 de séquence narrative générique, chaque Aventure scripte ses propres étapes en dur (Trois lunes :
-"choix" -> "choix_module"/"choix_carte" -> "resolu" ; Astéroïdes : "choix" -> "choix_module" ->
+"choix" -> "choix_module"/"choix_carte" -> "resolu" ; Astéroïdes : "choix" ->
 "sequence_2" -> "sequence_3"/"resolu" -> "resolu" ; Police : "choix" -> "resolu", un attribut `etape`
 interne à l'écran dans les trois cas). Contenu prévu à terme dans un `config/aventures.json` (miroir
 de l'onglet xlsx, même relation que `config/cartes.json`/onglet Cartes) — pas encore créé, les trois
@@ -56,126 +56,69 @@ Recadrages/extraits/illustrations dédiées, toutes conservées dans `assets/ave
 `confiscation.png`/`detourner.png`) ; sources originales des icônes recadrées inchangées pour leur
 usage propre (Station service, Choix du prochain niveau).
 
-**Astéroïdes** — **implémentée** (fond `assets/aventure/champ_asteroides.png`) — "Poursuivi par des
-pirates de l'espace, vous n'avez plus le choix : vaincre ou périr ! À moins que..."
+**Astéroïdes** — **implémentée** (fond `assets/aventure/champ_asteroides.png`) — « Poursuivi par
+des pirates de l'espace, vous n'avez plus le choix : vaincre ou périr ! À moins que... »
 
-> **Refonte branchée côté gameplay (PR 1, 2026-11-12, décision utilisateur du 2026-11-11 n° 3)** :
-> les deux chocs de « Traverser » touchent **toujours le principal** (`subir_degats_principal`,
-> `second_choc_asteroides(partie, cartes, aleatoire)`), le choix du module disparaît, et ils lui
-> **laissent toujours au moins 1 PV** (`PV_MIN_APRES_ASTEROIDES`, décision utilisateur du
-> 2026-11-12 : un combat ne commence jamais avec un principal détruit) ; la carte
-> offerte est rattachée au principal. « Affronter les pirates » : 3 ennemis de la refonte placés
-> selon leur préférence (`flotte.flotte_asteroides`). Écrans PC et web à adapter (PR 2 et 3).
-- Choix 1, *Traverser le champ d'astéroïdes* (**ancienne règle, remplacée par la note ci-dessus**
-  pour le module touché, la fonction et le plancher de PV ; la séquence d'écrans reste à adapter
-  aux PR 2 et 3) : séquence en 3 temps sur le même écran, chaque étape validée par un bouton
-  "Continuer" :
-  1. Le joueur clique un module (`_dessiner_choix_module`/`choix_module`) : -`DEGATS_ASTEROIDES` (5)
-     PV appliqués immédiatement (`subir_degats_module`, dégâts hors combat, plafonnés à 0,
-     opération inverse de `reparer_module`/`reparer_vaisseau`), puis affichage d'un message de
-     confirmation + bouton "Continuer" (étape `sequence_2`)
-  2. Au clic sur "Continuer" : **`second_choc_asteroides`** (`src/gameplay/partie.py`) inflige
-     -`DEGATS_ASTEROIDES` PV supplémentaires (même module) **et** tire, en un seul appel, une carte
-     dans le pool complet (`pool_toutes_cartes`/`tirer_carte_recompense`, §6) proposée gratuitement
-     — c'est cette fonction gameplay qui décide seule si une carte est offerte, ni PC ni web ne
-     retirent cette décision eux-mêmes (cf. CLAUDE.md, gameplay commun aux deux interfaces ;
-     décision initialement dupliquée indépendamment côté PC et web, corrigée après relecture)
-  3. Si une carte a été offerte, elle est présentée (boutons "Prendre"/"Passer", étape
-     `sequence_3`) — gratuite et hors du flux de récompense standard de fin de combat. Si le pool
-     était vide (`second_choc_asteroides` renvoie `None`), l'étape `sequence_3` est sautée
-     directement vers `resolu`
-- Choix 2, *Affronter les pirates* : lance un combat scripté contre `NOMBRE_ENNEMIS_ASTEROIDES` (3)
-  ennemis (`combat_aventure_asteroides`/`flotte.flotte_asteroides`) — approximation décidée en
-  attendant la taille S/M/L par ennemi (absente de `config/ennemis.json`, cf. §3.2/§9.1/§10.3) :
-  ennemis tirés du pool existant sur les 3 premières cases de la grille (colonne Avant), plutôt que
-  le tirage standard d'un combat Prime (grille complète, `combat_depuis_partie`). Délègue
-  entièrement au pipeline Combat existant (étape 5/6 : victoire → Argent + carte, comme un Prime
-  normal ; défaite → même traitement qu'un combat normal) via `main.py:_ouvrir_combat`
-  (paramètre `combat` optionnel, déjà construit par l'appelant) / `src/web/bridge.py:combat_aventure_asteroides_web`
-  (même variable globale `combat` que `continuer_partie_web`, reste du pipeline de fin de combat
-  inchangé)
-- Pas de 3ᵉ choix (binaire assumé)
+- Choix 1, *Traverser le champ d'astéroïdes* : séquence sur le même écran, chaque étape validée
+  par « Continuer ».
+  1. **Premier choc** : −`DEGATS_ASTEROIDES` (5) PV au **module principal** (`subir_degats_principal`),
+     sans choix de module (décision utilisateur, 2026-11-11 : seul le principal garde ses PV).
+  2. **Second choc** (`second_choc_asteroides`) : −5 PV au principal **et** tirage, dans le même
+     appel, d'une carte offerte dans toutes les cartes jouables non Base, toutes raretés, sans
+     palier de mise à jour. C'est cette fonction qui décide seule si une carte est offerte ; ni PC
+     ni web ne refont le tirage.
+  3. Si une carte est offerte : « Prendre » ou « Passer ». Elle est **rattachée au principal**
+     (modules-cartes.md §12.4).
+  - Les chocs **laissent toujours au moins 1 PV** au principal (`PV_MIN_APRES_ASTEROIDES`,
+    décision utilisateur, 2026-11-12 : un combat ne commence jamais avec un principal détruit).
+    Le message affiché donne les PV **réellement** perdus (différence avant / après).
+- Choix 2, *Affronter les pirates* : combat contre `NOMBRE_ENNEMIS_ASTEROIDES` (3) ennemis, placés
+  selon leur préférence (`combat_aventure_asteroides`, `flotte.flotte_asteroides`, combat.md
+  §13.4), puis la même fin de combat qu'un Prime (Argent, carte, ou défaite).
+- Pas de 3ᵉ choix.
 
-`src/gameplay/flotte.py` (`NOMBRE_ENNEMIS_ASTEROIDES`, `flotte_asteroides`) ;
-`src/gameplay/partie.py` (`DEGATS_ASTEROIDES`, `subir_degats_module`, **`second_choc_asteroides`**
-— 2e choc + tirage de la carte offerte en un seul appel, `cartes` reçu en paramètre plutôt que
-rechargé en interne ; l'id de la carte offerte est lu directement sur `Carte.id` (§6) —,
-`combat_aventure_asteroides`, `_joueur_depuis_partie`
-factorisée avec `combat_depuis_partie`) ; `src/ui/ecran_aventure_asteroides.py` (PC, garde une
-instance `random.Random` explicite en attribut — jamais recréée à chaque appel, cf. CLAUDE.md
-"Déterminisme du tirage aléatoire") + `main.py:_ouvrir_aventure_asteroides` ; côté web
-`src/web/bridge.py` (`constantes_aventure_asteroides_web` expose `DEGATS_ASTEROIDES` pour le texte des
-choix avant de les jouer, plutôt que dupliqué en dur dans `src/web/app.js`, cf. CLAUDE.md ;
-`subir_degats_module_asteroides_web` pour le 1er choc ; **`second_choc_asteroides_web`** pour le
-2e — sérialise le résultat de `second_choc_asteroides`, ne recalcule jamais si une carte est
-offerte ; `prendre_carte_offerte_asteroides_web` ; `combat_aventure_asteroides_web` ;
-`terminer_aventure_asteroides_web`) + `src/web/app.js` (`ouvrirAventureAsteroidesPartie` et fonctions
-associées)
+Code : `src/gameplay/partie.py`, `src/gameplay/flotte.py` ; `src/ui/ecran_aventure_asteroides.py`
+(PC, garde une instance `random.Random` en attribut) + `main.py:_ouvrir_aventure_asteroides` ;
+côté web `src/web/bridge.py` (`premier_choc_asteroides_web`, `second_choc_asteroides_web`,
+`prendre_carte_offerte_asteroides_web`, `combat_aventure_asteroides_web`) + `src/web/app.js`.
 
-**Trois lunes** — **implémentée** (fond `assets/aventure/trois_lunes.png`) — "Un havre de paix au
-milieu de la galaxie [...]. Il est temps de faire une pause." Trois choix, chacun résolu
-immédiatement (pas de séquence), retour direct au Choix du prochain niveau (bouton "Continuer") :
-- *Réparer le vaisseau* (**refonte branchée, PR 1** : soigne **le principal seul**, seul module dont
-  les PV persistent, décision n° 3 du 2026-11-11 ; ancienne règle ci-après) :
-  +`PV_REPARATION_VAISSEAU` (5) PV à **chaque** module équipé, plafonné à
-  son pv_max chacun (`reparer_vaisseau`, nouveau côté moteur : soin groupé, distinct de
-  `reparer_module`, §2.2, qui ne cible qu'un seul module choisi)
-- *Améliorer* : même effet que `ameliorer_module` (+`PV_AMELIORATION`, §2.2) mais **gratuit**
-  (`ameliorer_module_aventure`, aucun coût en Argent contrairement à la Station service — l'effet
-  commun aux deux est factorisé dans `_effet_ameliorer_module`), sur le module cliqué par le joueur
-- *Bricoler* : retire une carte choisie par le joueur de son deck réel (`retirer_carte`, nouveau
-  côté moteur : opération inverse de `ajouter_carte`, §2.4 étape 6). Cartes regroupées par id via
-  `regrouper_cartes` (même regroupement que l'écran "deck en entier", §6), l'id de la carte cliquée
-  (`Carte.id`) étant passé à `retirer_carte`
+**Trois lunes** — **implémentée** (fond `assets/aventure/trois_lunes.png`) — « Un havre de paix au
+milieu de la galaxie [...]. Il est temps de faire une pause. » Trois choix, chacun résolu
+immédiatement, puis « Continuer » :
 
-`src/gameplay/partie.py` (`PV_REPARATION_VAISSEAU`, `reparer_vaisseau`, `ameliorer_module_aventure`,
-`retirer_carte`) ; `src/ui/ecran_aventure_trois_lunes.py` (PC, écran à état interne `etape` : "choix"
--> "choix_module"/"choix_carte" -> "resolu") + `main.py:_ouvrir_etape` ; côté web
-`src/web/bridge.py` (`constantes_aventure_trois_lunes_web` expose PV_REPARATION_VAISSEAU/PV_AMELIORATION
-pour le texte des choix avant de les jouer, plutôt que dupliqués en dur dans `src/web/app.js`, cf.
-CLAUDE.md ; `deck_groupe_par_id_partie_web` ; `reparer_vaisseau_aventure_web` ;
-`ameliorer_module_aventure_web` ; `retirer_carte_aventure_web` ; `terminer_aventure_trois_lunes_web`)
-+ `src/web/app.js` (`ouvrirAventureTroisLunesPartie`/`rendreAventureTroisLunes` et les fonctions de clic
-associées)
+- *Réparer le vaisseau* : +`PV_REPARATION_VAISSEAU` (5) PV au **module principal**, plafonné à
+  son PV max (`reparer_vaisseau` ; décision utilisateur, 2026-11-11 : seul le principal garde ses
+  PV).
+- *Améliorer un module* : même effet qu'Améliorer à la Station (+`PV_AMELIORATION`, parcours.md
+  §2.2) mais **gratuit**, sur le module cliqué (`ameliorer_module_aventure`).
+- *Bricoler* : retire du deck une carte choisie par le joueur (`retirer_carte`). Les cartes sont
+  regroupées **par carte et par module** (une entrée par couple, avec le nom du module), et c'est
+  ce couple (`CartePossedee`) qui est retiré.
 
-**Police** — **implémentée** (fond `assets/aventure/police.png`) — "Pas de bol, votre dernier achat
-n'est pas aux normes [...]." Une carte est tirée au hasard du deck réel du joueur
-(`tirer_carte_deck`, nouveau côté moteur : tirage dans le deck possédé, contrairement à
-`tirer_carte_recompense` qui tire dans un pool de récompense) et affichée **avant** les choix
-(contrairement aux deux autres Aventures) — dans le même format qu'une carte en combat (image en
-haut, texte en dessous, non cliquable), pas dans le format ligne image+texte des choix en dessous,
-pour ne pas donner l'impression que c'est elle-même une option :
-- *Confiscation* : retire cette carte du deck (`retirer_carte`, réutilisée de Trois lunes/Bricoler)
-- *Mettre aux normes* : coûte un montant fixe en Argent (`COUT_METTRE_AUX_NORMES`, 10 € inventés
-  par symétrie avec les autres montants du jeu, à ajuster en playtest si besoin) plutôt qu'un
-  pourcentage du prix de vente en magasin comme envisagé initialement — abandonné, la
-  Planète commerciale n'ayant pas de prix par carte (§9.1) ; garde la carte si l'Argent est
-  suffisant (`payer_mise_aux_normes`), sinon reste sur l'écran avec un message d'erreur
-- *Détourner l'attention* : tire une **seconde** carte au hasard qui remplace la première affichée,
-  puis revient au même écran avec seulement les 2 choix restants (Confiscation/Mettre aux normes —
-  "Détourner" ne peut être choisi qu'une fois **par Aventure**, pas par run)
+Code : `src/gameplay/partie.py` ; `src/ui/ecran_aventure_trois_lunes.py` (PC) + `main.py:_ouvrir_etape` ;
+côté web `src/web/bridge.py` (`reparer_vaisseau_aventure_web`, `ameliorer_module_aventure_web`,
+`retirer_carte_aventure_web`, `constantes_aventure_trois_lunes_web`) + `src/web/app.js`.
 
-L'état de résolution (carte actuellement affichée, disponibilité de "Détourner") est possédé par
-le gameplay — **`EtatAventurePolice`** (`src/gameplay/partie.py`, dataclass
-`id_carte_actuelle`/`detourner_disponible`), jamais par l'écran PC ni par des variables JS
-indépendantes : `demarrer_aventure_police` l'initialise (1er tirage), `detourner_aventure_police`
-le fait évoluer (renvoie `False` sans rien faire si "Détourner" a déjà été utilisé). PC
-(`EcranAventurePolice.etat_police`) et web (`src/web/bridge.py:etat_aventure_police`, variable globale
-— même principe que `combat`) gardent chacun une référence à cet état plutôt que de suivre
-`detourner_disponible` séparément (cf. CLAUDE.md, gameplay commun aux deux interfaces — décision
-initialement dupliquée indépendamment côté PC et web, corrigée après relecture).
+**Police** — **implémentée** (fond `assets/aventure/police.png`) — « Pas de bol, votre dernier
+achat n'est pas aux normes [...]. » Une carte est tirée au hasard dans le deck du joueur
+(`tirer_carte_deck`) et affichée **avant** les choix, comme une carte en combat (non cliquable) :
 
-`src/gameplay/parcours.py` (`tirer_carte_deck`) ; `src/gameplay/partie.py`
-(`COUT_METTRE_AUX_NORMES`, `payer_mise_aux_normes`, `EtatAventurePolice`,
-`demarrer_aventure_police`, `detourner_aventure_police`) ; `src/ui/ecran_aventure_police.py` (PC,
-écran à état interne `etape` : "choix" -> "resolu", garde une instance `random.Random` explicite en
-attribut) + `main.py:_ouvrir_etape` ; côté web `src/web/bridge.py`
-(`constantes_aventure_police_web` expose `COUT_METTRE_AUX_NORMES` pour le texte du choix avant de
-le jouer, plutôt que dupliqué en dur dans `src/web/app.js`, cf. CLAUDE.md ;
-`demarrer_aventure_police_web` — appelée à l'ouverture de l'écran ; `detourner_police_web` — renvoie
-aussi `succes`/`detourner_disponible`, JS ne décide jamais lui-même si "Détourner" reste possible ;
-`confiscation_police_web` — retire `etat_aventure_police.id_carte_actuelle`, plus besoin de le
-transmettre depuis JS ; `mettre_aux_normes_police_web` renvoie `{"partie": ..., "succes": bool}`,
-même convention que les actions payantes qui peuvent échouer ; `terminer_aventure_police_web`) +
-`src/web/app.js` (`ouvrirAventurePolicePartie`/`rendreAventurePolice` et les fonctions de clic
-associées, qui ne font plus que refléter la dernière réponse du gameplay)
+- *Confiscation* : retire cette carte du deck (`retirer_carte`).
+- *Mettre aux normes* : coûte `COUT_METTRE_AUX_NORMES` (10 €, valeur inventée) et garde la carte
+  (`payer_mise_aux_normes`) ; sans assez d'Argent, l'écran reste ouvert avec un message.
+- *Détourner l'attention* : tire une autre carte qui remplace la première, puis il ne reste que
+  les deux autres choix (une seule fois **par Aventure**).
+
+L'état de résolution (carte affichée, disponibilité de « Détourner ») est possédé par le gameplay :
+**`EtatAventurePolice`** (`src/gameplay/partie.py` : `carte_actuelle`, un couple carte + module,
+et `detourner_disponible`), initialisé par `demarrer_aventure_police` et modifié par
+`detourner_aventure_police`. PC et web gardent une référence à cet état, jamais leurs propres
+variables.
+
+**Cas non géré** : avec un deck vide (après plusieurs « Bricoler » ou confiscations), le tirage
+plante (a-trancher.md §9.1).
+
+Code : `src/gameplay/parcours.py` (`tirer_carte_deck`), `src/gameplay/partie.py` ;
+`src/ui/ecran_aventure_police.py` (PC) + `main.py:_ouvrir_etape` ; côté web `src/web/bridge.py`
+(`demarrer_aventure_police_web`, `detourner_police_web`, `confiscation_police_web`,
+`mettre_aux_normes_police_web`, `constantes_aventure_police_web`) + `src/web/app.js`.

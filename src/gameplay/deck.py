@@ -1,7 +1,6 @@
 """
 Deck de combat (Deck) : les cinq piles de cartes d'un combat (pioche, main,
-defausse, epuisees, Hors service) et le deck de depart (specs/refonte-combat.md 2.3, 3, 6 ;
-specs/refonte-modules.md 3.4).
+defausse, epuisees, Hors service) et le deck de depart (specs.md 3.3, 3.4, 3.7).
 """
 
 import random

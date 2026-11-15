@@ -1,6 +1,6 @@
 """
-Flotte de la refonte (Flotte) : les ennemis en combat (copies d'Ennemi) places sur la grille
-ennemie (specs/refonte-combat.md 2.2, 5.1). Remplace flotte.py:Flotte. La classe recoit les
+Flotte ennemie (Flotte) : les ennemis en combat (copies d'Ennemi) places sur la grille
+ennemie (specs.md 3.1, 13.2.1). La classe recoit les
 ennemis deja places ; la composition des flottes du parcours (quels ennemis selon le niveau, et
 leur placement) est faite par les fonctions en bas de ce fichier (refonte-branchement.md 2,
 decision 4 : memes regles que l'ancien moteur, avec les ennemis de la refonte).
@@ -58,7 +58,7 @@ class Flotte:
         return list(self._ennemis)
 
     def ennemis_vivants(self) -> list[Ennemi]:
-        """Ennemis vivants dans l'ordre de jeu (decision utilisateur, refonte-combat.md 5.1)."""
+        """Ennemis vivants dans l'ordre de jeu (decision utilisateur, specs.md 13.2.1)."""
         return [ennemi for ennemi in self.ennemis if not ennemi.est_detruit()]
 
     def ennemis_vivants_de_colonne(self, colonne: Colonne) -> list[Ennemi]:
