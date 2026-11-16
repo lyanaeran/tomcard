@@ -4,7 +4,7 @@
 > main** : toute modification se fait dans le JSON, puis `python -m outils.tableau_cartes`
 > régénère ce tableau (un test échoue tant qu'il n'est pas à jour).
 
-19 cartes.
+20 cartes.
 
 | Id | Nom | Rareté | Catégorie | Cible | Modules | Coût | Munitions | Lancements | Persistante | Jouable | Refonte | Description affichée | Valeurs | Effets |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -27,3 +27,4 @@
 | CRT_17 | Embrasement | Rare | Attaque | Ennemi Unique | MOD_2 | 2 | Illimitées | 1 | Non | Oui | Oui | Ajoute 8 points d’incendie à un ennemi | `{"incendie": 8}` | `{"nature": "INCENDIE", "valeur": "incendie"}` |
 | CRT_18 | Leurre | Rare | Defense | Module Unique | MOD_2 | 1 | Illimitées | 1 | Non | Oui | Oui | Annule la prochaine attaque ciblant le module | `{}` | `{"nature": "ANNULATION_PROCHAINE_ATTAQUE"}` |
 | CRT_19 | Guerre nucléaire | Legendaire | Attaque | Ennemi Tous | MOD_2 | 3 | Illimitées | 1 | Non | Oui | Oui | Ajoute 8 points d’incendie à tous les ennemis | `{"incendie": 8}` | `{"nature": "INCENDIE", "valeur": "incendie"}` |
+| CRT_51 | Lasers en surchauffe | Rare | Buff | Module Principal | MOD_2 | 1 | 3 | 1 | Non | Non | Oui | Augmente de 2 les dégâts de toutes les attaques directes. | `{"buff": 2}` | `{"nature": "SURCHARGE", "valeur": "buff"}` |

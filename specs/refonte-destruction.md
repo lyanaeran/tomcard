@@ -129,7 +129,7 @@ Pour que la destruction d'un module soit un choix et pas seulement une conséque
 
 - Carte *Éjection* (0 ou 1⚡) : détruit un de vos modules secondaires, ce qui déclenche ses buffs
   Destruction, et donne un bonus (ex. +1 électricité, ou pioche 1).
-- Variante : *Surcharge critique* — double les effets Destruction du module sacrifié.
+- Variante : *Réaction en chaîne* (ex-« Surcharge critique », renommée : le mot désigne désormais un statut) — double les effets Destruction du module sacrifié.
 
 Rend la mort **active** (on choisit quand faire exploser un module chargé de Destruction) plutôt
 que seulement subie.

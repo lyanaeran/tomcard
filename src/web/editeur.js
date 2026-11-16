@@ -308,15 +308,29 @@ function nouvelleCarteEditeur() {
 
 // --- Copie du fichier (specs/outil-editeur-cartes.md 6.2) ---
 
+// Seules les cartes modifiees ou ajoutees sont copiees (decision utilisateur, 2026-11-16) : les
+// autres sont deja dans le jeu, l'agent les fusionne par id a l'integration.
+function cartesACopier() {
+    return cartesEffectives().filter((carte) => {
+        const etat = etatCarte(carte.id);
+        return etat.modifiee || etat.nouvelle;
+    });
+}
+
 function copierFichierEditeur() {
     validerToutes();
     if (cartesEffectives().some((carte) => editeurValidations[carte.id].erreurs.length)) {
         afficherMessageEditeur("Des cartes sont en erreur : corrige-les avant de copier.", true);
         return;
     }
-    const texte = appelerBridge("editeur_exporter_web", JSON.stringify(cartesEffectives()));
-    const etats = cartesEffectives().map((carte) => etatCarte(carte.id));
-    const aRevoir = cartesEffectives().filter((carte) => editeurValidations[carte.id].effets_a_revoir).length;
+    const aCopier = cartesACopier();
+    if (aCopier.length === 0) {
+        afficherMessageEditeur("Aucune carte modifiée ou ajoutée : rien à copier.", true);
+        return;
+    }
+    const texte = appelerBridge("editeur_exporter_web", JSON.stringify(aCopier));
+    const etats = aCopier.map((carte) => etatCarte(carte.id));
+    const aRevoir = aCopier.filter((carte) => editeurValidations[carte.id].effets_a_revoir).length;
     const resume = `${etats.filter((e) => e.modifiee).length} modifiée(s), ${etats.filter((e) => e.nouvelle).length} nouvelle(s)` +
         (aRevoir ? `, ${aRevoir} dont les effets seront écrits par l'agent` : "");
     const enSecours = () => {
@@ -331,7 +345,7 @@ function copierFichierEditeur() {
     };
     if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(texte).then(
-            () => afficherMessageEditeur(`Fichier cartes.json copié (${resume}).`, false),
+            () => afficherMessageEditeur(`Cartes copiées : ${resume}.`, false),
             enSecours,
         );
     } else {

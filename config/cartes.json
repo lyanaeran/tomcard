@@ -381,6 +381,26 @@
       "effets": [
         { "nature": "INCENDIE", "valeur": "incendie" }
       ]
+    },
+    {
+      "id": "CRT_51",
+      "nom": "Lasers en surchauffe",
+      "image": "assets/cartes/attaque.png",
+      "rarete": "Rare",
+      "categorie": "Buff",
+      "cible": "Module Principal",
+      "modules": ["MOD_2"],
+      "cout": 1,
+      "munition": 3,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "non",
+      "refonte": true,
+      "description": "Augmente de {buff} les dégâts de toutes les attaques directes.",
+      "valeurs": { "buff": 2 },
+      "effets": [
+        { "nature": "SURCHARGE", "valeur": "buff" }
+      ]
     }
   ]
 }

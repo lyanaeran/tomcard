@@ -200,9 +200,9 @@ def test_editeur_des_effets_qui_ne_correspondent_plus_ne_bloquent_pas(bridge):
     laser = cartes[0]
     laser["valeurs"] = {"degats": 6, "brulure": 2}  # nouvelle valeur, citee par aucun effet
     laser["description"] = "Inflige {degats} dégâts et {brulure} d'incendie"
-    nouvelle = dict(laser, id="CRT_51", effets=[])
+    nouvelle = dict(laser, id="CRT_90", effets=[])
     cartes.append(nouvelle)
-    citation_inconnue = dict(laser, id="CRT_52", description="Inflige {inconnu} dégâts")
+    citation_inconnue = dict(laser, id="CRT_91", description="Inflige {inconnu} dégâts")
     cartes.append(citation_inconnue)
 
     resultats = json.loads(bridge.editeur_valider_web(json.dumps(cartes)))

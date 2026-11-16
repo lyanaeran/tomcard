@@ -126,13 +126,17 @@ class NatureEffet(Enum):
     ANNULATION_PROCHAINE_ATTAQUE = auto()
     # L'ennemi touche attaque un de ses allies au hasard au lieu du joueur, sans valeur (Tir allie)
     REDIRECTION_CIBLE = auto()
-    # Donne `valeur` electricite en plus pour ce tour (Surcharge temporaire)
+    # Donne `valeur` electricite en plus pour ce tour (aucune carte pour l'instant)
     GAIN_ELECTRICITE = auto()
     # Pioche `valeur` cartes en plus (Boost)
     PIOCHE = auto()
     # Les cartes designees par le filtre de l'effet sont lancees `valeur` fois de plus, jusqu'a la
     # fin du combat (appliquer_repetition : Salve laser, Protocole d'urgence, Bouclier stabilise)
     REPETITION = auto()
+    # Pose le statut SURCHARGE d'intensite `valeur` sur le module principal : +intensite aux degats
+    # de chaque coup des cartes du joueur, -1 par tour (Lasers en surchauffe). Decide le
+    # 2026-11-16, PAS ENCORE CODE : refusee par le combat (specs/effets-a-coder.md)
+    SURCHARGE = auto()
 
     @property
     def statut_pose(self) -> Statut | None:

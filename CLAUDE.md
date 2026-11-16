@@ -35,10 +35,13 @@ L'utilisateur conçoit le jeu ; l'agent propose, documente et code. Préférence
 - **Réponses courtes et concrètes, en français**, avec des exemples chiffrés plutôt que du jargon ;
   dire clairement ce qui a été testé et ce qui ne l'a pas été.
 - **Cartes modifiées dans l'outil d'administration** (éditeur de cartes web / iPhone,
-  `specs/outil-editeur-cartes.md`) : l'utilisateur colle le `config/cartes.json` complet copié par
-  l'outil. Le remplacer tel quel, puis **écrire ou corriger les effets** des cartes nouvelles ou
+  `specs/outil-editeur-cartes.md`) : l'utilisateur colle **seulement les cartes modifiées ou
+  ajoutées**, copiées par l'outil (`{"cartes": [...]}`). Les **fusionner par id** dans
+  `config/cartes.json` (une carte existante est remplacée, une nouvelle ajoutée à la fin, les
+  autres cartes ne bougent pas), puis **écrire ou corriger les effets** des cartes nouvelles ou
   dont la description ou les valeurs ont changé (l'outil ne les saisit pas : ils se déduisent de
-  la description ; un effet d'un genre nouveau demande du code), régénérer `config/cartes.md`
+  la description ; un effet d'un genre nouveau demande du code : tant qu'il n'est pas codé, la
+  carte reste `"jouable": "non"` et l'effet est décrit dans `specs/effets-a-coder.md`), régénérer `config/cartes.md`
   (`python -m outils.tableau_cartes`), lancer `pytest`, et résumer ce qui a changé carte par
   carte avant la PR.
 - **Revues de PR** : un bot (Claude Code) commente les PR. À la demande de l'utilisateur, lire les
