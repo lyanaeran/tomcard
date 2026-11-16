@@ -24,7 +24,11 @@ ELECTRICITE_PAR_TOUR = 3
 
 # Natures d'effet de carte laissees pour plus tard (specs.md 3.8.4) : une carte qui en porte
 # est refusee
-NATURES_NON_GEREES = {NatureEffet.VULNERABILITE, NatureEffet.REDUCTION_DEGATS, NatureEffet.REDIRECTION_CIBLE}
+NATURES_NON_GEREES = {
+    NatureEffet.VULNERABILITE, NatureEffet.REDUCTION_DEGATS, NatureEffet.REDIRECTION_CIBLE,
+    # Decidee le 2026-11-16, pas encore codee (specs/effets-a-coder.md)
+    NatureEffet.SURCHARGE,
+}
 
 # Natures qui agissent sur le joueur lui-meme (electricite, pioche, cartes), pas sur une entite
 NATURES_GLOBALES = {NatureEffet.GAIN_ELECTRICITE, NatureEffet.PIOCHE, NatureEffet.REPETITION}

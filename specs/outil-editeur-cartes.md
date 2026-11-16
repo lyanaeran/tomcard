@@ -237,13 +237,16 @@ Une carte supprimée (Jouable « Supprimée ») est en plus grisée et barrée (
 - Limite connue : le `localStorage` est propre à l'appareil **et** au navigateur (Safari sur
   iPhone ≠ Chrome sur Mac) ; pas d'import dans la première version (§11).
 
-### 6.2 Export : copier le fichier (décision utilisateur)
+### 6.2 Export : copier les cartes modifiées (décision utilisateur)
 
-Un seul bouton, **Copier**, désactivé tant qu'une carte est en erreur : il met le fichier
-**`config/cartes.json` complet** dans le **presse-papiers** (toutes les cartes du jeu, les
-modifications appliquées, les nouvelles cartes à la fin, dans le même format), avec un message
-« Fichier copié (2 cartes modifiées, 1 nouvelle) ». On le colle ensuite dans un message ou dans la
-conversation avec l'agent.
+Un seul bouton, **Copier**, désactivé tant qu'une carte est en erreur : il met dans le
+**presse-papiers** **seulement les cartes modifiées ou ajoutées** (décision utilisateur du
+2026-11-16, qui remplace la copie du fichier complet : les autres cartes ne servent à rien), au
+format et dans la mise en forme de `config/cartes.json` (`{"cartes": [...]}`, les cartes du jeu
+modifiées dans l'ordre du fichier, puis les nouvelles), avec un message « Cartes copiées :
+2 modifiée(s), 1 nouvelle(s) ». Une carte supprimée (Jouable « Supprimée ») est une carte
+modifiée : elle est copiée. Sans aucune carte modifiée ni ajoutée, l'outil le dit et ne copie
+rien. On colle ensuite le texte dans un message ou dans la conversation avec l'agent.
 
 Le presse-papiers du navigateur demande une page sécurisée : c'est le cas sur GitHub Pages
 (https) et en local (`localhost`).
@@ -253,7 +256,8 @@ Le presse-papiers du navigateur demande une page sécurisée : c'est le cas sur 
 ## 7. Intégrer un export dans le jeu
 
 1. L'utilisateur colle le fichier copié dans la conversation avec l'agent (ou l'envoie).
-2. L'agent remplace `config/cartes.json`, **écrit ou corrige les effets** des cartes nouvelles ou
+2. L'agent **fusionne** les cartes copiées dans `config/cartes.json` par leur id (une carte
+   existante est remplacée, une nouvelle est ajoutée à la fin), **écrit ou corrige les effets** des cartes nouvelles ou
    dont la description ou les valeurs ont changé (§4.2), régénère le tableau `config/cartes.md`
    (`python -m outils.tableau_cartes`), lance `pytest`, et signale ce qui a changé, en particulier
    les tests qui lisent une valeur de carte et les effets qui demandent du code nouveau.
@@ -287,7 +291,7 @@ Le presse-papiers du navigateur demande une page sécurisée : c'est le cas sur 
 | 2 | Version PC | Web seulement pour l'éditeur ; le jeu PC a un bouton Admin qui ouvre la page web dans le navigateur (§2, §8) |
 | 3 | Bouton Admin | Visible seulement pour les joueurs thomas, tom ou lyan, quelle que soit la casse (§8) |
 | 4 | Module | Dans `cartes.json`, champ `modules` (liste) sur chaque carte ; la liste `cartes` de `modules.json` disparaît (§4.7, §10) |
-| 5 | Export | Copier le fichier `cartes.json` complet dans le presse-papiers, seulement (§6.2) |
+| 5 | Export | Copier dans le presse-papiers, seulement ; d'abord le fichier `cartes.json` complet, puis **seulement les cartes modifiées ou ajoutées** (décision du 2026-11-16, §6.2) |
 | 6 | Suppression | Le champ Jouable prend une troisième valeur, « Supprimée » ; la carte reste dans le fichier (§4.6, §10) |
 | 7 | Options | Tri par colonne et filtre dans la première version ; « Dupliquer » et « Tout effacer » plus tard (§11) |
 | 8 | Effets | Pas de saisie des effets : ils se déduisent de la description et sont écrits par l'agent à l'intégration (§4.2) |

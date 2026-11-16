@@ -7,6 +7,7 @@ import json
 
 import pytest
 
+from src.gameplay.combat import NATURES_NON_GEREES
 from src.gameplay.carte import RareteCarte
 from src.gameplay.carte import (
     Camp,
@@ -49,16 +50,21 @@ def _carte_simple(**champs) -> Carte:
 # --- config/cartes.json ---
 
 
-def test_cartes_json_contient_les_19_cartes_revues():
+def test_cartes_json_contient_les_cartes_revues():
     cartes = charger_cartes()
 
-    assert len(cartes) == 19
+    assert len(cartes) >= 19
     assert all(carte.refonte for carte in cartes.values())
 
 
-def test_les_19_cartes_revues_sont_jouables():
-    # Decision 5 du branchement (refonte-branchement.md 2) : toutes proposables en recompense
-    assert all(carte.jouable for carte in charger_cartes().values())
+def test_une_carte_jouable_n_utilise_que_des_effets_codes():
+    # Une carte dont un effet n'est pas encore code (ex. Surcharge, decidee le 2026-11-16) reste
+    # "non" jouable : sinon elle serait proposee en recompense sans pouvoir etre jouee
+    cartes = charger_cartes().values()
+    assert sum(carte.jouable for carte in cartes) >= 19
+    for carte in cartes:
+        if carte.jouable:
+            assert not any(effet.nature in NATURES_NON_GEREES for effet in carte.effets), carte.id
 
 
 def test_description_affichee_remplace_les_valeurs_nommees():

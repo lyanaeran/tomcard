@@ -42,6 +42,7 @@ et les brouillons de la refonte ont été reportés dans les sections numéroté
 | [refonte-branchement.md](refonte-branchement.md) | **Historique** du branchement de la refonte en 4 PR : décisions, choix faits en codant, ce qui a été vérifié. Garde les noms `_new` de l'époque |
 | [refonte-destruction.md](refonte-destruction.md) | **Pistes non codées** : buff « Destruction », résurrection, sacrifice volontaire d'un module |
 | [refonte-buffs-debuffs.md](refonte-buffs-debuffs.md) | Réflexion d'origine sur les buffs, debuffs et bouclier : historique, avec des **pistes non codées** (statuts à durée, boucliers à seuil) |
+| [effets-a-coder.md](effets-a-coder.md) | **Nouveaux effets décidés ou en réflexion, pas encore codés** (Surcharge…) ; on ne code pas avant l'accord de l'utilisateur |
 | [archive-cartes-modules.md](archive-cartes-modules.md) | **Archive** : les 44 cartes et 10 modules de l'ancien moteur (anciens `config/cartes.json` et `modules.json`), en tableaux ; réserve d'idées pour revoir les autres modules, ne décrit pas le jeu actuel |
 | [simulation.md](simulation.md) | Conception des simulateurs d'équilibrage (`outils/simulation/`) : parties complètes (§11) et combats isolés (§12) |
 | [outil-editeur-cartes.md](outil-editeur-cartes.md) | **Spécification codée** (2026-11-15) de l'outil d'administration web / iPhone : liste des cartes, détail modifiable, sauvegarde locale, repérage des cartes modifiées, copie du fichier ; deux changements de format des cartes à faire avant (§10) |
@@ -57,7 +58,7 @@ et les brouillons de la refonte ont été reportés dans les sections numéroté
 - **Sauvegarde, profils, structure du code, transitions de fenêtres** → `architecture.md`
 - **Valeur non tranchée ou idée pour plus tard** → `a-trancher.md`
 - **Vue d'ensemble, où est le code de quoi** → `refonte.md`
-- **Idée de mécanique pas encore codée** → `a-trancher.md` §11, `refonte-destruction.md`,
+- **Idée de mécanique pas encore codée** → `effets-a-coder.md`, `a-trancher.md` §11, `refonte-destruction.md`,
   `refonte-buffs-debuffs.md`
 - **Équilibrage, simulation** → `simulation.md` et les synthèses `outils/simulation/synthese/`
 

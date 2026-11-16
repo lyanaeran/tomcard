@@ -96,7 +96,7 @@ _PAIRES_CASES_ENNEMIES = (("AV_G", "AR_G"), ("AV_M", "AR_M"), ("AV_D", "AR_D"))
 
 # Version du contrat entre bridge.py et src/web/app.js : doit etre egale a VERSION_CACHE (app.js),
 # verifie au demarrage par app.js (versionsAccordees) et par tests/test_architecture.py
-VERSION_WEB = "93"
+VERSION_WEB = "94"
 
 combat = None
 # Taille du journal deja transmise : les popups d'une action sont calcules a partir des seules
@@ -833,6 +833,7 @@ def editeur_valider_web(json_entrees) -> str:
 
 
 def editeur_exporter_web(json_entrees) -> str:
-    """Texte complet de config/cartes.json pour ces cartes, dans la mise en forme du fichier."""
+    """Ces cartes (les modifiees ou ajoutees, choisies par l'editeur) au format et dans la mise en
+    forme de config/cartes.json, a fusionner par id dans le fichier a l'integration."""
     return json.dumps(cartes_vers_texte_json(json.loads(json_entrees)), ensure_ascii=False)
 

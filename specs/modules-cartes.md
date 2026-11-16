@@ -47,7 +47,7 @@ d'information :
 - Tir de précision (1⚡, 8 dégâts)
 - Charge concentrée (2⚡, 14 dégâts)
 - Tir perforant (2⚡, 10 dégâts, avant + arrière de la colonne)
-- Surcharge (3⚡, 20 dégâts, ne peut pas retirer au tour suivant)
+- Tir de rupture (3⚡, 20 dégâts, ne peut pas retirer au tour suivant) — ex-« Surcharge », renommée : le mot désigne désormais un statut (effets-a-coder.md §1)
 
 **Batterie Gatling** — multi-cible / dégâts répartis. Fort contre les groupes de S, faible contre un seul L.
 - Rafale (1⚡, 3 dégâts à 2 cibles aléatoires)
@@ -235,6 +235,7 @@ règle systématique entre rareté et munitions (a-trancher.md §9.1).
 | `GAIN_ELECTRICITE` | Électricité en plus pour ce tour | codé, aucune carte |
 | `PIOCHE` | Pioche en plus | codé, aucune carte |
 | `REPETITION` | Les cartes désignées sont lancées N fois de plus (§12.5) | codé |
+| `SURCHARGE` | Pose le statut Surcharge sur le principal : +intensité aux dégâts de chaque coup des cartes, −1 par tour | **décidé le 2026-11-16, non codé** (effets-a-coder.md §1) ; *Lasers en surchauffe* non jouable en attendant |
 | `VULNERABILITE`, `REDUCTION_DEGATS`, `REDIRECTION_CIBLE` | Statuts à durée, Tir allié | **non codé** : une carte qui en porte n'est pas jouable |
 
 Règles des statuts : combat.md §3.5. Résolution d'une carte : combat.md §3.8. Le **renvoi** n'est

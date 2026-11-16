@@ -115,6 +115,10 @@ Une seule source pour les règles : chaque nature d'effet de carte qui pose un s
 (`NatureEffet.statut_pose`) : `BOUCLIER` → Bouclier, `INCENDIE` → Incendie,
 `ANNULATION_PROCHAINE_ATTAQUE` → Leurre (modules-cartes.md §12.2).
 
+**Décidé, pas encore codé** : le statut **Surcharge** (+intensité aux dégâts de chaque coup,
+−1 par tour, porté par le principal pour toutes les cartes, et par les ennemis) :
+[effets-a-coder.md](effets-a-coder.md) §1.
+
 **Points ouverts** : les statuts à durée (Vulnérabilité, Réduction de dégâts : une intensité et un
 nombre de tours) ne sont pas codés ; le buff Destruction portera des effets, pas un nombre, et
 aura son propre champ ([refonte-destruction.md](refonte-destruction.md)).
