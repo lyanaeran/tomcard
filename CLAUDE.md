@@ -23,6 +23,9 @@ utilisateur) ; tout le reste (identifiants, clés JSON, code, commentaires) rest
 
 L'utilisateur conçoit le jeu ; l'agent propose, documente et code. Préférences constatées :
 
+- **Concevoir du contenu** (cartes, modules, ennemis, Aventures) : suivre le skill de projet
+  `designer-contenu` (`.claude/skills/designer-contenu/`, appel `/designer-contenu <sujet>`) ; ses
+  fichiers sont des consignes pour l'agent, pas des documents de conception (ceux-là vont dans `specs/`).
 - **Spécifier avant de coder.** Une nouvelle mécanique se discute d'abord (propositions, questions
   numérotées), puis la décision est notée dans `specs/` (« décision utilisateur », avec la date),
   puis seulement codée quand l'utilisateur le demande. Quand il dit « ne code rien » ou pose une
