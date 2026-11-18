@@ -80,7 +80,7 @@ numériques (coûts, dégâts, munitions) sont des valeurs inventées**, à ajus
 | CRT_52 | Roquette | nouvelle | Attaque | Ennemi Unique | 0 | | | Inflige {degats} dégâts à un ennemi | `degats: 4` | `DEGATS(degats)` | — |
 | CRT_53 | Missile guidé | nouvelle | Attaque | Ennemi Unique | 1 | | | Inflige {degats} dégâts à un ennemi. Piochez {pioche} carte | `degats: 7, pioche: 1` | `DEGATS(degats)` ; `PIOCHE(pioche)` | — |
 | CRT_54 | Contre-mesures | nouvelle | Attaque | Ennemi Unique | 1 | | | Inflige {degats} dégâts à un ennemi et donne {bouclier} de bouclier au module principal | `degats: 6, bouclier: 5` | `DEGATS(degats)` ; `BOUCLIER(bouclier) @`**`MODULE_PRINCIPAL`** | portées vers un module (§3.1) |
-| CRT_55 | Mise à feu | nouvelle | Attaque | Ennemi Tous | 1 | | | Inflige {degats} dégâts à tous les ennemis, puis Surcharge {surcharge} | `degats: 3, surcharge: 2` | `DEGATS(degats)` ; `SURCHARGE(surcharge) @MODULE_PRINCIPAL` | Surcharge (§3.2), portées (§3.1) |
+| CRT_55 | Mise à feu | nouvelle | Attaque | Ennemi Tous | 1 | | | Surcharge {surcharge}, puis inflige {degats} dégâts (+ Surcharge) à tous les ennemis | `degats: 3, surcharge: 2` | `SURCHARGE(surcharge) @MODULE_PRINCIPAL` ; `DEGATS(degats)` | Surcharge (§3.2), portées (§3.1) |
 | CRT_56 | Désignation de cible | nouvelle | Attaque | Ennemi Unique | 1 | | | Inflige {degats} dégâts à un ennemi et lui pose Verrouillage {verrouillage} | `degats: 5, verrouillage: 2` | `DEGATS(degats)` ; **`VERROUILLAGE`**`(verrouillage)` | Verrouillage (§3.3) |
 | CRT_57 | Marquage de zone | nouvelle | Attaque | Ennemi Tous | 1 | | | Inflige {degats} dégâts à tous les ennemis et leur pose Verrouillage {verrouillage} | `degats: 3, verrouillage: 1` | `DEGATS(degats)` ; `VERROUILLAGE(verrouillage)` | Verrouillage (§3.3) |
 | CRT_58 | Tir double | nouvelle | Attaque | Ennemi Unique | 1 | | 2 | Inflige {degats} dégâts à un ennemi, deux fois | `degats: 4` | `DEGATS(degats)` | — |
@@ -119,14 +119,14 @@ numériques (coûts, dégâts, munitions) sont des valeurs inventées**, à ajus
 | CRT_77 | Surcharge critique | nouvelle | Buff | Module Principal | 2 | 1 | | Double votre Surcharge. Elle ne baisse plus jusqu'à la fin du combat | `facteur: 2` | `MULTIPLIER_SURCHARGE(facteur)` ; **`FIGER_SURCHARGE`** | Surcharge (§3.2) |
 | CRT_78 | Feu à volonté | nouvelle | Buff | Module Principal | 2 | 1 | | Jusqu'à la fin du combat, vos cartes du Lanceur sont lancées {repetition} fois de plus | `repetition: 1` | `REPETITION(repetition) [filtre={module: MOD_2}]` | filtre module (§3.9) |
 | CRT_79 | Cadence de tir | nouvelle | Buff | Module Principal | 1 | 1 | | Jusqu'à la fin du combat, chaque carte du Lanceur jouée vous donne Surcharge {surcharge} | `surcharge: 1` | **`SUR_CARTE_JOUEE`**` [filtre={module: MOD_2}, declenche=SURCHARGE(surcharge) @MODULE_PRINCIPAL]` | Réactions (§3.13), Surcharge (§3.2) |
-| CRT_80 | Essaim | nouvelle | Attaque | Ennemi Tous | 2 | | | Inflige {degats} dégâts à un ennemi au hasard, autant de fois que vous avez joué de cartes dans ce combat | `degats: 3` | `DEGATS(degats) @ENNEMI_AU_HASARD [coups=@CARTES_JOUEES_COMBAT]` | Hasard et coups (§3.4) |
+| CRT_80 | Essaim | nouvelle | Attaque | Ennemi Tous | 2 | | | Inflige {degats} dégâts à un ennemi au hasard, autant de fois que vous avez joué d'autres cartes dans ce combat | `degats: 3` | `DEGATS(degats) @ENNEMI_AU_HASARD [coups=@CARTES_JOUEES_COMBAT]` | Hasard et coups (§3.4) |
 
 ### 2.5 Cartes retirées ou écartées
 
 - **CRT_18 Leurre** : quitte le Lanceur (décision utilisateur), pour un futur module défensif
-  (Blindage, modules-cartes.md §4.2). *Proposition* : `"modules": []` en attendant, ce qui fait
-  qu'elle n'est plus proposée nulle part. Elle reste `"jouable": "oui"`, puisque son effet est
-  codé.
+  (Blindage, modules-cartes.md §4.2). En attendant : `"modules": []`, elle n'est plus proposée
+  nulle part (décision utilisateur, 2026-11-18). Elle reste `"jouable": "oui"`, puisque son effet
+  est codé.
 - **Écartées** (décision utilisateur) : *Ogive à trophée* (Trophée), *Frappe de saturation* (coût
   X), *Leurre explosif* (dégâts à l'attaquant).
 
@@ -161,9 +161,11 @@ Principes communs, repris de l'existant :
 - Tout tirage passe par `Combat.aleatoire` (déterminisme, `src/gameplay/CLAUDE.md`).
 - Le flux de clics ne change pas : toutes ces cartes se jouent en sélectionnant la carte, puis en
   cliquant sur une case valide (interface.md §8.3).
-- **Ordre de calcul d'un coup de carte** (proposition) : valeur de base (avec Calibrage) + bonus
-  calculé (§3.11) + Surcharge du joueur + Verrouillage de la cible, **puis** les protections
-  (leurre, renvoi, bouclier) sauf si le coup est perforant.
+- **Ordre de calcul d'un coup de carte** (décision utilisateur, 2026-11-18) : valeur de base
+  (avec Calibrage) + bonus calculé (§3.11) + Surcharge du joueur + Verrouillage de la cible,
+  **puis** les protections (leurre, renvoi, bouclier) sauf si le coup est perforant. Exemple :
+  Roquette (4) avec Surcharge 3 sur un ennemi Verrouillage 2 avec 5 de bouclier → 9, le bouclier
+  en absorbe 5, l'ennemi perd 4 PV.
 
 ### 3.1 Nouvelles portées : `MODULE_PRINCIPAL`, `MODULE_DE_LA_CARTE`, `MEME_COLONNE`
 
@@ -186,8 +188,10 @@ Principes communs, repris de l'existant :
 - **Application** : dans `Combat._attaquer`, quand la source est une `Carte`, ajouter
   `principal.statuts[SURCHARGE]` aux dégâts **de chaque coup**. L'incendie et le renvoi ne sont pas
   concernés.
-- **Ordre dans une carte** : les effets s'appliquent dans l'ordre de la liste. Mise à feu met donc
-  ses dégâts **avant** sa Surcharge, qui ne profite pas à ses propres dégâts (proposition).
+- **Ordre dans une carte** : les effets s'appliquent dans l'ordre de la liste. Mise à feu pose
+  **d'abord** sa Surcharge, qui profite donc à ses propres dégâts : sur 3 ennemis, (3 + 2) × 3 = 15
+  (décision utilisateur, 2026-11-18 ; la description le dit : « Surcharge 2, puis inflige 3 dégâts
+  (+ Surcharge) à tous les ennemis »).
 - **`MULTIPLIER_SURCHARGE(facteur)`** (Amplificateur, Surcharge critique) : nouvelle nature, cible
   le principal ; `intensité ← intensité × facteur`. Elle est sans effet à Surcharge 0.
 - **`FIGER_SURCHARGE`** (sans valeur, Surcharge critique) : drapeau `Combat.surcharge_figee =
@@ -230,9 +234,9 @@ Principes communs, repris de l'existant :
     **exception** pour cette portée : l'ennemi est **tiré au moment de chaque coup**
     (`self.aleatoire.choice(self.flotte.ennemis_vivants())`) ;
   - s'il ne reste aucun ennemi vivant, les coups restants sont perdus (et le combat est gagné).
-- **Compteur `@CARTES_JOUEES_COMBAT`** : `Combat.cartes_jouees`, +1 à chaque `jouer_carte`, **avant**
-  la résolution. Essaim compte donc elle-même : jouée en première carte, elle fait 1 coup
-  (proposition).
+- **Compteur `@CARTES_JOUEES_COMBAT`** : `Combat.cartes_jouees`, +1 à chaque `jouer_carte`, **après**
+  la résolution. **Essaim ne se compte pas** (décision utilisateur, 2026-11-18) : jouée après 4
+  autres cartes, elle fait 4 coups ; jouée en première carte, elle ne fait rien.
 - **Lancements** : un Ricochet lancé 2 fois refait toute la séquence (1 coup ciblé + 4 rebonds).
 - **Journal** : un événement par coup, comme une attaque normale.
 - **Tests** : seed fixée → cibles attendues ; retouche possible du même ennemi ; arrêt quand la
@@ -294,8 +298,8 @@ Principes communs, repris de l'existant :
   directement aux PV. Réservé à l'Obus perforant.
 - **Format** : clé d'effet booléenne `"perforant": true`, autorisée seulement avec `DEGATS`.
 - **Code** : `Statuts.encaisser_attaque(degats, perforant=False)` ; si `perforant`, renvoie
-  directement `Encaissement(degats=degats, degats_pv=degats)` ; le leurre **n'est pas consommé**
-  (proposition).
+  directement `Encaissement(degats=degats, degats_pv=degats)` ; le leurre **reste en place** et
+  annulera le coup suivant (décision utilisateur, 2026-11-18).
 - **Tests** : ennemi avec bouclier, leurre et renvoi → tout passe en PV, statuts inchangés.
 
 ### 3.9 Filtre de cartes : critères `module` et `cible`
@@ -394,17 +398,13 @@ Chaque lot :
 
 ---
 
-## 4. Questions ouvertes
+## 4. Décisions sur les questions ouvertes (décision utilisateur, 2026-11-18)
 
-1. **Valeurs** : les coûts, dégâts et munitions du §2 sont tous inventés. Les régler à la main
-   d'abord, ou lancer une simulation après les lots 1 à 3 (durée à proposer) ?
-2. **Choix des légendaires** : 5 proposées, au moins 3 à garder (décision repoussée par
-   l'utilisateur).
-3. **Leurre** : `"modules": []` en attendant un module défensif (proposition), ou rattaché
-   provisoirement au Principal ?
-4. **Ordre de calcul d'un coup** (§3, principes communs) : base + bonus + Surcharge +
-   Verrouillage, puis protections. D'accord ?
-5. **Mise à feu** : sa Surcharge ne profite pas à ses propres dégâts (effets dans l'ordre). D'accord ?
-6. **Essaim** se compte lui-même (1 coup au minimum) : d'accord ?
-7. **Perforant** : le leurre de la cible reste en place après un Obus perforant (proposition), ou
-   il est consommé ?
+1. **Ordre de calcul d'un coup** : base + bonus + Surcharge + Verrouillage, puis protections (§3).
+2. **Mise à feu** : Surcharge d'abord, elle profite à ses propres dégâts ; description changée (§2.2, §3.2).
+3. **Essaim** ne se compte pas lui-même (§3.4).
+4. **Obus perforant** : le leurre de la cible reste en place (§3.8).
+5. **Leurre** : `"modules": []` en attendant un module défensif (§2.5).
+6. **Légendaires** : choix repoussé, les 5 restent proposées.
+7. **Valeurs** : réglage à la main par l'utilisateur dans l'éditeur de cartes d'abord, **puis**
+   simulation après les lots 1 à 3 (volume et durée proposés à l'utilisateur avant de la lancer).
