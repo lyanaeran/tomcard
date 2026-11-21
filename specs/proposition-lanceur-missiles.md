@@ -16,8 +16,7 @@ numériques (coûts, dégâts, munitions) sont des valeurs inventées**, à ajus
 - **Toutes les cartes font des dégâts, en empêchent, ou agissent sur les dégâts**, et peuvent faire
   autre chose en plus (bouclier, pioche, électricité…).
 - La puissance dépend de la rareté. Demande : au moins **3 légendaires, 8 rares, 15 communes**,
-  de coûts variés. Proposition : **5 légendaires** (l'utilisateur choisira plus tard, décision
-  utilisateur : « garde tout pour le moment »), **12 rares, 20 communes**.
+  de coûts variés. Après la revue du 2026-11-21 (§5) : **4 légendaires, 12 rares, 21 communes** (37 cartes).
 
 ### 1.1 Repère de puissance (proposition)
 
@@ -69,57 +68,57 @@ numériques (coûts, dégâts, munitions) sont des valeurs inventées**, à ajus
 - **Module** : toutes les cartes ont `"modules": ["MOD_2"]`, **Munitions** vide = illimitées,
   **Lancements** vide = 1, **Persistante** : aucune.
 
-### 2.2 Communes (20)
+### 2.2 Communes (21)
 
 | Id | Nom | État | Catégorie | Cible | Coût | Mun. | Lanc. | Description affichée | Valeurs | Effets | Mécanique à coder |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| CRT_13 | Missiles | existante | Attaque | Ennemi Unique | 2 | | | Inflige {degats_cible} dégâts à un ennemi et {degats_autres} à tous les autres | `degats_cible: 15, degats_autres: 6` | `DEGATS(degats_cible)` ; `DEGATS(degats_autres) @AUTRES_ENNEMIS` | — |
-| CRT_14 | Torpille | existante | Attaque | Ennemi Tous | 2 | | | Inflige {degats_avant} dégâts à la ligne avant et {degats_arriere} à la ligne arrière | `degats_avant: 10, degats_arriere: 8` | `DEGATS(degats_avant) @COLONNE_AVANT_ENNEMIE` ; `DEGATS(degats_arriere) @COLONNE_ARRIERE_ENNEMIE` | — |
-| CRT_9 | Bombardement | modifiée (6 → 5) | Attaque | Ennemi Tous | 1 | | | Inflige {degats} dégâts à tous les ennemis | `degats: 5` | `DEGATS(degats)` | — |
-| CRT_16 | Ligne arrière | existante | Attaque | Ennemi Arriere | 1 | | | Inflige {degats} dégâts à tous les ennemis de la ligne arrière | `degats: 8` | `DEGATS(degats)` | — |
-| CRT_52 | Roquette | nouvelle | Attaque | Ennemi Unique | 0 | | | Inflige {degats} dégâts à un ennemi | `degats: 4` | `DEGATS(degats)` | — |
+| CRT_13 | Missile à fragmentation | modifiée (nom, ex-Missiles) | Attaque | Ennemi Unique | 2 | | | Inflige {degats_cible} dégâts à un ennemi et {degats_autres} à tous les autres | `degats_cible: 15, degats_autres: 6` | `DEGATS(degats_cible)` ; `DEGATS(degats_autres) @AUTRES_ENNEMIS` | — |
+| CRT_14 | Vague de torpilles | modifiée (nom, ex-Torpille) | Attaque | Ennemi Tous | 2 | | | Inflige {degats_avant} dégâts à la ligne avant et {degats_arriere} à la ligne arrière | `degats_avant: 10, degats_arriere: 8` | `DEGATS(degats_avant) @COLONNE_AVANT_ENNEMIE` ; `DEGATS(degats_arriere) @COLONNE_ARRIERE_ENNEMIE` | — |
+| CRT_9 | Ogive légère | modifiée (nom, ex-Bombardement ; 6 → 5) | Attaque | Ennemi Tous | 1 | | | Inflige {degats} dégâts à tous les ennemis | `degats: 5` | `DEGATS(degats)` | — |
+| CRT_16 | Torpille arrière | modifiée (nom, ex-Ligne arrière ; 8 → 9) | Attaque | Ennemi Arriere | 1 | | | Inflige {degats} dégâts à tous les ennemis de la ligne arrière | `degats: 9` | `DEGATS(degats)` | — |
+| CRT_81 | Torpille avant | nouvelle (demandée par l'utilisateur) | Attaque | Ennemi Avant | 1 | | | Inflige {degats} dégâts à tous les ennemis de la ligne avant | `degats: 9` | `DEGATS(degats)` | — |
+| CRT_52 | Mini-missile | nouvelle | Attaque | Ennemi Unique | 0 | | | Inflige {degats} dégâts à un ennemi | `degats: 4` | `DEGATS(degats)` | — |
 | CRT_53 | Missile guidé | nouvelle | Attaque | Ennemi Unique | 1 | | | Inflige {degats} dégâts à un ennemi. Piochez {pioche} carte | `degats: 7, pioche: 1` | `DEGATS(degats)` ; `PIOCHE(pioche)` | — |
-| CRT_54 | Contre-mesures | nouvelle | Attaque | Ennemi Unique | 1 | | | Inflige {degats} dégâts à un ennemi et donne {bouclier} de bouclier au module principal | `degats: 6, bouclier: 5` | `DEGATS(degats)` ; `BOUCLIER(bouclier) @`**`MODULE_PRINCIPAL`** | portées vers un module (§3.1) |
-| CRT_55 | Mise à feu | nouvelle | Attaque | Ennemi Tous | 1 | | | Surcharge {surcharge}, puis inflige {degats} dégâts (+ Surcharge) à tous les ennemis | `degats: 3, surcharge: 2` | `SURCHARGE(surcharge) @MODULE_PRINCIPAL` ; `DEGATS(degats)` | Surcharge (§3.2), portées (§3.1) |
-| CRT_56 | Désignation de cible | nouvelle | Attaque | Ennemi Unique | 1 | | | Inflige {degats} dégâts à un ennemi et lui pose Verrouillage {verrouillage} | `degats: 5, verrouillage: 2` | `DEGATS(degats)` ; **`VERROUILLAGE`**`(verrouillage)` | Verrouillage (§3.3) |
-| CRT_57 | Marquage de zone | nouvelle | Attaque | Ennemi Tous | 1 | | | Inflige {degats} dégâts à tous les ennemis et leur pose Verrouillage {verrouillage} | `degats: 3, verrouillage: 1` | `DEGATS(degats)` ; `VERROUILLAGE(verrouillage)` | Verrouillage (§3.3) |
-| CRT_58 | Tir double | nouvelle | Attaque | Ennemi Unique | 1 | | 2 | Inflige {degats} dégâts à un ennemi, deux fois | `degats: 4` | `DEGATS(degats)` | — |
-| CRT_59 | Bombes à sous-munitions | nouvelle | Attaque | Ennemi Tous | 2 | | | {coups} fois : inflige {degats} dégâts à un ennemi au hasard | `degats: 4, coups: 4` | `DEGATS(degats) @`**`ENNEMI_AU_HASARD`**` [`**`coups`**`=coups]` | Hasard et coups (§3.4) |
-| CRT_60 | Coup de grâce | nouvelle | Attaque | Ennemi Unique | 1 | | | Inflige {degats} dégâts à un ennemi. Pour chaque ennemi tué : +{electricite} électricité | `degats: 7, electricite: 1` | `DEGATS(degats)` ; **`si_ennemi_tue`**` : GAIN_ELECTRICITE(electricite)` | Exécution (§3.5) |
-| CRT_61 | Ogive à fragmentation | nouvelle | Attaque | Ennemi Unique | 2 | | | Inflige {degats_cible} dégâts à un ennemi et {degats_colonne} à l'ennemi de sa colonne | `degats_cible: 12, degats_colonne: 5` | `DEGATS(degats_cible)` ; `DEGATS(degats_colonne) @`**`MEME_COLONNE`** | portée même colonne (§3.1) |
-| CRT_62 | Tir de barrage | nouvelle | Attaque | Ennemi Avant | 2 | | | Inflige {degats} dégâts à la ligne avant et donne {bouclier} de bouclier au Lanceur | `degats: 8, bouclier: 6` | `DEGATS(degats)` ; `BOUCLIER(bouclier) @`**`MODULE_DE_LA_CARTE`** | portées vers un module (§3.1) |
-| CRT_63 | Missile chercheur | nouvelle | Attaque | Ennemi Unique | 1 | | | Inflige {degats} dégâts à un ennemi, puis rebondit {rebonds} fois au hasard | `degats: 6, rebonds: 1` | `DEGATS(degats)` ; `DEGATS(degats) @ENNEMI_AU_HASARD [coups=rebonds]` | Hasard et coups (§3.4) |
+| CRT_54 | Missile de couverture | nouvelle | Attaque | Ennemi Unique | 1 | | | Inflige {degats} dégâts à un ennemi et donne {bouclier} de bouclier au module principal | `degats: 6, bouclier: 5` | `DEGATS(degats)` ; `BOUCLIER(bouclier) @`**`MODULE_PRINCIPAL`** | portées vers un module (§3.1) |
+| CRT_55 | Ogive surchauffée | nouvelle | Attaque | Ennemi Tous | 1 | | | Surcharge {surcharge}, puis inflige {degats} dégâts (+ Surcharge) à tous les ennemis | `degats: 3, surcharge: 2` | `SURCHARGE(surcharge) @MODULE_PRINCIPAL` ; `DEGATS(degats)` | Surcharge (§3.2), portées (§3.1) |
+| CRT_56 | Missile marqueur | nouvelle | Attaque | Ennemi Unique | 1 | | | Inflige {degats} dégâts à un ennemi et lui pose Verrouillage {verrouillage} | `degats: 5, verrouillage: 2` | `DEGATS(degats)` ; **`VERROUILLAGE`**`(verrouillage)` | Verrouillage (§3.3) |
+| CRT_57 | Ogive de marquage | nouvelle | Attaque | Ennemi Tous | 1 | | | Inflige {degats} dégâts à tous les ennemis et leur pose Verrouillage {verrouillage} | `degats: 3, verrouillage: 2` | `DEGATS(degats)` ; `VERROUILLAGE(verrouillage)` | Verrouillage (§3.3) |
+| CRT_58 | Missiles jumeaux | nouvelle | Attaque | Ennemi Unique | 1 | | 2 | Inflige {degats} dégâts à un ennemi, deux fois | `degats: 4` | `DEGATS(degats)` | — (premier usage de `lancements: 2` sur une carte) |
+| CRT_59 | Ogive à dispersion | nouvelle | Attaque | Ennemi Tous | 2 | | | {coups} fois : inflige {degats} dégâts à un ennemi au hasard | `degats: 4, coups: 5` | `DEGATS(degats) @`**`ENNEMI_AU_HASARD`**` [`**`coups`**`=coups]` | Hasard et coups (§3.4) |
+| CRT_60 | Coup de grâce | nouvelle | Attaque | Ennemi Unique | 1 | | | Inflige {degats} dégâts à un ennemi. Pour chaque ennemi tué : +{electricite} électricité | `degats: 7, electricite: 2` | `DEGATS(degats)` ; **`si_ennemi_tue`**` : GAIN_ELECTRICITE(electricite)` | Exécution (§3.5) |
+| CRT_61 | Torpille traversante | nouvelle | Attaque | Ennemi Unique | 2 | | | Inflige {degats_cible} dégâts à un ennemi et {degats_colonne} à l'ennemi de sa colonne (derrière ou devant) | `degats_cible: 12, degats_colonne: 8` | `DEGATS(degats_cible)` ; `DEGATS(degats_colonne) @`**`MEME_COLONNE`** | portée même colonne (§3.1) |
+| CRT_62 | Torpille de barrage | nouvelle | Attaque | Ennemi Avant | 2 | | | Inflige {degats} dégâts à la ligne avant et donne {bouclier} de bouclier au Lanceur | `degats: 12, bouclier: 8` | `DEGATS(degats)` ; `BOUCLIER(bouclier) @`**`MODULE_DE_LA_CARTE`** | portées vers un module (§3.1) |
+| CRT_63 | Missile rebondissant | nouvelle | Attaque | Ennemi Unique | 1 | | | Inflige {degats} dégâts à un ennemi, puis rebondit {rebonds} fois au hasard | `degats: 5, rebonds: 1` | `DEGATS(degats)` ; `DEGATS(degats) @ENNEMI_AU_HASARD [coups=rebonds]` | Hasard et coups (§3.4) |
 | CRT_64 | Rechargement rapide | nouvelle | Attaque | Ennemi Unique | 0 | | | Inflige {degats} dégâts à un ennemi. Rend {munitions} munition à toutes vos cartes du Lanceur, même épuisées | `degats: 3, munitions: 1` | `DEGATS(degats)` ; **`RECHARGEMENT`**`(munitions) [filtre={module: MOD_2}]` | Rechargement (§3.7), filtre module (§3.9) |
 | CRT_65 | Missile thermique | nouvelle | Attaque | Ennemi Unique | 1 | | | Inflige {degats} dégâts et {incendie} d'incendie à un ennemi | `degats: 4, incendie: 3` | `DEGATS(degats)` ; `INCENDIE(incendie)` | — |
-| CRT_66 | Calibrage | nouvelle | Attaque | Ennemi Unique | 1 | | | Inflige {degats} dégâts à un ennemi. Toutes vos cartes Calibrage gagnent +{gain} dégâts jusqu'à la fin du combat | `degats: 5, gain: 2` | `DEGATS(degats)` ; **`CALIBRAGE`**`(gain) [`**`augmente`**`=degats]` | Calibrage (§3.6) |
-| CRT_67 | Obus perforant | nouvelle | Attaque | Ennemi Unique | 1 | 3 | | Inflige {degats} dégâts à un ennemi, en ignorant bouclier, leurre et renvoi | `degats: 9` | `DEGATS(degats) [`**`perforant`**`=true]` | Perforant (§3.8) |
+| CRT_66 | Calibrage | nouvelle | Attaque | Ennemi Unique | 1 | | | Inflige {degats} dégâts à un ennemi. Toutes vos cartes Calibrage gagnent +{gain} dégâts jusqu'à la fin du combat | `degats: 4, gain: 3` | `DEGATS(degats)` ; **`CALIBRAGE`**`(gain) [`**`augmente`**`=degats]` | Calibrage (§3.6) |
+| CRT_67 | Torpille perforante | nouvelle | Attaque | Ennemi Unique | 1 | 3 | | Inflige {degats} dégâts à un ennemi, en ignorant bouclier, leurre et renvoi | `degats: 9` | `DEGATS(degats) [`**`perforant`**`=true]` | Perforant (§3.8) |
 
 ### 2.3 Rares (12)
 
 | Id | Nom | État | Catégorie | Cible | Coût | Mun. | Lanc. | Description affichée | Valeurs | Effets | Mécanique à coder |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| CRT_15 | Ciel de missiles | existante | Attaque | Ennemi Tous | 1 | | | Inflige {degats} dégâts à tous les ennemis | `degats: 8` | `DEGATS(degats)` | — |
-| CRT_17 | Embrasement | modifiée (+ dégâts) | Attaque | Ennemi Unique | 2 | | | Inflige {degats} dégâts et {incendie} d'incendie à un ennemi | `degats: 6, incendie: 8` | `DEGATS(degats)` ; `INCENDIE(incendie)` | — |
-| CRT_51 | Post-combustion (ex-Lasers en surchauffe) | modifiée (nom, 2 → 4) | Buff | Module Principal | 1 | 3 | | Surcharge {surcharge} | `surcharge: 4` | `SURCHARGE(surcharge)` | Surcharge (§3.2) |
+| CRT_15 | Ogive lourde | modifiée (nom, ex-Ciel de missiles ; 8 → 7) | Attaque | Ennemi Tous | 1 | | | Inflige {degats} dégâts à tous les ennemis | `degats: 7` | `DEGATS(degats)` | — |
+| CRT_17 | Missile incendiaire | modifiée (nom, ex-Embrasement ; + dégâts) | Attaque | Ennemi Unique | 2 | | | Inflige {degats} dégâts et {incendie} d'incendie à un ennemi | `degats: 6, incendie: 8` | `DEGATS(degats)` ; `INCENDIE(incendie)` | — |
+| CRT_51 | Post-combustion | modifiée (ex-Lasers en surchauffe ; 2 → 4) | Buff | Module Principal | 1 | 3 | | Surcharge {surcharge} | `surcharge: 4` | `SURCHARGE(surcharge)` | Surcharge (§3.2) |
 | CRT_68 | Amplificateur | nouvelle | Buff | Module Principal | 1 | 2 | | Double votre Surcharge | `facteur: 2` | **`MULTIPLIER_SURCHARGE`**`(facteur)` | Surcharge (§3.2) |
-| CRT_69 | Ricochet | nouvelle | Attaque | Ennemi Unique | 2 | | | Inflige {degats} dégâts à un ennemi, puis rebondit {rebonds} fois au hasard | `degats: 8, rebonds: 4` | `DEGATS(degats)` ; `DEGATS(degats) @ENNEMI_AU_HASARD [coups=rebonds]` | Hasard et coups (§3.4) |
-| CRT_70 | Chasseur de primes | nouvelle | Attaque | Ennemi Unique | 1 | | | Inflige {degats} dégâts à un ennemi. Pour chaque ennemi tué : +{electricite} électricité et piochez {pioche} carte | `degats: 10, electricite: 2, pioche: 1` | `DEGATS(degats)` ; `si_ennemi_tue : GAIN_ELECTRICITE(electricite), PIOCHE(pioche)` | Exécution (§3.5) |
-| CRT_71 | Double frappe | nouvelle | Buff | Module Principal | 1 | 1 | | Ce tour, vos attaques à cible unique sont lancées {repetition} fois de plus | `repetition: 1, tours: 1` | `REPETITION(repetition) [duree=tours, filtre={categorie: Attaque, cible: Ennemi Unique}]` | Répétition au tour (§3.10), filtre cible (§3.9) |
-| CRT_72 | Chargeur automatique | nouvelle | Buff | Module Principal | 1 | | | Piochez {pioche} cartes. Surcharge {surcharge} | `pioche: 2, surcharge: 2` | `PIOCHE(pioche)` ; `SURCHARGE(surcharge)` | Surcharge (§3.2) |
-| CRT_73 | Verrouillage total | nouvelle | Attaque | Ennemi Unique | 1 | | | Inflige {degats} dégâts à un ennemi et lui pose Verrouillage {verrouillage} | `degats: 4, verrouillage: 5` | `DEGATS(degats)` ; `VERROUILLAGE(verrouillage)` | Verrouillage (§3.3) |
-| CRT_74 | Frappe de précision | nouvelle | Attaque | Ennemi Unique | 2 | | | Inflige {degats} dégâts à un ennemi, plus {par_point} par point de Verrouillage de la cible | `degats: 8, par_point: 3` | `DEGATS(degats) [`**`bonus`**`={par: VERROUILLAGE_CIBLE, facteur: par_point}]` | Verrouillage (§3.3), bonus calculé (§3.11) |
-| CRT_75 | Frappe surchargée | nouvelle | Attaque | Ennemi Unique | 2 | | | Inflige {degats} dégâts à un ennemi, plus {par_point} par point de Surcharge | `degats: 6, par_point: 2` | `DEGATS(degats) [bonus={par: SURCHARGE_JOUEUR, facteur: par_point}]` | Surcharge (§3.2), bonus calculé (§3.11) |
-| CRT_76 | Soute piégée | nouvelle | Attaque | Ennemi Tous | 2 | | | Inflige {degats} dégâts à tous les ennemis. Destruction (Lanceur) : {degats_explosion} dégâts à tous les ennemis | `degats: 6, degats_explosion: 20` | `DEGATS(degats)` ; **`DESTRUCTION`**` @MODULE_DE_LA_CARTE [declenche=DEGATS(degats_explosion) @TOUS_ENNEMIS]` | Destruction (§3.12), portées (§3.1) |
+| CRT_69 | Missile à ricochets | nouvelle | Attaque | Ennemi Unique | 2 | | | Inflige {degats} dégâts à un ennemi, puis rebondit {rebonds} fois au hasard | `degats: 6, rebonds: 3` | `DEGATS(degats)` ; `DEGATS(degats) @ENNEMI_AU_HASARD [coups=rebonds]` | Hasard et coups (§3.4) |
+| CRT_70 | Chasseur de primes | nouvelle | Attaque | Ennemi Unique | 1 | | | Inflige {degats} dégâts à un ennemi. Pour chaque ennemi tué : +{electricite} électricité et piochez {pioche} cartes | `degats: 10, electricite: 2, pioche: 2` | `DEGATS(degats)` ; `si_ennemi_tue : GAIN_ELECTRICITE(electricite), PIOCHE(pioche)` | Exécution (§3.5) |
+| CRT_71 | Double frappe | nouvelle | Buff | Module Principal | 1 | 2 | | Ce tour, vos attaques à cible unique sont lancées {repetition} fois de plus | `repetition: 1, tours: 1` | `REPETITION(repetition) [duree=tours, filtre={categorie: Attaque, cible: Ennemi Unique}]` | Répétition au tour (§3.10), filtre cible (§3.9) |
+| CRT_72 | Armer le lanceur | nouvelle | Buff | Module Principal | 1 | | | Piochez {pioche} cartes. Surcharge {surcharge} | `pioche: 2, surcharge: 2` | `PIOCHE(pioche)` ; `SURCHARGE(surcharge)` | Surcharge (§3.2) |
+| CRT_73 | Missile verrouilleur | nouvelle | Attaque | Ennemi Unique | 1 | | | Inflige {degats} dégâts à un ennemi et lui pose Verrouillage {verrouillage} | `degats: 4, verrouillage: 5` | `DEGATS(degats)` ; `VERROUILLAGE(verrouillage)` | Verrouillage (§3.3) |
+| CRT_74 | Missile de précision | nouvelle | Attaque | Ennemi Unique | 2 | | | Inflige {degats} dégâts à un ennemi, plus {par_point} par point de Verrouillage de la cible | `degats: 8, par_point: 3` | `DEGATS(degats) [`**`bonus`**`={par: VERROUILLAGE_CIBLE, facteur: par_point}]` | Verrouillage (§3.3), bonus calculé (§3.11) |
+| CRT_75 | Missile surchargé | nouvelle | Attaque | Ennemi Unique | 2 | | | Inflige {degats} dégâts à un ennemi, plus {par_point} par point de Surcharge | `degats: 6, par_point: 2` | `DEGATS(degats) [bonus={par: SURCHARGE_JOUEUR, facteur: par_point}]` | Surcharge (§3.2), bonus calculé (§3.11) |
+| CRT_76 | Piéger le lanceur | nouvelle | Buff | Module Principal | 1 | 1 | | Destruction (Lanceur) : {degats_explosion} dégâts à tous les ennemis | `degats_explosion: 30` | **`DESTRUCTION`**` @MODULE_DE_LA_CARTE [declenche=DEGATS(degats_explosion) @TOUS_ENNEMIS]` | Destruction (§3.12), portées (§3.1) |
 
-### 2.4 Légendaires (5, l'utilisateur en choisira au moins 3)
+### 2.4 Légendaires (4)
 
 | Id | Nom | État | Catégorie | Cible | Coût | Mun. | Lanc. | Description affichée | Valeurs | Effets | Mécanique à coder |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| CRT_19 | Guerre nucléaire | modifiée (+ dégâts, 1 munition) | Attaque | Ennemi Tous | 3 | 1 | | Inflige {degats} dégâts et {incendie} d'incendie à tous les ennemis | `degats: 20, incendie: 10` | `DEGATS(degats)` ; `INCENDIE(incendie)` | — |
-| CRT_77 | Surcharge critique | nouvelle | Buff | Module Principal | 2 | 1 | | Double votre Surcharge. Elle ne baisse plus jusqu'à la fin du combat | `facteur: 2` | `MULTIPLIER_SURCHARGE(facteur)` ; **`FIGER_SURCHARGE`** | Surcharge (§3.2) |
+| CRT_19 | Ogive nucléaire | modifiée (nom, ex-Guerre nucléaire ; + dégâts, incendie 8 → 4) | Attaque | Ennemi Tous | 3 | | | Inflige {degats} dégâts et {incendie} d'incendie à tous les ennemis | `degats: 15, incendie: 4` | `DEGATS(degats)` ; `INCENDIE(incendie)` | — |
+| CRT_77 | Lanceur incandescent | nouvelle | Buff | Module Principal | 2 | 1 | | Double votre Surcharge. Elle ne baisse plus jusqu'à la fin du combat | `facteur: 2` | `MULTIPLIER_SURCHARGE(facteur)` ; **`FIGER_SURCHARGE`** | Surcharge (§3.2) |
 | CRT_78 | Feu à volonté | nouvelle | Buff | Module Principal | 2 | 1 | | Jusqu'à la fin du combat, vos cartes du Lanceur sont lancées {repetition} fois de plus | `repetition: 1` | `REPETITION(repetition) [filtre={module: MOD_2}]` | filtre module (§3.9) |
 | CRT_79 | Cadence de tir | nouvelle | Buff | Module Principal | 1 | 1 | | Jusqu'à la fin du combat, chaque carte du Lanceur jouée vous donne Surcharge {surcharge} | `surcharge: 1` | **`SUR_CARTE_JOUEE`**` [filtre={module: MOD_2}, declenche=SURCHARGE(surcharge) @MODULE_PRINCIPAL]` | Réactions (§3.13), Surcharge (§3.2) |
-| CRT_80 | Essaim | nouvelle | Attaque | Ennemi Tous | 2 | | | Inflige {degats} dégâts à un ennemi au hasard, autant de fois que vous avez joué d'autres cartes dans ce combat | `degats: 3` | `DEGATS(degats) @ENNEMI_AU_HASARD [coups=@CARTES_JOUEES_COMBAT]` | Hasard et coups (§3.4) |
 
 ### 2.5 Cartes retirées ou écartées
 
@@ -127,6 +126,8 @@ numériques (coûts, dégâts, munitions) sont des valeurs inventées**, à ajus
   (Blindage, modules-cartes.md §4.2). En attendant : `"modules": []`, elle n'est plus proposée
   nulle part (décision utilisateur, 2026-11-18). Elle reste `"jouable": "oui"`, puisque son effet
   est codé.
+- **CRT_80 Essaim** : supprimée à la revue (décision utilisateur, 2026-11-21) ; le compteur
+  `@CARTES_JOUEES_COMBAT` (§3.4) n'a plus d'utilisateur et n'est pas à coder.
 - **Écartées** (décision utilisateur) : *Ogive à trophée* (Trophée), *Frappe de saturation* (coût
   X), *Leurre explosif* (dégâts à l'attaquant).
 
@@ -134,12 +135,12 @@ numériques (coûts, dégâts, munitions) sont des valeurs inventées**, à ajus
 
 | Combinaison | Dégâts |
 |---|---|
-| Ricochet seul : 5 coups de 8 | 40 |
-| Tour 1 : Post-combustion (S4) + Amplificateur (S8). Tour 2 (S7) : Ricochet, 5 coups de 8 + 7 | 75 |
-| Même chose avec Feu à volonté joué avant : Ricochet frappe 10 fois | 150 |
-| Verrouillage total (V5) puis Frappe de précision : 8 + 3×5 + 5 (Verrouillage) | 28 sur un ennemi |
-| Surcharge critique à S6 → S12 figée ; chaque Roquette (0⚡) fait 4 + 12 | 16 par Roquette, tout le combat |
-| Essaim au tour 4 après 10 cartes jouées, Surcharge 3 : 10 coups de 6 au hasard | 60 répartis |
+| Missile à ricochets seul : 4 coups de 6 | 24 |
+| Tour 1 : Post-combustion (S4) + Amplificateur (S8). Tour 2 (S7) : Missile à ricochets, 4 coups de 6 + 7 | 52 |
+| Même chose avec Feu à volonté joué avant : Missile à ricochets frappe 8 fois | 104 |
+| Missile verrouilleur (V5) puis Missile de précision : 8 + 3×5 + 5 (Verrouillage) | 28 sur un ennemi |
+| Lanceur incandescent à S6 → S12 figée ; chaque Mini-missile (0⚡) fait 4 + 12 | 16 par Mini-missile, tout le combat |
+| Ogive nucléaire avec Feu à volonté : lancée 2 fois | 30 + Incendie 8 à tous |
 
 Ces chiffres sont des ordres de grandeur, à vérifier par simulation (`outils/simulation/`), avec
 l'accord de l'utilisateur.
@@ -164,13 +165,13 @@ Principes communs, repris de l'existant :
 - **Ordre de calcul d'un coup de carte** (décision utilisateur, 2026-11-18) : valeur de base
   (avec Calibrage) + bonus calculé (§3.11) + Surcharge du joueur + Verrouillage de la cible,
   **puis** les protections (leurre, renvoi, bouclier) sauf si le coup est perforant. Exemple :
-  Roquette (4) avec Surcharge 3 sur un ennemi Verrouillage 2 avec 5 de bouclier → 9, le bouclier
+  Mini-missile (4) avec Surcharge 3 sur un ennemi Verrouillage 2 avec 5 de bouclier → 9, le bouclier
   en absorbe 5, l'ennemi perd 4 PV.
 
 ### 3.1 Nouvelles portées : `MODULE_PRINCIPAL`, `MODULE_DE_LA_CARTE`, `MEME_COLONNE`
 
 - **Pourquoi** : une carte qui vise un ennemi doit pouvoir donner un bouclier ou une Surcharge à un
-  module (Contre-mesures, Tir de barrage, Mise à feu), et l'Ogive à fragmentation touche l'autre
+  module (Missile de couverture, Torpille de barrage, Ogive surchauffée), et la Torpille traversante touche l'autre
   ennemi de la colonne de sa cible.
 - **Code** : `PorteeEffet` (dans `carte.py`) gagne trois membres, qui précisent leur camp ; ensuite
   `Combat._cibles_de_l_effet` les résout :
@@ -188,19 +189,19 @@ Principes communs, repris de l'existant :
 - **Application** : dans `Combat._attaquer`, quand la source est une `Carte`, ajouter
   `principal.statuts[SURCHARGE]` aux dégâts **de chaque coup**. L'incendie et le renvoi ne sont pas
   concernés.
-- **Ordre dans une carte** : les effets s'appliquent dans l'ordre de la liste. Mise à feu pose
+- **Ordre dans une carte** : les effets s'appliquent dans l'ordre de la liste. Ogive surchauffée pose
   **d'abord** sa Surcharge, qui profite donc à ses propres dégâts : sur 3 ennemis, (3 + 2) × 3 = 15
   (décision utilisateur, 2026-11-18 ; la description le dit : « Surcharge 2, puis inflige 3 dégâts
   (+ Surcharge) à tous les ennemis »).
-- **`MULTIPLIER_SURCHARGE(facteur)`** (Amplificateur, Surcharge critique) : nouvelle nature, cible
+- **`MULTIPLIER_SURCHARGE(facteur)`** (Amplificateur, Lanceur incandescent) : nouvelle nature, cible
   le principal ; `intensité ← intensité × facteur`. Elle est sans effet à Surcharge 0.
-- **`FIGER_SURCHARGE`** (sans valeur, Surcharge critique) : drapeau `Combat.surcharge_figee =
+- **`FIGER_SURCHARGE`** (sans valeur, Lanceur incandescent) : drapeau `Combat.surcharge_figee =
   True` ; `_fin_de_tour_d_entite` saute l'extinction de la Surcharge du principal tant qu'il est
   levé. Il disparaît à la fin du combat, puisque le combat est recréé à chaque fois. Les poses
   suivantes continuent de s'ajouter (proposition).
 - **Affichage** : pastille Surcharge sur le principal, infobulle « Surcharge 4 : +4 dégâts à
   chaque coup, −1 par tour » (« figée » si le drapeau est levé), journal
-  « Roquette → X : 16 dégâts (dont 12 de surcharge) ».
+  « Mini-missile → X : 16 dégâts (dont 12 de surcharge) ».
 - **Tests** : Surcharge sur chaque coup d'une zone et de chaque lancement ; baisse de 1 ;
   doublement ; Surcharge figée qui ne baisse plus ; incendie non concerné.
 
@@ -220,27 +221,25 @@ Principes communs, repris de l'existant :
   +3 dégâts à chaque coup reçu, −1 par tour ».
 - **Tests** : bonus sur chaque coup, cumul, baisse, disparition à 0, pas de bonus sur l'incendie.
 
-### 3.4 Coups au hasard : portée `ENNEMI_AU_HASARD` et clé `coups` (Rebond, Bombes, Essaim)
+### 3.4 Coups au hasard : portée `ENNEMI_AU_HASARD` et clé `coups` (rebonds, Ogive à dispersion)
 
 - **Règle** (décision utilisateur) : chaque coup tire **un ennemi vivant au hasard, sans
   restriction** ; il peut retoucher le même ennemi.
 - **Format** :
   - portée `ENNEMI_AU_HASARD` ;
-  - clé d'effet `coups` : soit le **nom d'une valeur** de la carte (`"coups": "rebonds"`), soit un
-    **compteur du combat** préfixé par `@` (`"coups": "@CARTES_JOUEES_COMBAT"`, pour Essaim) ;
+  - clé d'effet `coups` : le **nom d'une valeur** de la carte (`"coups": "rebonds"`) ;
   - sans `coups`, l'effet fait un seul coup.
 - **Code** :
   - dans `jouer_carte`, les cibles sont aujourd'hui choisies une fois pour tous les lancements ;
     **exception** pour cette portée : l'ennemi est **tiré au moment de chaque coup**
     (`self.aleatoire.choice(self.flotte.ennemis_vivants())`) ;
   - s'il ne reste aucun ennemi vivant, les coups restants sont perdus (et le combat est gagné).
-- **Compteur `@CARTES_JOUEES_COMBAT`** : `Combat.cartes_jouees`, +1 à chaque `jouer_carte`, **après**
-  la résolution. **Essaim ne se compte pas** (décision utilisateur, 2026-11-18) : jouée après 4
-  autres cartes, elle fait 4 coups ; jouée en première carte, elle ne fait rien.
-- **Lancements** : un Ricochet lancé 2 fois refait toute la séquence (1 coup ciblé + 4 rebonds).
+- **Compteur de cartes jouées** (`@CARTES_JOUEES_COMBAT`) : **abandonné**, Essaim étant supprimée
+  (2026-11-21).
+- **Lancements** : un Missile à ricochets lancé 2 fois refait toute la séquence (1 coup ciblé + 3 rebonds).
 - **Journal** : un événement par coup, comme une attaque normale.
 - **Tests** : seed fixée → cibles attendues ; retouche possible du même ennemi ; arrêt quand la
-  flotte est vide ; Essaim avec 1 et 10 cartes jouées.
+  flotte est vide.
 
 ### 3.5 Exécution : clé de carte `si_ennemi_tue`
 
@@ -295,7 +294,7 @@ Principes communs, repris de l'existant :
 ### 3.8 Perforant (une seule carte, exprès)
 
 - **Règle** (décision utilisateur) : le coup **ignore leurre, renvoi et bouclier** et va
-  directement aux PV. Réservé à l'Obus perforant.
+  directement aux PV. Réservé à la Torpille perforante.
 - **Format** : clé d'effet booléenne `"perforant": true`, autorisée seulement avec `DEGATS`.
 - **Code** : `Statuts.encaisser_attaque(degats, perforant=False)` ; si `perforant`, renvoie
   directement `Encaissement(degats=degats, degats_pv=degats)` ; le leurre **reste en place** et
@@ -328,16 +327,16 @@ Principes communs, repris de l'existant :
 
 ### 3.11 Bonus calculé : clé d'effet `bonus`
 
-- **Pourquoi** : Frappe de précision (+3 par point de Verrouillage de la cible) et Frappe
-  surchargée (+2 par point de Surcharge, **en plus** de la Surcharge normale : l'idée « dégât qui
+- **Pourquoi** : Missile de précision (+3 par point de Verrouillage de la cible) et Missile
+  surchargé (+2 par point de Surcharge, **en plus** de la Surcharge normale : l'idée « dégât qui
   utilise le double de la surcharge »).
 - **Format** : `"bonus": {"par": "VERROUILLAGE_CIBLE" | "SURCHARGE_JOUEUR", "facteur":
   "<valeur nommée>"}` sur un effet `DEGATS`.
 - **Code** : dans `_appliquer_effet_de_carte`, `valeur += facteur × compteur`, lu au moment du
   coup. Le statut n'est pas consommé (proposition).
-- **Tests** : Frappe de précision sur V0 et V5 ; Frappe surchargée à S0 et S8.
+- **Tests** : Missile de précision sur V0 et V5 ; Missile surchargé à S0 et S8.
 
-### 3.12 Destruction (Soute piégée)
+### 3.12 Destruction (Piéger le lanceur)
 
 - Reprend le buff Destruction de [refonte-destruction.md](refonte-destruction.md) §1–§3 (nature
   `DESTRUCTION`, liste `declenche`), avec la portée `MODULE_DE_LA_CARTE` (§3.1) pour le poser sur
@@ -351,7 +350,7 @@ Principes communs, repris de l'existant :
   - champ `Module.destructions` (liste d'effets déclenchés) ;
   - `Combat._traiter_destruction` les applique à la mort d'un module ;
   - nouvelle portée d'effet déclenché `TOUS_ENNEMIS`.
-- **Cumul** : Soute piégée jouée deux fois → deux explosions (décision de refonte-destruction.md
+- **Cumul** : Piéger le lanceur jouée deux fois (deux copies, ou une copie rechargée) → deux explosions (décision de refonte-destruction.md
   §3.6).
 - **Affichage** : pastille « Destruction » sur le Lanceur, infobulle « À sa destruction : 20
   dégâts à tous les ennemis ».
@@ -377,17 +376,20 @@ Principes communs, repris de l'existant :
 
 ### 3.14 Ordre de réalisation proposé (une PR par lot)
 
+**Rien n'est codé avant la revue du module principal** (décision utilisateur, 2026-11-21) : le
+lot 1 attend que les cartes du principal aient été revues de la même façon (noms, valeurs).
+
 | Lot | Contenu | Cartes rendues jouables |
 |---|---|---|
-| 1 | Aucune mécanique : nouvelles cartes et valeurs modifiées ; Leurre retiré du Lanceur | Roquette, Missile guidé, Tir double, Missile thermique, Bombardement, Embrasement, Guerre nucléaire |
-| 2 | Portées vers un module et même colonne (§3.1) | Contre-mesures, Tir de barrage, Ogive à fragmentation |
-| 3 | Surcharge, doublement, Surcharge figée, bonus calculé (§3.2, §3.11) | Mise à feu, Post-combustion, Amplificateur, Chargeur automatique, Frappe surchargée, Surcharge critique |
-| 4 | Verrouillage (§3.3) | Désignation de cible, Marquage de zone, Verrouillage total, Frappe de précision |
-| 5 | Coups au hasard et compteur de cartes jouées (§3.4) | Bombes à sous-munitions, Missile chercheur, Ricochet, Essaim |
+| 1 | Aucune mécanique : nouvelles cartes et valeurs modifiées ; Leurre retiré du Lanceur | Mini-missile, Missile guidé, Missiles jumeaux, Missile thermique, Torpille avant ; valeurs ou noms modifiés : Missile à fragmentation, Vague de torpilles, Ogive légère, Torpille arrière, Ogive lourde, Missile incendiaire, Ogive nucléaire |
+| 2 | Portées vers un module et même colonne (§3.1) | Missile de couverture, Torpille de barrage, Torpille traversante |
+| 3 | Surcharge, doublement, Surcharge figée, bonus calculé (§3.2, §3.11) | Ogive surchauffée, Post-combustion, Amplificateur, Armer le lanceur, Missile surchargé, Lanceur incandescent |
+| 4 | Verrouillage (§3.3) | Missile marqueur, Ogive de marquage, Missile verrouilleur, Missile de précision |
+| 5 | Coups au hasard (§3.4) | Ogive à dispersion, Missile rebondissant, Missile à ricochets |
 | 6 | Exécution (§3.5) | Coup de grâce, Chasseur de primes |
-| 7 | Calibrage, Rechargement, Perforant, filtre module/cible (§3.6–§3.9) | Calibrage, Rechargement rapide, Obus perforant |
+| 7 | Calibrage, Rechargement, Perforant, filtre module/cible (§3.6–§3.9) | Calibrage, Rechargement rapide, Torpille perforante |
 | 8 | Répétition au tour, réactions (§3.10, §3.13) | Double frappe, Feu à volonté, Cadence de tir |
-| 9 | Destruction (§3.12), après décision sur refonte-destruction.md §3 | Soute piégée |
+| 9 | Destruction (§3.12), après décision sur refonte-destruction.md §3 | Piéger le lanceur |
 
 Chaque lot :
 
@@ -401,11 +403,11 @@ Chaque lot :
 ## 4. Décisions sur les questions ouvertes (décision utilisateur, 2026-11-18)
 
 1. **Ordre de calcul d'un coup** : base + bonus + Surcharge + Verrouillage, puis protections (§3).
-2. **Mise à feu** : Surcharge d'abord, elle profite à ses propres dégâts ; description changée (§2.2, §3.2).
-3. **Essaim** ne se compte pas lui-même (§3.4).
-4. **Obus perforant** : le leurre de la cible reste en place (§3.8).
+2. **Ogive surchauffée** (ex-Mise à feu) : Surcharge d'abord, elle profite à ses propres dégâts ; description changée (§2.2, §3.2).
+3. **Essaim** ne se compte pas lui-même (sans objet : Essaim supprimée le 2026-11-21).
+4. **Torpille perforante** (ex-Obus perforant) : le leurre de la cible reste en place (§3.8).
 5. **Leurre** : `"modules": []` en attendant un module défensif (§2.5).
-6. **Légendaires** : choix repoussé, les 5 restent proposées.
+6. **Légendaires** : 4 gardées sur 5 à la revue du 2026-11-21 (Essaim supprimée).
 7. **Valeurs** : réglage à la main par l'utilisateur dans l'éditeur de cartes d'abord, **puis**
    simulation après les lots 1 à 3 (volume et durée proposés à l'utilisateur avant de la lancer).
 
@@ -413,8 +415,8 @@ Chaque lot :
 
 ## 5. Revue carte par carte (décision utilisateur, 2026-11-21)
 
-Revue des cartes une par une : nom, valeurs, suppression. **Ces choix remplacent les tableaux du
-§2** pour les cartes concernées (le §2 sera réécrit à la fin de la revue).
+Revue des cartes une par une : nom, valeurs, suppression. **Les choix sont reportés au §2**, qui
+fait foi ; cette section garde l'historique et les raisons.
 
 ### 5.1 Noms : quatre familles
 
@@ -474,7 +476,7 @@ Remarques de la revue :
 - **Vocabulaire** : la portée `MEME_COLONNE` (Torpille traversante) est correcte avec la
   convention de combat.md §3.1.1 (l'ennemi derrière ou devant la cible).
 
-### 5.4 Rares et légendaires : revue en cours
+### 5.4 Rares : revue (décision utilisateur, 2026-11-21)
 
 La revue une par une s'arrête aux communes (décision utilisateur : trop long) : les rares sont
 revues d'après un tableau de recommandations, ligne par ligne ; les légendaires, plus tard.
@@ -503,4 +505,21 @@ Remarques :
   dans le deck peuvent donner 60 à tous : **accepté** (décision utilisateur, 2026-11-21).
 - **Coûts des rares** après la revue : 8 à 1⚡, 4 à 2⚡ (Missile incendiaire, Missile à ricochets,
   Missile de précision, Missile surchargé).
-- **Légendaires** : revue plus tard (décision utilisateur, 2026-11-21).
+
+### 5.5 Légendaires : revue (décision utilisateur, 2026-11-21)
+
+| Id | Ancien nom | Nouveau nom | Valeurs décidées | Statut |
+|---|---|---|---|---|
+| CRT_19 | Guerre nucléaire | **Ogive nucléaire** | 3⚡, **15 à tous + Incendie 4**, **munitions illimitées** (était 20 + Incendie 10, 1 munition) : 24 par ennemi sur 3 tours, un peu plus que 3 Ogives lourdes (21) en une seule carte | décidé |
+| CRT_77 | Surcharge critique | **Lanceur incandescent** | 2⚡, 1 munition, double la Surcharge et la fige (inchangé) | décidé |
+| CRT_78 | Feu à volonté | **Feu à volonté** | 2⚡, 1 munition, cartes du Lanceur lancées 1 fois de plus jusqu'à la fin du combat (inchangé) | décidé |
+| CRT_79 | Cadence de tir | **Cadence de tir** | 1⚡, 1 munition, Surcharge +1 par carte du Lanceur jouée jusqu'à la fin du combat (inchangé) | décidé |
+| CRT_80 | Essaim | — | **supprimée** (décision utilisateur) | supprimée |
+
+Remarques :
+
+- **Une munition** pour les trois buffs « jusqu'à la fin du combat » : les rejouer reviendrait à
+  les cumuler (comme les cartes Pouvoir de Slay the Spire). **Ogive nucléaire**, attaque
+  ponctuelle, n'a plus de munitions, ce qui varie les légendaires.
+- Avec Feu à volonté, Ogive nucléaire est lancée 2 fois : 30 + Incendie 8 à tous (combo voulu).
+- **Revue terminée** : 21 communes, 12 rares, 4 légendaires (37 cartes), reportées au §2.
