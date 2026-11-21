@@ -408,3 +408,99 @@ Chaque lot :
 6. **Légendaires** : choix repoussé, les 5 restent proposées.
 7. **Valeurs** : réglage à la main par l'utilisateur dans l'éditeur de cartes d'abord, **puis**
    simulation après les lots 1 à 3 (volume et durée proposés à l'utilisateur avant de la lancer).
+
+---
+
+## 5. Revue carte par carte (décision utilisateur, 2026-11-21)
+
+Revue des cartes une par une : nom, valeurs, suppression. **Ces choix remplacent les tableaux du
+§2** pour les cartes concernées (le §2 sera réécrit à la fin de la revue).
+
+### 5.1 Noms : quatre familles
+
+Les noms des cartes du Lanceur reprennent **quatre noms de base**, rendus uniques par un adjectif
+ou un complément (décision utilisateur) ; quelques cartes gardent un nom hors famille quand il
+est plus clair (Coup de grâce, Rechargement rapide, Calibrage) :
+
+| Famille | Ce que fait la carte |
+|---|---|
+| **Missile** | frappe un ennemi (avec éventuellement un bonus : pioche, électricité, incendie, rebond) |
+| **Torpille** | suit une ligne : ligne avant ou arrière, ennemi derrière la cible, perforation |
+| **Ogive** | explose sur tous les ennemis |
+| **Lanceur** | buffs (Surcharge, répétition), qui agissent sur le module |
+
+Disparaissent : Bombardement, Roquette, Ciel de missiles, Frappe, Tir, Obus.
+
+### 5.2 Ratio dégâts par électricité
+
+Calculé dans deux cas (convention de grille : combat.md §3.1.1) : **6 ennemis** (3 en ligne
+avant, 3 en ligne arrière) et **2 ennemis** (l'un derrière l'autre, même colonne), puis leur
+**moyenne**. Dégâts immédiats seulement, sans Surcharge, Verrouillage ni protections ; l'incendie
+est compté à part (incendie N = N + (N−1) + … + 1 si l'ennemi survit).
+
+### 5.3 Communes (21) : revue terminée
+
+| Id | Ancien nom | Nouveau nom | Coût | Valeurs décidées | 6 ennemis | 2 ennemis | Moyenne |
+|---|---|---|---|---|---|---|---|
+| CRT_13 | Missiles | **Missile à fragmentation** | 2 | 15 sur la cible, 6 aux autres (inchangé) | 22,5 | 10,5 | 16,5 |
+| CRT_14 | Torpille | **Vague de torpilles** | 2 | 10 ligne avant, 8 ligne arrière (inchangé) | 27 | 9 | 18 |
+| CRT_9 | Bombardement | **Ogive légère** | 1 | 5 à tous | 30 | 10 | 20 |
+| CRT_16 | Ligne arrière | **Torpille arrière** | 1 | **9** à la ligne arrière (était 8) | 27 | 9 | 18 |
+| CRT_81 | *(nouvelle)* | **Torpille avant** | 1 | 9 à la ligne avant (carte demandée par l'utilisateur, symétrique de Torpille arrière) | 27 | 9 | 18 |
+| CRT_52 | Roquette | **Mini-missile** | 0 | 4 | 4 gratuits | 4 gratuits | — |
+| CRT_53 | Missile guidé | **Missile guidé** | 1 | 7 + pioche 1 | 7 | 7 | 7 |
+| CRT_54 | Contre-mesures | **Missile de couverture** | 1 | 6 + 5 bouclier au principal | 6 | 6 | 6 |
+| CRT_55 | Mise à feu | **Ogive surchauffée** | 1 | Surcharge 2, puis 3 (+ Surcharge) à tous, soit 5 chacun | 30 | 10 | 20 |
+| CRT_56 | Désignation de cible | **Missile marqueur** | 1 | 5 + Verrouillage 2 | 5 | 5 | 5 |
+| CRT_57 | Marquage de zone | **Ogive de marquage** | 1 | 3 à tous + **Verrouillage 2** à tous (était 1) | 18 | 6 | 12 |
+| CRT_58 | Tir double | **Missiles jumeaux** | 1 | 2 lancements de 4 (champ `lancements`, jouable au lot 1) | 8 | 8 | 8 |
+| CRT_59 | Bombes à sous-munitions | **Ogive à dispersion** | 2 | **5 coups** de 4 au hasard (était 4 coups) | 10 | 10 | 10 |
+| CRT_60 | Coup de grâce | **Coup de grâce** | 1 | 7 ; **+2 électricité** par ennemi tué (était +1) | 7 | 7 | 7 |
+| CRT_61 | Ogive à fragmentation | **Torpille traversante** | 2 | 12 sur la cible + **8** à l'autre ennemi de sa colonne (était 5) | 10 | 10 | 10 |
+| CRT_62 | Tir de barrage | **Torpille de barrage** | 2 | **12** à la ligne avant + **8** bouclier au Lanceur (était 8 + 6) | 18 | 6 | 12 |
+| CRT_63 | Missile chercheur | **Missile rebondissant** | 1 | **5** + 1 rebond de **5** (était 6 + 6) | 10 | 10 | 10 |
+| CRT_64 | Rechargement rapide | **Rechargement rapide** | 0 | 3 + 1 munition à toutes les cartes du Lanceur, **légendaires comprises** (inchangé) | 3 gratuits | 3 gratuits | — |
+| CRT_65 | Missile thermique | **Missile thermique** | 1 | 4 + Incendie 3 (inchangé) | 4 (10 avec l'incendie) | 4 (10) | 4 (10) |
+| CRT_66 | Calibrage | **Calibrage** | 1 | **4**, puis **+3** à chaque usage (était 5 + 2) | 4, 7, 10… | 4, 7, 10… | — |
+| CRT_67 | Obus perforant | **Torpille perforante** | 1 | 9 perforant, 3 munitions (inchangé) | 9 | 9 | 9 |
+
+Remarques de la revue :
+
+- **Ogive surchauffée** fait autant qu'Ogive légère sur la zone et laisse en plus Surcharge 2 :
+  elle la domine (choix assumé par l'utilisateur, à revoir éventuellement en fin de revue).
+- **Torpille de barrage** reste à 2⚡ parce que les communes ont près de 3 fois plus de cartes
+  à 1⚡ qu'à 2⚡ (14 contre 5) ; critère de l'utilisateur : au moins 2 fois plus de cartes à 1⚡.
+- **Coup de grâce** à +2⚡ se rapproche de Chasseur de primes (rare) : à revoir avec elle.
+- **Vocabulaire** : la portée `MEME_COLONNE` (Torpille traversante) est correcte avec la
+  convention de combat.md §3.1.1 (l'ennemi derrière ou devant la cible).
+
+### 5.4 Rares et légendaires : revue en cours
+
+La revue une par une s'arrête aux communes (décision utilisateur : trop long) : les rares sont
+revues d'après un tableau de recommandations, ligne par ligne ; les légendaires, plus tard.
+
+| Id | Ancien nom | Nouveau nom | Valeurs décidées | Statut |
+|---|---|---|---|---|
+| CRT_15 | Ciel de missiles | **Ogive lourde** | 1⚡, **7** à tous (était 8) : moyenne 28 | décidé |
+| CRT_17 | Embrasement | **Missile incendiaire** | 2⚡, 6 + Incendie 8 (inchangé : seule valeur nettement au-dessus de 2 Missiles thermiques, 27 contre 23 sur 3 tours, 42 contre 29 au maximum) | décidé |
+| CRT_51 | Lasers en surchauffe | **Post-combustion** | 1⚡, Surcharge 4, 3 munitions | décidé |
+| CRT_68 | Amplificateur | **Amplificateur** | 1⚡, double la Surcharge, 2 munitions | décidé |
+| CRT_69 | Ricochet | **Missile à ricochets** | 2⚡, **6 + 3 rebonds de 6** (était 8 + 4) : 12/⚡ | décidé |
+| CRT_70 | Chasseur de primes | **Chasseur de primes** | 1⚡, 10 ; par ennemi tué : +2⚡ et **pioche 2** (était 1) | décidé |
+| CRT_71 | Double frappe | **Double frappe** | 1⚡, ce tour : attaques à cible unique lancées 1 fois de plus ; **2 munitions** (était 1) | décidé |
+| CRT_72 | Chargeur automatique | **Armer le lanceur** | 1⚡, pioche 2 + Surcharge 2 | décidé |
+| CRT_73 | Verrouillage total | **Missile verrouilleur** | 1⚡, 4 + Verrouillage 5 | décidé |
+| CRT_74 | Frappe de précision | **Missile de précision** | 2⚡, 8 + 3 par point de Verrouillage de la cible | décidé |
+| CRT_75 | Frappe surchargée | **Missile surchargé** | 2⚡, 6 + 2 par point de Surcharge | décidé |
+| CRT_76 | Soute piégée | **Piéger le lanceur** | **1⚡** (était 2), catégorie **Buff** ; **plus de dégâts immédiats** : à la destruction du Lanceur, **30 à tous les ennemis** (était 6 immédiat + 20) ; **1 munition** (pour limiter le cumul ; la rejouer après un Rechargement est voulu) | décidé |
+
+Remarques :
+
+- **Piéger le lanceur** : le joueur ne contrôle pas la destruction (sacrifice volontaire non codé,
+  refonte-destruction.md), qui lui coûte déjà les cartes du Lanceur : d'où un coût bas et une
+  explosion forte. **1 munition** pour limiter le cumul (décision utilisateur) ; une copie
+  rejouée après Rechargement rapide est voulue. Les munitions comptent par copie : deux copies
+  dans le deck peuvent donner 60 à tous : **accepté** (décision utilisateur, 2026-11-21).
+- **Coûts des rares** après la revue : 8 à 1⚡, 4 à 2⚡ (Missile incendiaire, Missile à ricochets,
+  Missile de précision, Missile surchargé).
+- **Légendaires** : revue plus tard (décision utilisateur, 2026-11-21).

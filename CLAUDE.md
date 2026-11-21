@@ -58,6 +58,11 @@ L'utilisateur conçoit le jeu ; l'agent propose, documente et code. Préférence
   **Lire d'abord `specs/specs.md`** (index court : quelle section dans quel fichier, quel fichier
   lire selon la tâche), puis seulement le fichier utile ; pour la refonte, `specs/refonte.md`. Les références « specs.md §X.Y » du code se
   résolvent avec cet index (numérotation commune à tous les fichiers).
+- **Vocabulaire de la grille de combat** (décision utilisateur, 2026-11-21, `specs/combat.md`
+  §3.1.1) : chaque camp a **2 lignes** (avant, arrière) × **3 colonnes** (gauche, milieu,
+  droite), vues depuis le camp et non depuis l'écran ; « derrière la cible » = même colonne. Le
+  code et les anciens textes disent encore l'inverse (`Colonne.AVANT` = ligne avant,
+  `Rangee` = colonne) : écrire tout nouveau texte avec le vocabulaire retenu.
 - **Tous les documents de conception `.md` vont dans `specs/`** (consigne utilisateur), y compris
   les brouillons de refonte et la conception d'outils (ex. `specs/simulation.md` pour
   `outils/simulation/`), et sont listés dans l'index `specs/specs.md`. Seules exceptions : les
