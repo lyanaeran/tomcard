@@ -595,7 +595,7 @@ def lister_profils() -> list[Profil]:
     for dossier in DOSSIER_SAVES.iterdir():
         fichier = dossier / "profil.json"
         if fichier.is_file():
-            profils.append(profil_depuis_json(fichier.read_text()))
+            profils.append(profil_depuis_json(fichier.read_text(encoding="utf-8")))
     return sorted(profils, key=lambda profil: profil.nom.lower())
 
 
@@ -609,7 +609,7 @@ def creer_profil(nom: str) -> Profil:
 def sauvegarder_profil(profil: Profil) -> None:
     dossier = _dossier_profil(profil.id)
     dossier.mkdir(parents=True, exist_ok=True)
-    (dossier / "profil.json").write_text(profil_vers_json(profil))
+    (dossier / "profil.json").write_text(profil_vers_json(profil), encoding="utf-8")
 
 
 def supprimer_profil(joueur_id: str) -> None:
@@ -628,7 +628,7 @@ def partie_en_cours(joueur_id: str) -> Partie | None:
     if not dossier.exists():
         return None
     for fichier in dossier.iterdir():
-        partie, a_effacer = lire_sauvegarde(fichier.read_text())
+        partie, a_effacer = lire_sauvegarde(fichier.read_text(encoding="utf-8"))
         if a_effacer:
             fichier.unlink()
         elif partie is not None and partie.statut == STATUT_EN_COURS:
@@ -639,7 +639,7 @@ def partie_en_cours(joueur_id: str) -> Partie | None:
 def sauvegarder_partie(joueur_id: str, partie: Partie) -> None:
     dossier = _dossier_parties(joueur_id)
     dossier.mkdir(parents=True, exist_ok=True)
-    (dossier / f"{partie.id}.json").write_text(partie_vers_json(partie))
+    (dossier / f"{partie.id}.json").write_text(partie_vers_json(partie), encoding="utf-8")
 
 
 def marquer_terminee(partie: Partie) -> Partie:

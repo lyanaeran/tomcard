@@ -430,7 +430,8 @@ def main() -> None:
     DOSSIER_RESULTATS.mkdir(exist_ok=True)
     horodatage = datetime.now().strftime("%Y-%m-%d_%H%M")
     (DOSSIER_RESULTATS / f"{horodatage}_combats.json").write_text(
-        json.dumps({"combats": resultats, "enchainements": enchainements, "parametres": vars(options)}, default=str)
+        json.dumps({"combats": resultats, "enchainements": enchainements, "parametres": vars(options)}, default=str),
+        encoding="utf-8",
     )
     sections = [
         ("Robustesse", tableau_robustesse(resultats + enchainements)),
@@ -442,7 +443,7 @@ def main() -> None:
     ]
     texte = "".join(f"## {titre}\n\n{tableau}\n" for titre, tableau in sections)
     texte += f"{len(resultats)} combats isolés et {len(enchainements)} enchaînements en {duree} s.\n"
-    (DOSSIER_RESULTATS / f"{horodatage}_combats.md").write_text(texte)
+    (DOSSIER_RESULTATS / f"{horodatage}_combats.md").write_text(texte, encoding="utf-8")
     print(texte)
 
 

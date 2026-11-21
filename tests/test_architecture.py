@@ -29,7 +29,7 @@ def test_src_gameplay_n_importe_jamais_pyglet():
     fonction qui a besoin de pyglet appartient a src/ui."""
     fautifs = []
     for fichier in _fichiers_python(SRC_GAMEPLAY):
-        arbre = ast.parse(fichier.read_text(), filename=str(fichier))
+        arbre = ast.parse(fichier.read_text(encoding="utf-8"), filename=str(fichier))
         for noeud in ast.walk(arbre):
             if isinstance(noeud, ast.Import) and any(alias.name.split(".")[0] == "pyglet" for alias in noeud.names):
                 fautifs.append(fichier)
@@ -46,7 +46,7 @@ def test_aucun_tirage_aleatoire_direct_sur_le_module_random_global():
     fautifs = []
     for dossier in (RACINE / "src", RACINE / "outils"):
         for fichier in _fichiers_python(dossier):
-            arbre = ast.parse(fichier.read_text(), filename=str(fichier))
+            arbre = ast.parse(fichier.read_text(encoding="utf-8"), filename=str(fichier))
             for noeud in ast.walk(arbre):
                 if not isinstance(noeud, ast.Call):
                     continue
@@ -69,7 +69,7 @@ def test_tous_les_fichiers_src_gameplay_sont_montes_par_web_app_js():
     reellement dans un navigateur/Pyodide (bug reel constate : src/gameplay/journal.py manquant,
     cf. CLAUDE.md "Tester les deux versions" - l'appel direct a bridge.py en Python ne passe pas
     par ce montage et ne l'aurait jamais detecte)."""
-    app_js = (RACINE / "src" / "web" / "app.js").read_text()
+    app_js = (RACINE / "src" / "web" / "app.js").read_text(encoding="utf-8")
     bloc = re.search(r"FICHIERS_A_MONTER\s*=\s*\[(.*?)\];", app_js, re.S)
     assert bloc is not None, "FICHIERS_A_MONTER introuvable dans src/web/app.js"
     fichiers_montes = set(re.findall(r'"([^"]+)"', bloc.group(1)))
@@ -87,9 +87,9 @@ def test_versions_web_accordees():
     """VERSION_WEB (bridge.py), VERSION_CACHE (app.js) et le ?v= d'app.js (index.html) doivent etre
     egaux : app.js recharge la page s'il ne trouve pas la meme version que bridge.py (cf.
     versionsAccordees), il faut donc les incrementer ensemble (src/web/CLAUDE.md)."""
-    bridge = (RACINE / "src" / "web" / "bridge.py").read_text()
-    app_js = (RACINE / "src" / "web" / "app.js").read_text()
-    index = (RACINE / "index.html").read_text()
+    bridge = (RACINE / "src" / "web" / "bridge.py").read_text(encoding="utf-8")
+    app_js = (RACINE / "src" / "web" / "app.js").read_text(encoding="utf-8")
+    index = (RACINE / "index.html").read_text(encoding="utf-8")
     version_bridge = re.search(r'^VERSION_WEB = "(\d+)"', bridge, re.M).group(1)
     version_app = re.search(r'const VERSION_CACHE = "(\d+)";', app_js).group(1)
     version_index = re.search(r'web/app\.js\?v=(\d+)', index).group(1)
