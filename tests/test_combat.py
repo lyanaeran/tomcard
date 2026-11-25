@@ -15,14 +15,14 @@ from src.gameplay.deck import deck_de_depart
 from src.gameplay.ennemi import charger_ennemis
 from src.gameplay.flotte import Flotte
 from src.gameplay.module import charger_modules
-from src.gameplay.position import Colonne, Position, Rangee
+from src.gameplay.position import Ligne, Position, Colonne
 from src.gameplay.statut import Statut
 
-AVANT_GAUCHE = Position(Colonne.AVANT, Rangee.GAUCHE)
-AVANT_MID = Position(Colonne.AVANT, Rangee.MID)
-AVANT_DROITE = Position(Colonne.AVANT, Rangee.DROITE)
-ARRIERE_MID = Position(Colonne.ARRIERE, Rangee.MID)
-ARRIERE_DROITE = Position(Colonne.ARRIERE, Rangee.DROITE)
+AVANT_GAUCHE = Position(Ligne.AVANT, Colonne.GAUCHE)
+AVANT_MID = Position(Ligne.AVANT, Colonne.MID)
+AVANT_DROITE = Position(Ligne.AVANT, Colonne.DROITE)
+ARRIERE_MID = Position(Ligne.ARRIERE, Colonne.MID)
+ARRIERE_DROITE = Position(Ligne.ARRIERE, Colonne.DROITE)
 CARTES = charger_cartes()
 # Valeur de la carte Bouclier (CRT_10), lue dans config/cartes.json pour suivre les reglages
 BOUCLIER_CARTE = CARTES["CRT_10"].valeurs["bouclier"]
@@ -145,7 +145,7 @@ def test_missiles_degats_sur_la_cible_puis_sur_les_autres():
     assert (cible.pv, autre.pv) == (35, 44)
 
 
-def test_torpille_colonne_avant_puis_arriere():
+def test_torpille_ligne_avant_puis_arriere():
     avant, arriere = _ennemi(), _ennemi()
     combat = _combat({AVANT_MID: avant, ARRIERE_DROITE: arriere})
     (torpille,) = _en_main(combat, _carte("CRT_14", "M2"))
@@ -339,7 +339,7 @@ def test_le_boss_frappe_tous_les_modules_et_se_protege_a_la_troisieme_etape():
     assert boss.statuts[Statut.BOUCLIER] == 10
 
 
-def test_miroir_pose_un_renvoi_sur_un_allie_de_la_colonne_avant():
+def test_miroir_pose_un_renvoi_sur_un_allie_de_la_ligne_avant():
     miroir, pat = _ennemi("ENM_MIROIR"), _ennemi()
     combat = _combat({AVANT_MID: pat, ARRIERE_DROITE: miroir})
 

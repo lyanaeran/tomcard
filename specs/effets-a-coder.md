@@ -38,12 +38,18 @@ Exemples avec Surcharge 2 :
 | Carte | Sans | Avec Surcharge 2 | Gain |
 |---|---|---|---|
 | Laser (6, un ennemi) | 6 | 8 | +2 |
-| Laser perçant (8, colonne de 2 ennemis) | 16 | 20 | +4 |
+| Laser perçant (8, ligne de 2 ennemis) | 16 | 20 | +4 |
 | Missiles (15, puis 6 sur 2 autres) | 27 | 33 | +6 |
 | Bombardement (6 sur 3 ennemis) | 18 | 24 | +6 |
 | Laser lancé 2 fois (Salve laser) | 12 | 16 | +4 |
 
-### 1.3 Baisse : à quel moment ? (à préciser)
+### 1.3 Baisse : à quel moment ?
+
+**Décision utilisateur (2026-11-25)** : la règle commune de combat.md §3.5.2 s'applique, tous les
+statuts d'une entité baissent ensemble à la fin du tour de son adversaire. La Surcharge du
+principal baisse donc **à la fin du tour ennemi** (option A ci-dessous) ; celle d'un ennemi, à la
+fin du tour du joueur. Historique de la question :
+
 
 « Baisse de 1 à chaque tour » laisse un choix :
 

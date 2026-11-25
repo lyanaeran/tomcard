@@ -196,7 +196,7 @@ def test_cible_camp_et_case_cliquee():
     assert CibleCarte("Ennemi Tous").camp == Camp.ENNEMI
     assert CibleCarte("Module Principal").camp == Camp.JOUEUR
     assert CibleCarte.ENNEMI_UNIQUE.depend_de_la_case_cliquee
-    assert CibleCarte.ENNEMI_COLONNE.depend_de_la_case_cliquee
+    assert CibleCarte.ENNEMI_LIGNE.depend_de_la_case_cliquee
     assert not CibleCarte.ENNEMI_TOUS.depend_de_la_case_cliquee
     assert not CibleCarte.MODULE_PRINCIPAL.depend_de_la_case_cliquee
 

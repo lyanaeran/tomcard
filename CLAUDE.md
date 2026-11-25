@@ -61,8 +61,8 @@ L'utilisateur conçoit le jeu ; l'agent propose, documente et code. Préférence
 - **Vocabulaire de la grille de combat** (décision utilisateur, 2026-11-21, `specs/combat.md`
   §3.1.1) : chaque camp a **2 lignes** (avant, arrière) × **3 colonnes** (gauche, milieu,
   droite), vues depuis le camp et non depuis l'écran ; « derrière la cible » = même colonne. Le
-  code et les anciens textes disent encore l'inverse (`Colonne.AVANT` = ligne avant,
-  `Rangee` = colonne) : écrire tout nouveau texte avec le vocabulaire retenu.
+  code suit ce vocabulaire depuis le 2026-11-25 (`Ligne`, `Colonne`, portées `LIGNE_…`, cible
+  « Ennemi Ligne ») ; seuls les documents historiques disent encore l'inverse.
 - **Tous les documents de conception `.md` vont dans `specs/`** (consigne utilisateur), y compris
   les brouillons de refonte et la conception d'outils (ex. `specs/simulation.md` pour
   `outils/simulation/`), et sont listés dans l'index `specs/specs.md`. Seules exceptions : les

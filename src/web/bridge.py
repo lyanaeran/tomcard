@@ -66,7 +66,7 @@ from src.gameplay.partie import (
     second_choc_asteroides,
     subir_degats_principal,
 )
-from src.gameplay.position import Colonne, Position, Rangee
+from src.gameplay.position import Ligne, Position, Colonne
 from src.gameplay.statut import Statut
 from src.gameplay.vaisseau import CASES_PAR_EMPLACEMENT
 
@@ -74,29 +74,29 @@ from src.gameplay.vaisseau import CASES_PAR_EMPLACEMENT
 # accueil joueur) ; dans le combat, le principal garde son image entiere (le vaisseau)
 IMAGE_CASE_PRINCIPAL = "assets/modules/principal_avant.png"
 
-# Cases du joueur : le principal occupe les deux cases de la rangee du milieu
+# Cases du joueur : le principal occupe les deux cases de la colonne du milieu
 IDS_MODULES = {
-    "AV_G": Position(Colonne.AVANT, Rangee.GAUCHE),
-    "AV_D": Position(Colonne.AVANT, Rangee.DROITE),
-    "AR_G": Position(Colonne.ARRIERE, Rangee.GAUCHE),
-    "AR_D": Position(Colonne.ARRIERE, Rangee.DROITE),
+    "AV_G": Position(Ligne.AVANT, Colonne.GAUCHE),
+    "AV_D": Position(Ligne.AVANT, Colonne.DROITE),
+    "AR_G": Position(Ligne.ARRIERE, Colonne.GAUCHE),
+    "AR_D": Position(Ligne.ARRIERE, Colonne.DROITE),
 }
-CASE_PRINCIPAL = Position(Colonne.AVANT, Rangee.MID)
+CASE_PRINCIPAL = Position(Ligne.AVANT, Colonne.MID)
 # Emplacement d'un module (Module.emplacement) -> id de case
 IDS_PAR_EMPLACEMENT = {"base": "base", "avant_gauche": "AV_G", "avant_droite": "AV_D", "arriere_gauche": "AR_G", "arriere_droite": "AR_D"}
 IDS_ENNEMIS = {
-    "AV_G": Position(Colonne.AVANT, Rangee.GAUCHE),
-    "AV_M": Position(Colonne.AVANT, Rangee.MID),
-    "AV_D": Position(Colonne.AVANT, Rangee.DROITE),
-    "AR_G": Position(Colonne.ARRIERE, Rangee.GAUCHE),
-    "AR_M": Position(Colonne.ARRIERE, Rangee.MID),
-    "AR_D": Position(Colonne.ARRIERE, Rangee.DROITE),
+    "AV_G": Position(Ligne.AVANT, Colonne.GAUCHE),
+    "AV_M": Position(Ligne.AVANT, Colonne.MID),
+    "AV_D": Position(Ligne.AVANT, Colonne.DROITE),
+    "AR_G": Position(Ligne.ARRIERE, Colonne.GAUCHE),
+    "AR_M": Position(Ligne.ARRIERE, Colonne.MID),
+    "AR_D": Position(Ligne.ARRIERE, Colonne.DROITE),
 }
 _PAIRES_CASES_ENNEMIES = (("AV_G", "AR_G"), ("AV_M", "AR_M"), ("AV_D", "AR_D"))
 
 # Version du contrat entre bridge.py et src/web/app.js : doit etre egale a VERSION_CACHE (app.js),
 # verifie au demarrage par app.js (versionsAccordees) et par tests/test_architecture.py
-VERSION_WEB = "94"
+VERSION_WEB = "95"
 
 combat = None
 # Taille du journal deja transmise : les popups d'une action sont calcules a partir des seules
@@ -166,9 +166,9 @@ def _id_case_module(module: Module) -> str | None:
 
 
 def _id_case_ennemi(ennemi: Ennemi) -> str | None:
-    """Case Avant de la rangee pour un ennemi sur deux cases (le Boss), sinon sa case."""
+    """Case Avant de la colonne pour un ennemi sur deux cases (le Boss), sinon sa case."""
     cases = combat.flotte.cases_de(ennemi)
-    case = next((c for c in cases if c.colonne == Colonne.AVANT), cases[0])
+    case = next((c for c in cases if c.ligne == Ligne.AVANT), cases[0])
     return next(id_case for id_case, position in IDS_ENNEMIS.items() if position == case)
 
 
@@ -303,7 +303,7 @@ def _ennemi_json(ennemi: Ennemi | None, id_case: str, intentions: dict, fusionne
 
 def _ennemis_json(intentions_du_tour: list) -> list:
     """Un objet par case de la grille ennemie (ordre de IDS_ENNEMIS), None si vide. Un ennemi sur
-    les deux cases d'une rangee (le Boss) n'est publie qu'une fois, sur sa case Avant
+    les deux cases d'une colonne (le Boss) n'est publie qu'une fois, sur sa case Avant
     (fusionne=True)."""
     flotte = combat.flotte
     intentions = {id(intention.ennemi): intention for intention in intentions_du_tour}

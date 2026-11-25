@@ -17,7 +17,7 @@ from src.gameplay.flotte import (
     nombre_ennemis_prime,
     placer_ennemis,
 )
-from src.gameplay.position import Colonne, Position, Rangee
+from src.gameplay.position import Ligne, Position, Colonne
 
 
 def _ennemi(id_ennemi):
@@ -25,42 +25,42 @@ def _ennemi(id_ennemi):
 
 
 def test_ordre_de_jeu_avant_puis_arriere_de_droite_a_gauche():
-    """Decision utilisateur : la rangee gauche est en bas de l'ecran."""
+    """Decision utilisateur : la colonne gauche est en bas de l'ecran."""
     arriere_droite, avant_gauche, avant_droite = (_ennemi("ENM_PAT_LE_PIRATE") for _ in range(3))
     flotte = Flotte({
-        Position(Colonne.ARRIERE, Rangee.DROITE): arriere_droite,
-        Position(Colonne.AVANT, Rangee.GAUCHE): avant_gauche,
-        Position(Colonne.AVANT, Rangee.DROITE): avant_droite,
+        Position(Ligne.ARRIERE, Colonne.DROITE): arriere_droite,
+        Position(Ligne.AVANT, Colonne.GAUCHE): avant_gauche,
+        Position(Ligne.AVANT, Colonne.DROITE): avant_droite,
     })
 
     assert flotte.ennemis_vivants() == [avant_droite, avant_gauche, arriere_droite]
 
 
-def test_un_ennemi_sur_deux_cases_compte_une_fois_et_est_dans_les_deux_colonnes():
+def test_un_ennemi_sur_deux_cases_compte_une_fois_et_est_dans_les_deux_lignes():
     boss = _ennemi("ENM_BOSS_PIRATES")
-    flotte = Flotte({Position(Colonne.AVANT, Rangee.MID): boss, Position(Colonne.ARRIERE, Rangee.MID): boss})
+    flotte = Flotte({Position(Ligne.AVANT, Colonne.MID): boss, Position(Ligne.ARRIERE, Colonne.MID): boss})
 
     assert flotte.ennemis_vivants() == [boss]
-    assert flotte.ennemis_vivants_de_colonne(Colonne.ARRIERE) == [boss]
-    assert flotte.rangee_de(boss) == Rangee.MID
+    assert flotte.ennemis_vivants_de_ligne(Ligne.ARRIERE) == [boss]
+    assert flotte.colonne_de(boss) == Colonne.MID
 
 
 def test_le_nombre_de_cases_doit_correspondre_aux_emplacements():
     with pytest.raises(ValueError, match="1 case"):
-        Flotte({Position(Colonne.AVANT, Rangee.MID): _ennemi("ENM_BOSS_PIRATES")})
+        Flotte({Position(Ligne.AVANT, Colonne.MID): _ennemi("ENM_BOSS_PIRATES")})
 
 
 def test_la_flotte_est_vide_quand_tous_les_ennemis_sont_detruits():
     pat = _ennemi("ENM_PAT_LE_PIRATE")
-    flotte = Flotte({Position(Colonne.AVANT, Rangee.MID): pat})
+    flotte = Flotte({Position(Ligne.AVANT, Colonne.MID): pat})
 
     pat.subir_degats(50)
 
-    assert flotte.est_vide() and flotte.ennemi_en(Position(Colonne.AVANT, Rangee.MID)) is None
+    assert flotte.est_vide() and flotte.ennemi_en(Position(Ligne.AVANT, Colonne.MID)) is None
 
 
 def test_les_cases_d_un_ennemi_absent_de_la_flotte_sont_refusees():
-    flotte = Flotte({Position(Colonne.AVANT, Rangee.MID): _ennemi("ENM_PAT_LE_PIRATE")})
+    flotte = Flotte({Position(Ligne.AVANT, Colonne.MID): _ennemi("ENM_PAT_LE_PIRATE")})
 
     with pytest.raises(ValueError, match="absent de cette flotte"):
         flotte.cases_de(_ennemi("ENM_PAT_LE_PIRATE"))
@@ -69,8 +69,8 @@ def test_les_cases_d_un_ennemi_absent_de_la_flotte_sont_refusees():
 # --- Composition des flottes du parcours (refonte-branchement.md 2, decision 4) ---
 
 
-def _colonnes(flotte: Flotte, id_ennemi: str) -> list[Colonne]:
-    return [flotte.cases_de(e)[0].colonne for e in flotte.ennemis if e.id == id_ennemi]
+def _lignes(flotte: Flotte, id_ennemi: str) -> list[Ligne]:
+    return [flotte.cases_de(e)[0].ligne for e in flotte.ennemis if e.id == id_ennemi]
 
 
 def test_nombre_ennemis_prime_1_jusqu_au_niveau_5_puis_2():
@@ -81,22 +81,22 @@ def test_placer_ennemis_protecteurs_a_l_avant_proteges_a_l_arriere():
     for graine in range(10):
         flotte = placer_ennemis([_ennemi("ENM_LE_NETTOYEUR"), _ennemi("ENM_PETIT_JEAN"), _ennemi("ENM_PAT_LE_PIRATE")], random.Random(graine))
 
-        assert _colonnes(flotte, "ENM_PETIT_JEAN") == [Colonne.AVANT]
-        assert _colonnes(flotte, "ENM_LE_NETTOYEUR") == [Colonne.ARRIERE]
+        assert _lignes(flotte, "ENM_PETIT_JEAN") == [Ligne.AVANT]
+        assert _lignes(flotte, "ENM_LE_NETTOYEUR") == [Ligne.ARRIERE]
         # Les autres d'abord a l'avant
-        assert _colonnes(flotte, "ENM_PAT_LE_PIRATE") == [Colonne.AVANT]
+        assert _lignes(flotte, "ENM_PAT_LE_PIRATE") == [Ligne.AVANT]
 
 
 def test_placer_ennemis_un_4e_protecteur_passe_a_l_arriere():
     flotte = placer_ennemis([_ennemi("ENM_PETIT_JEAN") for _ in range(4)], random.Random(1))
 
-    assert sorted(_colonnes(flotte, "ENM_PETIT_JEAN"), key=lambda c: c.value) == [Colonne.AVANT] * 3 + [Colonne.ARRIERE]
+    assert sorted(_lignes(flotte, "ENM_PETIT_JEAN"), key=lambda c: c.value) == [Ligne.AVANT] * 3 + [Ligne.ARRIERE]
 
 
 def test_placer_ennemis_un_4e_protege_passe_a_l_avant():
     flotte = placer_ennemis([_ennemi("ENM_LE_NETTOYEUR") for _ in range(4)], random.Random(1))
 
-    assert sorted(_colonnes(flotte, "ENM_LE_NETTOYEUR"), key=lambda c: c.value) == [Colonne.AVANT] + [Colonne.ARRIERE] * 3
+    assert sorted(_lignes(flotte, "ENM_LE_NETTOYEUR"), key=lambda c: c.value) == [Ligne.AVANT] + [Ligne.ARRIERE] * 3
 
 
 def test_placer_ennemis_refuse_plus_de_6_ennemis_ou_un_ennemi_de_deux_cases():
@@ -124,4 +124,4 @@ def test_flotte_boss_sur_les_deux_cases_du_milieu():
 
     (boss,) = flotte.ennemis
     assert boss.id == ID_BOSS
-    assert flotte.cases_de(boss) == [Position(Colonne.AVANT, Rangee.MID), Position(Colonne.ARRIERE, Rangee.MID)]
+    assert flotte.cases_de(boss) == [Position(Ligne.AVANT, Colonne.MID), Position(Ligne.ARRIERE, Colonne.MID)]

@@ -12,14 +12,14 @@ n'est compte, touche et joue qu'une fois.
 import random
 
 from src.gameplay.ennemi import Ennemi, PlacementEnnemi
-from src.gameplay.position import Colonne, Position, Rangee
+from src.gameplay.position import Ligne, Position, Colonne
 
-# Ordre de jeu des ennemis (decision utilisateur) : colonne avant puis arriere ; dans une colonne,
-# rangee droite, milieu, gauche (la rangee gauche est en bas de l'ecran)
+# Ordre de jeu des ennemis (decision utilisateur) : ligne avant puis arriere ; dans une ligne,
+# colonne droite, milieu, gauche (la colonne gauche est en bas de l'ecran)
 ORDRE_DE_JEU = tuple(
-    Position(colonne, rangee)
-    for colonne in (Colonne.AVANT, Colonne.ARRIERE)
-    for rangee in (Rangee.DROITE, Rangee.MID, Rangee.GAUCHE)
+    Position(ligne, colonne)
+    for ligne in (Ligne.AVANT, Ligne.ARRIERE)
+    for colonne in (Colonne.DROITE, Colonne.MID, Colonne.GAUCHE)
 )
 
 
@@ -47,8 +47,8 @@ class Flotte:
             cases = self.cases_de(ennemi)
             if len(cases) != ennemi.emplacements:
                 raise ValueError(f"Ennemi {ennemi.id} : {len(cases)} case(s) pour {ennemi.emplacements} emplacement(s)")
-            if len({case.rangee for case in cases}) != 1:
-                raise ValueError(f"Ennemi {ennemi.id} : ses cases doivent etre sur la meme rangee")
+            if len({case.colonne for case in cases}) != 1:
+                raise ValueError(f"Ennemi {ennemi.id} : ses cases doivent etre sur la meme colonne")
         if not self._par_case:
             raise ValueError("Une flotte a au moins un ennemi")
 
@@ -61,9 +61,9 @@ class Flotte:
         """Ennemis vivants dans l'ordre de jeu (decision utilisateur, specs.md 13.2.1)."""
         return [ennemi for ennemi in self.ennemis if not ennemi.est_detruit()]
 
-    def ennemis_vivants_de_colonne(self, colonne: Colonne) -> list[Ennemi]:
+    def ennemis_vivants_de_ligne(self, ligne: Ligne) -> list[Ennemi]:
         return [ennemi for ennemi in self.ennemis_vivants() if any(
-            case.colonne == colonne for case in self.cases_de(ennemi)
+            case.ligne == ligne for case in self.cases_de(ennemi)
         )]
 
     def ennemi_en(self, case: Position) -> Ennemi | None:
@@ -80,8 +80,8 @@ class Flotte:
     def cases_vivantes(self) -> list[Position]:
         return [case for case in ORDRE_DE_JEU if self.ennemi_en(case) is not None]
 
-    def rangee_de(self, ennemi: Ennemi) -> Rangee:
-        return self.cases_de(ennemi)[0].rangee
+    def colonne_de(self, ennemi: Ennemi) -> Colonne:
+        return self.cases_de(ennemi)[0].colonne
 
     def est_vide(self) -> bool:
         """Tous les ennemis sont detruits : victoire."""
@@ -100,8 +100,8 @@ ID_BOSS = "ENM_BOSS_PIRATES"
 # par niveau apres le branchement
 COEFFICIENT_PARCOURS = 1
 
-CASES_AVANT = tuple(Position(Colonne.AVANT, rangee) for rangee in Rangee)
-CASES_ARRIERE = tuple(Position(Colonne.ARRIERE, rangee) for rangee in Rangee)
+CASES_AVANT = tuple(Position(Ligne.AVANT, colonne) for colonne in Colonne)
+CASES_ARRIERE = tuple(Position(Ligne.ARRIERE, colonne) for colonne in Colonne)
 
 
 def nombre_ennemis_prime(niveau: int) -> int:
@@ -117,7 +117,7 @@ def placer_ennemis(ennemis: list[Ennemi], aleatoire: random.Random) -> Flotte:
     """Place des ennemis d'une case selon leur preference (specs.md 13, comme
     l'ancien moteur) : les protecteurs d'abord a l'avant, puis les
     proteges a l'arriere, puis les autres a l'avant, sinon a l'arriere ; cases tirees au hasard
-    dans chaque colonne. Au plus 6 ennemis."""
+    dans chaque ligne. Au plus 6 ennemis."""
     if len(ennemis) > len(CASES_AVANT) + len(CASES_ARRIERE):
         raise ValueError(f"{len(ennemis)} ennemis pour {len(CASES_AVANT) + len(CASES_ARRIERE)} cases")
     if any(ennemi.emplacements != 1 for ennemi in ennemis):
@@ -127,10 +127,10 @@ def placer_ennemis(ennemis: list[Ennemi], aleatoire: random.Random) -> Flotte:
     aleatoire.shuffle(arriere)
     places: dict[Position, Ennemi] = {}
     reste = list(ennemis)
-    for preference, colonne in ((PlacementEnnemi.PROTECTEUR_AVANT, avant), (PlacementEnnemi.PROTEGE_ARRIERE, arriere)):
+    for preference, ligne in ((PlacementEnnemi.PROTECTEUR_AVANT, avant), (PlacementEnnemi.PROTEGE_ARRIERE, arriere)):
         for ennemi in [e for e in reste if e.placement == preference]:
-            if colonne:
-                places[colonne.pop(0)] = ennemi
+            if ligne:
+                places[ligne.pop(0)] = ennemi
                 reste.remove(ennemi)
     for ennemi in reste:
         places[(avant or arriere).pop(0)] = ennemi
@@ -155,6 +155,6 @@ def flotte_asteroides(modeles: dict[str, Ennemi], aleatoire: random.Random) -> F
 
 
 def flotte_boss(modeles: dict[str, Ennemi]) -> Flotte:
-    """Flotte du Boss : le Boss des pirates seul, sur les deux cases de la rangee du milieu."""
+    """Flotte du Boss : le Boss des pirates seul, sur les deux cases de la colonne du milieu."""
     boss = modeles[ID_BOSS].pour_combat(COEFFICIENT_PARCOURS)
-    return Flotte({Position(Colonne.AVANT, Rangee.MID): boss, Position(Colonne.ARRIERE, Rangee.MID): boss})
+    return Flotte({Position(Ligne.AVANT, Colonne.MID): boss, Position(Ligne.ARRIERE, Colonne.MID): boss})

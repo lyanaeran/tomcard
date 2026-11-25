@@ -65,7 +65,7 @@ from src.gameplay.partie import (
     subir_degats_principal,
     supprimer_profil,
 )
-from src.gameplay.position import Colonne, Position, Rangee
+from src.gameplay.position import Ligne, Position, Colonne
 
 LANCEUR = charger_modules()["MOD_2"]
 
@@ -306,7 +306,7 @@ def test_flotte_du_boss_au_niveau_10():
 
     (boss,) = combat.flotte.ennemis
     assert boss.id == ID_BOSS
-    assert combat.flotte.cases_de(boss) == [Position(Colonne.AVANT, Rangee.MID), Position(Colonne.ARRIERE, Rangee.MID)]
+    assert combat.flotte.cases_de(boss) == [Position(Ligne.AVANT, Colonne.MID), Position(Ligne.ARRIERE, Colonne.MID)]
 
 
 def test_combat_aventure_asteroides_a_trois_ennemis_places_selon_leur_preference():
@@ -316,11 +316,11 @@ def test_combat_aventure_asteroides_a_trois_ennemis_places_selon_leur_preference
         combat = combat_aventure_asteroides(partie, random.Random(graine))
         assert len(combat.flotte.ennemis) == NOMBRE_ENNEMIS_ASTEROIDES
         for ennemi in combat.flotte.ennemis:
-            colonne = combat.flotte.cases_de(ennemi)[0].colonne
+            ligne = combat.flotte.cases_de(ennemi)[0].ligne
             if ennemi.id == "ENM_PETIT_JEAN":
-                assert colonne == Colonne.AVANT
+                assert ligne == Ligne.AVANT
             if ennemi.id == "ENM_LE_NETTOYEUR":
-                assert colonne == Colonne.ARRIERE
+                assert ligne == Ligne.ARRIERE
 
 
 def _gagner(combat: Combat) -> None:
@@ -445,7 +445,7 @@ def test_deplacer_module_met_a_jour_l_emplacement_et_garde_les_cartes_rattachees
     assert partie.deck[-1] == CartePossedee("CRT_9", "M2")
     # Le combat suivant place bien chaque module a son nouvel emplacement
     combat = combat_depuis_partie(partie, random.Random(1))
-    assert combat.vaisseau.module_en(Position(Colonne.AVANT, Rangee.DROITE)).exemplaire == "M2"
+    assert combat.vaisseau.module_en(Position(Ligne.AVANT, Colonne.DROITE)).exemplaire == "M2"
 
 
 def test_deplacer_le_principal_est_refuse():

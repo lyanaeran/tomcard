@@ -30,7 +30,7 @@ def test_le_controle_detecte_un_invariant_casse():
     assert "carte presente dans deux piles" in controle.violations
 
 
-def test_valeur_d_un_lancement_d_une_carte_de_colonne_ne_compte_que_sa_colonne():
+def test_valeur_d_un_lancement_d_une_carte_de_ligne_ne_compte_que_sa_ligne():
     from outils.simulation.bot import valeur_d_un_lancement
     from src.gameplay.carte import charger_cartes
 

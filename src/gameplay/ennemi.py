@@ -47,7 +47,7 @@ def _verifier_cles(entree: dict, autorisees: set[str], ou: str) -> None:
 
 
 class PlacementEnnemi(Enum):
-    """Colonne preferee de l'ennemi dans la flotte (specs.md 3.2) ; absent si indifferent."""
+    """Ligne preferee de l'ennemi dans la flotte (specs.md 3.2) ; absent si indifferent."""
 
     # Se place devant un autre ennemi pour le proteger (Petit Jean)
     PROTECTEUR_AVANT = auto()
@@ -80,7 +80,7 @@ class CibleEffetEnnemi(Enum):
     TOUS_MODULES = auto()
     # L'ennemi qui joue l'effet
     SOI_MEME = auto()
-    # Un ennemi de la colonne avant de la flotte (lui-meme compris), sinon de la colonne arriere
+    # Un ennemi de la ligne avant de la flotte (lui-meme compris), sinon de la ligne arriere
     # (Miroir : il se protege lui-meme s'il est seul)
     ALLIE_AVANT_SINON_ARRIERE = auto()
 
@@ -169,7 +169,7 @@ class Ennemi:
     taille: str = "S"
     # Nombre de cases occupees dans la flotte (Boss des pirates : 2)
     emplacements: int = 1
-    # Colonne preferee, None si indifferent
+    # Ligne preferee, None si indifferent
     placement: PlacementEnnemi | None = None
 
     # --- Etat en combat : sur la copie de combat seulement ---

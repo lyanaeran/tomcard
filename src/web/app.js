@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "94";
+const VERSION_CACHE = "95";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -579,9 +579,10 @@ function rendreGrilleJoueur() {
         </div>`;
 }
 
-// Une paire (Avant, Arriere) par rangee. Un ennemi sur les deux cases de sa rangee (le Boss) est
-// place explicitement sur les 2 colonnes : sa case Arriere n'est pas publiee par bridge.py.
-const RANGEES_GRILLE_ENNEMIS = [
+// Une paire (Avant, Arriere) par colonne du jeu (gauche, milieu, droite : specs combat.md 3.1.1),
+// affichee sur une rangee de la grille CSS. Un ennemi sur les deux cases de sa colonne (le Boss)
+// est place explicitement sur les 2 lignes : sa case Arriere n'est pas publiee par bridge.py.
+const COLONNES_GRILLE_ENNEMIS = [
     ["AV_G", "AR_G", 1],
     ["AV_M", "AR_M", 2],
     ["AV_D", "AR_D", 3],
@@ -589,15 +590,15 @@ const RANGEES_GRILLE_ENNEMIS = [
 
 function rendreGrilleEnnemis() {
     const parIndex = Object.fromEntries(etatCourant.ennemis.filter(Boolean).map((e) => [e.id, e]));
-    const cellules = RANGEES_GRILLE_ENNEMIS.map(([idAvant, idArriere, ligne]) => {
+    const cellules = COLONNES_GRILLE_ENNEMIS.map(([idAvant, idArriere, rangCss]) => {
         const avant = parIndex[idAvant] ?? null;
         if (avant && avant.fusionne) {
-            return rendreCaseEnnemi(avant, `grid-row:${ligne}; grid-column:1 / span 2;`);
+            return rendreCaseEnnemi(avant, `grid-row:${rangCss}; grid-column:1 / span 2;`);
         }
         const arriere = parIndex[idArriere] ?? null;
         return (
-            rendreCaseEnnemi(avant, `grid-row:${ligne}; grid-column:1;`) +
-            rendreCaseEnnemi(arriere, `grid-row:${ligne}; grid-column:2;`)
+            rendreCaseEnnemi(avant, `grid-row:${rangCss}; grid-column:1;`) +
+            rendreCaseEnnemi(arriere, `grid-row:${rangCss}; grid-column:2;`)
         );
     });
     return `
