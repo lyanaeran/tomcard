@@ -409,7 +409,9 @@ Chaque lot :
 5. **Leurre** : `"modules": []` en attendant un module défensif (§2.5).
 6. **Légendaires** : 4 gardées sur 5 à la revue du 2026-11-21 (Essaim supprimée).
 7. **Valeurs** : réglage à la main par l'utilisateur dans l'éditeur de cartes d'abord, **puis**
-   simulation après les lots 1 à 3 (volume et durée proposés à l'utilisateur avant de la lancer).
+   simulation (volume et durée proposés à l'utilisateur avant de la lancer). Prévue d'abord après
+   les lots 1 à 3, **repoussée après le lot 5** (décision utilisateur, 2026-11-25 :
+   plan-cartes.md §3).
 
 ---
 
