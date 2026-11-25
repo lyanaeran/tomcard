@@ -102,21 +102,22 @@
     },
     {
       "id": "CRT_45",
-      "nom": "Tir incendiaire",
+      "nom": "Laser incendiaire",
       "image": "assets/cartes/attaque.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
       "modules": ["MOD_1"],
-      "cout": 2,
-      "munition": 3,
+      "cout": 1,
+      "munition": null,
       "lancements": 1,
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Ajoute {incendie} points d’incendie sur la cible",
-      "valeurs": { "incendie": 4 },
+      "description": "Inflige {degats} dégâts et {incendie} d'incendie à un ennemi",
+      "valeurs": { "degats": 2, "incendie": 4 },
       "effets": [
+        { "nature": "DEGATS", "valeur": "degats" },
         { "nature": "INCENDIE", "valeur": "incendie" }
       ]
     },
@@ -143,19 +144,19 @@
     {
       "id": "CRT_47",
       "nom": "Laser lourd",
-      "image": "assets/cartes/attaque.png",
+      "image": "assets/cartes/tir_charge.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
       "modules": ["MOD_1"],
-      "cout": 1,
+      "cout": 2,
       "munition": null,
       "lancements": 1,
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
       "description": "Inflige {degats} dégâts à un ennemi unique",
-      "valeurs": { "degats": 12 },
+      "valeurs": { "degats": 14 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" }
       ]
@@ -221,8 +222,311 @@
       ]
     },
     {
+      "id": "CRT_82",
+      "nom": "Laser d'appoint",
+      "image": "assets/cartes/attaque.png",
+      "rarete": "Commune",
+      "categorie": "Attaque",
+      "cible": "Ennemi Unique",
+      "modules": ["MOD_1"],
+      "cout": 0,
+      "munition": null,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Inflige {degats} dégâts à un ennemi. Piochez {pioche} carte",
+      "valeurs": { "degats": 2, "pioche": 1 },
+      "effets": [
+        { "nature": "DEGATS", "valeur": "degats" },
+        { "nature": "PIOCHE", "valeur": "pioche" }
+      ]
+    },
+    {
+      "id": "CRT_84",
+      "nom": "Laser double",
+      "image": "assets/cartes/attaque.png",
+      "rarete": "Commune",
+      "categorie": "Attaque",
+      "cible": "Ennemi Unique",
+      "modules": ["MOD_1"],
+      "cout": 1,
+      "munition": null,
+      "lancements": 2,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Inflige {degats} dégâts à un ennemi, deux fois",
+      "valeurs": { "degats": 3 },
+      "effets": [
+        { "nature": "DEGATS", "valeur": "degats" }
+      ]
+    },
+    {
+      "id": "CRT_86",
+      "nom": "Bouclier d'escadre",
+      "image": "assets/cartes/bouclier.png",
+      "rarete": "Commune",
+      "categorie": "Defense",
+      "cible": "Module Tous",
+      "modules": ["MOD_1"],
+      "cout": 1,
+      "munition": null,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Donne {bouclier} de bouclier à tous vos modules",
+      "valeurs": { "bouclier": 4 },
+      "effets": [
+        { "nature": "BOUCLIER", "valeur": "bouclier" }
+      ]
+    },
+    {
+      "id": "CRT_87",
+      "nom": "Bouclier avant",
+      "image": "assets/cartes/defense.png",
+      "rarete": "Commune",
+      "categorie": "Defense",
+      "cible": "Module Avant",
+      "modules": ["MOD_1"],
+      "cout": 1,
+      "munition": null,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Donne {bouclier} de bouclier aux modules de la ligne avant",
+      "valeurs": { "bouclier": 6 },
+      "effets": [
+        { "nature": "BOUCLIER", "valeur": "bouclier" }
+      ]
+    },
+    {
+      "id": "CRT_88",
+      "nom": "Bouclier réactif",
+      "image": "assets/cartes/bouclier.png",
+      "rarete": "Commune",
+      "categorie": "Defense",
+      "cible": "Module Unique",
+      "modules": ["MOD_1"],
+      "cout": 1,
+      "munition": null,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Donne {bouclier} de bouclier à un module. Piochez {pioche} carte",
+      "valeurs": { "bouclier": 4, "pioche": 1 },
+      "effets": [
+        { "nature": "BOUCLIER", "valeur": "bouclier" },
+        { "nature": "PIOCHE", "valeur": "pioche" }
+      ]
+    },
+    {
+      "id": "CRT_89",
+      "nom": "Bouclier chargé",
+      "image": "assets/cartes/champ_electromagnetique.png",
+      "rarete": "Commune",
+      "categorie": "Defense",
+      "cible": "Module Principal",
+      "modules": ["MOD_1"],
+      "cout": 2,
+      "munition": null,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Donne {bouclier} de bouclier au module principal",
+      "valeurs": { "bouclier": 14 },
+      "effets": [
+        { "nature": "BOUCLIER", "valeur": "bouclier" }
+      ]
+    },
+    {
+      "id": "CRT_91",
+      "nom": "Réparation rapide",
+      "image": "assets/cartes/reparation.png",
+      "rarete": "Commune",
+      "categorie": "Reparation",
+      "cible": "Module Principal",
+      "modules": ["MOD_1"],
+      "cout": 0,
+      "munition": 2,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Répare le module principal pour {reparation}",
+      "valeurs": { "reparation": 4 },
+      "effets": [
+        { "nature": "REPARATION", "valeur": "reparation" }
+      ]
+    },
+    {
+      "id": "CRT_92",
+      "nom": "Réparation de champ",
+      "image": "assets/cartes/reparation.png",
+      "rarete": "Commune",
+      "categorie": "Reparation",
+      "cible": "Module Tous",
+      "modules": ["MOD_1"],
+      "cout": 1,
+      "munition": 2,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Répare tous vos modules pour {reparation}",
+      "valeurs": { "reparation": 4 },
+      "effets": [
+        { "nature": "REPARATION", "valeur": "reparation" }
+      ]
+    },
+    {
+      "id": "CRT_93",
+      "nom": "Réacteur d'appoint",
+      "image": "assets/cartes/batteries.png",
+      "rarete": "Commune",
+      "categorie": "Outils",
+      "cible": "Module Principal",
+      "modules": ["MOD_1"],
+      "cout": 0,
+      "munition": 2,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Donne {electricite} électricité en plus ce tour",
+      "valeurs": { "electricite": 1 },
+      "effets": [
+        { "nature": "GAIN_ELECTRICITE", "valeur": "electricite" }
+      ]
+    },
+    {
+      "id": "CRT_96",
+      "nom": "Protocole d'analyse",
+      "image": "assets/cartes/scanner.png",
+      "rarete": "Commune",
+      "categorie": "Outils",
+      "cible": "Module Principal",
+      "modules": ["MOD_1"],
+      "cout": 1,
+      "munition": null,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Piochez {pioche} cartes",
+      "valeurs": { "pioche": 2 },
+      "effets": [
+        { "nature": "PIOCHE", "valeur": "pioche" }
+      ]
+    },
+    {
+      "id": "CRT_98",
+      "nom": "Laser de siège",
+      "image": "assets/cartes/tourelle.png",
+      "rarete": "Rare",
+      "categorie": "Attaque",
+      "cible": "Ennemi Unique",
+      "modules": ["MOD_1"],
+      "cout": 2,
+      "munition": null,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Inflige {degats} dégâts à un ennemi",
+      "valeurs": { "degats": 20 },
+      "effets": [
+        { "nature": "DEGATS", "valeur": "degats" }
+      ]
+    },
+    {
+      "id": "CRT_101",
+      "nom": "Bouclier intégral",
+      "image": "assets/cartes/champ_electromagnetique.png",
+      "rarete": "Rare",
+      "categorie": "Defense",
+      "cible": "Module Tous",
+      "modules": ["MOD_1"],
+      "cout": 2,
+      "munition": null,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Donne {bouclier} de bouclier à tous vos modules",
+      "valeurs": { "bouclier": 9 },
+      "effets": [
+        { "nature": "BOUCLIER", "valeur": "bouclier" }
+      ]
+    },
+    {
+      "id": "CRT_103",
+      "nom": "Réparation complète",
+      "image": "assets/cartes/reparation.png",
+      "rarete": "Rare",
+      "categorie": "Reparation",
+      "cible": "Module Principal",
+      "modules": ["MOD_1"],
+      "cout": 2,
+      "munition": 1,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Répare le module principal pour {reparation}",
+      "valeurs": { "reparation": 25 },
+      "effets": [
+        { "nature": "REPARATION", "valeur": "reparation" }
+      ]
+    },
+    {
+      "id": "CRT_104",
+      "nom": "Réacteur en surrégime",
+      "image": "assets/cartes/generateur_electricite.png",
+      "rarete": "Rare",
+      "categorie": "Outils",
+      "cible": "Module Principal",
+      "modules": ["MOD_1"],
+      "cout": 0,
+      "munition": 1,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Donne {electricite} électricité en plus ce tour",
+      "valeurs": { "electricite": 2 },
+      "effets": [
+        { "nature": "GAIN_ELECTRICITE", "valeur": "electricite" }
+      ]
+    },
+    {
+      "id": "CRT_110",
+      "nom": "Laser orbital",
+      "image": "assets/cartes/onde_de_choc.png",
+      "rarete": "Legendaire",
+      "categorie": "Attaque",
+      "cible": "Ennemi Unique",
+      "modules": ["MOD_1"],
+      "cout": 3,
+      "munition": null,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Inflige {degats_cible} dégâts à un ennemi et {degats_autres} à tous les autres",
+      "valeurs": { "degats_cible": 25, "degats_autres": 10 },
+      "effets": [
+        { "nature": "DEGATS", "valeur": "degats_cible" },
+        { "nature": "DEGATS", "valeur": "degats_autres", "portee": "AUTRES_ENNEMIS" }
+      ]
+    },
+    {
       "id": "CRT_13",
-      "nom": "Missiles",
+      "nom": "Missile à fragmentation",
       "image": "assets/cartes/missile_guide.png",
       "rarete": "Commune",
       "categorie": "Attaque",
@@ -243,7 +547,7 @@
     },
     {
       "id": "CRT_14",
-      "nom": "Torpille",
+      "nom": "Vague de torpilles",
       "image": "assets/cartes/plasma.png",
       "rarete": "Commune",
       "categorie": "Attaque",
@@ -264,7 +568,7 @@
     },
     {
       "id": "CRT_9",
-      "nom": "Bombardement",
+      "nom": "Ogive légère",
       "image": "assets/cartes/bombe.png",
       "rarete": "Commune",
       "categorie": "Attaque",
@@ -277,14 +581,14 @@
       "jouable": "oui",
       "refonte": true,
       "description": "Inflige {degats} dégâts à tous les ennemis",
-      "valeurs": { "degats": 6 },
+      "valeurs": { "degats": 5 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" }
       ]
     },
     {
       "id": "CRT_16",
-      "nom": "Ligne arrière",
+      "nom": "Torpille arrière",
       "image": "assets/cartes/tir_groupe.png",
       "rarete": "Commune",
       "categorie": "Attaque",
@@ -297,14 +601,116 @@
       "jouable": "oui",
       "refonte": true,
       "description": "Inflige {degats} dégâts à tous les ennemis de la ligne arrière",
-      "valeurs": { "degats": 8 },
+      "valeurs": { "degats": 9 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" }
       ]
     },
     {
+      "id": "CRT_81",
+      "nom": "Torpille avant",
+      "image": "assets/cartes/tir_groupe.png",
+      "rarete": "Commune",
+      "categorie": "Attaque",
+      "cible": "Ennemi Avant",
+      "modules": ["MOD_2"],
+      "cout": 1,
+      "munition": null,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Inflige {degats} dégâts à tous les ennemis de la ligne avant",
+      "valeurs": { "degats": 9 },
+      "effets": [
+        { "nature": "DEGATS", "valeur": "degats" }
+      ]
+    },
+    {
+      "id": "CRT_52",
+      "nom": "Mini-missile",
+      "image": "assets/cartes/missile_guide.png",
+      "rarete": "Commune",
+      "categorie": "Attaque",
+      "cible": "Ennemi Unique",
+      "modules": ["MOD_2"],
+      "cout": 0,
+      "munition": null,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Inflige {degats} dégâts à un ennemi",
+      "valeurs": { "degats": 4 },
+      "effets": [
+        { "nature": "DEGATS", "valeur": "degats" }
+      ]
+    },
+    {
+      "id": "CRT_53",
+      "nom": "Missile guidé",
+      "image": "assets/cartes/missiles_guides.png",
+      "rarete": "Commune",
+      "categorie": "Attaque",
+      "cible": "Ennemi Unique",
+      "modules": ["MOD_2"],
+      "cout": 1,
+      "munition": null,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Inflige {degats} dégâts à un ennemi. Piochez {pioche} carte",
+      "valeurs": { "degats": 7, "pioche": 1 },
+      "effets": [
+        { "nature": "DEGATS", "valeur": "degats" },
+        { "nature": "PIOCHE", "valeur": "pioche" }
+      ]
+    },
+    {
+      "id": "CRT_58",
+      "nom": "Missiles jumeaux",
+      "image": "assets/cartes/mitrailleuse.png",
+      "rarete": "Commune",
+      "categorie": "Attaque",
+      "cible": "Ennemi Unique",
+      "modules": ["MOD_2"],
+      "cout": 1,
+      "munition": null,
+      "lancements": 2,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Inflige {degats} dégâts à un ennemi, deux fois",
+      "valeurs": { "degats": 4 },
+      "effets": [
+        { "nature": "DEGATS", "valeur": "degats" }
+      ]
+    },
+    {
+      "id": "CRT_65",
+      "nom": "Missile thermique",
+      "image": "assets/cartes/zone_de_feu.png",
+      "rarete": "Commune",
+      "categorie": "Attaque",
+      "cible": "Ennemi Unique",
+      "modules": ["MOD_2"],
+      "cout": 1,
+      "munition": null,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Inflige {degats} dégâts et {incendie} d'incendie à un ennemi",
+      "valeurs": { "degats": 4, "incendie": 3 },
+      "effets": [
+        { "nature": "DEGATS", "valeur": "degats" },
+        { "nature": "INCENDIE", "valeur": "incendie" }
+      ]
+    },
+    {
       "id": "CRT_15",
-      "nom": "Ciel de missiles",
+      "nom": "Ogive lourde",
       "image": "assets/cartes/missiles.png",
       "rarete": "Rare",
       "categorie": "Attaque",
@@ -317,15 +723,15 @@
       "jouable": "oui",
       "refonte": true,
       "description": "Inflige {degats} dégâts à tous les ennemis",
-      "valeurs": { "degats": 8 },
+      "valeurs": { "degats": 7 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" }
       ]
     },
     {
       "id": "CRT_17",
-      "nom": "Embrasement",
-      "image": "assets/cartes/surcharge.png",
+      "nom": "Missile incendiaire",
+      "image": "assets/cartes/zone_de_feu.png",
       "rarete": "Rare",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
@@ -336,9 +742,10 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Ajoute {incendie} points d’incendie à un ennemi",
-      "valeurs": { "incendie": 8 },
+      "description": "Inflige {degats} dégâts et {incendie} d'incendie à un ennemi",
+      "valeurs": { "degats": 6, "incendie": 8 },
       "effets": [
+        { "nature": "DEGATS", "valeur": "degats" },
         { "nature": "INCENDIE", "valeur": "incendie" }
       ]
     },
@@ -349,7 +756,7 @@
       "rarete": "Rare",
       "categorie": "Defense",
       "cible": "Module Unique",
-      "modules": ["MOD_2"],
+      "modules": [],
       "cout": 1,
       "munition": null,
       "lancements": 1,
@@ -364,7 +771,7 @@
     },
     {
       "id": "CRT_19",
-      "nom": "Guerre nucléaire",
+      "nom": "Ogive nucléaire",
       "image": "assets/cartes/alerte_generale.png",
       "rarete": "Legendaire",
       "categorie": "Attaque",
@@ -376,9 +783,10 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Ajoute {incendie} points d’incendie à tous les ennemis",
-      "valeurs": { "incendie": 8 },
+      "description": "Inflige {degats} dégâts et {incendie} d'incendie à tous les ennemis",
+      "valeurs": { "degats": 15, "incendie": 4 },
       "effets": [
+        { "nature": "DEGATS", "valeur": "degats" },
         { "nature": "INCENDIE", "valeur": "incendie" }
       ]
     },

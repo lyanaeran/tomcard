@@ -31,10 +31,10 @@ function verifier(condition, message) {
     page.on("dialog", (d) => d.accept());
     await page.goto(URL + "#editeur");
     await page.waitForSelector("#ecran-editeur-liste:not(.cachee)", { timeout: 180000 });
-    verifier((await page.locator("#tableau-editeur tbody tr").count()) === 20, "20 cartes dans la liste");
+    verifier((await page.locator("#tableau-editeur tbody tr").count()) === 40, "40 cartes dans la liste");
     const entetes = (await page.locator("#tableau-editeur th").allTextContents()).map((texte) => texte.replace(/[▲▼]/g, "").trim());
     verifier(entetes.join("|") === "|Nom|Coût|Rareté|Catégorie|Module|Munitions|Description", `colonnes (${entetes.join("|")})`);
-    verifier((await page.locator('#tableau-editeur tr[data-id="CRT_47"] .col-description').textContent()).includes("12"), "description avec les valeurs remplacées");
+    verifier((await page.locator('#tableau-editeur tr[data-id="CRT_47"] .col-description').textContent()).includes("14"), "description avec les valeurs remplacées");
     const debordement = await page.evaluate(() => {
         const c = document.getElementById("conteneur-tableau-editeur");
         return { page: document.documentElement.scrollWidth - window.innerWidth, tableau: c.scrollWidth - c.clientWidth, lignesVisibles: Math.floor(c.clientHeight / 32) };
@@ -45,12 +45,12 @@ function verifier(condition, message) {
     await page.locator('#tableau-editeur tr[data-id="CRT_47"]').click();
     await page.waitForSelector("#ecran-editeur-carte:not(.cachee)");
     await page.screenshot({ path: `${captures}/2_detail.png` });
-    verifier((await page.locator(".apercu-editeur").textContent()).includes("12"), "aperçu de la description");
+    verifier((await page.locator(".apercu-editeur").textContent()).includes("14"), "aperçu de la description");
     verifier((await page.locator("legend", { hasText: "Effets" }).count()) === 0, "pas de saisie des effets");
     const cout = page.locator('.saisie-editeur[data-chemin=\'["cout"]\']');
-    await cout.fill("2");
+    await cout.fill("3");
     await cout.blur();
-    verifier((await page.locator(".rappel-jeu").first().textContent()).includes("jeu : 1"), "rappel de la valeur du jeu");
+    verifier((await page.locator(".rappel-jeu").first().textContent()).includes("jeu : 2"), "rappel de la valeur du jeu");
     verifier((await page.locator("#titre-editeur-carte .pastille-modifiee").count()) === 1, "pastille Modifiée dans le détail");
     await page.screenshot({ path: `${captures}/3_detail_modifie.png`, fullPage: true });
     await page.locator("#bouton-fermer-carte-editeur").click();
@@ -62,9 +62,9 @@ function verifier(condition, message) {
 
     await page.locator("#bouton-nouvelle-carte-editeur").click();
     await page.waitForSelector("#ecran-editeur-carte:not(.cachee)");
-    // Id propose : le premier CRT_n libre apres les cartes du jeu (CRT_52 depuis l'ajout de CRT_51)
+    // Id propose : le premier CRT_n libre apres les cartes du jeu (CRT_111 depuis le lot 1 du plan des cartes)
     const idNouvelle = (await page.locator("#titre-editeur-carte").textContent()).match(/CRT_\d+/)[0];
-    verifier(idNouvelle === "CRT_52", "nouvelle carte : premier id libre proposé");
+    verifier(idNouvelle === "CRT_111", "nouvelle carte : premier id libre proposé");
     const nom = page.locator('.saisie-editeur[data-chemin=\'["nom"]\']');
     await nom.fill("Tir de barrage");
     await nom.blur();
@@ -102,7 +102,7 @@ function verifier(condition, message) {
     const texte = await page.evaluate(() => navigator.clipboard.readText());
     const cartes = JSON.parse(texte).cartes;
     verifier(cartes.length === 3, "copie : seulement les 3 cartes modifiées ou ajoutées");
-    verifier(cartes.find((c) => c.id === "CRT_47").cout === 2 && cartes.find((c) => c.id === "CRT_16").jouable === "supprimee", "copie : modifications appliquées");
+    verifier(cartes.find((c) => c.id === "CRT_47").cout === 3 && cartes.find((c) => c.id === "CRT_16").jouable === "supprimee", "copie : modifications appliquées");
     const nouvelle = cartes[cartes.length - 1];
     verifier(nouvelle.id === idNouvelle && nouvelle.modules[0] === "MOD_2", "copie : nouvelle carte à la fin, avec son module");
     verifier(nouvelle.effets.length === 0, "copie : effets de la nouvelle carte laissés à l'agent");

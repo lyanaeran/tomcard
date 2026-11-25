@@ -43,10 +43,12 @@ def test_les_cartes_des_modules_existent_dans_cartes_json():
         assert set(module.cartes) <= cartes.keys(), module.id
 
 
-def test_chaque_carte_revue_appartient_a_un_module():
+def test_chaque_carte_rattachee_a_un_module_figure_dans_ce_module():
+    # Une carte peut n'appartenir a aucun module : le Leurre attend un futur module defensif
+    # (decision utilisateur, 2026-11-18) et n'est alors propose nulle part
     ids_modules = {id_carte for module in charger_modules().values() for id_carte in module.cartes}
 
-    assert ids_modules == charger_cartes().keys()
+    assert ids_modules == {id_carte for id_carte, carte in charger_cartes().items() if carte.modules}
 
 
 # --- Exemplaires ---

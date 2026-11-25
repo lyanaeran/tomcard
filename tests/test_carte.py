@@ -70,15 +70,15 @@ def test_une_carte_jouable_n_utilise_que_des_effets_codes():
 def test_description_affichee_remplace_les_valeurs_nommees():
     cartes = _cartes()
 
-    assert cartes["Missiles"].description_affichee() == "Inflige 15 dégâts à un ennemi et 6 à tous les autres"
-    assert cartes["Torpille"].description_affichee() == "Inflige 10 dégâts à la ligne avant et 8 à la ligne arrière"
+    assert cartes["Missile à fragmentation"].description_affichee() == "Inflige 15 dégâts à un ennemi et 6 à tous les autres"
+    assert cartes["Vague de torpilles"].description_affichee() == "Inflige 10 dégâts à la ligne avant et 8 à la ligne arrière"
     assert cartes["Laser"].description_affichee() == "Inflige 6 dégâts à un ennemi unique"
-    assert cartes["Tir incendiaire"].description_affichee() == "Ajoute 4 points d’incendie sur la cible"
+    assert cartes["Laser incendiaire"].description_affichee() == "Inflige 2 dégâts et 4 d'incendie à un ennemi"
     assert cartes["Leurre"].description_affichee() == "Annule la prochaine attaque ciblant le module"
 
 
 def test_les_effets_lisent_leur_valeur_sur_la_carte():
-    missiles = _cartes()["Missiles"]
+    missiles = _cartes()["Missile à fragmentation"]
 
     assert [missiles.valeur_de(effet) for effet in missiles.effets] == [15, 6]
     assert missiles.effets[1].portee == PorteeEffet.AUTRES_ENNEMIS
@@ -131,7 +131,7 @@ def test_bouclier_incendie_et_leurre_posent_le_statut_correspondant():
     """Une seule source pour les regles de cumul et d'extinction : statut.py."""
     cartes = _cartes()
 
-    assert cartes["Embrasement"].effets[0].nature.statut_pose == Statut.INCENDIE
+    assert cartes["Missile incendiaire"].effets[1].nature.statut_pose == Statut.INCENDIE
     assert cartes["Bouclier"].effets[0].nature.statut_pose == Statut.BOUCLIER
     assert NatureEffet.ANNULATION_PROCHAINE_ATTAQUE.statut_pose == Statut.LEURRE
     assert cartes["Laser"].effets[0].nature.statut_pose is None

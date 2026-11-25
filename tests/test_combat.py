@@ -162,7 +162,7 @@ def test_un_ennemi_sur_deux_cases_n_est_touche_qu_une_fois_par_effet():
 
     combat.jouer_carte(bombardement, ARRIERE_MID)
 
-    assert boss.pv == 144
+    assert boss.pv == boss.pv_max - CARTES["CRT_9"].valeurs["degats"]
 
 
 # --- Lancements, munitions, repetition (4.3) ---
@@ -286,7 +286,8 @@ def test_carte_dont_le_module_meurt_pendant_qu_elle_est_jouee_part_hors_service(
 
     combat.jouer_carte(laser_lourd, AVANT_MID)
 
-    assert combat.vaisseau.module_d_exemplaire("M2").pv_combat == 8
+    lanceur = combat.vaisseau.module_d_exemplaire("M2")
+    assert lanceur.pv_combat == lanceur.pv_max - CARTES["CRT_47"].valeurs["degats"]
     combat.electricite = 3
     combat.deck.main = [laser_lourd2 := _carte("CRT_47", "M2")]
     combat.jouer_carte(laser_lourd2, AVANT_MID)
@@ -507,8 +508,9 @@ def test_carte_lancee_deux_fois_un_seul_cout_et_effets_a_chaque_lancement():
     combat.jouer_carte(laser, AVANT_MID)
     combat.jouer_carte(bouclier, AVANT_MID)
 
-    assert combat.electricite == 1  # 3 - 1 - 1
-    assert combat.flotte.ennemi_en(AVANT_MID).pv == 26  # 50 - 12 - 12
+    assert combat.electricite == 3 - laser.cout - bouclier.cout
+    ennemi = combat.flotte.ennemi_en(AVANT_MID)
+    assert ennemi.pv == ennemi.pv_max - 2 * laser.valeurs["degats"]
     assert combat.vaisseau.principal.statuts[Statut.BOUCLIER] == 2 * BOUCLIER_CARTE
 
 
