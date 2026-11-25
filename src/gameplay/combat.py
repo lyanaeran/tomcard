@@ -41,6 +41,8 @@ CAMP_PAR_NATURE = {
     NatureEffet.BOUCLIER: Camp.JOUEUR,
     NatureEffet.REPARATION: Camp.JOUEUR,
     NatureEffet.ANNULATION_PROCHAINE_ATTAQUE: Camp.JOUEUR,
+    NatureEffet.RENVOI: Camp.JOUEUR,
+    NatureEffet.RETRAIT_BOUCLIER: Camp.ENNEMI,
 }
 
 Entite = Module | Ennemi
@@ -66,6 +68,8 @@ class NatureEvenement(Enum):
     RENVOI = auto()
     # Statut pose (cible, statut, valeur : intensite posee)
     STATUT_POSE = auto()
+    # Statut retire par une carte (cible, statut, valeur : intensite reellement retiree)
+    STATUT_RETIRE = auto()
     # Reparation (cible, valeur : PV rendus, pv_restants)
     REPARATION = auto()
     # Incendie en fin de tour (cible, valeur : intensite, et le detail des degats)
@@ -365,6 +369,18 @@ class Combat:
         if effet.portee == PorteeEffet.AUTRES_ENNEMIS:
             choisi = self.flotte.ennemi_en(case)
             return [ennemi for ennemi in self.flotte.ennemis_vivants() if ennemi is not choisi]
+        if effet.portee == PorteeEffet.MEME_COLONNE:
+            # L'ennemi de l'autre case de la colonne ; un ennemi sur les deux cases (le Boss) est la
+            # cible elle-meme, il n'est pas touche une seconde fois
+            choisi = self.flotte.ennemi_en(case)
+            autre_ligne = Ligne.ARRIERE if case.ligne == Ligne.AVANT else Ligne.AVANT
+            autre = self.flotte.ennemi_en(Position(autre_ligne, case.colonne))
+            return [autre] if autre is not None and autre is not choisi and not autre.est_detruit() else []
+        if effet.portee == PorteeEffet.MODULE_PRINCIPAL:
+            return [self.vaisseau.principal]
+        if effet.portee == PorteeEffet.MODULE_DE_LA_CARTE:
+            module = self.vaisseau.module_d_exemplaire(carte.exemplaire_module)
+            return [module] if module is not None and not module.est_detruit() else []
         ligne = Ligne.AVANT if effet.portee == PorteeEffet.LIGNE_AVANT_ENNEMIE else Ligne.ARRIERE
         return self.flotte.ennemis_vivants_de_ligne(ligne)
 
@@ -388,6 +404,11 @@ class Combat:
                 if not isinstance(cible, Ennemi):
                     raise ValueError(f"Carte {carte.id} : degats sur un module non geres")
                 self._attaquer(carte, cible, valeur, renvoi_vers=self._module_qui_recoit_le_renvoi(carte))
+            elif nature == NatureEffet.RETRAIT_BOUCLIER:
+                retire = cible.statuts.retirer(Statut.BOUCLIER, valeur)
+                self._noter(
+                    NatureEvenement.STATUT_RETIRE, source=carte, cible=cible, valeur=retire, statut=Statut.BOUCLIER,
+                )
             elif nature == NatureEffet.REPARATION:
                 pv_avant = cible.pv_combat
                 cible.reparer(valeur)

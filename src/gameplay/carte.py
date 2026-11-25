@@ -121,9 +121,15 @@ class NatureEffet(Enum):
     # L'ennemi inflige `valeur` degats de moins par attaque (Tordre le canon)
     REDUCTION_DEGATS = auto()
     # Pose le statut LEURRE sur le module touche : annule sa prochaine attaque recue, sans valeur
-    # (Leurre). Pas de nature "renvoi" : le renvoi n'est pose que par l'ennemi Miroir pour l'instant
-    # (decision utilisateur), la carte Renvoi du Blindage sera revue avec son module
+    # (Leurre)
     ANNULATION_PROCHAINE_ATTAQUE = auto()
+    # Pose le statut RENVOI d'intensite `valeur` sur le module touche : il renvoie a l'ennemi qui
+    # l'attaque les degats recus, jusqu'a son intensite (Bouclier reflechissant, decision
+    # utilisateur du 2026-11-22 ; memes regles que le renvoi de Miroir, specs.md 3.5)
+    RENVOI = auto()
+    # Retire `valeur` de bouclier a l'ennemi touche, sans toucher a son renvoi ni a son leurre
+    # (Laser disrupteur, decision utilisateur du 2026-11-22)
+    RETRAIT_BOUCLIER = auto()
     # L'ennemi touche attaque un de ses allies au hasard au lieu du joueur, sans valeur (Tir allie)
     REDIRECTION_CIBLE = auto()
     # Donne `valeur` electricite en plus pour ce tour (aucune carte pour l'instant)
@@ -153,6 +159,7 @@ STATUT_PAR_NATURE = {
     NatureEffet.BOUCLIER: Statut.BOUCLIER,
     NatureEffet.INCENDIE: Statut.INCENDIE,
     NatureEffet.ANNULATION_PROCHAINE_ATTAQUE: Statut.LEURRE,
+    NatureEffet.RENVOI: Statut.RENVOI,
 }
 
 # Natures dont l'effet peut avoir une duree en tours (statuts a duree, geres plus tard :
@@ -170,6 +177,15 @@ class PorteeEffet(Enum):
     # Ligne avant / arriere de la flotte ennemie (Torpille : degats a l'avant, puis a l'arriere)
     LIGNE_AVANT_ENNEMIE = auto()
     LIGNE_ARRIERE_ENNEMIE = auto()
+    # L'autre ennemi de la colonne de la case choisie, derriere ou devant elle (Torpille
+    # traversante ; vocabulaire de specs.md 3.1.1)
+    MEME_COLONNE = auto()
+    # Le module principal, quelle que soit la cible de la carte (Missile de couverture : degats a
+    # un ennemi et bouclier au principal)
+    MODULE_PRINCIPAL = auto()
+    # Le module auquel la carte est rattachee (exemplaire_module), rien s'il est detruit (Torpille
+    # de barrage : bouclier au Lanceur)
+    MODULE_DE_LA_CARTE = auto()
 
     @property
     def camp(self) -> "Camp | None":
@@ -183,6 +199,9 @@ _CAMP_PAR_PORTEE = {
     PorteeEffet.AUTRES_ENNEMIS: Camp.ENNEMI,
     PorteeEffet.LIGNE_AVANT_ENNEMIE: Camp.ENNEMI,
     PorteeEffet.LIGNE_ARRIERE_ENNEMIE: Camp.ENNEMI,
+    PorteeEffet.MEME_COLONNE: Camp.ENNEMI,
+    PorteeEffet.MODULE_PRINCIPAL: Camp.JOUEUR,
+    PorteeEffet.MODULE_DE_LA_CARTE: Camp.JOUEUR,
 }
 
 
@@ -366,6 +385,10 @@ class Carte:
             self.cible != CibleCarte.ENNEMI_UNIQUE
         ):
             raise ValueError(f"{self.id} : 'autres ennemis' suppose une cible Ennemi Unique")
+        if any(effet.portee == PorteeEffet.MEME_COLONNE for effet in self.effets) and (
+            self.cible != CibleCarte.ENNEMI_UNIQUE
+        ):
+            raise ValueError(f"{self.id} : 'meme colonne' suppose une cible Ennemi Unique")
         self._verifier_valeurs()
         if self.munitions_restantes is None:
             self.munitions_restantes = self.munitions_base

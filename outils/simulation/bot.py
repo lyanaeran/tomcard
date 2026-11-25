@@ -46,6 +46,8 @@ VALEUR_PAR_NATURE = {
     NatureEffet.DEGATS: POIDS_PV_ENNEMI,
     NatureEffet.INCENDIE: 2 * POIDS_PV_ENNEMI,  # l'incendie frappe plusieurs tours
     NatureEffet.BOUCLIER: 1.0,
+    # Le renvoi protege comme un bouclier, et blesse l'attaquant en plus (estimation)
+    NatureEffet.RENVOI: 1.0,
     NatureEffet.REPARATION: 1.0,
     NatureEffet.GAIN_ELECTRICITE: 5.0,
     NatureEffet.PIOCHE: 5.0,
@@ -130,6 +132,9 @@ def _nombre_de_cibles(carte: Carte, effet, combat: Combat) -> int:
     par_ligne = {ligne: len(flotte.ennemis_vivants_de_ligne(ligne)) for ligne in Ligne}
     if effet.portee == PorteeEffet.AUTRES_ENNEMIS:
         return vivants - 1
+    # Un seul module ou un seul ennemi (l'autre de la colonne, s'il y en a un : estime a 1)
+    if effet.portee in (PorteeEffet.MODULE_PRINCIPAL, PorteeEffet.MODULE_DE_LA_CARTE, PorteeEffet.MEME_COLONNE):
+        return 1
     if effet.portee == PorteeEffet.LIGNE_AVANT_ENNEMIE:
         return par_ligne[Ligne.AVANT]
     if effet.portee == PorteeEffet.LIGNE_ARRIERE_ENNEMIE:

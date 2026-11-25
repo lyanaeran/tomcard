@@ -354,7 +354,23 @@ def test_effet_invalide_refuse():
 
 def test_chaque_portee_declare_le_camp_qu_elle_touche():
     assert PorteeEffet.CIBLE.camp is None
-    assert all(portee.camp == Camp.ENNEMI for portee in PorteeEffet if portee != PorteeEffet.CIBLE)
+    joueur = {PorteeEffet.MODULE_PRINCIPAL, PorteeEffet.MODULE_DE_LA_CARTE}
+    for portee in PorteeEffet:
+        if portee != PorteeEffet.CIBLE:
+            assert portee.camp == (Camp.JOUEUR if portee in joueur else Camp.ENNEMI), portee
+
+
+def test_meme_colonne_suppose_une_cible_ennemi_unique():
+    with pytest.raises(ValueError, match="meme colonne"):
+        _carte_simple(
+            cible=CibleCarte.ENNEMI_TOUS,
+            effets=(Effet(NatureEffet.DEGATS, "degats", portee=PorteeEffet.MEME_COLONNE),),
+        )
+
+
+def test_renvoi_pose_le_statut_renvoi():
+    assert NatureEffet.RENVOI.statut_pose == Statut.RENVOI
+    assert NatureEffet.RETRAIT_BOUCLIER.statut_pose is None
 
 
 def test_un_id_de_carte_en_double_est_refuse(tmp_path):

@@ -96,7 +96,7 @@ _PAIRES_CASES_ENNEMIES = (("AV_G", "AR_G"), ("AV_M", "AR_M"), ("AV_D", "AR_D"))
 
 # Version du contrat entre bridge.py et src/web/app.js : doit etre egale a VERSION_CACHE (app.js),
 # verifie au demarrage par app.js (versionsAccordees) et par tests/test_architecture.py
-VERSION_WEB = "96"
+VERSION_WEB = "97"
 
 combat = None
 # Taille du journal deja transmise : les popups d'une action sont calcules a partir des seules
@@ -398,7 +398,7 @@ def _popup_evenement(evenement) -> dict | None:
     nature = evenement.nature
     if nature not in (
         NatureEvenement.ATTAQUE, NatureEvenement.RENVOI, NatureEvenement.INCENDIE,
-        NatureEvenement.STATUT_POSE, NatureEvenement.REPARATION,
+        NatureEvenement.STATUT_POSE, NatureEvenement.STATUT_RETIRE, NatureEvenement.REPARATION,
     ) or evenement.cible is None:
         return None
     id_case, camp = _id_case_entite(evenement.cible)
@@ -409,6 +409,12 @@ def _popup_evenement(evenement) -> dict | None:
             texte = "Leurre"
         else:
             texte = f"+{evenement.valeur} {_SYMBOLES_STATUT[evenement.statut.name]}"
+        couleur = {"BOUCLIER": "bouclier", "INCENDIE": "degats", "RENVOI": "debuff"}.get(evenement.statut.name, "buff")
+    elif nature == NatureEvenement.STATUT_RETIRE:
+        # Rien retire (la cible n'avait pas ce statut) : rien a montrer
+        if not evenement.valeur:
+            return None
+        texte = f"-{evenement.valeur} {_SYMBOLES_STATUT[evenement.statut.name]}"
         couleur = {"BOUCLIER": "bouclier", "INCENDIE": "degats", "RENVOI": "debuff"}.get(evenement.statut.name, "buff")
     elif nature == NatureEvenement.REPARATION:
         if not evenement.valeur:

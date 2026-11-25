@@ -120,7 +120,10 @@ Bouclier, incendie, renvoi et leurre sont gérés **ensemble**, de la même faç
 | **Renvoi** | Addition | Tour suivant (disparaît entièrement) | Renvoie à l'attaquant les dégâts reçus jusqu'à son intensité, qui diminue d'autant ; l'entité encaisse le reste |
 | **Leurre** | Remplacement (non cumulable) | Consommation | Annule entièrement la prochaine attaque reçue, puis disparaît |
 
-Le renvoi n'est posé que par l'ennemi Miroir pour l'instant (§13.3).
+Le renvoi est posé par l'ennemi Miroir (§13.3) et, depuis le 2026-11-25, par des cartes sur les
+modules du joueur (Bouclier réfléchissant, Bouclier miroir, Protocole de riposte : décision
+utilisateur du 2026-11-22) : posé pendant le tour du joueur, il protège pendant le tour ennemi qui
+suit et disparaît à la fin de ce tour ennemi.
 
 #### 3.5.1 Attaque reçue
 
@@ -148,7 +151,7 @@ entité baissent **ensemble**, à ce moment-là, y compris les statuts décidés
 
 Une seule source pour les règles : chaque nature d'effet de carte qui pose un statut le désigne
 (`NatureEffet.statut_pose`) : `BOUCLIER` → Bouclier, `INCENDIE` → Incendie,
-`ANNULATION_PROCHAINE_ATTAQUE` → Leurre (modules-cartes.md §12.2).
+`ANNULATION_PROCHAINE_ATTAQUE` → Leurre, `RENVOI` → Renvoi (modules-cartes.md §12.2).
 
 **Décidé, pas encore codé** : le statut **Surcharge** (+intensité aux dégâts de chaque coup,
 −1 par tour, porté par le principal pour toutes les cartes, et par les ennemis) :
@@ -220,8 +223,9 @@ ligne avant puis ligne arrière) le touche une fois par effet.
 2. La carte est **lancée `lancements_actuels` fois** ; à chaque lancement, **tous** ses effets
    s'appliquent dans l'ordre (y compris gain d'électricité, pioche, répétition). Les cibles sont
    choisies une fois pour tous les lancements ; une cible détruite ne reçoit pas les suivants.
-3. Chaque effet touche, selon sa **portée** (`PorteeEffet`) : la cible de la carte, les autres
-   ennemis vivants, la ligne avant ou arrière ennemie.
+3. Chaque effet touche, selon sa **portée** (`PorteeEffet`, modules-cartes.md §12.3) : la cible
+   de la carte, les autres ennemis vivants, la ligne avant ou arrière ennemie, l'autre ennemi de
+   la colonne de la case choisie, le module principal, ou le module de la carte.
 4. **Munitions** : §3.6. La carte part ensuite en défausse, en épuisées ou en Hors service (§3.4).
 5. **Victoire ou défaite au milieu d'une carte** : les effets et lancements restants ne sont pas
    joués.
@@ -231,7 +235,8 @@ ligne avant puis ligne arrière) le touche une fois par effet.
 | Nature | Effet sur chaque entité touchée |
 |---|---|
 | Dégâts | Une attaque de la valeur (§3.5.1) ; les dégâts renvoyés partent vers un module (§3.8.5) |
-| Bouclier, Incendie, Leurre | Pose du statut, selon sa règle de cumul (§3.5) |
+| Bouclier, Incendie, Leurre, Renvoi | Pose du statut, selon sa règle de cumul (§3.5) |
+| Retrait de bouclier | Retire la valeur au bouclier de l'ennemi (jamais en dessous de 0), sans toucher à son renvoi ni à son leurre ; journal « bouclier −N » avec ce qui a vraiment été retiré |
 | Réparation | Rend des PV de combat, sans dépasser le PV max ; jamais sur un module détruit |
 | Gain d'électricité | Électricité en plus pour ce tour |
 | Pioche | Pioche de cartes en plus (main limitée à 10) |
