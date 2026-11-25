@@ -53,8 +53,15 @@ sections : [specs.md](specs.md).*
 
 ### 9.2 Technique / développement
 
-*(voir §10 pour les choix techniques déjà tranchés ; aucun point technique ouvert pour le moment —
-les munitions, seul point qui figurait ici, sont implémentées depuis §3.6/§12.10)*
+*(voir §10 pour les choix techniques déjà tranchés ; les munitions, qui figuraient ici, sont
+implémentées depuis §3.6/§12.10)*
+
+- **Espaces perdues dans les textes sur plusieurs lignes, PC sous Windows** (constaté le
+  2026-11-25) : pyglet (moteur de texte DirectWrite) perd parfois une espace dans un
+  `pyglet.text.Label(multiline=True)` (« Lanceur demissiles », « Attaque2 ») ; 23 textes dans 11
+  écrans de `src/ui/`. Le même texte sur une seule ligne s'affiche bien, et
+  `pyglet.options.win32_gdi_font = True` corrige tout, mais avec une police plus fine et moins
+  lissée. **Décision utilisateur : à traiter dans une PR à part.** macOS n'est pas concerné.
 
 ---
 

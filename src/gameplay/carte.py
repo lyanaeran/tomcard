@@ -140,9 +140,13 @@ class NatureEffet(Enum):
     # fin du combat (appliquer_repetition : Salve laser, Protocole d'urgence, Bouclier stabilise)
     REPETITION = auto()
     # Pose le statut SURCHARGE d'intensite `valeur` sur le module principal : +intensite aux degats
-    # de chaque coup des cartes du joueur, -1 par tour (Lasers en surchauffe). Decide le
-    # 2026-11-16, PAS ENCORE CODE : refusee par le combat (specs/effets-a-coder.md)
+    # de chaque coup des cartes du joueur, -1 par tour (Post-combustion, Ogive surchauffee)
     SURCHARGE = auto()
+    # Multiplie la Surcharge du principal par `valeur` (Amplificateur)
+    MULTIPLIER_SURCHARGE = auto()
+    # La Surcharge du principal ne baisse plus jusqu'a la fin du combat, sans valeur (Lanceur
+    # incandescent)
+    FIGER_SURCHARGE = auto()
 
     @property
     def statut_pose(self) -> Statut | None:
@@ -151,7 +155,9 @@ class NatureEffet(Enum):
 
 
 # Natures sans valeur numerique : leur effet ne renvoie a aucune valeur nommee de la carte
-NATURES_SANS_VALEUR = {NatureEffet.ANNULATION_PROCHAINE_ATTAQUE, NatureEffet.REDIRECTION_CIBLE}
+NATURES_SANS_VALEUR = {
+    NatureEffet.ANNULATION_PROCHAINE_ATTAQUE, NatureEffet.REDIRECTION_CIBLE, NatureEffet.FIGER_SURCHARGE,
+}
 
 # Statut pose sur l'entite touchee : ses regles de cumul et d'extinction sont celles de
 # statut.py (une seule source, partagee avec les modules et les ennemis, specs.md 3.5)
@@ -160,7 +166,12 @@ STATUT_PAR_NATURE = {
     NatureEffet.INCENDIE: Statut.INCENDIE,
     NatureEffet.ANNULATION_PROCHAINE_ATTAQUE: Statut.LEURRE,
     NatureEffet.RENVOI: Statut.RENVOI,
+    NatureEffet.SURCHARGE: Statut.SURCHARGE,
 }
+
+# Natures qui n'agissent que sur la Surcharge du module principal : la carte doit viser le
+# principal (cible Module Principal, ou portee MODULE_PRINCIPAL)
+NATURES_DU_PRINCIPAL = {NatureEffet.SURCHARGE, NatureEffet.MULTIPLIER_SURCHARGE, NatureEffet.FIGER_SURCHARGE}
 
 # Camp que chaque nature d'effet peut toucher (portee de l'effet, sinon cible de la carte) : une
 # carte qui l'applique a l'autre camp est refusee au chargement (Carte.__post_init__)
@@ -172,6 +183,9 @@ CAMP_PAR_NATURE = {
     NatureEffet.REPARATION: Camp.JOUEUR,
     NatureEffet.ANNULATION_PROCHAINE_ATTAQUE: Camp.JOUEUR,
     NatureEffet.RENVOI: Camp.JOUEUR,
+    NatureEffet.SURCHARGE: Camp.JOUEUR,
+    NatureEffet.MULTIPLIER_SURCHARGE: Camp.JOUEUR,
+    NatureEffet.FIGER_SURCHARGE: Camp.JOUEUR,
 }
 
 # Natures dont l'effet peut avoir une duree en tours (statuts a duree, geres plus tard :
@@ -223,7 +237,8 @@ CLES_CARTE = {
     "id", "nom", "image", "rarete", "categorie", "cible", "modules", "cout", "munition", "lancements",
     "persistante", "jouable", "refonte", "description", "valeurs", "effets",
 }
-CLES_EFFET = {"nature", "valeur", "portee", "duree", "filtre"}
+CLES_EFFET = {"nature", "valeur", "portee", "duree", "filtre", "bonus"}
+CLES_BONUS = {"par", "facteur", "consomme"}
 CLES_FILTRE = {"id", "rarete", "categorie"}
 
 
@@ -259,6 +274,37 @@ class FiltreCartes:
         )
 
 
+class SourceBonus(Enum):
+    """Ce qui compte pour un bonus calcule (proposition-lanceur-missiles.md 3.11)."""
+
+    # Surcharge du module principal (Missile surcharge : en plus de la Surcharge normale)
+    SURCHARGE_JOUEUR = auto()
+    # Bouclier du module principal (Laser de contre-charge)
+    BOUCLIER_PRINCIPAL = auto()
+
+    @property
+    def statut(self) -> Statut:
+        """Statut du module principal compte par ce bonus (seule correspondance, pour le combat et
+        les simulateurs)."""
+        return {SourceBonus.SURCHARGE_JOUEUR: Statut.SURCHARGE, SourceBonus.BOUCLIER_PRINCIPAL: Statut.BOUCLIER}[self]
+
+
+@dataclass(frozen=True)
+class BonusCalcule:
+    """Degats en plus d'un effet DEGATS : facteur x compteur, lu au moment du coup. `facteur` est
+    le NOM d'une valeur de la carte. Avec `consomme`, le compteur est remis a 0 au premier coup
+    (Laser de contre-charge consomme le bouclier du principal, decision utilisateur 2026-11-22)."""
+
+    par: SourceBonus
+    facteur: str
+    consomme: bool = False
+
+    @classmethod
+    def depuis_dict(cls, entree: dict) -> "BonusCalcule":
+        _verifier_cles(entree, CLES_BONUS, "Bonus d'un effet")
+        return cls(par=SourceBonus[entree["par"]], facteur=entree["facteur"], consomme=bool(entree.get("consomme", False)))
+
+
 @dataclass(frozen=True)
 class Effet:
     """Un effet d'une carte. Ne contient aucun nombre : `valeur` et `duree` sont des NOMS de
@@ -274,6 +320,8 @@ class Effet:
     duree: str | None = None
     # Cartes visees, obligatoire pour REPETITION et interdit sinon
     filtre: FiltreCartes | None = None
+    # Degats en plus calcules au moment du coup (Missile surcharge), seulement pour DEGATS
+    bonus: "BonusCalcule | None" = None
 
     def __post_init__(self):
         if (self.valeur is None) != (self.nature in NATURES_SANS_VALEUR):
@@ -282,11 +330,14 @@ class Effet:
             raise ValueError(f"{self.nature.name} n'a pas de duree")
         if (self.nature == NatureEffet.REPETITION) != (self.filtre is not None):
             raise ValueError("Un filtre de cartes est requis pour REPETITION, et seulement pour elle")
+        if self.bonus is not None and self.nature != NatureEffet.DEGATS:
+            raise ValueError(f"{self.nature.name} : un bonus calcule ne va que sur des DEGATS")
 
     @property
     def noms_de_valeurs(self) -> list[str]:
         """Noms des valeurs de la carte utilisees par cet effet."""
-        return [nom for nom in (self.valeur, self.duree) if nom is not None]
+        facteur = self.bonus.facteur if self.bonus is not None else None
+        return [nom for nom in (self.valeur, self.duree, facteur) if nom is not None]
 
     @classmethod
     def depuis_dict(cls, entree: dict) -> "Effet":
@@ -305,6 +356,7 @@ class Effet:
                 rarete=RareteCarte[filtre["rarete"].upper()] if "rarete" in filtre else None,
                 categorie=CategorieCarte(filtre["categorie"]) if "categorie" in filtre else None,
             ) if filtre else None,
+            bonus=BonusCalcule.depuis_dict(entree["bonus"]) if "bonus" in entree else None,
         )
 
 
@@ -402,6 +454,11 @@ class Carte:
         ):
             raise ValueError(f"{self.id} : 'meme colonne' suppose une cible Ennemi Unique")
         for effet in self.effets:
+            if effet.nature in NATURES_DU_PRINCIPAL and not (
+                effet.portee == PorteeEffet.MODULE_PRINCIPAL
+                or (effet.portee == PorteeEffet.CIBLE and self.cible == CibleCarte.MODULE_PRINCIPAL)
+            ):
+                raise ValueError(f"{self.id} : {effet.nature.name} ne vise que le module principal")
             camp_touche = effet.portee.camp or self.cible.camp
             camp_nature = CAMP_PAR_NATURE.get(effet.nature)
             if camp_nature is not None and camp_nature != camp_touche:

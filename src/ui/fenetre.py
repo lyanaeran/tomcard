@@ -814,7 +814,8 @@ class FenetreCombat(pyglet.window.Window):
                 return []
             lignes = [entite.nom, f"PV {entite.pv}/{entite.pv_max}", *textes_combat.lignes_statuts(entite)]
             for intention in self.combat.intentions():
-                if intention.ennemi is entite:
+                if intention.ennemi is entite and intention.effets:
+                    lignes.append(textes_combat.TITRE_PROCHAIN_TOUR)
                     lignes.extend(textes_combat.texte_intention(effet) for effet in intention.effets)
         else:
             lignes = [entite.nom, f"PV {max(entite.pv_combat, 0)}/{entite.pv_max}", *textes_combat.lignes_statuts(entite)]
@@ -824,7 +825,7 @@ class FenetreCombat(pyglet.window.Window):
                     lignes.append(f"{hors_service} carte(s) hors service")
             menaces = textes_combat.menaces_par_module(self.combat).get(id(entite), [])
             if menaces:
-                lignes.append("Visé au prochain tour par :")
+                lignes.append(textes_combat.TITRE_PROCHAIN_TOUR)
                 lignes.extend(menaces)
         return _infobulle_au_curseur("\n".join(lignes), self.position_souris, lot)
 

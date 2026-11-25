@@ -455,3 +455,40 @@ def test_l_ecriture_remet_les_cles_dans_l_ordre_du_fichier():
     melangee["effets"] = [dict(reversed(list(effet.items()))) for effet in entree["effets"]]
 
     assert cartes_vers_texte_json([melangee]) == cartes_vers_texte_json([entree])
+
+
+
+def test_la_surcharge_ne_vise_que_le_module_principal():
+    with pytest.raises(ValueError, match="ne vise que le module principal"):
+        _carte_simple(
+            categorie=CategorieCarte.BUFF, cible=CibleCarte.MODULE_UNIQUE, description="",
+            valeurs={"surcharge": 2}, effets=(Effet(NatureEffet.SURCHARGE, "surcharge"),),
+        )
+    # Portee MODULE_PRINCIPAL sur une carte qui vise un ennemi (Ogive surchauffee) : acceptee
+    _carte_simple(
+        description="", valeurs={"surcharge": 2, "degats": 3},
+        effets=(
+            Effet(NatureEffet.SURCHARGE, "surcharge", portee=PorteeEffet.MODULE_PRINCIPAL),
+            Effet(NatureEffet.DEGATS, "degats"),
+        ),
+    )
+
+
+def test_un_bonus_calcule_ne_va_que_sur_des_degats_et_son_facteur_est_une_valeur():
+    from src.gameplay.carte import BonusCalcule, SourceBonus
+
+    bonus = BonusCalcule(SourceBonus.SURCHARGE_JOUEUR, "par_point")
+    with pytest.raises(ValueError, match="bonus calcule"):
+        Effet(NatureEffet.BOUCLIER, "bouclier", bonus=bonus)
+    with pytest.raises(ValueError, match="inconnues"):
+        _carte_simple(description="", valeurs={"degats": 5}, effets=(Effet(NatureEffet.DEGATS, "degats", bonus=bonus),))
+    entree = {"nature": "DEGATS", "valeur": "degats", "bonus": {"par": "BOUCLIER_PRINCIPAL", "facteur": "x", "consomme": True}}
+    assert Effet.depuis_dict(entree).bonus == BonusCalcule(SourceBonus.BOUCLIER_PRINCIPAL, "x", True)
+
+
+
+def test_chaque_source_de_bonus_designe_un_statut_du_principal():
+    from src.gameplay.carte import SourceBonus
+
+    assert SourceBonus.SURCHARGE_JOUEUR.statut == Statut.SURCHARGE
+    assert SourceBonus.BOUCLIER_PRINCIPAL.statut == Statut.BOUCLIER

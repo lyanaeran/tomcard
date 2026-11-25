@@ -546,6 +546,11 @@ body {
     background: #9c36b5;
 }
 
+.pastille-surcharge {
+    background: #e0a800;
+    color: #1a1a1a;
+}
+
 .pastille-leurre {
     background: #5ac8d2;
 }
@@ -639,6 +644,10 @@ body {
 
 .popup-soin {
     color: #51cf66;
+}
+
+.popup-surcharge {
+    color: #ffd43b;
 }
 
 .popup-debuff {

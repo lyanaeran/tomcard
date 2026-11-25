@@ -269,7 +269,7 @@ Chaque lot :
 ## 4. Questions restantes
 
 1. **Valeurs** : toutes inventées ; réglage à la main dans l'éditeur, puis simulation après les
-   premiers lots (comme décidé pour le Lanceur).
+   lots 1 à 5, avec presque toutes les cartes (décision utilisateur, 2026-11-25 : plan-cartes.md §3).
 2. **Protocole d'urgence** garde 3 munitions et se cumule : on le laisse ainsi (décision de ce
    jour), ou on s'aligne plus tard sur les légendaires du Lanceur (1 munition) ?
 3. **Laser perçant** : description et cible corrigées (« la ligne ciblée », cible « Ennemi

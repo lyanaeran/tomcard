@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "98";
+const VERSION_CACHE = "103";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -266,11 +266,12 @@ function nomJournal(nom, genre) {
     return segmentJournal(nom, CLASSES_GENRE_JOURNAL[genre] || "journal-texte");
 }
 
-const NOMS_STATUT_JOURNAL = { BOUCLIER: "bouclier", INCENDIE: "incendie", RENVOI: "renvoi", LEURRE: "leurre" };
+const NOMS_STATUT_JOURNAL = { BOUCLIER: "bouclier", INCENDIE: "incendie", RENVOI: "renvoi", LEURRE: "leurre", SURCHARGE: "surcharge" };
 
 // Detail des degats recus : "6 degats, 2 absorbes par le bouclier, 4 PV perdus (46 restants)".
 function detailDegatsJournal(evenement) {
     const morceaux = [`${evenement.valeur} dégâts`];
+    if (evenement.dont_surcharge) morceaux[0] += ` (dont ${evenement.dont_surcharge} de surcharge)`;
     if (evenement.annules_leurre) morceaux.push("annulés par le leurre");
     if (evenement.renvoyes) morceaux.push(`${evenement.renvoyes} renvoyés`);
     if (evenement.absorbes_bouclier) morceaux.push(`${evenement.absorbes_bouclier} absorbés par le bouclier`);
@@ -298,6 +299,10 @@ function construireLigneJournal(evenement) {
             const valeur = evenement.statut === "LEURRE" ? "" : ` ${evenement.valeur}`;
             const debut = source ? `${source}${texte(" → ")}` : "";
             return `${debut}${cible}${texte(` : ${nom}${valeur}`)}`;
+        }
+        case "STATUT_FIGE": {
+            const nom = NOMS_STATUT_JOURNAL[evenement.statut] || evenement.statut;
+            return `${source}${texte(" → ")}${cible}${texte(` : ${nom} ${evenement.valeur} figée jusqu'à la fin du combat`)}`;
         }
         case "STATUT_RETIRE": {
             const nom = NOMS_STATUT_JOURNAL[evenement.statut] || evenement.statut;
@@ -412,17 +417,24 @@ function trouverObjetCase(idCase, typeCase) {
     return etatCourant.ennemis.find((e) => e && e.id === idCase) ?? null;
 }
 
-// Texte d'un effet d'ennemi (son prochain tour) : symbole d'attaque 7 x2 -> Lanceur
-// de missiles, symbole de bouclier 10, symbole de renvoi 5 -> un allie. La cible prevue vient du
-// gameplay (Combat.intentions).
+// Texte d'un effet d'ennemi (son prochain tour), en phrase, sous le titre "Prochain tour :" pour
+// le distinguer des statuts actifs (decision utilisateur, 2026-11-25) : "inflige 5 degats a
+// Lanceur de missiles", "se donne 6 de bouclier"... La cible prevue vient du gameplay
+// (Combat.intentions). Meme texte que src/ui/textes_combat.py:texte_intention.
 function texteEffetEnnemi(effet) {
-    const repetitions = effet.repetitions > 1 ? ` ×${effet.repetitions}` : "";
-    const symbole = { ATTAQUE: "⚔", BOUCLIER: "🛡", RENVOI: "↩" }[effet.nature] || "?";
-    let cible = "";
-    if (effet.cible === "TOUS") cible = " → tous";
-    else if (effet.cible === "ALLIE") cible = " → un allié";
-    else if (effet.cible === "MODULE") cible = effet.cible_nom ? ` → ${effet.cible_nom}` : " → module le plus proche";
-    return `${symbole} ${effet.valeur}${repetitions}${cible}`;
+    const fois = effet.repetitions > 1 ? `, ${effet.repetitions} fois` : "";
+    if (effet.nature === "ATTAQUE") {
+        if (effet.cible === "TOUS") return `⚔ inflige ${effet.valeur} dégâts à chaque module${fois}`;
+        return `⚔ inflige ${effet.valeur} dégâts à ${effet.cible_nom || "module le plus proche"}${fois}`;
+    }
+    const soiMeme = effet.cible !== "ALLIE";
+    if (effet.nature === "BOUCLIER") {
+        return `🛡 ${soiMeme ? `se donne ${effet.valeur} de bouclier` : `donne ${effet.valeur} de bouclier à un allié de la ligne avant`}${fois}`;
+    }
+    if (effet.nature === "RENVOI") {
+        return `↩ ${soiMeme ? `se pose Renvoi ${effet.valeur}` : `pose Renvoi ${effet.valeur} sur un allié de la ligne avant`}${fois}`;
+    }
+    return `? ${effet.valeur}${fois}`;
 }
 
 // Version courte, dans la case de l'ennemi : symbole et valeur, "x2" si repetee, "tous" pour une
@@ -441,6 +453,9 @@ function lignesStatuts(objet) {
     if (objet.incendie) lignes.push(`🔥 Incendie ${objet.incendie}`);
     if (objet.renvoi) lignes.push(`↩ Renvoi ${objet.renvoi}`);
     if (objet.leurre) lignes.push("🎭 Leurre");
+    // Seule la Surcharge peut etre figee aujourd'hui (feminin) ; un autre statut figeable devra
+    // accorder "(fige)" comme textes_combat.py:lignes_statuts
+    if (objet.surcharge) lignes.push(`⚡ Surcharge ${objet.surcharge}${objet.surcharge_figee ? " (figée)" : ""}`);
     return lignes;
 }
 
@@ -461,14 +476,17 @@ function afficherInfobulle(idCase, typeCase) {
             lignes.push(`<div>${objet.hors_service} carte(s) hors service</div>`);
         }
         if (objet.menaces.length > 0) {
-            lignes.push(`<div class="infobulle-titre-cycle">Visé au prochain tour par :</div>`);
+            // Meme titre et meme tournure que l'infobulle d'un ennemi (decision utilisateur, 2026-11-25)
+            lignes.push(`<div class="infobulle-titre-cycle">Prochain tour :</div>`);
             objet.menaces.forEach((menace) => {
-                const repetitions = menace.repetitions > 1 ? ` ×${menace.repetitions}` : "";
-                lignes.push(`<div class="infobulle-etape-courante">${menace.ennemi} : ⚔ ${menace.valeur}${repetitions}</div>`);
+                const fois = menace.repetitions > 1 ? `, ${menace.repetitions} fois` : "";
+                lignes.push(`<div class="infobulle-etape-courante">⚔ ${menace.ennemi} inflige ${menace.valeur} dégâts${fois}</div>`);
             });
         }
     } else if (!objet.detruit) {
-        // Une action du prochain tour par ligne, sans titre (decision utilisateur, 2026-11-13)
+        // Une action du prochain tour par ligne, sous un titre qui la distingue des statuts actifs
+        // (decision utilisateur, 2026-11-25 ; remplace "sans titre" du 2026-11-13)
+        if (objet.intention.length > 0) lignes.push(`<div class="infobulle-titre-cycle">Prochain tour :</div>`);
         objet.intention.forEach((effet) => {
             lignes.push(`<div class="infobulle-etape-courante">${texteEffetEnnemi(effet)}</div>`);
         });
@@ -493,13 +511,14 @@ function attacherPressionCase(element, idCase, typeCase) {
 }
 
 // Pastilles d'une case (refonte-branchement.md 4.2/4.3), de droite a gauche : PV (rouge),
-// Bouclier (bleu), puis Incendie (orange), Renvoi (violet), Leurre (cyan) seulement s'ils sont
+// Bouclier (bleu), puis Surcharge (jaune), Incendie (orange), Renvoi (violet), Leurre (cyan) seulement s'ils sont
 // actifs. Masquees si detruit (le bandeau "Detruit" les remplace).
 function pastillesStatuts(objet) {
     const pastilles = [
         `<span class="pastille pastille-pv">${objet.pv}</span>`,
         `<span class="pastille pastille-bouclier">${objet.bouclier}</span>`,
     ];
+    if (objet.surcharge) pastilles.push(`<span class="pastille pastille-surcharge">⚡${objet.surcharge}</span>`);
     if (objet.incendie) pastilles.push(`<span class="pastille pastille-incendie">🔥${objet.incendie}</span>`);
     if (objet.renvoi) pastilles.push(`<span class="pastille pastille-renvoi">↩${objet.renvoi}</span>`);
     if (objet.leurre) pastilles.push(`<span class="pastille pastille-leurre">🎭</span>`);

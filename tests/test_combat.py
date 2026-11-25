@@ -736,3 +736,151 @@ def test_le_retrait_de_bouclier_ne_touche_ni_au_renvoi_ni_au_leurre():
 
     assert pat.statuts[Statut.RENVOI] == 4 and pat.statuts[Statut.LEURRE] == 1
     assert _evenements(combat, NatureEvenement.STATUT_RETIRE)[0].valeur == 0
+
+
+# --- Lot 3 du plan des cartes : Surcharge et bonus calcule ---
+
+
+def _surcharge(combat):
+    return combat.vaisseau.principal.statuts[Statut.SURCHARGE]
+
+
+def test_post_combustion_pose_la_surcharge_qui_s_ajoute_a_chaque_coup():
+    pat = _ennemi()
+    combat = _combat({AVANT_MID: pat})
+    post_combustion, laser = _en_main(combat, _carte("CRT_51", "M2"), _carte("CRT_7"))
+
+    combat.jouer_carte(post_combustion, AVANT_MID)
+    combat.jouer_carte(laser, AVANT_MID)
+
+    surcharge = _valeur("CRT_51", "surcharge")
+    assert _surcharge(combat) == surcharge
+    assert pat.pv == pat.pv_max - (_valeur("CRT_7", "degats") + surcharge)
+    attaque = _evenements(combat, NatureEvenement.ATTAQUE)[-1]
+    assert attaque.dont_surcharge == surcharge
+
+
+def test_la_surcharge_compte_pour_chaque_cible_et_chaque_lancement():
+    pat, pat2 = _ennemi(), _ennemi()
+    combat = _combat({AVANT_MID: pat, AVANT_DROITE: pat2})
+    combat.vaisseau.principal.statuts.ajouter(Statut.SURCHARGE, 3)
+    ogive, jumeaux = _en_main(combat, _carte("CRT_9", "M2"), _carte("CRT_58", "M2"))
+
+    combat.jouer_carte(ogive, AVANT_MID)
+    combat.jouer_carte(jumeaux, AVANT_DROITE)
+
+    assert pat.pv == pat.pv_max - (_valeur("CRT_9", "degats") + 3)
+    assert pat2.pv == pat2.pv_max - (_valeur("CRT_9", "degats") + 3) - 2 * (_valeur("CRT_58", "degats") + 3)
+
+
+def test_la_surcharge_ne_compte_ni_pour_l_incendie_ni_pour_les_degats_renvoyes():
+    pat = _ennemi()
+    pat.statuts.ajouter(Statut.RENVOI, 50)
+    combat = _combat({AVANT_MID: pat})
+    combat.vaisseau.principal.statuts.ajouter(Statut.SURCHARGE, 3)
+    (thermique,) = _en_main(combat, _carte("CRT_65", "M2"))
+
+    combat.jouer_carte(thermique, AVANT_MID)
+
+    # Coup de la carte : degats + Surcharge, tout renvoye au Lanceur sans nouveau bonus
+    coup = _valeur("CRT_65", "degats") + 3
+    lanceur = combat.vaisseau.module_d_exemplaire("M2")
+    assert lanceur.pv_combat == lanceur.pv_max - coup
+    assert pat.statuts[Statut.INCENDIE] == _valeur("CRT_65", "incendie")
+
+
+def test_la_surcharge_baisse_de_1_a_la_fin_du_tour_ennemi():
+    combat = _combat({AVANT_GAUCHE: _ennemi()})
+    combat.vaisseau.principal.statuts.ajouter(Statut.SURCHARGE, 4)
+    _en_main(combat)
+
+    combat.finir_tour()
+
+    assert _surcharge(combat) == 3
+
+
+def test_ogive_surchauffee_pose_la_surcharge_avant_ses_degats():
+    pat = _ennemi()
+    combat = _combat({AVANT_MID: pat})
+    (ogive,) = _en_main(combat, _carte("CRT_55", "M2"))
+
+    combat.jouer_carte(ogive, AVANT_MID)
+
+    surcharge = _valeur("CRT_55", "surcharge")
+    assert _surcharge(combat) == surcharge
+    assert pat.pv == pat.pv_max - (_valeur("CRT_55", "degats") + surcharge)
+
+
+def test_amplificateur_multiplie_la_surcharge_et_rien_a_zero():
+    combat = _combat()
+    premier, second = _en_main(combat, _carte("CRT_68", "M2"), _carte("CRT_68", "M2"))
+
+    combat.jouer_carte(premier, AVANT_MID)
+    assert _surcharge(combat) == 0 and not _evenements(combat, NatureEvenement.STATUT_POSE)
+
+    combat.vaisseau.principal.statuts.ajouter(Statut.SURCHARGE, 4)
+    combat.jouer_carte(second, AVANT_MID)
+    assert _surcharge(combat) == 4 * _valeur("CRT_68", "facteur")
+
+
+def test_lanceur_incandescent_double_et_fige_la_surcharge():
+    combat = _combat({AVANT_GAUCHE: _ennemi()})
+    combat.vaisseau.principal.statuts.ajouter(Statut.SURCHARGE, 3)
+    incandescent, post_combustion = _en_main(combat, _carte("CRT_77", "M2"), _carte("CRT_51", "M2"))
+
+    combat.jouer_carte(incandescent, AVANT_MID)
+    figee = 3 * _valeur("CRT_77", "facteur")
+    assert _surcharge(combat) == figee
+    assert _evenements(combat, NatureEvenement.STATUT_FIGE)[0].valeur == figee
+    combat.finir_tour()
+    assert _surcharge(combat) == figee  # ne baisse plus
+
+    # Les nouvelles poses s'ajoutent toujours
+    combat.electricite = 3
+    combat.deck.main = [post_combustion]
+    combat.jouer_carte(post_combustion, AVANT_MID)
+    assert _surcharge(combat) == figee + _valeur("CRT_51", "surcharge")
+
+
+def test_missile_surcharge_compte_la_surcharge_deux_fois():
+    pat = _ennemi()
+    combat = _combat({AVANT_MID: pat})
+    combat.vaisseau.principal.statuts.ajouter(Statut.SURCHARGE, 4)
+    (missile,) = _en_main(combat, _carte("CRT_75", "M2"))
+
+    combat.jouer_carte(missile, AVANT_MID)
+
+    # Base + bonus (par point de Surcharge) + la Surcharge normale
+    attendu = _valeur("CRT_75", "degats") + _valeur("CRT_75", "par_point") * 4 + 4
+    assert pat.pv == pat.pv_max - attendu
+
+
+def test_laser_de_contre_charge_consomme_le_bouclier_du_principal():
+    boss = _ennemi("ENM_BOSS_PIRATES")
+    combat = _combat({AVANT_MID: boss, ARRIERE_MID: boss})
+    principal = combat.vaisseau.principal
+    principal.statuts.ajouter(Statut.BOUCLIER, 14)
+    contre_charge, second = _en_main(combat, _carte("CRT_99"), _carte("CRT_99"))
+
+    combat.jouer_carte(contre_charge, AVANT_MID)
+    assert boss.pv == boss.pv_max - 14 * _valeur("CRT_99", "par_point")
+    assert principal.statuts[Statut.BOUCLIER] == 0
+    (retrait,) = _evenements(combat, NatureEvenement.STATUT_RETIRE)
+    assert (retrait.cible, retrait.valeur) == (principal, 14)
+
+    # Sans bouclier : plus de degats en plus
+    pv = boss.pv
+    combat.jouer_carte(second, AVANT_MID)
+    assert boss.pv == pv - _valeur("CRT_99", "degats")
+
+
+def test_reacteur_en_surtension_et_armer_le_lanceur_piochent_et_surchargent():
+    combat = _combat()
+    reacteur, armer = _en_main(combat, _carte("CRT_95"), _carte("CRT_72", "M2"))
+    combat.deck.pioche = [_carte("CRT_7") for _ in range(5)]
+
+    combat.jouer_carte(reacteur, AVANT_MID)
+    combat.jouer_carte(armer, AVANT_MID)
+
+    assert _surcharge(combat) == _valeur("CRT_95", "surcharge") + _valeur("CRT_72", "surcharge")
+    assert len(combat.deck.main) == _valeur("CRT_95", "pioche") + _valeur("CRT_72", "pioche")

@@ -628,6 +628,47 @@
       ]
     },
     {
+      "id": "CRT_95",
+      "nom": "Réacteur en surtension",
+      "image": "assets/cartes/batteries.png",
+      "rarete": "Commune",
+      "categorie": "Buff",
+      "cible": "Module Principal",
+      "modules": ["MOD_1"],
+      "cout": 1,
+      "munition": null,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Surcharge {surcharge}. Piochez {pioche} carte",
+      "valeurs": { "surcharge": 2, "pioche": 1 },
+      "effets": [
+        { "nature": "SURCHARGE", "valeur": "surcharge" },
+        { "nature": "PIOCHE", "valeur": "pioche" }
+      ]
+    },
+    {
+      "id": "CRT_99",
+      "nom": "Laser de contre-charge",
+      "image": "assets/cartes/attaque_percante.png",
+      "rarete": "Rare",
+      "categorie": "Attaque",
+      "cible": "Ennemi Unique",
+      "modules": ["MOD_1"],
+      "cout": 1,
+      "munition": null,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Consomme tout le bouclier du module principal et inflige {par_point} dégât par point de bouclier à un ennemi",
+      "valeurs": { "degats": 0, "par_point": 1 },
+      "effets": [
+        { "nature": "DEGATS", "valeur": "degats", "bonus": { "par": "BOUCLIER_PRINCIPAL", "facteur": "par_point", "consomme": true } }
+      ]
+    },
+    {
       "id": "CRT_13",
       "nom": "Missile à fragmentation",
       "image": "assets/cartes/missile_guide.png",
@@ -875,6 +916,109 @@
       ]
     },
     {
+      "id": "CRT_55",
+      "nom": "Ogive surchauffée",
+      "image": "assets/cartes/bombe.png",
+      "rarete": "Commune",
+      "categorie": "Attaque",
+      "cible": "Ennemi Tous",
+      "modules": ["MOD_2"],
+      "cout": 1,
+      "munition": null,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Surcharge {surcharge}, puis inflige {degats} dégâts (+ Surcharge) à tous les ennemis",
+      "valeurs": { "surcharge": 2, "degats": 3 },
+      "effets": [
+        { "nature": "SURCHARGE", "valeur": "surcharge", "portee": "MODULE_PRINCIPAL" },
+        { "nature": "DEGATS", "valeur": "degats" }
+      ]
+    },
+    {
+      "id": "CRT_68",
+      "nom": "Amplificateur",
+      "image": "assets/cartes/surcharge.png",
+      "rarete": "Rare",
+      "categorie": "Buff",
+      "cible": "Module Principal",
+      "modules": ["MOD_2"],
+      "cout": 1,
+      "munition": 2,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Multiplie votre Surcharge par {facteur}",
+      "valeurs": { "facteur": 2 },
+      "effets": [
+        { "nature": "MULTIPLIER_SURCHARGE", "valeur": "facteur" }
+      ]
+    },
+    {
+      "id": "CRT_72",
+      "nom": "Armer le lanceur",
+      "image": "assets/cartes/recharge.png",
+      "rarete": "Rare",
+      "categorie": "Buff",
+      "cible": "Module Principal",
+      "modules": ["MOD_2"],
+      "cout": 1,
+      "munition": null,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Piochez {pioche} cartes. Surcharge {surcharge}",
+      "valeurs": { "pioche": 2, "surcharge": 2 },
+      "effets": [
+        { "nature": "PIOCHE", "valeur": "pioche" },
+        { "nature": "SURCHARGE", "valeur": "surcharge" }
+      ]
+    },
+    {
+      "id": "CRT_75",
+      "nom": "Missile surchargé",
+      "image": "assets/cartes/missile_guide.png",
+      "rarete": "Rare",
+      "categorie": "Attaque",
+      "cible": "Ennemi Unique",
+      "modules": ["MOD_2"],
+      "cout": 2,
+      "munition": null,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Inflige {degats} dégâts à un ennemi, plus {par_point} par point de Surcharge",
+      "valeurs": { "degats": 6, "par_point": 1 },
+      "effets": [
+        { "nature": "DEGATS", "valeur": "degats", "bonus": { "par": "SURCHARGE_JOUEUR", "facteur": "par_point" } }
+      ]
+    },
+    {
+      "id": "CRT_77",
+      "nom": "Lanceur incandescent",
+      "image": "assets/cartes/surcharge.png",
+      "rarete": "Legendaire",
+      "categorie": "Buff",
+      "cible": "Module Principal",
+      "modules": ["MOD_2"],
+      "cout": 2,
+      "munition": 1,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Multiplie votre Surcharge par {facteur}. Elle ne baisse plus jusqu'à la fin du combat",
+      "valeurs": { "facteur": 2 },
+      "effets": [
+        { "nature": "MULTIPLIER_SURCHARGE", "valeur": "facteur" },
+        { "nature": "FIGER_SURCHARGE" }
+      ]
+    },
+    {
       "id": "CRT_15",
       "nom": "Ogive lourde",
       "image": "assets/cartes/missiles.png",
@@ -958,8 +1102,8 @@
     },
     {
       "id": "CRT_51",
-      "nom": "Lasers en surchauffe",
-      "image": "assets/cartes/attaque.png",
+      "nom": "Post-combustion",
+      "image": "assets/cartes/surcharge.png",
       "rarete": "Rare",
       "categorie": "Buff",
       "cible": "Module Principal",
@@ -968,12 +1112,12 @@
       "munition": 3,
       "lancements": 1,
       "persistante": false,
-      "jouable": "non",
+      "jouable": "oui",
       "refonte": true,
-      "description": "Augmente de {buff} les dégâts de toutes les attaques directes.",
-      "valeurs": { "buff": 2 },
+      "description": "Surcharge {surcharge} : chaque coup de vos cartes inflige {surcharge} dégâts de plus (−1 par tour)",
+      "valeurs": { "surcharge": 4 },
       "effets": [
-        { "nature": "SURCHARGE", "valeur": "buff" }
+        { "nature": "SURCHARGE", "valeur": "surcharge" }
       ]
     }
   ]

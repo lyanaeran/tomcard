@@ -31,6 +31,10 @@ POIDS_LEURRE = 3.0
 # Incendie restant : degats encore a venir (k + k-1 + ... + 1), comptes comme des PV ennemis
 # en moins, la recherche ne voyant que le tour suivant
 POIDS_INCENDIE = 1.0
+# Surcharge du principal : degats en plus a venir, comptes comme des PV ennemis en moins.
+# Estimation : COUPS_PAR_TOUR_ESTIMES coups par tour, et une Surcharge S qui baisse de 1 par tour
+# rapporte S + (S-1) + ... + 1 tours de bonus ; figee, S par tour jusqu'a la fin estimee du combat
+COUPS_PAR_TOUR_ESTIMES = 2
 
 # Valeur du deck (idee utilisateur, 2026-11-11) : une carte de repetition ne paie que sur les tours
 # suivants, que la recherche ne voit pas. On estime donc ce que rapportent les lancements en plus
@@ -117,6 +121,10 @@ def evaluer(combat: Combat) -> float:
             score += POIDS_BOUCLIER * module.statuts[Statut.BOUCLIER] + POIDS_LEURRE * module.statuts[Statut.LEURRE]
             if not module.principal:
                 score += BONUS_SECONDAIRE_VIVANT
+    statuts = combat.vaisseau.principal.statuts
+    score += POIDS_PV_ENNEMI * degats_a_venir_de_la_surcharge(
+        combat, statuts[Statut.SURCHARGE], Statut.SURCHARGE in statuts.figes,
+    )
     for ennemi in combat.flotte.ennemis_vivants():
         incendie = ennemi.statuts[Statut.INCENDIE]
         degats_a_venir = min(ennemi.pv, incendie * (incendie + 1) // 2)
@@ -125,6 +133,36 @@ def evaluer(combat: Combat) -> float:
     if VALEUR_DECK:
         score += valeur_des_lancements_en_plus(combat)
     return score
+
+
+def degats_a_venir_de_la_surcharge(combat: Combat, surcharge: int, figee: bool) -> float:
+    """Degats en plus qu'apporterait une Surcharge du principal (estimation), plafonnes par les PV
+    des ennemis vivants, comme l'incendie : sinon le bot empilerait la Surcharge au lieu de finir
+    les ennemis."""
+    if figee:
+        tours = max(1, DUREE_COMBAT_ESTIMEE - combat.tour)
+        degats = COUPS_PAR_TOUR_ESTIMES * surcharge * tours
+    else:
+        degats = COUPS_PAR_TOUR_ESTIMES * surcharge * (surcharge + 1) / 2
+    return min(degats, sum(ennemi.pv for ennemi in combat.flotte.ennemis_vivants()))
+
+
+def _gain_de_surcharge(combat: Combat, effet, valeur: int | None) -> float:
+    """Degats a venir en plus apres un effet de Surcharge (pose, multiplication, gel), a partir de
+    la Surcharge deja en place."""
+    statuts = combat.vaisseau.principal.statuts
+    avant, figee = statuts[Statut.SURCHARGE], Statut.SURCHARGE in statuts.figes
+    apres, figee_apres = avant, figee
+    if effet.nature == NatureEffet.SURCHARGE:
+        apres = avant + valeur
+    elif effet.nature == NatureEffet.MULTIPLIER_SURCHARGE:
+        apres = avant * valeur
+    elif effet.nature == NatureEffet.FIGER_SURCHARGE:
+        figee_apres = True
+    return (
+        degats_a_venir_de_la_surcharge(combat, apres, figee_apres)
+        - degats_a_venir_de_la_surcharge(combat, avant, figee)
+    )
 
 
 def _nombre_de_cibles(carte: Carte, effet, combat: Combat) -> int:
@@ -168,6 +206,16 @@ def valeur_d_un_lancement(carte: Carte, combat: Combat) -> float:
             # Vaut des degats, mais seulement a hauteur du bouclier que porte un ennemi
             boucliers = [ennemi.statuts[Statut.BOUCLIER] for ennemi in combat.flotte.ennemis_vivants()]
             valeur += POIDS_PV_ENNEMI * min(carte.valeur_de(effet), max(boucliers, default=0))
+            continue
+        if effet.nature in (NatureEffet.SURCHARGE, NatureEffet.MULTIPLIER_SURCHARGE, NatureEffet.FIGER_SURCHARGE):
+            # Meme estimation que l'evaluation, a partir de la Surcharge deja en place
+            valeur += POIDS_PV_ENNEMI * _gain_de_surcharge(combat, effet, carte.valeur_de(effet))
+            continue
+        if effet.nature == NatureEffet.DEGATS and effet.bonus is not None:
+            # Bonus calcule : lu sur l'etat actuel (Surcharge ou bouclier du principal)
+            statut = effet.bonus.par.statut
+            bonus = carte.valeurs_actuelles[effet.bonus.facteur] * combat.vaisseau.principal.statuts[statut]
+            valeur += POIDS_PV_ENNEMI * (carte.valeur_de(effet) + bonus) * max(0, _nombre_de_cibles(carte, effet, combat))
             continue
         if effet.nature == NatureEffet.RENVOI:
             cibles = min(RENVOI_MODULES_ATTAQUES, _nombre_de_cibles(carte, effet, combat))

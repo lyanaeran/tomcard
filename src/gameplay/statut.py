@@ -52,6 +52,9 @@ class Statut(Enum):
     RENVOI = auto()
     # Annule entierement la prochaine attaque recue, puis disparait (carte Leurre) ; intensite 1
     LEURRE = auto()
+    # Porte par le module principal : +intensite aux degats de chaque coup des cartes du joueur,
+    # quel que soit leur module (decision utilisateur, 2026-11-16 ; specs.md 3.5)
+    SURCHARGE = auto()
 
     @property
     def regle(self) -> RegleStatut:
@@ -66,6 +69,7 @@ REGLES_STATUT = {
     Statut.INCENDIE: RegleStatut(CumulStatut.ADDITION, ExtinctionStatut.MOINS_UN_PAR_TOUR),
     Statut.RENVOI: RegleStatut(CumulStatut.ADDITION, ExtinctionStatut.TOUR_SUIVANT),
     Statut.LEURRE: RegleStatut(CumulStatut.REMPLACEMENT, ExtinctionStatut.CONSOMMATION),
+    Statut.SURCHARGE: RegleStatut(CumulStatut.ADDITION, ExtinctionStatut.MOINS_UN_PAR_TOUR),
 }
 
 
@@ -93,6 +97,9 @@ class Statuts:
     intensite mise a 0 retire le statut. Pour poser un statut selon sa regle de cumul : ajouter."""
 
     intensites: dict[Statut, int] = field(default_factory=dict)
+    # Statuts figes : ils ne s'eteignent plus a la fin du tour, jusqu'a la fin du combat (Surcharge
+    # figee par Lanceur incandescent) ; les nouvelles poses continuent de s'ajouter
+    figes: set[Statut] = field(default_factory=set)
 
     def __getitem__(self, statut: Statut) -> int:
         """Intensite du statut, 0 s'il est absent."""
@@ -146,6 +153,8 @@ class Statuts:
         degats_pv = self.absorber_par_bouclier(incendie)
         encaissement = Encaissement(degats=incendie, degats_pv=degats_pv, absorbes_bouclier=incendie - degats_pv)
         for statut in list(self.intensites):
+            if statut in self.figes:
+                continue
             extinction = statut.regle.extinction
             if extinction == ExtinctionStatut.MOINS_UN_PAR_TOUR:
                 self[statut] -= 1

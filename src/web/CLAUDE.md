@@ -47,7 +47,36 @@ testé en navigateur. Méthodes à combiner :
    rechargement sur versions différentes ; sort en erreur au premier contrôle faux). À compléter
    quand on ajoute un écran ou un élément d'affichage. Demande Node et Playwright.
 4. Si un navigateur est accessible : DevTools (menu réactif au pouce, paysage, tailles iPhone).
-   En session cloud, Chromium + Playwright sont installés et le CDN de Pyodide est en général
-   joignable : servir le dépôt (`python -m http.server`), ouvrir `index.html` au format
-   `devices['iPhone 13 landscape']`, et préparer un combat précis depuis la page avec
-   `pyodide.runPython(...)` (les fonctions de `bridge.py` sont dans les globales de Pyodide).
+   En session cloud, Chromium + Playwright sont installés : servir le dépôt (`python -m
+   http.server`), ouvrir `index.html` au format `devices['iPhone 13 landscape']`, et préparer un
+   combat précis depuis la page avec `pyodide.runPython(...)` (les fonctions de `bridge.py` sont
+   dans les globales de Pyodide).
+
+### Recette en session cloud (version iPhone, éprouvée le 2026-11-25 sur la PR 79)
+
+1. **Accès au CDN de Pyodide.** Vérifier `curl -s -o /dev/null -w "%{http_code}"
+   https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js` (200 attendu). S'il est refusé (403
+   du proxy), utiliser l'**environnement cloud « tomcard »** (personnel, créé le 2026-11-25), qui
+   autorise `cdn.jsdelivr.net` ; l'environnement « Default » ne l'autorise pas. **Ne pas
+   contourner** le blocage (par exemple en servant Pyodide depuis un paquet npm local) : c'est
+   refusé ; passer par l'environnement, avec l'accord de l'utilisateur.
+2. **Essais de non-régression** : `python -m http.server 8765` en arrière-plan à la racine, puis
+   `NODE_PATH=$(npm root -g) node outils/test_web/essais.js <dossier des captures>` (Playwright
+   est installé globalement : sans `NODE_PATH`, `require("playwright")` échoue). Environ 3 à 5 min,
+   « N controles passes » à la fin. Regarder quelques captures.
+3. **Essai ciblé de la nouveauté** quand `essais.js` ne la couvre pas (ex. nouvelles cartes) :
+   petit script Playwright qui ouvre la page, attend `#ecran-selection-joueur`, prépare un combat
+   avec le même code Python que `PREPARATION_PYTHON` d'`essais.js` (main imposée, électricité
+   augmentée si besoin), puis **joue par de vrais clics** (`.carte[data-index=…]` puis
+   `.case.<camp>[data-id=…]`) et lit `etatCourant` : valeurs attendues, pastilles
+   (`.pastille-…`), popups, journal (`#bouton-journal-combat`), aucune erreur de page. Si l'essai
+   a de la valeur durable, l'ajouter à `essais.js`.
+4. **Sans Pyodide** (CDN injoignable et pas d'environnement adapté) : on peut encore vérifier le
+   **rendu** d'`app.js`/`style.css`. Produire l'état en Python avec `bridge.py` (méthode 1), servir
+   la page, puis dans Playwright appeler `masquerTousLesEcrans()`, afficher `#app` et
+   `appliquerResultat(<json>)`, et tester les fonctions d'affichage (ex.
+   `afficherInfobulle(idCase, "allie" | "ennemi")`, puis lire `#info-case`). Le message
+   « Erreur de chargement : loadPyodide is not defined » est alors normal. Cela ne remplace pas
+   l'essai complet : le dire dans la PR.
+5. **Compte rendu** : dire ce qui a tourné (essais.js, essai ciblé, bridge en Python, rendu sans
+   Pyodide) et ce qui n'a pas pu tourner ; arrêter le serveur (`pkill -f "http.server 8765"`).
