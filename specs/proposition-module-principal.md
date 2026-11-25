@@ -89,10 +89,10 @@ Lanceur (voir sa §3) ; **✱** = mécanique nouvelle, décrite au §3 ci-dessou
 | CRT_88 | Bouclier réactif | Bouclier | nouvelle | Defense | Module Unique | 1 | | | Donne {bouclier} de bouclier à un module. Piochez {pioche} carte | `bouclier: 4, pioche: 1` | `BOUCLIER(bouclier)` ; `PIOCHE(pioche)` | — |
 | CRT_89 | Bouclier chargé | Bouclier | nouvelle | Defense | Module Principal | 2 | | | Donne {bouclier} de bouclier au module principal | `bouclier: 14` | `BOUCLIER(bouclier)` | — |
 | CRT_90 | Bouclier réfléchissant | Bouclier | nouvelle | Defense | Module Unique | 1 | | | Renvoi {renvoi} sur un module : il renvoie à l'attaquant les dégâts reçus | `renvoi: 5` | **`RENVOI`**`(renvoi)` | ✱ Renvoi (§3.2) |
-| CRT_91 | Réparation rapide | Réparation | nouvelle | Reparation | Module Principal | 0 | 1 | | Répare le module principal pour {reparation} | `reparation: 4` | `REPARATION(reparation)` | — |
+| CRT_91 | Réparation rapide | Réparation | nouvelle | Reparation | Module Principal | 0 | 2 | | Répare le module principal pour {reparation} | `reparation: 4` | `REPARATION(reparation)` | — |
 | CRT_92 | Réparation de champ | Réparation | nouvelle | Reparation | Module Tous | 1 | 2 | | Répare tous vos modules pour {reparation} | `reparation: 4` | `REPARATION(reparation)` | — |
-| CRT_93 | Réacteur d'appoint | Réacteur | nouvelle | Outils | Module Principal | 0 | 2 | | +{electricite} électricité | `electricite: 1` | `GAIN_ELECTRICITE(electricite)` | — |
-| CRT_94 | Réacteur à condensateur | Réacteur | nouvelle | Outils | Module Principal | 1 | | | +{electricite} électricité au prochain tour | `electricite: 2` | **`GAIN_ELECTRICITE_DIFFERE`**`(electricite)` | ✱ électricité différée (§3.3) |
+| CRT_93 | Réacteur d'appoint | Réacteur | nouvelle | Outils | Module Principal | 0 | 2 | | Donne {electricite} électricité en plus ce tour | `electricite: 1` | `GAIN_ELECTRICITE(electricite)` | — |
+| CRT_94 | Réacteur à condensateur | Réacteur | nouvelle | Outils | Module Principal | 1 | | | Donne {electricite} électricité en plus au prochain tour | `electricite: 2` | **`GAIN_ELECTRICITE_DIFFERE`**`(electricite)` | ✱ électricité différée (§3.3) |
 | CRT_95 | Réacteur en surtension | Réacteur | nouvelle | Buff | Module Principal | 1 | | | Surcharge {surcharge}. Piochez {pioche} carte | `surcharge: 2, pioche: 1` | `SURCHARGE(surcharge)` ; `PIOCHE(pioche)` | ◆ Surcharge |
 | CRT_96 | Protocole d'analyse | Protocole | nouvelle | Outils | Module Principal | 1 | | | Piochez {pioche} cartes | `pioche: 2` | `PIOCHE(pioche)` | — |
 | CRT_97 | Protocole de tir | Protocole | nouvelle | Buff | Module Principal | 1 | 2 | | Ce tour, vos cartes Laser sont lancées {repetition} fois de plus | `repetition: 1, tours: 1` | `REPETITION(repetition) [duree=tours, filtre={famille: Laser}]` | ◆ répétition au tour, ✱ filtre famille (§3.1) |
@@ -111,8 +111,8 @@ revue du Lanceur).
 | CRT_100 | Laser disrupteur | Laser | nouvelle | Attaque | Ennemi Unique | 1 | | | Retire {retrait} de bouclier à un ennemi, puis lui inflige {degats} dégâts | `retrait: 8, degats: 6` | **`RETRAIT_BOUCLIER`**`(retrait)` ; `DEGATS(degats)` | ✱ retrait de bouclier (§3.5) |
 | CRT_101 | Bouclier intégral | Bouclier | nouvelle | Defense | Module Tous | 2 | | | Donne {bouclier} de bouclier à tous vos modules | `bouclier: 9` | `BOUCLIER(bouclier)` | — |
 | CRT_102 | Bouclier miroir | Bouclier | nouvelle | Defense | Module Tous | 1 | | | Renvoi {renvoi} sur tous vos modules | `renvoi: 4` | `RENVOI(renvoi)` | ✱ Renvoi (§3.2) |
-| CRT_103 | Réparation complète | Réparation | nouvelle | Reparation | Module Principal | 2 | 1 | | Répare le module principal pour {reparation} | `reparation: 15` | `REPARATION(reparation)` | — |
-| CRT_104 | Réacteur en surrégime | Réacteur | nouvelle | Outils | Module Principal | 0 | 1 | | +{electricite} électricité | `electricite: 2` | `GAIN_ELECTRICITE(electricite)` | — |
+| CRT_103 | Réparation complète | Réparation | nouvelle | Reparation | Module Principal | 2 | 1 | | Répare le module principal pour {reparation} | `reparation: 25` | `REPARATION(reparation)` | — |
+| CRT_104 | Réacteur en surrégime | Réacteur | nouvelle | Outils | Module Principal | 0 | 1 | | Donne {electricite} électricité en plus ce tour | `electricite: 2` | `GAIN_ELECTRICITE(electricite)` | — |
 | CRT_105 | Réacteur à batterie | Réacteur | nouvelle | Buff | Module Principal | 2 | 1 | | Jusqu'à la fin du combat, l'électricité non dépensée est gardée pour le tour suivant | `{}` | **`STOCKAGE_ELECTRICITE`** | ✱ report de l'électricité (§3.6) |
 | CRT_106 | Protocole de ciblage | Protocole | nouvelle | Debuff | Ennemi Tous | 1 | | | Pose Verrouillage {verrouillage} à tous les ennemis | `verrouillage: 3` | `VERROUILLAGE(verrouillage)` | ◆ Verrouillage |
 | CRT_107 | Protocole de riposte | Protocole | nouvelle | Defense | Module Principal | 1 | | | Donne {bouclier} de bouclier et Renvoi {renvoi} au module principal | `bouclier: 5, renvoi: 5` | `BOUCLIER(bouclier)` ; `RENVOI(renvoi)` | ✱ Renvoi (§3.2) |
@@ -123,7 +123,7 @@ revue du Lanceur).
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | CRT_50 | Protocole d'urgence | Protocole | existante (inchangée, décision utilisateur) | Buff | Module Tous | 3 | 3 | | Les cartes de base sont lancées {repetitions} fois de plus. | `repetitions: 1` | `REPETITION(repetitions) [filtre={rarete: Base}]` | — |
 | CRT_108 | Protocole laser | Protocole | nouvelle (décision utilisateur) | Buff | Module Principal | 2 | 1 | | Jusqu'à la fin du combat, vos cartes Laser sont lancées {repetitions} fois de plus | `repetitions: 1` | `REPETITION(repetitions) [filtre={famille: Laser}]` | ✱ filtre famille (§3.1) |
-| CRT_109 | Réacteur à fusion | Réacteur | nouvelle | Buff | Module Principal | 3 | 1 | | Jusqu'à la fin du combat, +{electricite} électricité au début de chaque tour | `electricite: 1` | **`AU_DEBUT_DU_TOUR`**` [declenche=GAIN_ELECTRICITE(electricite)]` | ✱ effet au début de chaque tour (§3.7) |
+| CRT_109 | Réacteur à fusion | Réacteur | nouvelle | Buff | Module Principal | 3 | 1 | | Donne {electricite} électricité en plus à chaque tour, jusqu'à la fin du combat | `electricite: 1` | **`AU_DEBUT_DU_TOUR`**` [declenche=GAIN_ELECTRICITE(electricite)]` | ✱ effet au début de chaque tour (§3.7) |
 | CRT_110 | Laser orbital | Laser | nouvelle | Attaque | Ennemi Unique | 3 | | | Inflige {degats_cible} dégâts à un ennemi et {degats_autres} à tous les autres | `degats_cible: 25, degats_autres: 10` | `DEGATS(degats_cible)` ; `DEGATS(degats_autres) @AUTRES_ENNEMIS` | — |
 
 ### 2.5 Écartées ou déplacées
@@ -158,9 +158,14 @@ calculé) sont décrites dans [proposition-lanceur-missiles.md](proposition-lanc
 
 ### 3.1 Champ `famille` et filtre par famille
 
-- **Règle** (décision utilisateur) : chaque carte a une **famille** ; un buff peut viser une
-  famille. Familles : Laser, Bouclier, Réparation, Réacteur, Protocole (principal) ; Missile,
-  Torpille, Ogive, Lanceur (Lanceur, proposition-lanceur-missiles.md §5.1).
+- **Règle** (décision utilisateur, 2026-11-25) : le champ `famille` n'est rempli **que sur les
+  cartes qu'un buff doit pouvoir viser**. Aujourd'hui, seule la famille **Laser** est visée
+  (Protocole de tir, Protocole laser) : seules les cartes Laser ont le champ. Ailleurs, les
+  familles (Bouclier, Réparation, Réacteur, Protocole ; Missile, Torpille, Ogive, Lanceur) restent
+  une **règle de nommage**, sans champ ; on ajoutera le champ à une famille le jour où un buff la
+  visera.
+- **Laser de base** (CRT_7) : famille Laser (proposition), donc boosté aussi par Protocole laser ;
+  Salve laser continue de viser le seul Laser de base par son id.
 - **Format** : champ de carte `"famille": "Laser"` (texte, sans accent : `Reparation`,
   `Reacteur`), optionnel. `FiltreCartes` gagne le critère `famille`.
 - **Code** :
@@ -269,3 +274,32 @@ Chaque lot :
    jour), ou on s'aligne plus tard sur les légendaires du Lanceur (1 munition) ?
 3. **Laser perçant** : sa description dit « la colonne ciblée » alors qu'elle touche une ligne
    (vocabulaire de combat.md §3.1.1) ; à corriger au lot P1 (proposition).
+
+---
+
+## 5. Revue avec l'utilisateur (2026-11-25)
+
+Discussion seulement : rien n'est codé.
+
+- **Blindage ciblé** : gardée telle quelle (décision utilisateur). Le bouclier qui ne perd que 1
+  par tour rend tous les boucliers plus durables que dans Slay the Spire, mais Blindage ciblé est
+  le moins rentable par ⚡ (4/⚡) ; c'est plutôt **Bouclier chargé** (14 pour 2⚡, et avec Laser de
+  contre-charge) qu'il faudra surveiller en simulation.
+- **Réparations**, comparées à la carte de base *Réparation* (1⚡, 2 munitions, 8 au principal,
+  soit 16 PV par combat) :
+
+| Carte | Décision utilisateur | PV au principal par combat |
+|---|---|---|
+| Réparation rapide | 0⚡, 4 au principal, **2 munitions** (était 1) | 8, gratuits |
+| Réparation de champ | **inchangée** : 1⚡, 2 munitions, 4 à tous les modules. Avec un secondaire, elle rend autant de PV que la base (4 + 4) ; plus avec 2 secondaires ou davantage | 8 (plus 4 par secondaire, pour le combat) |
+| Réparation complète | 2⚡, **25** au principal (était 15), 1 munition | 25 |
+
+  Rappel : seuls les PV du principal sont gardés d'un combat à l'autre, et la Station service
+  vend aussi de la réparation ; trop de réparation dans les cartes lui ôterait son intérêt.
+- **Textes des cartes qui donnent de l'électricité** (décision utilisateur) : verbe « Donne » et
+  moment précisé : « Donne {electricite} électricité en plus **ce tour** » (Réacteur d'appoint,
+  Réacteur en surrégime : effet immédiat confirmé), « … **au prochain tour** » (Réacteur à
+  condensateur), « … **à chaque tour, jusqu'à la fin du combat** » (Réacteur à fusion). Même
+  règle pour les cartes du Lanceur (Coup de grâce, Chasseur de primes).
+- **Champ famille** (décision utilisateur) : seulement sur les cartes qu'un buff vise, donc pour
+  l'instant les cartes Laser ; les autres familles ne sont qu'une règle de nommage (§3.1).
