@@ -96,7 +96,7 @@ _PAIRES_CASES_ENNEMIES = (("AV_G", "AR_G"), ("AV_M", "AR_M"), ("AV_D", "AR_D"))
 
 # Version du contrat entre bridge.py et src/web/app.js : doit etre egale a VERSION_CACHE (app.js),
 # verifie au demarrage par app.js (versionsAccordees) et par tests/test_architecture.py
-VERSION_WEB = "97"
+VERSION_WEB = "98"
 
 combat = None
 # Taille du journal deja transmise : les popups d'une action sont calcules a partir des seules
@@ -392,6 +392,8 @@ def _etat_dict() -> dict:
 # --- Combat : popups (presentation des entrees du journal ajoutees par la derniere action) ---
 
 _SYMBOLES_STATUT = {"BOUCLIER": "🛡", "INCENDIE": "🔥", "RENVOI": "↩"}
+# Couleur du popup d'un statut pose ou retire (classes .popup-* de style.css)
+_COULEUR_PAR_STATUT = {"BOUCLIER": "bouclier", "INCENDIE": "degats", "RENVOI": "debuff"}
 
 
 def _popup_evenement(evenement) -> dict | None:
@@ -409,13 +411,13 @@ def _popup_evenement(evenement) -> dict | None:
             texte = "Leurre"
         else:
             texte = f"+{evenement.valeur} {_SYMBOLES_STATUT[evenement.statut.name]}"
-        couleur = {"BOUCLIER": "bouclier", "INCENDIE": "degats", "RENVOI": "debuff"}.get(evenement.statut.name, "buff")
+        couleur = _COULEUR_PAR_STATUT.get(evenement.statut.name, "buff")
     elif nature == NatureEvenement.STATUT_RETIRE:
         # Rien retire (la cible n'avait pas ce statut) : rien a montrer
         if not evenement.valeur:
             return None
         texte = f"-{evenement.valeur} {_SYMBOLES_STATUT[evenement.statut.name]}"
-        couleur = {"BOUCLIER": "bouclier", "INCENDIE": "degats", "RENVOI": "debuff"}.get(evenement.statut.name, "buff")
+        couleur = _COULEUR_PAR_STATUT.get(evenement.statut.name, "buff")
     elif nature == NatureEvenement.REPARATION:
         if not evenement.valeur:
             # Reparation d'un module deja plein : rien a montrer

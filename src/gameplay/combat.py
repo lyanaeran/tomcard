@@ -33,17 +33,6 @@ NATURES_NON_GEREES = {
 # Natures qui agissent sur le joueur lui-meme (electricite, pioche, cartes), pas sur une entite
 NATURES_GLOBALES = {NatureEffet.GAIN_ELECTRICITE, NatureEffet.PIOCHE, NatureEffet.REPETITION}
 
-# Camp que chaque nature d'effet peut toucher : une carte qui l'applique a l'autre camp est
-# injouable (verifie avant toute modification du combat)
-CAMP_PAR_NATURE = {
-    NatureEffet.DEGATS: Camp.ENNEMI,
-    NatureEffet.INCENDIE: Camp.ENNEMI,
-    NatureEffet.BOUCLIER: Camp.JOUEUR,
-    NatureEffet.REPARATION: Camp.JOUEUR,
-    NatureEffet.ANNULATION_PROCHAINE_ATTAQUE: Camp.JOUEUR,
-    NatureEffet.RENVOI: Camp.JOUEUR,
-    NatureEffet.RETRAIT_BOUCLIER: Camp.ENNEMI,
-}
 
 Entite = Module | Ennemi
 
@@ -183,7 +172,7 @@ class Combat:
 
     def _cases_jouables(self, carte: Carte) -> list[Position]:
         """Cases ou la carte peut etre jouee maintenant ; vide si elle est injouable (hors main,
-        electricite, nature laissee pour plus tard ou appliquee au mauvais camp, aucune cible)."""
+        electricite, nature laissee pour plus tard, aucune cible)."""
         if not (
             self.en_cours
             and any(carte is en_main for en_main in self.deck.main)
@@ -195,13 +184,8 @@ class Combat:
 
     @staticmethod
     def _effet_gere(carte: Carte, effet: Effet) -> bool:
-        if effet.nature in NATURES_NON_GEREES:
-            return False
-        camp = CAMP_PAR_NATURE.get(effet.nature)
-        if camp is None:
-            return True
-        camp_touche = effet.portee.camp or carte.cible.camp
-        return camp == camp_touche
+        # Le camp touche par chaque effet est verifie au chargement de la carte (CAMP_PAR_NATURE)
+        return effet.nature not in NATURES_NON_GEREES
 
     def intentions(self) -> list[Intention]:
         """Ce que chaque ennemi vivant jouera a son prochain tour (specs.md 13.2.3)."""
@@ -377,10 +361,12 @@ class Combat:
             autre = self.flotte.ennemi_en(Position(autre_ligne, case.colonne))
             return [autre] if autre is not None and autre is not choisi and not autre.est_detruit() else []
         if effet.portee == PorteeEffet.MODULE_PRINCIPAL:
-            return [self.vaisseau.principal]
+            principal = self.vaisseau.principal
+            return [principal] if not principal.est_detruit() else []
         if effet.portee == PorteeEffet.MODULE_DE_LA_CARTE:
-            module = self.vaisseau.module_d_exemplaire(carte.exemplaire_module)
-            return [module] if module is not None and not module.est_detruit() else []
+            # Module detruit : l'effet va au principal, comme les degats renvoyes (decision
+            # utilisateur, 2026-11-25)
+            return [self._module_qui_recoit_le_renvoi(carte)]
         ligne = Ligne.AVANT if effet.portee == PorteeEffet.LIGNE_AVANT_ENNEMIE else Ligne.ARRIERE
         return self.flotte.ennemis_vivants_de_ligne(ligne)
 
@@ -421,7 +407,8 @@ class Combat:
                 self._poser_statut(cible, nature.statut_pose, valeur if valeur is not None else 1, source=carte)
 
     def _module_qui_recoit_le_renvoi(self, carte: Carte) -> Module:
-        """Module de la carte jouee, ou le principal s'il est detruit (decision utilisateur, 4.5)."""
+        """Module de la carte jouee, ou le principal s'il est detruit (decision utilisateur, 4.5) :
+        recoit les degats renvoyes et les effets de portee MODULE_DE_LA_CARTE."""
         module = self.vaisseau.module_d_exemplaire(carte.exemplaire_module)
         return self.vaisseau.principal if module.est_detruit() else module
 

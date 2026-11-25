@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "97";
+const VERSION_CACHE = "98";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -301,7 +301,8 @@ function construireLigneJournal(evenement) {
         }
         case "STATUT_RETIRE": {
             const nom = NOMS_STATUT_JOURNAL[evenement.statut] || evenement.statut;
-            return `${source}${texte(" → ")}${cible}${texte(` : ${nom} -${evenement.valeur}`)}`;
+            const detail = evenement.valeur ? `${nom} -${evenement.valeur}` : `aucun ${nom} à retirer`;
+            return `${source}${texte(" → ")}${cible}${texte(` : ${detail}`)}`;
         }
         case "REPARATION":
             return `${source}${texte(" → ")}${cible}${texte(` : +${evenement.valeur} PV (${evenement.pv_restants} restants)`)}`;

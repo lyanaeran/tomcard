@@ -124,3 +124,5 @@ def test_popup_et_journal_du_retrait_de_bouclier():
     assert textes_combat.popup_evenement(rien) is None
     texte = "".join(morceau for morceau, _couleur in textes_combat.ligne_journal(retire))
     assert texte == f"{carte.nom} → {ennemi.nom} : bouclier -8"
+    texte = "".join(morceau for morceau, _couleur in textes_combat.ligne_journal(rien))
+    assert texte == f"{carte.nom} → {ennemi.nom} : aucun bouclier à retirer"

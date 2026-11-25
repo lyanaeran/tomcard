@@ -539,7 +539,7 @@
       "jouable": "oui",
       "refonte": true,
       "description": "Inflige {degats} dégâts à un ennemi et donne {bouclier} de bouclier au module principal",
-      "valeurs": { "degats": 4, "bouclier": 3 },
+      "valeurs": { "degats": 5, "bouclier": 6 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" },
         { "nature": "BOUCLIER", "valeur": "bouclier", "portee": "MODULE_PRINCIPAL" }

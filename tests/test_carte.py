@@ -368,6 +368,32 @@ def test_meme_colonne_suppose_une_cible_ennemi_unique():
         )
 
 
+@pytest.mark.parametrize(
+    "cible, nature, portee",
+    [
+        (CibleCarte.MODULE_UNIQUE, NatureEffet.DEGATS, PorteeEffet.CIBLE),
+        (CibleCarte.ENNEMI_UNIQUE, NatureEffet.DEGATS, PorteeEffet.MODULE_PRINCIPAL),
+        (CibleCarte.ENNEMI_UNIQUE, NatureEffet.RETRAIT_BOUCLIER, PorteeEffet.MODULE_DE_LA_CARTE),
+        (CibleCarte.ENNEMI_UNIQUE, NatureEffet.BOUCLIER, PorteeEffet.CIBLE),
+        (CibleCarte.ENNEMI_UNIQUE, NatureEffet.RENVOI, PorteeEffet.CIBLE),
+    ],
+)
+def test_une_nature_appliquee_au_mauvais_camp_est_refusee_au_chargement(cible, nature, portee):
+    with pytest.raises(ValueError, match="ne peut pas toucher le camp"):
+        _carte_simple(
+            cible=cible, description="", valeurs={"x": 5}, effets=(Effet(nature, "x", portee=portee),),
+        )
+
+
+def test_une_nature_peut_toucher_l_autre_camp_par_sa_portee():
+    # Missile de couverture : degats a l'ennemi, bouclier au principal
+    carte = _carte_simple(
+        description="", valeurs={"degats": 5, "bouclier": 3},
+        effets=(Effet(NatureEffet.DEGATS, "degats"), Effet(NatureEffet.BOUCLIER, "bouclier", portee=PorteeEffet.MODULE_PRINCIPAL)),
+    )
+    assert carte.cible == CibleCarte.ENNEMI_UNIQUE
+
+
 def test_renvoi_pose_le_statut_renvoi():
     assert NatureEffet.RENVOI.statut_pose == Statut.RENVOI
     assert NatureEffet.RETRAIT_BOUCLIER.statut_pose is None

@@ -236,7 +236,9 @@ def ligne_journal(evenement: Evenement) -> list[Segment]:
         debut = [*source, texte(" → ")] if source else []
         return [*debut, *cible, texte(f" : {NOMS_STATUT[evenement.statut].lower()}{valeur}")]
     if nature == NatureEvenement.STATUT_RETIRE:
-        return [*source, texte(" → "), *cible, texte(f" : {NOMS_STATUT[evenement.statut].lower()} -{evenement.valeur}")]
+        nom = NOMS_STATUT[evenement.statut].lower()
+        detail = f"{nom} -{evenement.valeur}" if evenement.valeur else f"aucun {nom} à retirer"
+        return [*source, texte(" → "), *cible, texte(f" : {detail}")]
     if nature == NatureEvenement.REPARATION:
         return [*source, texte(" → "), *cible, texte(f" : +{evenement.valeur} PV ({evenement.pv_restants} restants)")]
     if nature == NatureEvenement.ELECTRICITE:

@@ -46,13 +46,17 @@ VALEUR_PAR_NATURE = {
     NatureEffet.DEGATS: POIDS_PV_ENNEMI,
     NatureEffet.INCENDIE: 2 * POIDS_PV_ENNEMI,  # l'incendie frappe plusieurs tours
     NatureEffet.BOUCLIER: 1.0,
-    # Le renvoi protege comme un bouclier, et blesse l'attaquant en plus (estimation)
+    # Le renvoi protege comme un bouclier ; les degats rendus a l'attaquant ne sont pas comptes
+    # (estimation prudente), et il ne sert que sur les modules attaques (RENVOI_MODULES_ATTAQUES)
     NatureEffet.RENVOI: 1.0,
     NatureEffet.REPARATION: 1.0,
     NatureEffet.GAIN_ELECTRICITE: 5.0,
     NatureEffet.PIOCHE: 5.0,
 }
 VALEUR_LEURRE = 8.0
+# Modules attaques en general dans un tour ennemi : un renvoi pose sur plus de modules n'en protege
+# pas davantage (Bouclier miroir)
+RENVOI_MODULES_ATTAQUES = 2
 
 
 def copie_sans_journal(combat: Combat) -> Combat:
@@ -159,6 +163,15 @@ def valeur_d_un_lancement(carte: Carte, combat: Combat) -> float:
     for effet in carte.effets:
         if effet.nature == NatureEffet.ANNULATION_PROCHAINE_ATTAQUE:
             valeur += VALEUR_LEURRE
+            continue
+        if effet.nature == NatureEffet.RETRAIT_BOUCLIER:
+            # Vaut des degats, mais seulement a hauteur du bouclier que porte un ennemi
+            boucliers = [ennemi.statuts[Statut.BOUCLIER] for ennemi in combat.flotte.ennemis_vivants()]
+            valeur += POIDS_PV_ENNEMI * min(carte.valeur_de(effet), max(boucliers, default=0))
+            continue
+        if effet.nature == NatureEffet.RENVOI:
+            cibles = min(RENVOI_MODULES_ATTAQUES, _nombre_de_cibles(carte, effet, combat))
+            valeur += VALEUR_PAR_NATURE[NatureEffet.RENVOI] * carte.valeur_de(effet) * cibles
             continue
         par_point = VALEUR_PAR_NATURE.get(effet.nature, 0.0)
         valeur += par_point * (carte.valeur_de(effet) or 0) * max(0, _nombre_de_cibles(carte, effet, combat))

@@ -257,8 +257,9 @@ Ajoutées le 2026-11-25 (lot 2 de plan-cartes.md) :
   qu'une fois. Seulement sur une carte Ennemi Unique (vérifié au chargement). *Torpille traversante.*
 - `MODULE_PRINCIPAL` : le module principal, même sur une carte qui vise un ennemi. *Missile de
   couverture, Laser défensif.*
-- `MODULE_DE_LA_CARTE` : le module auquel la carte est rattachée, rien s'il est détruit (le bouclier
-  n'est pas reporté sur le principal). *Torpille de barrage.*
+- `MODULE_DE_LA_CARTE` : le module auquel la carte est rattachée ; **le principal s'il est détruit**
+  (carte Persistante), comme les dégâts renvoyés (combat.md §3.8.5, décision utilisateur du
+  2026-11-25). *Torpille de barrage.*
 
 ### 12.4 Rattachement à un module et mot-clé Persistante
 

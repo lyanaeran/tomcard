@@ -162,6 +162,18 @@ STATUT_PAR_NATURE = {
     NatureEffet.RENVOI: Statut.RENVOI,
 }
 
+# Camp que chaque nature d'effet peut toucher (portee de l'effet, sinon cible de la carte) : une
+# carte qui l'applique a l'autre camp est refusee au chargement (Carte.__post_init__)
+CAMP_PAR_NATURE = {
+    NatureEffet.DEGATS: Camp.ENNEMI,
+    NatureEffet.INCENDIE: Camp.ENNEMI,
+    NatureEffet.RETRAIT_BOUCLIER: Camp.ENNEMI,
+    NatureEffet.BOUCLIER: Camp.JOUEUR,
+    NatureEffet.REPARATION: Camp.JOUEUR,
+    NatureEffet.ANNULATION_PROCHAINE_ATTAQUE: Camp.JOUEUR,
+    NatureEffet.RENVOI: Camp.JOUEUR,
+}
+
 # Natures dont l'effet peut avoir une duree en tours (statuts a duree, geres plus tard :
 # specs.md 3.5.3)
 NATURES_A_DUREE = {NatureEffet.VULNERABILITE, NatureEffet.REDUCTION_DEGATS, NatureEffet.REDIRECTION_CIBLE}
@@ -183,8 +195,8 @@ class PorteeEffet(Enum):
     # Le module principal, quelle que soit la cible de la carte (Missile de couverture : degats a
     # un ennemi et bouclier au principal)
     MODULE_PRINCIPAL = auto()
-    # Le module auquel la carte est rattachee (exemplaire_module), rien s'il est detruit (Torpille
-    # de barrage : bouclier au Lanceur)
+    # Le module auquel la carte est rattachee (exemplaire_module), le principal s'il est detruit,
+    # comme le renvoi des degats (Torpille de barrage : bouclier au Lanceur)
     MODULE_DE_LA_CARTE = auto()
 
     @property
@@ -389,6 +401,13 @@ class Carte:
             self.cible != CibleCarte.ENNEMI_UNIQUE
         ):
             raise ValueError(f"{self.id} : 'meme colonne' suppose une cible Ennemi Unique")
+        for effet in self.effets:
+            camp_touche = effet.portee.camp or self.cible.camp
+            camp_nature = CAMP_PAR_NATURE.get(effet.nature)
+            if camp_nature is not None and camp_nature != camp_touche:
+                raise ValueError(
+                    f"{self.id} : {effet.nature.name} ne peut pas toucher le camp {camp_touche.name.lower()}"
+                )
         self._verifier_valeurs()
         if self.munitions_restantes is None:
             self.munitions_restantes = self.munitions_base

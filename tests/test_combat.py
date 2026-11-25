@@ -547,21 +547,6 @@ def test_le_combat_ne_modifie_pas_les_cartes_du_deck_de_la_partie():
     assert reparation.munitions_restantes == 1
 
 
-def test_une_nature_appliquee_au_mauvais_camp_est_refusee_avant_toute_modification():
-    degats_sur_module = Carte(
-        id="TEST", nom="Erreur", image="", rarete=RareteCarte.COMMUNE, categorie=CategorieCarte.ATTAQUE,
-        cible=CibleCarte.MODULE_UNIQUE, cout=1, description="", valeurs={"degats": 5},
-        effets=(Effet(NatureEffet.DEGATS, "degats"),), exemplaire_module="M1",
-    )
-    combat = _combat()
-    _en_main(combat, degats_sur_module)
-
-    assert not combat.peut_jouer(degats_sur_module)
-    with pytest.raises(ValueError, match="injouable"):
-        combat.jouer_carte(degats_sur_module, AVANT_MID)
-    assert combat.electricite == 3 and combat.deck.main == [degats_sur_module]
-
-
 def test_un_module_detruit_perd_ses_statuts():
     combat = _combat({AVANT_GAUCHE: _ennemi()})
     lanceur = combat.vaisseau.module_d_exemplaire("M2")
@@ -626,7 +611,7 @@ def test_torpille_de_barrage_bouclier_au_module_de_la_carte():
     assert combat.vaisseau.principal.statuts[Statut.BOUCLIER] == 0
 
 
-def test_portee_module_de_la_carte_rien_si_le_module_est_detruit():
+def test_portee_module_de_la_carte_va_au_principal_si_le_module_est_detruit():
     combat = _combat()
     barrage = _carte("CRT_62", "M2")
     barrage.persistante = True
@@ -635,7 +620,7 @@ def test_portee_module_de_la_carte_rien_si_le_module_est_detruit():
 
     combat.jouer_carte(barrage, AVANT_MID)
 
-    assert all(module.statuts[Statut.BOUCLIER] == 0 for module in combat.vaisseau.modules)
+    assert combat.vaisseau.principal.statuts[Statut.BOUCLIER] == _valeur("CRT_62", "bouclier")
 
 
 def test_torpille_traversante_touche_aussi_l_ennemi_de_la_meme_colonne():
@@ -661,14 +646,18 @@ def test_torpille_traversante_depuis_l_arriere_touche_l_ennemi_de_devant():
     assert devant.pv == devant.pv_max - _valeur("CRT_61", "degats_colonne")
 
 
-def test_torpille_traversante_sans_personne_dans_la_colonne_et_sur_le_boss():
+def test_torpille_traversante_sans_personne_dans_la_colonne():
     seul = _ennemi()
     combat = _combat({AVANT_DROITE: seul})
     (traversante,) = _en_main(combat, _carte("CRT_61", "M2"))
+
     combat.jouer_carte(traversante, AVANT_DROITE)
+
     assert seul.pv == seul.pv_max - _valeur("CRT_61", "degats_cible")
 
-    # Le Boss occupe les deux cases de sa colonne : il n'est touche qu'une fois
+
+def test_torpille_traversante_ne_touche_le_boss_qu_une_fois():
+    # Le Boss occupe les deux cases de sa colonne
     boss = _ennemi("ENM_BOSS_PIRATES")
     combat = _combat({AVANT_MID: boss, ARRIERE_MID: boss})
     (traversante,) = _en_main(combat, _carte("CRT_61", "M2"))
@@ -731,9 +720,10 @@ def test_laser_disrupteur_retire_le_bouclier_puis_inflige_ses_degats():
     assert (retire.cible, retire.statut, retire.valeur) == (pat, Statut.BOUCLIER, min(12, retrait))
 
 
-def test_le_retrait_de_bouclier_ne_touche_pas_au_renvoi():
+def test_le_retrait_de_bouclier_ne_touche_ni_au_renvoi_ni_au_leurre():
     pat = _ennemi()
     pat.statuts.ajouter(Statut.RENVOI, 4)
+    pat.statuts.ajouter(Statut.LEURRE, 1)
     combat = _combat({AVANT_MID: pat})
     retrait = Carte(
         id="TEST", nom="Retrait", image="test.png", rarete=RareteCarte.COMMUNE, categorie=CategorieCarte.ATTAQUE,
@@ -744,5 +734,5 @@ def test_le_retrait_de_bouclier_ne_touche_pas_au_renvoi():
 
     combat.jouer_carte(retrait, AVANT_MID)
 
-    assert pat.statuts[Statut.RENVOI] == 4
+    assert pat.statuts[Statut.RENVOI] == 4 and pat.statuts[Statut.LEURRE] == 1
     assert _evenements(combat, NatureEvenement.STATUT_RETIRE)[0].valeur == 0
