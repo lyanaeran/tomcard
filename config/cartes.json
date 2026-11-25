@@ -86,7 +86,7 @@
       "image": "assets/cartes/attaque_percante.png",
       "rarete": "Commune",
       "categorie": "Attaque",
-      "cible": "Ennemi Colonne",
+      "cible": "Ennemi Ligne",
       "modules": ["MOD_1"],
       "cout": 2,
       "munition": null,
@@ -94,7 +94,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats} dégâts à la colonne ciblée",
+      "description": "Inflige {degats} dégâts à la ligne ciblée",
       "valeurs": { "degats": 8 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" }
@@ -258,8 +258,8 @@
       "description": "Inflige {degats_avant} dégâts à la ligne avant et {degats_arriere} à la ligne arrière",
       "valeurs": { "degats_avant": 10, "degats_arriere": 8 },
       "effets": [
-        { "nature": "DEGATS", "valeur": "degats_avant", "portee": "COLONNE_AVANT_ENNEMIE" },
-        { "nature": "DEGATS", "valeur": "degats_arriere", "portee": "COLONNE_ARRIERE_ENNEMIE" }
+        { "nature": "DEGATS", "valeur": "degats_avant", "portee": "LIGNE_AVANT_ENNEMIE" },
+        { "nature": "DEGATS", "valeur": "degats_arriere", "portee": "LIGNE_ARRIERE_ENNEMIE" }
       ]
     },
     {

@@ -76,7 +76,7 @@ Lanceur (voir sa §3) ; **✱** = mécanique nouvelle, décrite au §3 ci-dessou
 
 | Id | Nom | Famille | État | Catégorie | Cible | Coût | Mun. | Lanc. | Description affichée | Valeurs | Effets | Mécanique à coder |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| CRT_8 | Laser perçant | Laser | existante | Attaque | Ennemi Colonne | 2 | | | Inflige {degats} dégâts à chaque ennemi de la ligne visée | `degats: 8` | `DEGATS(degats)` | — (description à corriger : « ligne », combat.md §3.1.1) |
+| CRT_8 | Laser perçant | Laser | existante | Attaque | Ennemi Ligne | 2 | | | Inflige {degats} dégâts à la ligne ciblée | `degats: 8` | `DEGATS(degats)` | — (cible et description corrigées au lot 0, 2026-11-25) |
 | CRT_47 | Laser lourd | Laser | modifiée (1⚡ 12 → 2⚡ 14) | Attaque | Ennemi Unique | 2 | | | Inflige {degats} dégâts à un ennemi | `degats: 14` | `DEGATS(degats)` | — |
 | CRT_45 | Laser incendiaire | Laser | modifiée (ex-Tir incendiaire : 2⚡, 3 mun., Incendie 4) | Attaque | Ennemi Unique | 1 | | | Inflige {degats} dégâts et {incendie} d'incendie à un ennemi | `degats: 2, incendie: 4` | `DEGATS(degats)` ; `INCENDIE(incendie)` | — |
 | CRT_82 | Laser d'appoint | Laser | nouvelle | Attaque | Ennemi Unique | 0 | | | Inflige {degats} dégâts à un ennemi. Piochez {pioche} carte | `degats: 2, pioche: 1` | `DEGATS(degats)` ; `PIOCHE(pioche)` | — |
@@ -272,8 +272,8 @@ Chaque lot :
    premiers lots (comme décidé pour le Lanceur).
 2. **Protocole d'urgence** garde 3 munitions et se cumule : on le laisse ainsi (décision de ce
    jour), ou on s'aligne plus tard sur les légendaires du Lanceur (1 munition) ?
-3. **Laser perçant** : sa description dit « la colonne ciblée » alors qu'elle touche une ligne
-   (vocabulaire de combat.md §3.1.1) ; à corriger au lot P1 (proposition).
+3. **Laser perçant** : description et cible corrigées (« la ligne ciblée », cible « Ennemi
+   Ligne ») au lot 0 du plan, 2026-11-25.
 
 ---
 
@@ -303,3 +303,6 @@ Discussion seulement : rien n'est codé.
   règle pour les cartes du Lanceur (Coup de grâce, Chasseur de primes).
 - **Champ famille** (décision utilisateur) : seulement sur les cartes qu'un buff vise, donc pour
   l'instant les cartes Laser ; les autres familles ne sont qu'une règle de nommage (§3.1).
+- **Laser de base** (CRT_7) : famille Laser, boosté par Protocole laser (décision utilisateur,
+  2026-11-25). **Protocole d'urgence** garde 3 munitions (décision utilisateur, 2026-11-25 ;
+  question 2 du §4 tranchée).

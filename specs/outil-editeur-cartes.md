@@ -118,7 +118,7 @@ Aperçu : « Inflige 12 dégâts à un ennemi unique »
 | | Image | **liste** des images de `assets/cartes/` **ou valeur libre** (avec la vignette) |
 | Classement | Rareté | **liste** (Base, Commune, Rare, Légendaire) ou libre |
 | | Catégorie | **liste** (Attaque, Defense, Reparation, Buff, Debuff, Outils, Controle) ou libre |
-| | Cible | **liste** (Ennemi Unique, Ennemi Colonne, Ennemi Avant, Ennemi Arriere, Ennemi Tous, Module Unique, Module Principal, Module Avant, Module Tous) ou libre |
+| | Cible | **liste** (Ennemi Unique, Ennemi Ligne, Ennemi Avant, Ennemi Arriere, Ennemi Tous, Module Unique, Module Principal, Module Avant, Module Tous) ou libre |
 | Module | Modules | cases à cocher : les modules de `config/modules.json` (§4.7) |
 | Coût et usage | Coût | nombre |
 | | Munitions | nombre, ou vide = illimitées |

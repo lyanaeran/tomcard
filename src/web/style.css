@@ -252,7 +252,7 @@ body {
 .grille {
     display: grid;
     grid-template-columns: repeat(2, var(--taille-case));
-    /* Ecart horizontal entre colonnes avant/arriere, assez large pour que les pastilles
+    /* Ecart horizontal entre lignes avant/arriere (colonnes de la grille CSS), assez large pour que les pastilles
        PV/Bouclier (qui debordent au-dessus de chaque case, cf. .pastille) ne chevauchent pas
        la case voisine - l'ecart vertical entre rangees est repris par .grille.grille-ennemis
        (row-gap, ci-dessous) pour aligner les rangees ennemies sur celles du vaisseau. */
@@ -280,13 +280,14 @@ body {
     width: calc(var(--taille-case) / 0.2556);
 }
 
-/* Alignement vertical des 3 rangees ennemies sur celles du vaisseau joueur (decision
+/* Alignement vertical des 3 rangees ennemies (les colonnes gauche, milieu, droite du jeu, vues
+   sur l'ecran : specs combat.md 3.1.1) sur celles du vaisseau joueur (decision
    utilisateur) : rangee du haut face aux modules du haut, rangee du bas face aux modules du
    bas, rangee du milieu face au vaisseau. Les deux blocs sont centres l'un sur l'autre par
    #grilles (align-items:center) : il suffit donc que l'ecart case+row-gap entre deux rangees
    ennemies adjacentes reproduise l'ecart (en unites de --taille-case) entre le centre d'une
    rangee de modules et le centre du vaisseau, mesure depuis EMPLACEMENTS_MODULES (app.js)
-   comme _CENTRE_Y_RANGEE_GAUCHE/_DROITE cote pc (src/ui/fenetre.py) : distance centre haut -
+   comme _CENTRE_Y_COLONNE_GAUCHE/_DROITE cote pc (src/ui/fenetre.py) : distance centre haut -
    centre milieu = 0.3860 * hauteur vaisseau, hauteur vaisseau = largeur / 0.2556 * 965 / 978
    ~= 3.8604 * --taille-case, d'ou l'ecart voulu ~= 1.4902 * --taille-case, moins 1 case pleine
    pour obtenir le row-gap. */
@@ -337,7 +338,7 @@ body {
 }
 
 /* .case-fusionnee (ennemi a plusieurs emplacements, specs.md 3.2, ex. le Boss des pirates) :
-   une seule case sur les 2 colonnes Avant/Arriere d'une rangee (grid-row/grid-column poses en
+   une seule case sur les 2 lignes Avant/Arriere d'une colonne du jeu (grid-row/grid-column poses en
    ligne par app.js:rendreGrilleEnnemis, cf. _PAIRES_CASES_ENNEMIES cote bridge.py). Sa largeur
    vient automatiquement des 2 pistes de grille fusionnees, bien plus large que haute - une image
    qui ne fait pas ce ratio paraitrait minuscule avec object-fit:contain (herite de .case img) :

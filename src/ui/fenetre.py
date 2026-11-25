@@ -13,7 +13,7 @@ from src.gameplay.combat import ELECTRICITE_PAR_TOUR, Combat, EtatCombat
 from src.gameplay.ennemi import Ennemi
 from src.gameplay.module import Module
 from src.gameplay.partie import RACINE, Partie
-from src.gameplay.position import Colonne, Position, Rangee
+from src.gameplay.position import Ligne, Position, Colonne
 from src.gameplay.statut import Statut
 from src.gameplay.vaisseau import CASES_PAR_EMPLACEMENT
 from src.ui import textes_combat
@@ -51,7 +51,7 @@ _ECHELLE_VAISSEAU = VAISSEAU_LARGEUR / _TAILLE_IMAGE_PRINCIPAL[0]
 # ENNEMI_AVANT_X derive (plutot qu'une valeur fixe) pour que le bloc vaisseau+flotte reste
 # centre horizontalement dans la fenetre (marges egales des deux cotes, meme principe que
 # #grilles/justify-content:center cote web) quelle que soit la taille des cases ennemies :
-# marge gauche (VAISSEAU_X) = marge droite (LARGEUR_FENETRE - bord droit de la colonne arriere).
+# marge gauche (VAISSEAU_X) = marge droite (LARGEUR_FENETRE - bord droit de la ligne arriere).
 ENNEMI_AVANT_X = LARGEUR_FENETRE - 2 * CELLULE_LARGEUR - ESPACEMENT_CELLULE - VAISSEAU_X
 ENNEMI_ARRIERE_X = ENNEMI_AVANT_X + CELLULE_LARGEUR + ESPACEMENT_CELLULE
 
@@ -63,27 +63,27 @@ ENNEMI_ARRIERE_X = ENNEMI_AVANT_X + CELLULE_LARGEUR + ESPACEMENT_CELLULE
 # coins d'une image large) : GAUCHE reste la paire du haut, DROITE celle du
 # bas, meme convention que l'ancienne image (deja GAUCHE = y le plus haut).
 _EMPLACEMENTS_MODULES_IMAGE = {
-    Position(Colonne.ARRIERE, Rangee.GAUCHE): (230, 745, 250, 220),
-    Position(Colonne.AVANT, Rangee.GAUCHE): (580, 745, 250, 220),
-    Position(Colonne.ARRIERE, Rangee.DROITE): (230, 0, 250, 220),
-    Position(Colonne.AVANT, Rangee.DROITE): (580, 0, 250, 220),
+    Position(Ligne.ARRIERE, Colonne.GAUCHE): (230, 745, 250, 220),
+    Position(Ligne.AVANT, Colonne.GAUCHE): (580, 745, 250, 220),
+    Position(Ligne.ARRIERE, Colonne.DROITE): (230, 0, 250, 220),
+    Position(Ligne.AVANT, Colonne.DROITE): (580, 0, 250, 220),
 }
 
-# Rangees de la flotte ennemie alignees verticalement sur celles du vaisseau
-# joueur (decision utilisateur) : rangee du haut face aux modules du haut,
-# rangee du bas face aux modules du bas, rangee du milieu face au vaisseau
+# Colonnes de la flotte ennemie alignees verticalement sur celles du vaisseau
+# joueur (decision utilisateur) : colonne du haut face aux modules du haut,
+# colonne du bas face aux modules du bas, colonne du milieu face au vaisseau
 # (entre les deux, au niveau du module principal). Centres derives des memes
 # emplacements que _rect_module, pour rester coherents si l'image change encore.
-_, _ey_gauche, _, _eh_gauche = _EMPLACEMENTS_MODULES_IMAGE[Position(Colonne.AVANT, Rangee.GAUCHE)]
-_, _ey_droite, _, _eh_droite = _EMPLACEMENTS_MODULES_IMAGE[Position(Colonne.AVANT, Rangee.DROITE)]
-_CENTRE_Y_RANGEE_GAUCHE = VAISSEAU_Y + (_ey_gauche + _eh_gauche / 2) * _ECHELLE_VAISSEAU
-_CENTRE_Y_RANGEE_DROITE = VAISSEAU_Y + (_ey_droite + _eh_droite / 2) * _ECHELLE_VAISSEAU
-_CENTRE_Y_RANGEE_MID = (_CENTRE_Y_RANGEE_GAUCHE + _CENTRE_Y_RANGEE_DROITE) / 2
+_, _ey_gauche, _, _eh_gauche = _EMPLACEMENTS_MODULES_IMAGE[Position(Ligne.AVANT, Colonne.GAUCHE)]
+_, _ey_droite, _, _eh_droite = _EMPLACEMENTS_MODULES_IMAGE[Position(Ligne.AVANT, Colonne.DROITE)]
+_CENTRE_Y_COLONNE_GAUCHE = VAISSEAU_Y + (_ey_gauche + _eh_gauche / 2) * _ECHELLE_VAISSEAU
+_CENTRE_Y_COLONNE_DROITE = VAISSEAU_Y + (_ey_droite + _eh_droite / 2) * _ECHELLE_VAISSEAU
+_CENTRE_Y_COLONNE_MID = (_CENTRE_Y_COLONNE_GAUCHE + _CENTRE_Y_COLONNE_DROITE) / 2
 
-RANGEE_Y = {
-    Rangee.GAUCHE: _CENTRE_Y_RANGEE_GAUCHE - CELLULE_HAUTEUR / 2,
-    Rangee.MID: _CENTRE_Y_RANGEE_MID - CELLULE_HAUTEUR / 2,
-    Rangee.DROITE: _CENTRE_Y_RANGEE_DROITE - CELLULE_HAUTEUR / 2,
+COLONNE_Y = {
+    Colonne.GAUCHE: _CENTRE_Y_COLONNE_GAUCHE - CELLULE_HAUTEUR / 2,
+    Colonne.MID: _CENTRE_Y_COLONNE_MID - CELLULE_HAUTEUR / 2,
+    Colonne.DROITE: _CENTRE_Y_COLONNE_DROITE - CELLULE_HAUTEUR / 2,
 }
 
 # Repere du pare-brise mesure sur l'image source (coordonnees locales,
@@ -364,13 +364,13 @@ def _rect_module(position: Position) -> tuple[float, float, float, float]:
 
 def _rect_ennemi(position: Position) -> tuple[float, float, float, float]:
     """Rectangle (x, y, largeur, hauteur) d'une case de la flotte ennemie."""
-    x = ENNEMI_AVANT_X if position.colonne == Colonne.AVANT else ENNEMI_ARRIERE_X
-    return x, RANGEE_Y[position.rangee], CELLULE_LARGEUR, CELLULE_HAUTEUR
+    x = ENNEMI_AVANT_X if position.ligne == Ligne.AVANT else ENNEMI_ARRIERE_X
+    return x, COLONNE_Y[position.colonne], CELLULE_LARGEUR, CELLULE_HAUTEUR
 
 
 def _rect_fusionne(positions: list[Position]) -> tuple[float, float, float, float]:
     """Rectangle englobant plusieurs cases ennemies (specs.md 3.2 : un ennemi a plusieurs
-    emplacements, ex. le Boss des pirates sur l'Avant et l'Arriere d'une meme rangee, est
+    emplacements, ex. le Boss des pirates sur l'Avant et l'Arriere d'une meme colonne, est
     dessine comme un seul rectangle fusionne plutot que deux sprites/pastilles PV redondants) -
     union des rectangles individuels de chaque case."""
     rects = [_rect_ennemi(position) for position in positions]

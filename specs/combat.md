@@ -35,18 +35,12 @@ Sur l'écran, le joueur est tourné vers la droite et les ennemis vers la gauche
   **horizontales**. Ne pas parler de « colonnes » pour l'avant et l'arrière, même si c'est ce
   qu'on voit à l'écran.
 
-**Ancien vocabulaire encore présent** (à harmoniser) : le code (`position.py`, `combat.py`,
-`flotte.py`, `vaisseau.py`, `src/ui/`, `src/web/`) et plusieurs passages de `specs/` utilisent
-l'inverse, hérité de la vue écran. Correspondance :
-
-| Vocabulaire retenu | Ancien vocabulaire (code, anciens textes) |
-|---|---|
-| ligne avant / ligne arrière | colonne avant / colonne arrière (`Colonne.AVANT`, `Colonne.ARRIERE`, portées `COLONNE_AVANT_ENNEMIE`…) |
-| colonne gauche / milieu / droite | rangée gauche / mid / droite (`Rangee.GAUCHE`, `Rangee.MID`, `Rangee.DROITE`) |
-| l'ennemi derrière la cible (même colonne) | l'ennemi de la même rangée |
-
-Dans la suite de ce fichier et dans les autres specs, un texte qui parle de « colonne avant » ou
-de « rangée du milieu » suit l'ancien vocabulaire : le lire avec ce tableau.
+**Dans le code** (renommé le 2026-11-25, lot 0 de [plan-cartes.md](plan-cartes.md)) :
+`position.Ligne` (`AVANT`, `ARRIERE`) et `position.Colonne` (`GAUCHE`, `MID`, `DROITE`), champs
+`Position.ligne` / `Position.colonne`, portées `LIGNE_AVANT_ENNEMIE` / `LIGNE_ARRIERE_ENNEMIE`,
+cible de carte « Ennemi Ligne ». Les documents **historiques** (refonte-branchement.md, synthèses
+de simulation, archive des anciennes cartes) gardent l'ancien vocabulaire, inverse : « colonne
+avant » y veut dire ligne avant, et « rangée » y veut dire colonne.
 
 #### 3.1.2 Occupation de la grille
 
@@ -141,6 +135,10 @@ Le renvoi n'est posé que par l'ennemi Miroir pour l'instant (§13.3).
 À la **fin du tour de l'adversaire** de l'entité (décision utilisateur) : fin du tour du joueur
 pour un ennemi, fin du tour ennemi pour un module.
 
+**Règle commune à tous les statuts** (décision utilisateur, 2026-11-25) : tous les statuts d'une
+entité baissent **ensemble**, à ce moment-là, y compris les statuts décidés mais pas encore codés
+(Surcharge, Verrouillage ; plan-cartes.md §2).
+
 1. **L'incendie frappe** de son intensité, **absorbé par le bouclier** (jamais renvoyé ni annulé
    par le leurre).
 2. Chaque statut **s'éteint selon sa règle** : bouclier et incendie −1, renvoi retiré, leurre
@@ -205,16 +203,16 @@ des cases).
 | Cible | Case à choisir | Ce qui est touché |
 |---|---|---|
 | Ennemi Unique | un ennemi vivant | cet ennemi |
-| Ennemi Colonne | un ennemi vivant | les ennemis vivants de la colonne de la case |
-| Ennemi Avant / Arrière | un ennemi vivant de cette colonne | les ennemis vivants de la colonne avant / arrière |
+| Ennemi Ligne | un ennemi vivant | les ennemis vivants de la ligne de la case |
+| Ennemi Avant / Arrière | un ennemi vivant de cette ligne | les ennemis vivants de la ligne avant / arrière |
 | Ennemi Tous | un ennemi vivant | tous les ennemis vivants |
 | Module Unique | un module vivant | ce module |
 | Module Principal | le principal | le principal |
-| Module Avant | un module vivant de la colonne avant | les modules vivants de la colonne avant |
+| Module Avant | un module vivant de la ligne avant | les modules vivants de la ligne avant |
 | Module Tous | un module vivant | tous les modules vivants |
 
 Un ennemi sur 2 cases n'est touché **qu'une fois par effet** ; une carte à deux effets (Torpille :
-colonne avant puis colonne arrière) le touche une fois par effet.
+ligne avant puis ligne arrière) le touche une fois par effet.
 
 #### 3.8.3 Résolution
 
@@ -223,7 +221,7 @@ colonne avant puis colonne arrière) le touche une fois par effet.
    s'appliquent dans l'ordre (y compris gain d'électricité, pioche, répétition). Les cibles sont
    choisies une fois pour tous les lancements ; une cible détruite ne reçoit pas les suivants.
 3. Chaque effet touche, selon sa **portée** (`PorteeEffet`) : la cible de la carte, les autres
-   ennemis vivants, la colonne avant ou arrière ennemie.
+   ennemis vivants, la ligne avant ou arrière ennemie.
 4. **Munitions** : §3.6. La carte part ensuite en défausse, en épuisées ou en Hors service (§3.4).
 5. **Victoire ou défaite au milieu d'une carte** : les effets et lancements restants ne sont pas
    joués.
@@ -349,18 +347,18 @@ rythmes ne sont jamais multipliés. Le parcours utilise pour l'instant le coeffi
 
 #### 13.2.1 Ordre de jeu (décision utilisateur)
 
-Colonne avant d'abord, puis colonne arrière ; dans une colonne, rangées **droite, milieu, gauche**
-(la rangée gauche est en bas de l'écran : on joue de haut en bas). Un ennemi sur 2 cases joue une
+Ligne avant d'abord, puis ligne arrière ; dans une ligne, colonnes **droite, milieu, gauche**
+(la colonne gauche est en bas de l'écran : on joue de haut en bas). Un ennemi sur 2 cases joue une
 seule fois, à sa case avant. Un ennemi détruit ne joue plus.
 
 #### 13.2.2 Effets d'une étape
 
 | Nature | Cible | Résolution |
 |---|---|---|
-| Attaque | `PROXIMITE` | Le module vivant le plus proche : rangée de l'ennemi d'abord (avant puis arrière), puis les rangées voisines (`Vaisseau.module_le_plus_proche`) |
+| Attaque | `PROXIMITE` | Le module vivant le plus proche : colonne de l'ennemi d'abord (avant puis arrière), puis les colonnes voisines (`Vaisseau.module_le_plus_proche`) |
 | Attaque | `TOUS_MODULES` | Chaque module vivant, une attaque chacun |
 | Bouclier, Renvoi | `SOI_MEME` | L'ennemi lui-même |
-| Bouclier, Renvoi | `ALLIE_AVANT_SINON_ARRIERE` | Un ennemi vivant tiré au hasard dans la colonne avant (lui-même compris), sinon dans la colonne arrière, au moment de jouer |
+| Bouclier, Renvoi | `ALLIE_AVANT_SINON_ARRIERE` | Un ennemi vivant tiré au hasard dans la ligne avant (lui-même compris), sinon dans la ligne arrière, au moment de jouer |
 
 - **Répétitions** : la cible est choisie **une seule fois**, puis l'effet est répété sur elle. Si
   elle est détruite, les répétitions suivantes sont perdues.
@@ -399,7 +397,7 @@ Valeurs à jour et détail tour par tour : `config/ennemis.md` (généré). Rés
 
 - **Prime** (`flotte_prime`) : 1 ennemi tiré au sort jusqu'au niveau 5, puis 2 à partir du
   niveau 6, parmi les ennemis à 1 case.
-- **Boss** (`flotte_boss`) : le Boss des pirates seul, sur les deux cases de la rangée du milieu,
+- **Boss** (`flotte_boss`) : le Boss des pirates seul, sur les deux cases de la colonne du milieu,
   au niveau 10. Plusieurs boss tirés au sort sont prévus à terme, pas codés.
 - **Astéroïdes** (`flotte_asteroides`, aventures.md §2.5) : 3 ennemis.
 - **Placement préféré** (`Ennemi.placement`, `placer_ennemis`) : Petit Jean (`PROTECTEUR_AVANT`) de

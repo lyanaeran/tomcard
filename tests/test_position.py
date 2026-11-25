@@ -2,26 +2,26 @@
 Tests unitaires pour les primitives de position (src/gameplay/position.py).
 """
 
-from src.gameplay.position import Colonne, Position, Rangee, ordre_rangees_par_proximite
+from src.gameplay.position import Ligne, Position, Colonne, ordre_colonnes_par_proximite
 
 
 def test_ordre_depuis_gauche():
-    assert ordre_rangees_par_proximite(Rangee.GAUCHE) == [Rangee.GAUCHE, Rangee.MID, Rangee.DROITE]
+    assert ordre_colonnes_par_proximite(Colonne.GAUCHE) == [Colonne.GAUCHE, Colonne.MID, Colonne.DROITE]
 
 
 def test_ordre_depuis_mid_privilegie_gauche_en_cas_d_egalite():
-    assert ordre_rangees_par_proximite(Rangee.MID) == [Rangee.MID, Rangee.GAUCHE, Rangee.DROITE]
+    assert ordre_colonnes_par_proximite(Colonne.MID) == [Colonne.MID, Colonne.GAUCHE, Colonne.DROITE]
 
 
 def test_ordre_depuis_droite():
-    assert ordre_rangees_par_proximite(Rangee.DROITE) == [Rangee.DROITE, Rangee.MID, Rangee.GAUCHE]
+    assert ordre_colonnes_par_proximite(Colonne.DROITE) == [Colonne.DROITE, Colonne.MID, Colonne.GAUCHE]
 
 
 def test_position_egalite_par_valeur():
-    assert Position(Colonne.AVANT, Rangee.GAUCHE) == Position(Colonne.AVANT, Rangee.GAUCHE)
-    assert Position(Colonne.AVANT, Rangee.GAUCHE) != Position(Colonne.ARRIERE, Rangee.GAUCHE)
+    assert Position(Ligne.AVANT, Colonne.GAUCHE) == Position(Ligne.AVANT, Colonne.GAUCHE)
+    assert Position(Ligne.AVANT, Colonne.GAUCHE) != Position(Ligne.ARRIERE, Colonne.GAUCHE)
 
 
 def test_position_utilisable_comme_cle_de_dict():
-    cles = {Position(Colonne.AVANT, Rangee.GAUCHE): "test"}
-    assert cles[Position(Colonne.AVANT, Rangee.GAUCHE)] == "test"
+    cles = {Position(Ligne.AVANT, Colonne.GAUCHE): "test"}
+    assert cles[Position(Ligne.AVANT, Colonne.GAUCHE)] == "test"

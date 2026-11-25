@@ -15,7 +15,7 @@ from src.gameplay.deck import CARTES_PIOCHEES_PAR_TOUR, Deck
 from src.gameplay.ennemi import CibleEffetEnnemi, EffetEnnemi, Ennemi, NatureEffetEnnemi
 from src.gameplay.flotte import Flotte
 from src.gameplay.module import Module
-from src.gameplay.position import Colonne, Position
+from src.gameplay.position import Ligne, Position
 from src.gameplay.statut import Encaissement, Statut, Statuts
 from src.gameplay.vaisseau import Vaisseau
 
@@ -157,20 +157,20 @@ class Combat:
 
     def cibles_possibles(self, carte: Carte) -> list[Position]:
         """Cases valides pour jouer cette carte (specs.md 3.8.2) : une case vivante du bon
-        camp, de la bonne colonne pour Avant/Arriere, celle du principal pour Module Principal."""
+        camp, de la bonne ligne pour Avant/Arriere, celle du principal pour Module Principal."""
         cible = carte.cible
         if cible.camp == Camp.ENNEMI:
             cases = self.flotte.cases_vivantes()
             if cible == CibleCarte.ENNEMI_AVANT:
-                return [case for case in cases if case.colonne == Colonne.AVANT]
+                return [case for case in cases if case.ligne == Ligne.AVANT]
             if cible == CibleCarte.ENNEMI_ARRIERE:
-                return [case for case in cases if case.colonne == Colonne.ARRIERE]
+                return [case for case in cases if case.ligne == Ligne.ARRIERE]
             return cases
         cases = self.vaisseau.cases_vivantes()
         if cible == CibleCarte.MODULE_PRINCIPAL:
             return [case for case in cases if self.vaisseau.module_en(case) is self.vaisseau.principal]
         if cible == CibleCarte.MODULE_AVANT:
-            return [case for case in cases if case.colonne == Colonne.AVANT]
+            return [case for case in cases if case.ligne == Ligne.AVANT]
         return cases
 
     def peut_jouer(self, carte: Carte) -> bool:
@@ -206,7 +206,7 @@ class Combat:
             effets = []
             for effet in ennemi.etape_courante:
                 if effet.cible == CibleEffetEnnemi.PROXIMITE:
-                    prevue = self.vaisseau.module_le_plus_proche(self.flotte.rangee_de(ennemi))
+                    prevue = self.vaisseau.module_le_plus_proche(self.flotte.colonne_de(ennemi))
                 elif effet.cible == CibleEffetEnnemi.SOI_MEME:
                     prevue = ennemi
                 else:
@@ -307,7 +307,7 @@ class Combat:
         valeur = ennemi.valeur(effet.valeur, self.tour)
         if effet.nature == NatureEffetEnnemi.ATTAQUE:
             if effet.cible == CibleEffetEnnemi.PROXIMITE:
-                proche = self.vaisseau.module_le_plus_proche(self.flotte.rangee_de(ennemi))
+                proche = self.vaisseau.module_le_plus_proche(self.flotte.colonne_de(ennemi))
                 cibles = [proche] if proche is not None else []
             else:
                 cibles = self.vaisseau.modules_vivants()
@@ -323,8 +323,8 @@ class Combat:
             allie = ennemi
         else:
             candidats = (
-                self.flotte.ennemis_vivants_de_colonne(Colonne.AVANT)
-                or self.flotte.ennemis_vivants_de_colonne(Colonne.ARRIERE)
+                self.flotte.ennemis_vivants_de_ligne(Ligne.AVANT)
+                or self.flotte.ennemis_vivants_de_ligne(Ligne.ARRIERE)
             )
             allie = self.aleatoire.choice(candidats)
         for _ in range(effet.repetitions):
@@ -342,18 +342,18 @@ class Combat:
         cible = carte.cible
         if cible in (CibleCarte.ENNEMI_UNIQUE, CibleCarte.MODULE_UNIQUE):
             return [self._entite_en(carte, case)]
-        if cible == CibleCarte.ENNEMI_COLONNE:
-            return self.flotte.ennemis_vivants_de_colonne(case.colonne)
+        if cible == CibleCarte.ENNEMI_LIGNE:
+            return self.flotte.ennemis_vivants_de_ligne(case.ligne)
         if cible == CibleCarte.ENNEMI_AVANT:
-            return self.flotte.ennemis_vivants_de_colonne(Colonne.AVANT)
+            return self.flotte.ennemis_vivants_de_ligne(Ligne.AVANT)
         if cible == CibleCarte.ENNEMI_ARRIERE:
-            return self.flotte.ennemis_vivants_de_colonne(Colonne.ARRIERE)
+            return self.flotte.ennemis_vivants_de_ligne(Ligne.ARRIERE)
         if cible == CibleCarte.ENNEMI_TOUS:
             return self.flotte.ennemis_vivants()
         if cible == CibleCarte.MODULE_PRINCIPAL:
             return [self.vaisseau.principal]
         if cible == CibleCarte.MODULE_AVANT:
-            return self.vaisseau.modules_vivants_de_colonne(Colonne.AVANT)
+            return self.vaisseau.modules_vivants_de_ligne(Ligne.AVANT)
         return self.vaisseau.modules_vivants()
 
     def _cibles_de_l_effet(self, carte: Carte, effet: Effet, case: Position) -> list[Entite]:
@@ -365,8 +365,8 @@ class Combat:
         if effet.portee == PorteeEffet.AUTRES_ENNEMIS:
             choisi = self.flotte.ennemi_en(case)
             return [ennemi for ennemi in self.flotte.ennemis_vivants() if ennemi is not choisi]
-        colonne = Colonne.AVANT if effet.portee == PorteeEffet.COLONNE_AVANT_ENNEMIE else Colonne.ARRIERE
-        return self.flotte.ennemis_vivants_de_colonne(colonne)
+        ligne = Ligne.AVANT if effet.portee == PorteeEffet.LIGNE_AVANT_ENNEMIE else Ligne.ARRIERE
+        return self.flotte.ennemis_vivants_de_ligne(ligne)
 
     def _appliquer_effet_de_carte(self, carte: Carte, effet: Effet, cibles: list[Entite]) -> None:
         """Un lancement d'un effet de carte (tableau du 4.4)."""

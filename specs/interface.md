@@ -48,16 +48,16 @@ web montrent le **même contenu** ; les écarts sont listés en §8.4.
 └──────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-- **Vaisseau du joueur** (haut gauche) : grille de **2 colonnes (arrière/avant) x 3 rangées (gauche/mid/droite)**. La colonne **avant est tournée vers l'ennemi** (la plus proche du centre de l'écran), la colonne arrière est la plus éloignée. Le tout repose sur un **fond commun** qui regroupe visuellement les 5 emplacements. Le **module de base** occupe la rangée mid en entier (arrière-mid + avant-mid fusionnés) ; les 4 autres modules équipés prennent FG/FD/AG/AD
-- **Flotte ennemie** (haut droite) : grille symétrique 2x3, 6 emplacements libres (pas de base adverse). La colonne **avant est tournée vers le joueur** (la plus proche du centre de l'écran) et c'est elle qui est visée en premier par les attaques « au plus proche » (combat.md §13.2.2) ; la colonne arrière est la plus éloignée
-- **Les 3 rangées ennemies sont alignées verticalement sur celles du vaisseau du joueur** (décision
-  utilisateur) : rangée du haut face aux modules du haut (FG/FD), rangée du bas face aux modules
-  du bas (AG/AD), rangée du milieu face au vaisseau (module de base, au centre). PC
-  (`src/ui/fenetre.py:RANGEE_Y`) : centres dérivés directement des mêmes emplacements que
-  `_rect_module` (rangée du milieu = moyenne des centres haut/bas). Web (`src/web/style.css`) :
+- **Vaisseau du joueur** (haut gauche) : grille de **2 lignes (arrière/avant) x 3 colonnes (gauche/mid/droite)** (combat.md §3.1.1). La ligne **avant est tournée vers l'ennemi** (la plus proche du centre de l'écran), la ligne arrière est la plus éloignée. Le tout repose sur un **fond commun** qui regroupe visuellement les 5 emplacements. Le **module de base** occupe la colonne du milieu en entier (arrière-mid + avant-mid fusionnés) ; les 4 autres modules équipés prennent FG/FD/AG/AD
+- **Flotte ennemie** (haut droite) : grille symétrique 2x3, 6 emplacements libres (pas de base adverse). La ligne **avant est tournée vers le joueur** (la plus proche du centre de l'écran) et c'est elle qui est visée en premier par les attaques « au plus proche » (combat.md §13.2.2) ; la ligne arrière est la plus éloignée
+- **Les 3 colonnes ennemies sont alignées verticalement sur celles du vaisseau du joueur** (décision
+  utilisateur ; vues sur l'écran, ce sont des bandes horizontales) : colonne du haut face aux modules du haut (FG/FD), colonne du bas face aux modules
+  du bas (AG/AD), colonne du milieu face au vaisseau (module de base, au centre). PC
+  (`src/ui/fenetre.py:COLONNE_Y`) : centres dérivés directement des mêmes emplacements que
+  `_rect_module` (colonne du milieu = moyenne des centres haut/bas). Web (`src/web/style.css`) :
   `.grille.grille-ennemis` définit un `row-gap` dérivé du même ratio (`--taille-case`), et un
   padding haut/bas égal (contrairement à une version antérieure, plus généreuse en haut pour la
-  pastille PV/Bouclier) pour que la rangée du milieu reste centrée sur le bloc vaisseau — les deux
+  pastille PV/Bouclier) pour que la colonne du milieu reste centrée sur le bloc vaisseau — les deux
   blocs étant déjà centrés l'un sur l'autre par `#grilles` (`align-items:center`)
 - **Contrôles** (à gauche, sous la barre latérale Niveau/Argent/Deck/Vaisseau, architecture.md
   §10.3) : électricité « ⚡ 3/3 », boutons icônes Tour suivant, Quitter, Journal (§8.3), puis le
@@ -99,7 +99,7 @@ web montrent le **même contenu** ; les écarts sont listés en §8.4.
 
 1. Clic sur une carte de la main → elle est **armée** (un second clic la désarme).
 2. Clic sur une **case valide** → la carte est jouée. Les cases valides sont celles de
-   `Combat.cibles_possibles(carte)` : une case du bon camp, vivante, de la bonne colonne pour
+   `Combat.cibles_possibles(carte)` : une case du bon camp, vivante, de la bonne ligne pour
    Avant / Arrière, celle du principal pour Module Principal.
 3. **Toujours un clic de confirmation**, même quand la case ne change rien à l'effet (Ennemi
    Tous, Module Tous, Module Principal) : jamais de résolution automatique. Un clic ailleurs, ou

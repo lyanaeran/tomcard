@@ -2,23 +2,23 @@
 Vaisseau de combat (Vaisseau) : les modules en combat (copies de Module) places sur la
 grille du joueur (specs.md 3.1).
 
-Grille 2 colonnes (avant, arriere) x 3 rangees (gauche, milieu, droite). Le principal occupe toute
-la rangee du milieu (les deux colonnes) ; les quatre autres emplacements correspondent chacun a une
+Grille 2 lignes (avant, arriere) x 3 colonnes (gauche, milieu, droite). Le principal occupe toute
+la colonne du milieu (les deux lignes) ; les quatre autres emplacements correspondent chacun a une
 case.
 """
 
 from collections.abc import Iterable
 
 from src.gameplay.module import Module
-from src.gameplay.position import Colonne, Position, Rangee, ordre_rangees_par_proximite
+from src.gameplay.position import Ligne, Position, Colonne, ordre_colonnes_par_proximite
 
 # Cases occupees par chaque emplacement (Module.emplacement)
 CASES_PAR_EMPLACEMENT = {
-    "base": (Position(Colonne.AVANT, Rangee.MID), Position(Colonne.ARRIERE, Rangee.MID)),
-    "avant_gauche": (Position(Colonne.AVANT, Rangee.GAUCHE),),
-    "arriere_gauche": (Position(Colonne.ARRIERE, Rangee.GAUCHE),),
-    "avant_droite": (Position(Colonne.AVANT, Rangee.DROITE),),
-    "arriere_droite": (Position(Colonne.ARRIERE, Rangee.DROITE),),
+    "base": (Position(Ligne.AVANT, Colonne.MID), Position(Ligne.ARRIERE, Colonne.MID)),
+    "avant_gauche": (Position(Ligne.AVANT, Colonne.GAUCHE),),
+    "arriere_gauche": (Position(Ligne.ARRIERE, Colonne.GAUCHE),),
+    "avant_droite": (Position(Ligne.AVANT, Colonne.DROITE),),
+    "arriere_droite": (Position(Ligne.ARRIERE, Colonne.DROITE),),
 }
 
 
@@ -39,7 +39,7 @@ class Vaisseau:
                 if case in self._par_case:
                     raise ValueError(f"Emplacement {module.emplacement} occupe deux fois")
                 self._par_case[case] = module
-        if Position(Colonne.AVANT, Rangee.MID) not in self._par_case:
+        if Position(Ligne.AVANT, Colonne.MID) not in self._par_case:
             raise ValueError("Le vaisseau n'a pas de module principal")
         exemplaires = [module.exemplaire for module in self.modules]
         if None in exemplaires or len(set(exemplaires)) != len(exemplaires):
@@ -47,7 +47,7 @@ class Vaisseau:
 
     @property
     def principal(self) -> Module:
-        return self._par_case[Position(Colonne.AVANT, Rangee.MID)]
+        return self._par_case[Position(Ligne.AVANT, Colonne.MID)]
 
     def module_en(self, case: Position) -> Module | None:
         """Module vivant sur cette case, None si elle est vide ou si son module est detruit."""
@@ -61,22 +61,22 @@ class Vaisseau:
     def modules_vivants(self) -> list[Module]:
         return [module for module in self.modules if not module.est_detruit()]
 
-    def modules_vivants_de_colonne(self, colonne: Colonne) -> list[Module]:
-        """Modules vivants de cette colonne ; le principal est dans les deux."""
+    def modules_vivants_de_ligne(self, ligne: Ligne) -> list[Module]:
+        """Modules vivants de cette ligne ; le principal est dans les deux."""
         return [module for module in self.modules_vivants() if any(
-            case.colonne == colonne for case in CASES_PAR_EMPLACEMENT[module.emplacement]
+            case.ligne == ligne for case in CASES_PAR_EMPLACEMENT[module.emplacement]
         )]
 
     def cases_vivantes(self) -> list[Position]:
         """Cases occupees par un module vivant."""
         return [case for case, module in self._par_case.items() if not module.est_detruit()]
 
-    def module_le_plus_proche(self, rangee_ennemi: Rangee) -> Module | None:
-        """Module vise par une attaque PROXIMITE d'un ennemi de cette rangee : sa rangee d'abord
-        (avant puis arriere), puis les rangees voisines (meme regle que ciblage.py)."""
-        for rangee in ordre_rangees_par_proximite(rangee_ennemi):
-            for colonne in (Colonne.AVANT, Colonne.ARRIERE):
-                module = self.module_en(Position(colonne, rangee))
+    def module_le_plus_proche(self, colonne_ennemi: Colonne) -> Module | None:
+        """Module vise par une attaque PROXIMITE d'un ennemi de cette colonne : sa colonne d'abord
+        (avant puis arriere), puis les colonnes voisines (meme regle que ciblage.py)."""
+        for colonne in ordre_colonnes_par_proximite(colonne_ennemi):
+            for ligne in (Ligne.AVANT, Ligne.ARRIERE):
+                module = self.module_en(Position(ligne, colonne))
                 if module is not None:
                     return module
         return None

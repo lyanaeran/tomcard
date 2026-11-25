@@ -166,7 +166,7 @@ La catégorie sert aussi de filtre aux effets de répétition (§12.5).
 ### 7.2 Cible
 
 Axe indépendant de la catégorie. Les neuf cibles (`CibleCarte`) et ce que chacune touche sont
-décrits en combat.md §3.8.2 : Ennemi Unique, Colonne, Avant, Arrière, Tous ; Module Unique,
+décrits en combat.md §3.8.2 : Ennemi Unique, Ligne, Avant, Arrière, Tous ; Module Unique,
 Principal, Avant, Tous. **Toutes** demandent un clic de confirmation sur une case valide, même
 quand la case ne change rien à l'effet (interface.md §8.3).
 
@@ -245,8 +245,8 @@ avec son module).
 ### 12.3 Portée d'un effet (`PorteeEffet`)
 
 Par rapport à la cible de la carte : `CIBLE` (la cible, ou tout l'ensemble visé),
-`AUTRES_ENNEMIS` (Missiles : X sur la cible, Y sur les autres), `COLONNE_AVANT_ENNEMIE` et
-`COLONNE_ARRIERE_ENNEMIE` (Torpille : X à l'avant, Y à l'arrière). C'est ce qui permet deux
+`AUTRES_ENNEMIS` (Missiles : X sur la cible, Y sur les autres), `LIGNE_AVANT_ENNEMIE` et
+`LIGNE_ARRIERE_ENNEMIE` (Torpille : X à l'avant, Y à l'arrière). C'est ce qui permet deux
 valeurs sur une même carte.
 
 ### 12.4 Rattachement à un module et mot-clé Persistante

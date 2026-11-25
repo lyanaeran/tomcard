@@ -78,12 +78,12 @@ class Camp(Enum):
 
 
 class CibleCarte(Enum):
-    """Cible d'une carte. Une cible "unique" ou "colonne" depend de la case cliquee ; les autres
+    """Cible d'une carte. Une cible "unique" ou "ligne" depend de la case cliquee ; les autres
     touchent un ensemble fixe, mais demandent quand meme un clic de confirmation sur une case du bon
     camp (specs.md 8.3, identique PC et web)."""
 
     ENNEMI_UNIQUE = "Ennemi Unique"
-    ENNEMI_COLONNE = "Ennemi Colonne"
+    ENNEMI_LIGNE = "Ennemi Ligne"
     ENNEMI_AVANT = "Ennemi Avant"
     ENNEMI_ARRIERE = "Ennemi Arriere"
     ENNEMI_TOUS = "Ennemi Tous"
@@ -99,7 +99,7 @@ class CibleCarte(Enum):
     @property
     def depend_de_la_case_cliquee(self) -> bool:
         """True si la case cliquee determine ce qui est touche (sinon simple confirmation)."""
-        return self in (CibleCarte.ENNEMI_UNIQUE, CibleCarte.ENNEMI_COLONNE, CibleCarte.MODULE_UNIQUE)
+        return self in (CibleCarte.ENNEMI_UNIQUE, CibleCarte.ENNEMI_LIGNE, CibleCarte.MODULE_UNIQUE)
 
 
 class NatureEffet(Enum):
@@ -167,9 +167,9 @@ class PorteeEffet(Enum):
     CIBLE = auto()
     # Tous les ennemis vivants sauf la cible (Missiles : degats sur la cible, puis sur les autres)
     AUTRES_ENNEMIS = auto()
-    # Colonne avant / arriere de la flotte ennemie (Torpille : degats a l'avant, puis a l'arriere)
-    COLONNE_AVANT_ENNEMIE = auto()
-    COLONNE_ARRIERE_ENNEMIE = auto()
+    # Ligne avant / arriere de la flotte ennemie (Torpille : degats a l'avant, puis a l'arriere)
+    LIGNE_AVANT_ENNEMIE = auto()
+    LIGNE_ARRIERE_ENNEMIE = auto()
 
     @property
     def camp(self) -> "Camp | None":
@@ -181,8 +181,8 @@ class PorteeEffet(Enum):
 _CAMP_PAR_PORTEE = {
     PorteeEffet.CIBLE: None,
     PorteeEffet.AUTRES_ENNEMIS: Camp.ENNEMI,
-    PorteeEffet.COLONNE_AVANT_ENNEMIE: Camp.ENNEMI,
-    PorteeEffet.COLONNE_ARRIERE_ENNEMIE: Camp.ENNEMI,
+    PorteeEffet.LIGNE_AVANT_ENNEMIE: Camp.ENNEMI,
+    PorteeEffet.LIGNE_ARRIERE_ENNEMIE: Camp.ENNEMI,
 }
 
 

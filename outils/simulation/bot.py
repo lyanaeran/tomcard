@@ -12,7 +12,7 @@ from collections import Counter
 from src.gameplay.carte import Carte, CibleCarte, NatureEffet, PorteeEffet
 from src.gameplay.combat import Combat, EtatCombat
 from src.gameplay.deck import CARTES_PIOCHEES_PAR_TOUR
-from src.gameplay.position import Colonne
+from src.gameplay.position import Ligne
 from src.gameplay.statut import Statut
 
 # Memes garde-fous que bot.py
@@ -78,8 +78,8 @@ def actions_possibles(combat: Combat) -> list[tuple[int, object]]:
             if carte.cible in (CibleCarte.ENNEMI_UNIQUE, CibleCarte.MODULE_UNIQUE):
                 entite = combat.flotte.ennemi_en(case) if carte.cible == CibleCarte.ENNEMI_UNIQUE else combat.vaisseau.module_en(case)
                 coup = id(entite)
-            elif carte.cible == CibleCarte.ENNEMI_COLONNE:
-                coup = case.colonne
+            elif carte.cible == CibleCarte.ENNEMI_LIGNE:
+                coup = case.ligne
             else:
                 coup = None
             if coup not in coups:
@@ -122,28 +122,28 @@ def evaluer(combat: Combat) -> float:
 
 
 def _nombre_de_cibles(carte: Carte, effet, combat: Combat) -> int:
-    """Entites touchees par un effet : tous les ennemis, les autres, ceux d'une colonne (la plus
-    peuplee pour une carte Ennemi Colonne, le joueur choisissant la meilleure), tous les modules
-    vivants ou ceux de la colonne avant, sinon une seule."""
+    """Entites touchees par un effet : tous les ennemis, les autres, ceux d'une ligne (la plus
+    peuplee pour une carte Ennemi Ligne, le joueur choisissant la meilleure), tous les modules
+    vivants ou ceux de la ligne avant, sinon une seule."""
     flotte = combat.flotte
     vivants = len(flotte.ennemis_vivants())
-    par_colonne = {colonne: len(flotte.ennemis_vivants_de_colonne(colonne)) for colonne in Colonne}
+    par_ligne = {ligne: len(flotte.ennemis_vivants_de_ligne(ligne)) for ligne in Ligne}
     if effet.portee == PorteeEffet.AUTRES_ENNEMIS:
         return vivants - 1
-    if effet.portee == PorteeEffet.COLONNE_AVANT_ENNEMIE:
-        return par_colonne[Colonne.AVANT]
-    if effet.portee == PorteeEffet.COLONNE_ARRIERE_ENNEMIE:
-        return par_colonne[Colonne.ARRIERE]
+    if effet.portee == PorteeEffet.LIGNE_AVANT_ENNEMIE:
+        return par_ligne[Ligne.AVANT]
+    if effet.portee == PorteeEffet.LIGNE_ARRIERE_ENNEMIE:
+        return par_ligne[Ligne.ARRIERE]
     if carte.cible == CibleCarte.ENNEMI_TOUS:
         return vivants
     if carte.cible == CibleCarte.MODULE_TOUS:
         return len(combat.vaisseau.modules_vivants())
     if carte.cible == CibleCarte.MODULE_AVANT:
-        return len(combat.vaisseau.modules_vivants_de_colonne(Colonne.AVANT))
-    if carte.cible == CibleCarte.ENNEMI_COLONNE:
-        return max(par_colonne.values())
+        return len(combat.vaisseau.modules_vivants_de_ligne(Ligne.AVANT))
+    if carte.cible == CibleCarte.ENNEMI_LIGNE:
+        return max(par_ligne.values())
     if carte.cible in (CibleCarte.ENNEMI_AVANT, CibleCarte.ENNEMI_ARRIERE):
-        return par_colonne[Colonne.AVANT if carte.cible == CibleCarte.ENNEMI_AVANT else Colonne.ARRIERE]
+        return par_ligne[Ligne.AVANT if carte.cible == CibleCarte.ENNEMI_AVANT else Ligne.ARRIERE]
     return 1
 
 
