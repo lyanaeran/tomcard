@@ -1119,6 +1119,130 @@
       "effets": [
         { "nature": "SURCHARGE", "valeur": "surcharge" }
       ]
+    },
+    {
+      "id": "CRT_56",
+      "nom": "Missile marqueur",
+      "image": "assets/cartes/missile_guide.png",
+      "rarete": "Commune",
+      "categorie": "Attaque",
+      "cible": "Ennemi Unique",
+      "modules": ["MOD_2"],
+      "cout": 1,
+      "munition": null,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Inflige {degats} dégâts à un ennemi et lui pose Verrouillage {verrouillage}",
+      "valeurs": { "degats": 5, "verrouillage": 2 },
+      "effets": [
+        { "nature": "DEGATS", "valeur": "degats" },
+        { "nature": "VERROUILLAGE", "valeur": "verrouillage" }
+      ]
+    },
+    {
+      "id": "CRT_57",
+      "nom": "Ogive de marquage",
+      "image": "assets/cartes/bombe.png",
+      "rarete": "Commune",
+      "categorie": "Attaque",
+      "cible": "Ennemi Tous",
+      "modules": ["MOD_2"],
+      "cout": 1,
+      "munition": null,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Inflige {degats} dégâts à tous les ennemis et leur pose Verrouillage {verrouillage}",
+      "valeurs": { "degats": 3, "verrouillage": 2 },
+      "effets": [
+        { "nature": "DEGATS", "valeur": "degats" },
+        { "nature": "VERROUILLAGE", "valeur": "verrouillage" }
+      ]
+    },
+    {
+      "id": "CRT_73",
+      "nom": "Missile verrouilleur",
+      "image": "assets/cartes/missiles_guides.png",
+      "rarete": "Rare",
+      "categorie": "Attaque",
+      "cible": "Ennemi Unique",
+      "modules": ["MOD_2"],
+      "cout": 1,
+      "munition": null,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Inflige {degats} dégâts à un ennemi et lui pose Verrouillage {verrouillage}",
+      "valeurs": { "degats": 4, "verrouillage": 5 },
+      "effets": [
+        { "nature": "DEGATS", "valeur": "degats" },
+        { "nature": "VERROUILLAGE", "valeur": "verrouillage" }
+      ]
+    },
+    {
+      "id": "CRT_74",
+      "nom": "Missile de précision",
+      "image": "assets/cartes/tir_charge.png",
+      "rarete": "Rare",
+      "categorie": "Attaque",
+      "cible": "Ennemi Unique",
+      "modules": ["MOD_2"],
+      "cout": 2,
+      "munition": null,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Inflige {degats} dégâts à un ennemi, plus {par_point} par point de Verrouillage de la cible",
+      "valeurs": { "degats": 8, "par_point": 3 },
+      "effets": [
+        { "nature": "DEGATS", "valeur": "degats", "bonus": { "par": "VERROUILLAGE_CIBLE", "facteur": "par_point" } }
+      ]
+    },
+    {
+      "id": "CRT_85",
+      "nom": "Laser de visée",
+      "image": "assets/cartes/attaque.png",
+      "rarete": "Commune",
+      "categorie": "Attaque",
+      "cible": "Ennemi Unique",
+      "modules": ["MOD_1"],
+      "cout": 1,
+      "munition": null,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Inflige {degats} dégâts à un ennemi et lui pose Verrouillage {verrouillage}",
+      "valeurs": { "degats": 4, "verrouillage": 2 },
+      "effets": [
+        { "nature": "DEGATS", "valeur": "degats" },
+        { "nature": "VERROUILLAGE", "valeur": "verrouillage" }
+      ]
+    },
+    {
+      "id": "CRT_106",
+      "nom": "Protocole de ciblage",
+      "image": "assets/cartes/scanner.png",
+      "rarete": "Rare",
+      "categorie": "Debuff",
+      "cible": "Ennemi Tous",
+      "modules": ["MOD_1"],
+      "cout": 1,
+      "munition": null,
+      "lancements": 1,
+      "persistante": false,
+      "jouable": "oui",
+      "refonte": true,
+      "description": "Pose Verrouillage {verrouillage} à tous les ennemis",
+      "valeurs": { "verrouillage": 3 },
+      "effets": [
+        { "nature": "VERROUILLAGE", "valeur": "verrouillage" }
+      ]
     }
   ]
 }

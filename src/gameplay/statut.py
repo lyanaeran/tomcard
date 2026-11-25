@@ -55,6 +55,9 @@ class Statut(Enum):
     # Porte par le module principal : +intensite aux degats de chaque coup des cartes du joueur,
     # quel que soit leur module (decision utilisateur, 2026-11-16 ; specs.md 3.5)
     SURCHARGE = auto()
+    # Porte par un ennemi : +intensite aux degats de chaque coup de carte qu'il recoit, -1 par tour
+    # (decision utilisateur, 2026-11-18 ; proposition-lanceur-missiles.md 3.3)
+    VERROUILLAGE = auto()
 
     @property
     def regle(self) -> RegleStatut:
@@ -70,6 +73,7 @@ REGLES_STATUT = {
     Statut.RENVOI: RegleStatut(CumulStatut.ADDITION, ExtinctionStatut.TOUR_SUIVANT),
     Statut.LEURRE: RegleStatut(CumulStatut.REMPLACEMENT, ExtinctionStatut.CONSOMMATION),
     Statut.SURCHARGE: RegleStatut(CumulStatut.ADDITION, ExtinctionStatut.MOINS_UN_PAR_TOUR),
+    Statut.VERROUILLAGE: RegleStatut(CumulStatut.ADDITION, ExtinctionStatut.MOINS_UN_PAR_TOUR),
 }
 
 

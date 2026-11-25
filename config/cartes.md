@@ -4,7 +4,7 @@
 > main** : toute modification se fait dans le JSON, puis `python -m outils.tableau_cartes`
 > régénère ce tableau (un test échoue tant qu'il n'est pas à jour).
 
-55 cartes.
+61 cartes.
 
 | Id | Nom | Rareté | Catégorie | Cible | Modules | Coût | Munitions | Lancements | Persistante | Jouable | Refonte | Description affichée | Valeurs | Effets |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -63,3 +63,9 @@
 | CRT_18 | Leurre | Rare | Defense | Module Unique | — | 1 | Illimitées | 1 | Non | Oui | Oui | Annule la prochaine attaque ciblant le module | `{}` | `{"nature": "ANNULATION_PROCHAINE_ATTAQUE"}` |
 | CRT_19 | Ogive nucléaire | Legendaire | Attaque | Ennemi Tous | MOD_2 | 3 | Illimitées | 1 | Non | Oui | Oui | Inflige 15 dégâts et 4 d'incendie à tous les ennemis | `{"degats": 15, "incendie": 4}` | `{"nature": "DEGATS", "valeur": "degats"}`<br>`{"nature": "INCENDIE", "valeur": "incendie"}` |
 | CRT_51 | Post-combustion | Rare | Buff | Module Principal | MOD_2 | 1 | 3 | 1 | Non | Oui | Oui | Surcharge 4 : chaque coup de vos cartes inflige 4 dégâts de plus (−1 par tour) | `{"surcharge": 4}` | `{"nature": "SURCHARGE", "valeur": "surcharge"}` |
+| CRT_56 | Missile marqueur | Commune | Attaque | Ennemi Unique | MOD_2 | 1 | Illimitées | 1 | Non | Oui | Oui | Inflige 5 dégâts à un ennemi et lui pose Verrouillage 2 | `{"degats": 5, "verrouillage": 2}` | `{"nature": "DEGATS", "valeur": "degats"}`<br>`{"nature": "VERROUILLAGE", "valeur": "verrouillage"}` |
+| CRT_57 | Ogive de marquage | Commune | Attaque | Ennemi Tous | MOD_2 | 1 | Illimitées | 1 | Non | Oui | Oui | Inflige 3 dégâts à tous les ennemis et leur pose Verrouillage 2 | `{"degats": 3, "verrouillage": 2}` | `{"nature": "DEGATS", "valeur": "degats"}`<br>`{"nature": "VERROUILLAGE", "valeur": "verrouillage"}` |
+| CRT_73 | Missile verrouilleur | Rare | Attaque | Ennemi Unique | MOD_2 | 1 | Illimitées | 1 | Non | Oui | Oui | Inflige 4 dégâts à un ennemi et lui pose Verrouillage 5 | `{"degats": 4, "verrouillage": 5}` | `{"nature": "DEGATS", "valeur": "degats"}`<br>`{"nature": "VERROUILLAGE", "valeur": "verrouillage"}` |
+| CRT_74 | Missile de précision | Rare | Attaque | Ennemi Unique | MOD_2 | 2 | Illimitées | 1 | Non | Oui | Oui | Inflige 8 dégâts à un ennemi, plus 3 par point de Verrouillage de la cible | `{"degats": 8, "par_point": 3}` | `{"nature": "DEGATS", "valeur": "degats", "bonus": {"par": "VERROUILLAGE_CIBLE", "facteur": "par_point"}}` |
+| CRT_85 | Laser de visée | Commune | Attaque | Ennemi Unique | MOD_1 | 1 | Illimitées | 1 | Non | Oui | Oui | Inflige 4 dégâts à un ennemi et lui pose Verrouillage 2 | `{"degats": 4, "verrouillage": 2}` | `{"nature": "DEGATS", "valeur": "degats"}`<br>`{"nature": "VERROUILLAGE", "valeur": "verrouillage"}` |
+| CRT_106 | Protocole de ciblage | Rare | Debuff | Ennemi Tous | MOD_1 | 1 | Illimitées | 1 | Non | Oui | Oui | Pose Verrouillage 3 à tous les ennemis | `{"verrouillage": 3}` | `{"nature": "VERROUILLAGE", "valeur": "verrouillage"}` |

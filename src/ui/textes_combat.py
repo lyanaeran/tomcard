@@ -21,6 +21,7 @@ COULEUR_INCENDIE = (215, 130, 40)
 COULEUR_RENVOI = (170, 130, 220)
 COULEUR_LEURRE = (90, 200, 210)
 COULEUR_SURCHARGE = (235, 185, 40)
+COULEUR_VERROUILLAGE = (225, 80, 170)
 COULEUR_SOIN = (70, 200, 90)
 COULEUR_TEXTE = (235, 235, 235)
 COULEUR_NOM_CARTE = (235, 200, 60)
@@ -34,6 +35,7 @@ COULEUR_PAR_STATUT = {
     Statut.RENVOI: COULEUR_RENVOI,
     Statut.LEURRE: COULEUR_LEURRE,
     Statut.SURCHARGE: COULEUR_SURCHARGE,
+    Statut.VERROUILLAGE: COULEUR_VERROUILLAGE,
 }
 NOMS_STATUT = {
     Statut.BOUCLIER: "Bouclier",
@@ -41,11 +43,12 @@ NOMS_STATUT = {
     Statut.RENVOI: "Renvoi",
     Statut.LEURRE: "Leurre",
     Statut.SURCHARGE: "Surcharge",
+    Statut.VERROUILLAGE: "Verrouillage",
 }
 # Statuts de nom feminin, pour accorder "(figee)" / "(fige)"
 STATUTS_FEMININS = {Statut.SURCHARGE}
 # Statuts affiches en pastille a cote des PV, dans cet ordre (le bouclier a toujours sa pastille)
-STATUTS_EN_PASTILLE = (Statut.SURCHARGE, Statut.INCENDIE, Statut.RENVOI, Statut.LEURRE)
+STATUTS_EN_PASTILLE = (Statut.SURCHARGE, Statut.VERROUILLAGE, Statut.INCENDIE, Statut.RENVOI, Statut.LEURRE)
 
 COULEUR_PAR_NATURE_ENNEMI = {
     NatureEffetEnnemi.ATTAQUE: (255, 120, 120),
@@ -228,8 +231,13 @@ def _nom(entite: object) -> Segment:
 def _detail_degats(evenement: Evenement) -> str:
     """Detail des degats recus : degats, part annulee, renvoyee, absorbee, PV perdus et restants."""
     morceaux = [f"{evenement.valeur} dégâts"]
-    if evenement.dont_surcharge:
-        morceaux[0] += f" (dont {evenement.dont_surcharge} de surcharge)"
+    parts = [
+        f"{part} de {nom}"
+        for part, nom in ((evenement.dont_surcharge, "surcharge"), (evenement.dont_verrouillage, "verrouillage"))
+        if part
+    ]
+    if parts:
+        morceaux[0] += f" (dont {', '.join(parts)})"
     if evenement.annules_leurre:
         morceaux.append("annulés par le leurre")
     if evenement.renvoyes:

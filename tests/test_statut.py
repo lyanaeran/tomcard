@@ -109,6 +109,15 @@ def test_une_attaque_a_zero_degat_ne_consomme_ni_leurre_ni_renvoi():
 
 
 
+def test_verrouillage_cumule_baisse_de_1_par_tour():
+    statuts = Statuts()
+    statuts.ajouter(Statut.VERROUILLAGE, 2)
+    statuts.ajouter(Statut.VERROUILLAGE, 3)
+    assert statuts[Statut.VERROUILLAGE] == 5
+    statuts.fin_de_tour()
+    assert statuts[Statut.VERROUILLAGE] == 4
+
+
 def test_surcharge_cumulee_baisse_de_1_sauf_si_figee():
     statuts = Statuts()
     statuts.ajouter(Statut.SURCHARGE, 2)

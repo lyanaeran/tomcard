@@ -35,6 +35,10 @@ POIDS_INCENDIE = 1.0
 # Estimation : COUPS_PAR_TOUR_ESTIMES coups par tour, et une Surcharge S qui baisse de 1 par tour
 # rapporte S + (S-1) + ... + 1 tours de bonus ; figee, S par tour jusqu'a la fin estimee du combat
 COUPS_PAR_TOUR_ESTIMES = 2
+# Verrouillage d'un ennemi : degats en plus a venir sur lui seul. Estimation : un coup de carte par
+# tour sur cet ennemi, et un Verrouillage V qui baisse de 1 par tour rapporte V + (V-1) + ... + 1,
+# plafonne par ses PV (comme l'incendie)
+COUPS_PAR_TOUR_SUR_UN_ENNEMI = 1
 
 # Valeur du deck (idee utilisateur, 2026-11-11) : une carte de repetition ne paie que sur les tours
 # suivants, que la recherche ne voit pas. On estime donc ce que rapportent les lancements en plus
@@ -129,6 +133,7 @@ def evaluer(combat: Combat) -> float:
         incendie = ennemi.statuts[Statut.INCENDIE]
         degats_a_venir = min(ennemi.pv, incendie * (incendie + 1) // 2)
         score -= POIDS_PV_ENNEMI * (ennemi.pv + ennemi.statuts[Statut.BOUCLIER] - POIDS_INCENDIE * degats_a_venir)
+        score += POIDS_PV_ENNEMI * degats_a_venir_du_verrouillage(ennemi, ennemi.statuts[Statut.VERROUILLAGE])
         score -= MALUS_ENNEMI_VIVANT
     if VALEUR_DECK:
         score += valeur_des_lancements_en_plus(combat)
@@ -145,6 +150,23 @@ def degats_a_venir_de_la_surcharge(combat: Combat, surcharge: int, figee: bool) 
     else:
         degats = COUPS_PAR_TOUR_ESTIMES * surcharge * (surcharge + 1) / 2
     return min(degats, sum(ennemi.pv for ennemi in combat.flotte.ennemis_vivants()))
+
+
+def degats_a_venir_du_verrouillage(ennemi, verrouillage: int) -> float:
+    """Degats en plus qu'apporterait un Verrouillage sur cet ennemi (estimation), plafonnes par
+    ses PV."""
+    return min(ennemi.pv, COUPS_PAR_TOUR_SUR_UN_ENNEMI * verrouillage * (verrouillage + 1) / 2)
+
+
+def _gain_de_verrouillage(combat: Combat, valeur: int) -> float:
+    """Degats a venir en plus apres la pose d'un Verrouillage `valeur` sur un ennemi, a partir de
+    son Verrouillage deja en place ; l'ennemi le plus interessant (le meilleur gain) est retenu."""
+    gains = [
+        degats_a_venir_du_verrouillage(ennemi, ennemi.statuts[Statut.VERROUILLAGE] + valeur)
+        - degats_a_venir_du_verrouillage(ennemi, ennemi.statuts[Statut.VERROUILLAGE])
+        for ennemi in combat.flotte.ennemis_vivants()
+    ]
+    return max(gains, default=0.0)
 
 
 def _gain_de_surcharge(combat: Combat, effet, valeur: int | None) -> float:
@@ -211,10 +233,20 @@ def valeur_d_un_lancement(carte: Carte, combat: Combat) -> float:
             # Meme estimation que l'evaluation, a partir de la Surcharge deja en place
             valeur += POIDS_PV_ENNEMI * _gain_de_surcharge(combat, effet, carte.valeur_de(effet))
             continue
+        if effet.nature == NatureEffet.VERROUILLAGE:
+            # Meme estimation que l'evaluation, sur chaque ennemi touche
+            gain = _gain_de_verrouillage(combat, carte.valeur_de(effet))
+            valeur += POIDS_PV_ENNEMI * gain * max(0, _nombre_de_cibles(carte, effet, combat))
+            continue
         if effet.nature == NatureEffet.DEGATS and effet.bonus is not None:
-            # Bonus calcule : lu sur l'etat actuel (Surcharge ou bouclier du principal)
+            # Bonus calcule : lu sur l'etat actuel (Surcharge ou bouclier du principal, ou le plus
+            # fort Verrouillage d'un ennemi vivant pour un bonus lu sur la cible)
             statut = effet.bonus.par.statut
-            bonus = carte.valeurs_actuelles[effet.bonus.facteur] * combat.vaisseau.principal.statuts[statut]
+            if effet.bonus.par.sur_la_cible:
+                compteur = max((e.statuts[statut] for e in combat.flotte.ennemis_vivants()), default=0)
+            else:
+                compteur = combat.vaisseau.principal.statuts[statut]
+            bonus = carte.valeurs_actuelles[effet.bonus.facteur] * compteur
             valeur += POIDS_PV_ENNEMI * (carte.valeur_de(effet) + bonus) * max(0, _nombre_de_cibles(carte, effet, combat))
             continue
         if effet.nature == NatureEffet.RENVOI:

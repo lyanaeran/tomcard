@@ -255,6 +255,54 @@ async function essaiCombatsPrepares() {
     await fermer(page, "combats prepares");
 }
 
+// Surcharge (lot 3) et Verrouillage (lot 4) joues par de vrais clics : valeurs, pastilles,
+// infobulle, journal, baisse en fin de tour. Les valeurs des cartes sont lues dans le jeu (reglables).
+async function essaiSurchargeEtVerrouillage() {
+    const page = await ouvrir();
+    await nouvellePartie(page, "Statuts", false);
+    await page.evaluate((code) => pyodide.runPython(code), PREPARATION_PYTHON);
+    await combatPrepare(page, ["BOSS"], ["CRT_95", "CRT_73", "CRT_74", "CRT_85", "CRT_106"], ["CRT_73", "CRT_74"]);
+    await python(page, "combat.electricite = 20");
+    const valeurs = await page.evaluate(() =>
+        JSON.parse(pyodide.runPython(`import json as _j; _j.dumps({i: _cc()[i].valeurs for i in ("CRT_95", "CRT_73", "CRT_74")})`))
+    );
+    const boss = () => page.evaluate(() => etatCourant.ennemis.find(Boolean));
+    const idBoss = (await boss()).id;
+
+    const surtension = await carteEnMain(page, "CRT_95");
+    await jouer(page, surtension, surtension.cases[0]);
+    const surcharge = valeurs.CRT_95.surcharge;
+    verifier((await page.evaluate(() => etatCourant.vaisseau.base.surcharge)) === surcharge, "Reacteur en surtension : Surcharge posee");
+
+    let pv = (await boss()).pv;
+    await jouer(page, await carteEnMain(page, "CRT_73"), idBoss);
+    const verrouillage = valeurs.CRT_73.verrouillage;
+    verifier((await boss()).verrouillage === verrouillage, "Missile verrouilleur : Verrouillage pose sur le Boss");
+    verifier(pv - (await boss()).pv === valeurs.CRT_73.degats + surcharge, "Missile verrouilleur : ses degats + Surcharge, sans son propre Verrouillage");
+    verifier((await page.locator(".pastille-verrouillage").count()) === 1, "pastille Verrouillage sur le Boss");
+
+    pv = (await boss()).pv;
+    await jouer(page, await carteEnMain(page, "CRT_74"), idBoss);
+    const attendu = valeurs.CRT_74.degats + valeurs.CRT_74.par_point * verrouillage + surcharge + verrouillage;
+    verifier(pv - (await boss()).pv === attendu, `Missile de precision : ${attendu} degats (base + bonus + Surcharge + Verrouillage)`);
+    await capture(page, "statuts_1_surcharge_et_verrouillage");
+
+    await page.click(`.case.ennemi[data-id="${idBoss}"]`);
+    const infobulle = await page.locator("#info-case").innerText();
+    verifier(infobulle.includes(`Verrouillage ${verrouillage}`), "infobulle du Boss : Verrouillage");
+    await capture(page, "statuts_2_infobulle_verrouillage");
+
+    await page.click("#tour-suivant");
+    await page.waitForTimeout(300);
+    verifier((await boss()).verrouillage === verrouillage - 1, "Verrouillage -1 a la fin du tour du joueur");
+    verifier((await page.evaluate(() => etatCourant.vaisseau.base.surcharge)) === surcharge - 1, "Surcharge -1 a la fin du tour ennemi");
+    await page.click("#bouton-journal-combat");
+    const journal = await page.evaluate(() => document.body.innerText);
+    verifier(journal.includes("de surcharge") && journal.includes("de verrouillage"), "journal : parts de la Surcharge et du Verrouillage");
+    await capture(page, "statuts_3_journal");
+    await fermer(page, "surcharge et verrouillage");
+}
+
 async function essaiEcransHorsCombat() {
     // Une partie en cours d'une ancienne version doit etre effacee, le profil garde
     const page = await ouvrir({
@@ -380,7 +428,9 @@ async function essaiVersions() {
 (async () => {
     navigateur = await chromium.launch();
     try {
-        for (const essai of [essaiPartieReelle, essaiCombatsPrepares, essaiEcransHorsCombat, essaiVersions]) {
+        for (const essai of [
+            essaiPartieReelle, essaiCombatsPrepares, essaiSurchargeEtVerrouillage, essaiEcransHorsCombat, essaiVersions,
+        ]) {
             await essai();
             console.log(`ok : ${essai.name}`);
         }

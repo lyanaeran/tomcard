@@ -110,3 +110,24 @@ def test_valeur_de_la_surcharge_plafonnee_et_gain_a_partir_de_l_existant():
     assert valeur_d_un_lancement(amplificateur, combat) == 0
     combat.vaisseau.principal.statuts.ajouter(Statut.SURCHARGE, 2)
     assert valeur_d_un_lancement(amplificateur, combat) > 0
+
+
+def test_valeur_du_verrouillage_plafonnee_et_bonus_lu_sur_les_ennemis():
+    from outils.simulation.bot import degats_a_venir_du_verrouillage, evaluer, valeur_d_un_lancement
+    from src.gameplay.carte import charger_cartes
+    from src.gameplay.statut import Statut
+
+    combat = construire_combat("depart", ("ENM_PAT_LE_PIRATE",), 1)
+    (pat,) = combat.flotte.ennemis_vivants()
+    # Plafond : jamais plus que les PV de l'ennemi
+    assert degats_a_venir_du_verrouillage(pat, 50) == pat.pv
+    assert 0 < degats_a_venir_du_verrouillage(pat, 2) < pat.pv
+
+    cartes = charger_cartes()
+    assert valeur_d_un_lancement(cartes["CRT_106"], combat) > 0
+    sans = valeur_d_un_lancement(cartes["CRT_74"], combat)
+    note = evaluer(combat)
+    pat.statuts.ajouter(Statut.VERROUILLAGE, 3)
+    # Un ennemi verrouille vaut mieux pour le joueur, et Missile de precision en profite
+    assert evaluer(combat) > note
+    assert valeur_d_un_lancement(cartes["CRT_74"], combat) > sans

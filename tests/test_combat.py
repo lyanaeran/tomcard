@@ -884,3 +884,128 @@ def test_reacteur_en_surtension_et_armer_le_lanceur_piochent_et_surchargent():
 
     assert _surcharge(combat) == _valeur("CRT_95", "surcharge") + _valeur("CRT_72", "surcharge")
     assert len(combat.deck.main) == _valeur("CRT_95", "pioche") + _valeur("CRT_72", "pioche")
+
+
+# --- Verrouillage (lot 4) ---
+
+
+def test_missile_marqueur_pose_le_verrouillage_apres_ses_degats():
+    pat = _ennemi()
+    combat = _combat({AVANT_MID: pat})
+    (marqueur,) = _en_main(combat, _carte("CRT_56", "M2"))
+
+    combat.jouer_carte(marqueur, AVANT_MID)
+
+    # Effets dans l'ordre : ses propres degats ne profitent pas du Verrouillage qu'il pose
+    assert pat.pv == pat.pv_max - _valeur("CRT_56", "degats")
+    assert pat.statuts[Statut.VERROUILLAGE] == _valeur("CRT_56", "verrouillage")
+
+
+def test_le_verrouillage_s_ajoute_a_chaque_coup_de_carte_et_au_journal():
+    pat = _ennemi()
+    pat.statuts.ajouter(Statut.VERROUILLAGE, 3)
+    combat = _combat({AVANT_MID: pat})
+    (jumeaux,) = _en_main(combat, _carte("CRT_58", "M2"))
+
+    combat.jouer_carte(jumeaux, AVANT_MID)
+
+    # Deux lancements, +3 a chacun ; le Verrouillage n'est pas consomme
+    assert pat.pv == pat.pv_max - 2 * (_valeur("CRT_58", "degats") + 3)
+    assert pat.statuts[Statut.VERROUILLAGE] == 3
+    attaque = _evenements(combat, NatureEvenement.ATTAQUE)[-1]
+    assert attaque.dont_verrouillage == 3 and attaque.dont_surcharge is None
+
+
+def test_verrouillage_et_surcharge_s_additionnent_avant_le_bouclier():
+    pat = _ennemi()
+    pat.statuts.ajouter(Statut.VERROUILLAGE, 2)
+    pat.statuts.ajouter(Statut.BOUCLIER, 5)
+    combat = _combat({AVANT_MID: pat})
+    combat.vaisseau.principal.statuts.ajouter(Statut.SURCHARGE, 3)
+    (laser,) = _en_main(combat, _carte("CRT_7"))
+
+    combat.jouer_carte(laser, AVANT_MID)
+
+    # Exemple de la decision du 2026-11-22 : base + Surcharge + Verrouillage, puis le bouclier
+    coup = _valeur("CRT_7", "degats") + 3 + 2
+    assert pat.pv == pat.pv_max - (coup - 5)
+    attaque = _evenements(combat, NatureEvenement.ATTAQUE)[-1]
+    assert (attaque.valeur, attaque.dont_surcharge, attaque.dont_verrouillage) == (coup, 3, 2)
+
+
+def test_le_verrouillage_ne_compte_ni_pour_l_incendie_ni_pour_les_degats_renvoyes():
+    pat = _ennemi()
+    pat.statuts.ajouter(Statut.VERROUILLAGE, 4)
+    pat.statuts.ajouter(Statut.RENVOI, 50)
+    combat = _combat({AVANT_MID: pat})
+    (thermique,) = _en_main(combat, _carte("CRT_65", "M2"))
+
+    combat.jouer_carte(thermique, AVANT_MID)
+
+    # Le coup de la carte compte le Verrouillage, tout est renvoye au Lanceur sans nouveau bonus
+    lanceur = combat.vaisseau.module_d_exemplaire("M2")
+    assert lanceur.pv_combat == lanceur.pv_max - (_valeur("CRT_65", "degats") + 4)
+    pv = pat.pv
+    combat.finir_tour()
+    # Incendie en fin de tour du joueur : sa seule intensite, sans le Verrouillage
+    incendie = [e for e in _evenements(combat, NatureEvenement.INCENDIE) if e.cible is pat]
+    assert incendie[0].valeur == _valeur("CRT_65", "incendie")
+    assert pat.pv == pv - _valeur("CRT_65", "incendie")
+
+
+def test_le_verrouillage_baisse_de_1_a_la_fin_du_tour_du_joueur():
+    pat = _ennemi()
+    pat.statuts.ajouter(Statut.VERROUILLAGE, 2)
+    combat = _combat({AVANT_MID: pat})
+    _en_main(combat)
+
+    combat.finir_tour()
+    assert pat.statuts[Statut.VERROUILLAGE] == 1
+    combat.finir_tour()
+    assert pat.statuts[Statut.VERROUILLAGE] == 0
+
+
+def test_ogive_de_marquage_et_protocole_de_ciblage_verrouillent_tous_les_ennemis():
+    pat, pat2 = _ennemi(), _ennemi()
+    combat = _combat({AVANT_MID: pat, ARRIERE_DROITE: pat2})
+    ogive, protocole = _en_main(combat, _carte("CRT_57", "M2"), _carte("CRT_106"))
+
+    combat.jouer_carte(ogive, AVANT_MID)
+    combat.jouer_carte(protocole, AVANT_MID)
+
+    attendu = _valeur("CRT_57", "verrouillage") + _valeur("CRT_106", "verrouillage")
+    for ennemi in (pat, pat2):
+        assert ennemi.pv == ennemi.pv_max - _valeur("CRT_57", "degats")
+        assert ennemi.statuts[Statut.VERROUILLAGE] == attendu
+
+
+def test_missile_de_precision_compte_le_verrouillage_de_sa_cible_deux_fois():
+    pat, pat2 = _ennemi(), _ennemi()
+    pat.statuts.ajouter(Statut.VERROUILLAGE, 5)
+    combat = _combat({AVANT_MID: pat, AVANT_DROITE: pat2})
+    precision, second = _en_main(combat, _carte("CRT_74", "M2"), _carte("CRT_74", "M2"))
+    combat.electricite = 4
+
+    combat.jouer_carte(precision, AVANT_MID)
+    # Exemple de la proposition : 8 + 3 x 5 + 5 (Verrouillage normal) = 28
+    attendu = _valeur("CRT_74", "degats") + _valeur("CRT_74", "par_point") * 5 + 5
+    assert pat.pv == pat.pv_max - attendu
+    assert pat.statuts[Statut.VERROUILLAGE] == 5
+
+    # Un ennemi sans Verrouillage : la base seule (le Verrouillage de l'autre ne compte pas)
+    combat.jouer_carte(second, AVANT_DROITE)
+    assert pat2.pv == pat2.pv_max - _valeur("CRT_74", "degats")
+
+
+def test_missile_verrouilleur_et_laser_de_visee_posent_leur_verrouillage():
+    pat = _ennemi("ENM_PETIT_JEAN")
+    combat = _combat({AVANT_MID: pat})
+    verrouilleur, visee = _en_main(combat, _carte("CRT_73", "M2"), _carte("CRT_85"))
+
+    combat.jouer_carte(verrouilleur, AVANT_MID)
+    combat.jouer_carte(visee, AVANT_MID)
+
+    v1 = _valeur("CRT_73", "verrouillage")
+    assert pat.statuts[Statut.VERROUILLAGE] == v1 + _valeur("CRT_85", "verrouillage")
+    # Le Laser de visee profite du Verrouillage pose par le Missile verrouilleur
+    assert pat.pv == pat.pv_max - _valeur("CRT_73", "degats") - (_valeur("CRT_85", "degats") + v1)

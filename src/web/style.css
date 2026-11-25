@@ -551,6 +551,10 @@ body {
     color: #1a1a1a;
 }
 
+.pastille-verrouillage {
+    background: #d6338f;
+}
+
 .pastille-leurre {
     background: #5ac8d2;
 }
@@ -648,6 +652,10 @@ body {
 
 .popup-surcharge {
     color: #ffd43b;
+}
+
+.popup-verrouillage {
+    color: #f783ac;
 }
 
 .popup-debuff {
