@@ -612,7 +612,7 @@ def test_partie_en_cours_efface_une_ancienne_sauvegarde_et_garde_le_profil(dossi
     dossier = dossier_saves_isole / profil.id / "parties"
     dossier.mkdir(parents=True)
     ancienne = dossier / "partie_ancienne.json"
-    ancienne.write_text(json.dumps({"version": 1, "id": "partie_ancienne", "statut": STATUT_EN_COURS}))
+    ancienne.write_text(json.dumps({"version": 1, "id": "partie_ancienne", "statut": STATUT_EN_COURS}), encoding="utf-8")
 
     assert partie_en_cours(profil.id) is None
     assert not ancienne.exists()
@@ -626,7 +626,7 @@ def test_partie_en_cours_garde_une_ancienne_partie_terminee(dossier_saves_isole)
     dossier = dossier_saves_isole / profil.id / "parties"
     dossier.mkdir(parents=True)
     terminee = dossier / "partie_finie.json"
-    terminee.write_text(json.dumps({"version": 1, "id": "partie_finie", "statut": "TERMINEE"}))
+    terminee.write_text(json.dumps({"version": 1, "id": "partie_finie", "statut": "TERMINEE"}), encoding="utf-8")
 
     assert partie_en_cours(profil.id) is None
     assert terminee.exists()

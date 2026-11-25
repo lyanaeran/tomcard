@@ -32,7 +32,7 @@ def main() -> None:
 
     DOSSIER_RESULTATS.mkdir(exist_ok=True)
     horodatage = datetime.now().strftime("%Y-%m-%d_%H%M")
-    (DOSSIER_RESULTATS / f"{horodatage}_resultats.json").write_text(json.dumps(resultats, default=str))
+    (DOSSIER_RESULTATS / f"{horodatage}_resultats.json").write_text(json.dumps(resultats, default=str), encoding="utf-8")
     parties = resultats["parties"]
     sections = [
         ("Validation du bot", rapport.validation_bot(resultats["combats"])),
@@ -44,7 +44,7 @@ def main() -> None:
         ("Choix clonés", rapport.choix_clones(parties, resultats["clones"])),
     ]
     texte = "".join(f"## {titre}\n\n{tableau}\n" for titre, tableau in sections)
-    (DOSSIER_RESULTATS / f"{horodatage}_tableaux.md").write_text(texte)
+    (DOSSIER_RESULTATS / f"{horodatage}_tableaux.md").write_text(texte, encoding="utf-8")
     print(texte)
     print(f"{resultats['simulations']} simulations en {resultats['duree_s']} s -> {DOSSIER_RESULTATS}")
 

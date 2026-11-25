@@ -12,17 +12,54 @@ le 2026-11-14, puis supprimés.*
 
 ### 3.1 Placement / rangs
 
-Grille de **2 colonnes** (avant, arrière) × **3 rangées** (gauche, milieu, droite), côté joueur
-comme côté ennemi (`position.py`).
+#### 3.1.1 Vocabulaire de la grille (décision utilisateur, 2026-11-21)
 
-- **Joueur** (`vaisseau.py`) : le module principal occupe **toute la rangée du milieu** (les deux
-  colonnes) ; les emplacements `avant_gauche`, `arriere_gauche`, `avant_droite`, `arriere_droite`
-  (`Module.emplacement`) correspondent aux cases du même nom. Le principal compte donc dans les
-  deux colonnes : il est touché par une carte « Module Avant ».
+**On décrit toujours la grille du point de vue du camp concerné**, pas de l'écran. Chaque camp
+(joueur, ennemi) a une grille de **2 lignes × 3 colonnes** :
+
+- **2 lignes** : la **ligne avant** (tournée vers l'adversaire) et la **ligne arrière**. La ligne
+  avant ennemie compte jusqu'à 3 ennemis, la ligne arrière aussi.
+- **3 colonnes** : **gauche, milieu, droite**. Deux cases de la même colonne sont l'une
+  **derrière** l'autre (une avant, une arrière).
+
+Sur l'écran, le joueur est tourné vers la droite et les ennemis vers la gauche :
+
+```
+  écran :  [arrière joueur] [avant joueur]  →  ←  [avant ennemi] [arrière ennemi]
+            tout à gauche                                         tout à droite
+```
+
+- La **ligne arrière du joueur** est **tout à gauche** de l'écran, la **ligne arrière ennemie**
+  **tout à droite** ; les deux lignes avant sont au centre, face à face.
+- Vues sur l'écran, les lignes sont donc des bandes **verticales** et les colonnes des bandes
+  **horizontales**. Ne pas parler de « colonnes » pour l'avant et l'arrière, même si c'est ce
+  qu'on voit à l'écran.
+
+**Ancien vocabulaire encore présent** (à harmoniser) : le code (`position.py`, `combat.py`,
+`flotte.py`, `vaisseau.py`, `src/ui/`, `src/web/`) et plusieurs passages de `specs/` utilisent
+l'inverse, hérité de la vue écran. Correspondance :
+
+| Vocabulaire retenu | Ancien vocabulaire (code, anciens textes) |
+|---|---|
+| ligne avant / ligne arrière | colonne avant / colonne arrière (`Colonne.AVANT`, `Colonne.ARRIERE`, portées `COLONNE_AVANT_ENNEMIE`…) |
+| colonne gauche / milieu / droite | rangée gauche / mid / droite (`Rangee.GAUCHE`, `Rangee.MID`, `Rangee.DROITE`) |
+| l'ennemi derrière la cible (même colonne) | l'ennemi de la même rangée |
+
+Dans la suite de ce fichier et dans les autres specs, un texte qui parle de « colonne avant » ou
+de « rangée du milieu » suit l'ancien vocabulaire : le lire avec ce tableau.
+
+#### 3.1.2 Occupation de la grille
+
+Grille de 2 lignes × 3 colonnes, côté joueur comme côté ennemi (`position.py`).
+
+- **Joueur** (`vaisseau.py`) : le module principal occupe **toute la colonne du milieu** (ses
+  deux cases, avant et arrière) ; les emplacements `avant_gauche`, `arriere_gauche`,
+  `avant_droite`, `arriere_droite` (`Module.emplacement`) correspondent aux cases du même nom. Le
+  principal compte donc dans les deux lignes : il est touché par une carte « Module Avant ».
 - **Ennemis** (`flotte.py`) : un ennemi occupe `emplacements` cases (le Boss : une case avant et
-  une case arrière de la même rangée) ; c'est un **seul** ennemi.
+  la case arrière juste derrière, dans la même colonne) ; c'est un **seul** ennemi.
 - Le placement des modules fragiles à l'arrière est une décision tactique : une attaque ennemie
-  « au plus proche » vise d'abord la colonne avant (§13.2.2).
+  « au plus proche » vise d'abord la ligne avant (§13.2.2).
 - Idée non codée : un module dédié (Propulseur) pour repositionner en cours de combat.
 
 ### 3.2 Tailles de monstres

@@ -1,5 +1,6 @@
 # Lance les tests a chaque PR et a chaque push sur main : pytest (src/gameplay, bridge web,
 # architecture, tableaux generes) et la syntaxe de la version web.
+# Sur Linux, macOS et Windows : le jeu se developpe sur Mac et sur PC Windows.
 name: tests
 
 on:
@@ -9,7 +10,11 @@ on:
 
 jobs:
   tests:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
