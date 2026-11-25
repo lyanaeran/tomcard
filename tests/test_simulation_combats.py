@@ -72,3 +72,22 @@ def test_la_recherche_du_bot_ne_connait_pas_les_vrais_melanges():
 
     assert copie.deck.aleatoire is copie.aleatoire
     assert copie.deck.aleatoire.getstate() != combat.deck.aleatoire.getstate()
+
+
+def test_valeur_du_retrait_de_bouclier_et_du_renvoi():
+    from outils.simulation.bot import RENVOI_MODULES_ATTAQUES, valeur_d_un_lancement
+    from src.gameplay.carte import charger_cartes
+    from src.gameplay.statut import Statut
+
+    combat = construire_combat("depart", ("ENM_PAT_LE_PIRATE",), 1)
+    cartes = charger_cartes()
+    laser_disrupteur, bouclier_miroir = cartes["CRT_100"], cartes["CRT_102"]
+
+    # Sans bouclier ennemi, le retrait ne vaut rien ; avec, il vaut des degats
+    sans_bouclier = valeur_d_un_lancement(laser_disrupteur, combat)
+    combat.flotte.ennemis_vivants()[0].statuts.ajouter(Statut.BOUCLIER, 50)
+    assert valeur_d_un_lancement(laser_disrupteur, combat) > sans_bouclier
+    # Le renvoi sur tous les modules ne compte que les modules attaques en general
+    renvoi = bouclier_miroir.valeurs["renvoi"]
+    modules = min(RENVOI_MODULES_ATTAQUES, len(combat.vaisseau.modules_vivants()))
+    assert valeur_d_un_lancement(bouclier_miroir, combat) == renvoi * modules

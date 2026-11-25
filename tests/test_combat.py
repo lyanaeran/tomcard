@@ -547,21 +547,6 @@ def test_le_combat_ne_modifie_pas_les_cartes_du_deck_de_la_partie():
     assert reparation.munitions_restantes == 1
 
 
-def test_une_nature_appliquee_au_mauvais_camp_est_refusee_avant_toute_modification():
-    degats_sur_module = Carte(
-        id="TEST", nom="Erreur", image="", rarete=RareteCarte.COMMUNE, categorie=CategorieCarte.ATTAQUE,
-        cible=CibleCarte.MODULE_UNIQUE, cout=1, description="", valeurs={"degats": 5},
-        effets=(Effet(NatureEffet.DEGATS, "degats"),), exemplaire_module="M1",
-    )
-    combat = _combat()
-    _en_main(combat, degats_sur_module)
-
-    assert not combat.peut_jouer(degats_sur_module)
-    with pytest.raises(ValueError, match="injouable"):
-        combat.jouer_carte(degats_sur_module, AVANT_MID)
-    assert combat.electricite == 3 and combat.deck.main == [degats_sur_module]
-
-
 def test_un_module_detruit_perd_ses_statuts():
     combat = _combat({AVANT_GAUCHE: _ennemi()})
     lanceur = combat.vaisseau.module_d_exemplaire("M2")
@@ -593,3 +578,161 @@ def test_remplacer_aleatoire_change_aussi_les_melanges_du_deck():
     combat.remplacer_aleatoire(nouveau)
 
     assert combat.aleatoire is nouveau and combat.deck.aleatoire is nouveau
+
+
+# --- Lot 2 du plan des cartes : portees vers un module, meme colonne, renvoi, retrait de bouclier ---
+
+
+def _valeur(id_carte, nom):
+    return CARTES[id_carte].valeurs[nom]
+
+
+def test_missile_de_couverture_degats_a_l_ennemi_et_bouclier_au_principal():
+    pat = _ennemi()
+    combat = _combat({AVANT_MID: pat})
+    (couverture,) = _en_main(combat, _carte("CRT_54", "M2"))
+
+    combat.jouer_carte(couverture, AVANT_MID)
+
+    assert pat.pv == pat.pv_max - _valeur("CRT_54", "degats")
+    assert combat.vaisseau.principal.statuts[Statut.BOUCLIER] == _valeur("CRT_54", "bouclier")
+    assert combat.vaisseau.module_d_exemplaire("M2").statuts[Statut.BOUCLIER] == 0
+
+
+def test_torpille_de_barrage_bouclier_au_module_de_la_carte():
+    pat, pat2 = _ennemi(), _ennemi()
+    combat = _combat({AVANT_MID: pat, AVANT_GAUCHE: pat2})
+    (barrage,) = _en_main(combat, _carte("CRT_62", "M2"))
+
+    combat.jouer_carte(barrage, AVANT_MID)
+
+    assert pat.pv == pat2.pv == pat.pv_max - _valeur("CRT_62", "degats")
+    assert combat.vaisseau.module_d_exemplaire("M2").statuts[Statut.BOUCLIER] == _valeur("CRT_62", "bouclier")
+    assert combat.vaisseau.principal.statuts[Statut.BOUCLIER] == 0
+
+
+def test_portee_module_de_la_carte_va_au_principal_si_le_module_est_detruit():
+    combat = _combat()
+    barrage = _carte("CRT_62", "M2")
+    barrage.persistante = True
+    _en_main(combat, barrage)
+    combat.vaisseau.module_d_exemplaire("M2").subir_degats(20)
+
+    combat.jouer_carte(barrage, AVANT_MID)
+
+    assert combat.vaisseau.principal.statuts[Statut.BOUCLIER] == _valeur("CRT_62", "bouclier")
+
+
+def test_torpille_traversante_touche_aussi_l_ennemi_de_la_meme_colonne():
+    devant, derriere, voisin = _ennemi(), _ennemi("ENM_LE_PUZZLE"), _ennemi()
+    combat = _combat({AVANT_MID: devant, ARRIERE_MID: derriere, AVANT_DROITE: voisin})
+    (traversante,) = _en_main(combat, _carte("CRT_61", "M2"))
+
+    combat.jouer_carte(traversante, AVANT_MID)
+
+    assert devant.pv == devant.pv_max - _valeur("CRT_61", "degats_cible")
+    assert derriere.pv == derriere.pv_max - _valeur("CRT_61", "degats_colonne")
+    assert voisin.pv == voisin.pv_max
+
+
+def test_torpille_traversante_depuis_l_arriere_touche_l_ennemi_de_devant():
+    devant, derriere = _ennemi(), _ennemi("ENM_LE_PUZZLE")
+    combat = _combat({AVANT_MID: devant, ARRIERE_MID: derriere})
+    (traversante,) = _en_main(combat, _carte("CRT_61", "M2"))
+
+    combat.jouer_carte(traversante, ARRIERE_MID)
+
+    assert derriere.pv == derriere.pv_max - _valeur("CRT_61", "degats_cible")
+    assert devant.pv == devant.pv_max - _valeur("CRT_61", "degats_colonne")
+
+
+def test_torpille_traversante_sans_personne_dans_la_colonne():
+    seul = _ennemi()
+    combat = _combat({AVANT_DROITE: seul})
+    (traversante,) = _en_main(combat, _carte("CRT_61", "M2"))
+
+    combat.jouer_carte(traversante, AVANT_DROITE)
+
+    assert seul.pv == seul.pv_max - _valeur("CRT_61", "degats_cible")
+
+
+def test_torpille_traversante_ne_touche_le_boss_qu_une_fois():
+    # Le Boss occupe les deux cases de sa colonne
+    boss = _ennemi("ENM_BOSS_PIRATES")
+    combat = _combat({AVANT_MID: boss, ARRIERE_MID: boss})
+    (traversante,) = _en_main(combat, _carte("CRT_61", "M2"))
+    combat.jouer_carte(traversante, AVANT_MID)
+    assert boss.pv == boss.pv_max - _valeur("CRT_61", "degats_cible")
+
+
+def test_bouclier_reflechissant_renvoie_l_attaque_ennemie_a_l_attaquant():
+    pat = _ennemi()
+    combat = _combat({AVANT_GAUCHE: pat})  # Pat vise le Lanceur (avant gauche)
+    (reflechissant,) = _en_main(combat, _carte("CRT_90"))
+    lanceur = combat.vaisseau.module_d_exemplaire("M2")
+    attaque = combat.intentions()[0].effets[0].valeur
+    renvoi = _valeur("CRT_90", "renvoi")
+
+    combat.jouer_carte(reflechissant, AVANT_GAUCHE)
+    assert lanceur.statuts[Statut.RENVOI] == renvoi
+    combat.finir_tour()
+
+    assert pat.pv == pat.pv_max - min(attaque, renvoi)
+    assert lanceur.pv_combat == lanceur.pv_max - max(0, attaque - renvoi)
+    assert _evenements(combat, NatureEvenement.RENVOI)[0].cible is pat
+
+
+def test_le_renvoi_pose_par_une_carte_disparait_a_la_fin_du_tour_ennemi():
+    combat = _combat({AVANT_GAUCHE: _ennemi()})  # Pat vise le Lanceur, pas le principal
+    (riposte,) = _en_main(combat, _carte("CRT_107"))
+
+    combat.jouer_carte(riposte, AVANT_MID)
+    principal = combat.vaisseau.principal
+    assert principal.statuts[Statut.RENVOI] == _valeur("CRT_107", "renvoi")
+    combat.finir_tour()
+
+    assert principal.statuts[Statut.RENVOI] == 0
+    assert principal.statuts[Statut.BOUCLIER] == _valeur("CRT_107", "bouclier") - 1
+
+
+def test_bouclier_miroir_pose_le_renvoi_sur_tous_les_modules():
+    combat = _combat()
+    (miroir,) = _en_main(combat, _carte("CRT_102"))
+
+    combat.jouer_carte(miroir, AVANT_MID)
+
+    assert all(module.statuts[Statut.RENVOI] == _valeur("CRT_102", "renvoi") for module in combat.vaisseau.modules)
+
+
+def test_laser_disrupteur_retire_le_bouclier_puis_inflige_ses_degats():
+    pat = _ennemi()
+    pat.statuts.ajouter(Statut.BOUCLIER, 12)
+    combat = _combat({AVANT_MID: pat})
+    (disrupteur,) = _en_main(combat, _carte("CRT_100"))
+    retrait, degats = _valeur("CRT_100", "retrait"), _valeur("CRT_100", "degats")
+
+    combat.jouer_carte(disrupteur, AVANT_MID)
+
+    bouclier_restant = max(0, 12 - retrait)
+    assert pat.pv == pat.pv_max - max(0, degats - bouclier_restant)
+    assert pat.statuts[Statut.BOUCLIER] == max(0, bouclier_restant - degats)
+    (retire,) = _evenements(combat, NatureEvenement.STATUT_RETIRE)
+    assert (retire.cible, retire.statut, retire.valeur) == (pat, Statut.BOUCLIER, min(12, retrait))
+
+
+def test_le_retrait_de_bouclier_ne_touche_ni_au_renvoi_ni_au_leurre():
+    pat = _ennemi()
+    pat.statuts.ajouter(Statut.RENVOI, 4)
+    pat.statuts.ajouter(Statut.LEURRE, 1)
+    combat = _combat({AVANT_MID: pat})
+    retrait = Carte(
+        id="TEST", nom="Retrait", image="test.png", rarete=RareteCarte.COMMUNE, categorie=CategorieCarte.ATTAQUE,
+        cible=CibleCarte.ENNEMI_UNIQUE, cout=1, description="Retire {retrait}", valeurs={"retrait": 8},
+        effets=(Effet(NatureEffet.RETRAIT_BOUCLIER, "retrait"),), exemplaire_module="M1",
+    )
+    _en_main(combat, retrait)
+
+    combat.jouer_carte(retrait, AVANT_MID)
+
+    assert pat.statuts[Statut.RENVOI] == 4 and pat.statuts[Statut.LEURRE] == 1
+    assert _evenements(combat, NatureEvenement.STATUT_RETIRE)[0].valeur == 0

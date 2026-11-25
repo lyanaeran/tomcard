@@ -232,22 +232,34 @@ règle systématique entre rareté et munitions (a-trancher.md §9.1).
 | `REPARATION` | Rend des PV, sans dépasser le PV max | codé |
 | `INCENDIE` | Pose le statut Incendie (le « poison » du jeu) | codé |
 | `ANNULATION_PROCHAINE_ATTAQUE` | Pose le statut Leurre | codé |
-| `GAIN_ELECTRICITE` | Électricité en plus pour ce tour | codé, aucune carte |
-| `PIOCHE` | Pioche en plus | codé, aucune carte |
+| `RENVOI` | Pose le statut Renvoi sur un module du joueur | codé le 2026-11-25 (lot 2 de plan-cartes.md) |
+| `RETRAIT_BOUCLIER` | Retire du bouclier à l'ennemi, pas son renvoi ni son leurre | codé le 2026-11-25 (lot 2) |
+| `GAIN_ELECTRICITE` | Électricité en plus pour ce tour | codé |
+| `PIOCHE` | Pioche en plus | codé |
 | `REPETITION` | Les cartes désignées sont lancées N fois de plus (§12.5) | codé |
 | `SURCHARGE` | Pose le statut Surcharge sur le principal : +intensité aux dégâts de chaque coup des cartes, −1 par tour | **décidé le 2026-11-16, non codé** (effets-a-coder.md §1) ; *Lasers en surchauffe* non jouable en attendant |
 | `VULNERABILITE`, `REDUCTION_DEGATS`, `REDIRECTION_CIBLE` | Statuts à durée, Tir allié | **non codé** : une carte qui en porte n'est pas jouable |
 
-Règles des statuts : combat.md §3.5. Résolution d'une carte : combat.md §3.8. Le **renvoi** n'est
-pas une nature de carte : seul l'ennemi Miroir le pose (la carte *Renvoi* du Blindage sera revue
-avec son module).
+Règles des statuts : combat.md §3.5. Résolution d'une carte : combat.md §3.8. Le **renvoi** est
+posé par l'ennemi Miroir et, depuis le lot 2, par les cartes de nature `RENVOI`.
 
 ### 12.3 Portée d'un effet (`PorteeEffet`)
 
 Par rapport à la cible de la carte : `CIBLE` (la cible, ou tout l'ensemble visé),
-`AUTRES_ENNEMIS` (Missiles : X sur la cible, Y sur les autres), `LIGNE_AVANT_ENNEMIE` et
-`LIGNE_ARRIERE_ENNEMIE` (Torpille : X à l'avant, Y à l'arrière). C'est ce qui permet deux
-valeurs sur une même carte.
+`AUTRES_ENNEMIS` (Missile à fragmentation : X sur la cible, Y sur les autres), `LIGNE_AVANT_ENNEMIE`
+et `LIGNE_ARRIERE_ENNEMIE` (Vague de torpilles : X à l'avant, Y à l'arrière). C'est ce qui permet
+deux valeurs sur une même carte.
+
+Ajoutées le 2026-11-25 (lot 2 de plan-cartes.md) :
+
+- `MEME_COLONNE` : l'autre ennemi vivant de la colonne de la case choisie (derrière ou devant,
+  combat.md §3.1.1), rien s'il n'y en a pas ; un ennemi sur les deux cases (le Boss) n'est touché
+  qu'une fois. Seulement sur une carte Ennemi Unique (vérifié au chargement). *Torpille traversante.*
+- `MODULE_PRINCIPAL` : le module principal, même sur une carte qui vise un ennemi. *Missile de
+  couverture, Laser défensif.*
+- `MODULE_DE_LA_CARTE` : le module auquel la carte est rattachée ; **le principal s'il est détruit**
+  (carte Persistante), comme les dégâts renvoyés (combat.md §3.8.5, décision utilisateur du
+  2026-11-25). *Torpille de barrage.*
 
 ### 12.4 Rattachement à un module et mot-clé Persistante
 

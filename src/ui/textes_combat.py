@@ -149,7 +149,7 @@ def texte_compteurs(combat: Combat) -> str:
 
 _NATURES_AVEC_POPUP = (
     NatureEvenement.ATTAQUE, NatureEvenement.RENVOI, NatureEvenement.INCENDIE,
-    NatureEvenement.STATUT_POSE, NatureEvenement.REPARATION,
+    NatureEvenement.STATUT_POSE, NatureEvenement.STATUT_RETIRE, NatureEvenement.REPARATION,
 )
 
 
@@ -161,6 +161,11 @@ def popup_evenement(evenement: Evenement) -> tuple[str, tuple[int, int, int]] | 
         if evenement.statut == Statut.LEURRE:
             return "Leurre", COULEUR_LEURRE
         return f"+{evenement.valeur} {NOMS_STATUT[evenement.statut].lower()}", COULEUR_PAR_STATUT[evenement.statut]
+    if evenement.nature == NatureEvenement.STATUT_RETIRE:
+        # Rien retire (la cible n'avait pas ce statut) : rien a montrer
+        if not evenement.valeur:
+            return None
+        return f"-{evenement.valeur} {NOMS_STATUT[evenement.statut].lower()}", COULEUR_PAR_STATUT[evenement.statut]
     if evenement.nature == NatureEvenement.REPARATION:
         # Reparation d'un module deja plein : rien a montrer
         return (f"+{evenement.valeur}", COULEUR_SOIN) if evenement.valeur else None
@@ -230,6 +235,10 @@ def ligne_journal(evenement: Evenement) -> list[Segment]:
         valeur = "" if evenement.statut == Statut.LEURRE else f" {evenement.valeur}"
         debut = [*source, texte(" → ")] if source else []
         return [*debut, *cible, texte(f" : {NOMS_STATUT[evenement.statut].lower()}{valeur}")]
+    if nature == NatureEvenement.STATUT_RETIRE:
+        nom = NOMS_STATUT[evenement.statut].lower()
+        detail = f"{nom} -{evenement.valeur}" if evenement.valeur else f"aucun {nom} à retirer"
+        return [*source, texte(" → "), *cible, texte(f" : {detail}")]
     if nature == NatureEvenement.REPARATION:
         return [*source, texte(" → "), *cible, texte(f" : +{evenement.valeur} PV ({evenement.pv_restants} restants)")]
     if nature == NatureEvenement.ELECTRICITE:

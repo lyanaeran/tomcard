@@ -111,3 +111,18 @@ def test_regrouper_cartes_par_carte_et_module():
     cartes = [laser.copie(exemplaire_module="M1"), laser.copie(exemplaire_module="M1"), laser.copie(exemplaire_module="M2")]
     groupes = regrouper_cartes(cartes)
     assert [(carte.exemplaire_module, quantite) for carte, quantite in groupes] == [("M1", 2), ("M2", 1)]
+
+
+def test_popup_et_journal_du_retrait_de_bouclier():
+    combat = _combat()
+    carte = charger_cartes()["CRT_100"]
+    ennemi = combat.flotte.ennemis_vivants()[0]
+    retire = Evenement(NatureEvenement.STATUT_RETIRE, 1, source=carte, cible=ennemi, valeur=8, statut=Statut.BOUCLIER)
+    rien = Evenement(NatureEvenement.STATUT_RETIRE, 1, source=carte, cible=ennemi, valeur=0, statut=Statut.BOUCLIER)
+
+    assert textes_combat.popup_evenement(retire)[0] == "-8 bouclier"
+    assert textes_combat.popup_evenement(rien) is None
+    texte = "".join(morceau for morceau, _couleur in textes_combat.ligne_journal(retire))
+    assert texte == f"{carte.nom} → {ennemi.nom} : bouclier -8"
+    texte = "".join(morceau for morceau, _couleur in textes_combat.ligne_journal(rien))
+    assert texte == f"{carte.nom} → {ennemi.nom} : aucun bouclier à retirer"

@@ -33,15 +33,6 @@ NATURES_NON_GEREES = {
 # Natures qui agissent sur le joueur lui-meme (electricite, pioche, cartes), pas sur une entite
 NATURES_GLOBALES = {NatureEffet.GAIN_ELECTRICITE, NatureEffet.PIOCHE, NatureEffet.REPETITION}
 
-# Camp que chaque nature d'effet peut toucher : une carte qui l'applique a l'autre camp est
-# injouable (verifie avant toute modification du combat)
-CAMP_PAR_NATURE = {
-    NatureEffet.DEGATS: Camp.ENNEMI,
-    NatureEffet.INCENDIE: Camp.ENNEMI,
-    NatureEffet.BOUCLIER: Camp.JOUEUR,
-    NatureEffet.REPARATION: Camp.JOUEUR,
-    NatureEffet.ANNULATION_PROCHAINE_ATTAQUE: Camp.JOUEUR,
-}
 
 Entite = Module | Ennemi
 
@@ -66,6 +57,8 @@ class NatureEvenement(Enum):
     RENVOI = auto()
     # Statut pose (cible, statut, valeur : intensite posee)
     STATUT_POSE = auto()
+    # Statut retire par une carte (cible, statut, valeur : intensite reellement retiree)
+    STATUT_RETIRE = auto()
     # Reparation (cible, valeur : PV rendus, pv_restants)
     REPARATION = auto()
     # Incendie en fin de tour (cible, valeur : intensite, et le detail des degats)
@@ -179,7 +172,7 @@ class Combat:
 
     def _cases_jouables(self, carte: Carte) -> list[Position]:
         """Cases ou la carte peut etre jouee maintenant ; vide si elle est injouable (hors main,
-        electricite, nature laissee pour plus tard ou appliquee au mauvais camp, aucune cible)."""
+        electricite, nature laissee pour plus tard, aucune cible)."""
         if not (
             self.en_cours
             and any(carte is en_main for en_main in self.deck.main)
@@ -191,13 +184,8 @@ class Combat:
 
     @staticmethod
     def _effet_gere(carte: Carte, effet: Effet) -> bool:
-        if effet.nature in NATURES_NON_GEREES:
-            return False
-        camp = CAMP_PAR_NATURE.get(effet.nature)
-        if camp is None:
-            return True
-        camp_touche = effet.portee.camp or carte.cible.camp
-        return camp == camp_touche
+        # Le camp touche par chaque effet est verifie au chargement de la carte (CAMP_PAR_NATURE)
+        return effet.nature not in NATURES_NON_GEREES
 
     def intentions(self) -> list[Intention]:
         """Ce que chaque ennemi vivant jouera a son prochain tour (specs.md 13.2.3)."""
@@ -365,6 +353,20 @@ class Combat:
         if effet.portee == PorteeEffet.AUTRES_ENNEMIS:
             choisi = self.flotte.ennemi_en(case)
             return [ennemi for ennemi in self.flotte.ennemis_vivants() if ennemi is not choisi]
+        if effet.portee == PorteeEffet.MEME_COLONNE:
+            # L'ennemi de l'autre case de la colonne ; un ennemi sur les deux cases (le Boss) est la
+            # cible elle-meme, il n'est pas touche une seconde fois
+            choisi = self.flotte.ennemi_en(case)
+            autre_ligne = Ligne.ARRIERE if case.ligne == Ligne.AVANT else Ligne.AVANT
+            autre = self.flotte.ennemi_en(Position(autre_ligne, case.colonne))
+            return [autre] if autre is not None and autre is not choisi and not autre.est_detruit() else []
+        if effet.portee == PorteeEffet.MODULE_PRINCIPAL:
+            principal = self.vaisseau.principal
+            return [principal] if not principal.est_detruit() else []
+        if effet.portee == PorteeEffet.MODULE_DE_LA_CARTE:
+            # Module detruit : l'effet va au principal, comme les degats renvoyes (decision
+            # utilisateur, 2026-11-25)
+            return [self._module_qui_recoit_le_renvoi(carte)]
         ligne = Ligne.AVANT if effet.portee == PorteeEffet.LIGNE_AVANT_ENNEMIE else Ligne.ARRIERE
         return self.flotte.ennemis_vivants_de_ligne(ligne)
 
@@ -388,6 +390,11 @@ class Combat:
                 if not isinstance(cible, Ennemi):
                     raise ValueError(f"Carte {carte.id} : degats sur un module non geres")
                 self._attaquer(carte, cible, valeur, renvoi_vers=self._module_qui_recoit_le_renvoi(carte))
+            elif nature == NatureEffet.RETRAIT_BOUCLIER:
+                retire = cible.statuts.retirer(Statut.BOUCLIER, valeur)
+                self._noter(
+                    NatureEvenement.STATUT_RETIRE, source=carte, cible=cible, valeur=retire, statut=Statut.BOUCLIER,
+                )
             elif nature == NatureEffet.REPARATION:
                 pv_avant = cible.pv_combat
                 cible.reparer(valeur)
@@ -400,7 +407,8 @@ class Combat:
                 self._poser_statut(cible, nature.statut_pose, valeur if valeur is not None else 1, source=carte)
 
     def _module_qui_recoit_le_renvoi(self, carte: Carte) -> Module:
-        """Module de la carte jouee, ou le principal s'il est detruit (decision utilisateur, 4.5)."""
+        """Module de la carte jouee, ou le principal s'il est detruit (decision utilisateur, 4.5) :
+        recoit les degats renvoyes et les effets de portee MODULE_DE_LA_CARTE."""
         module = self.vaisseau.module_d_exemplaire(carte.exemplaire_module)
         return self.vaisseau.principal if module.est_detruit() else module
 

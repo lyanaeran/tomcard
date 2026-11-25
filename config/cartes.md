@@ -4,7 +4,7 @@
 > main** : toute modification se fait dans le JSON, puis `python -m outils.tableau_cartes`
 > régénère ce tableau (un test échoue tant qu'il n'est pas à jour).
 
-40 cartes.
+48 cartes.
 
 | Id | Nom | Rareté | Catégorie | Cible | Modules | Coût | Munitions | Lancements | Persistante | Jouable | Refonte | Description affichée | Valeurs | Effets |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -34,6 +34,11 @@
 | CRT_103 | Réparation complète | Rare | Reparation | Module Principal | MOD_1 | 2 | 1 | 1 | Non | Oui | Oui | Répare le module principal pour 25 | `{"reparation": 25}` | `{"nature": "REPARATION", "valeur": "reparation"}` |
 | CRT_104 | Réacteur en surrégime | Rare | Outils | Module Principal | MOD_1 | 0 | 1 | 1 | Non | Oui | Oui | Donne 2 électricité en plus ce tour | `{"electricite": 2}` | `{"nature": "GAIN_ELECTRICITE", "valeur": "electricite"}` |
 | CRT_110 | Laser orbital | Legendaire | Attaque | Ennemi Unique | MOD_1 | 3 | Illimitées | 1 | Non | Oui | Oui | Inflige 25 dégâts à un ennemi et 10 à tous les autres | `{"degats_cible": 25, "degats_autres": 10}` | `{"nature": "DEGATS", "valeur": "degats_cible"}`<br>`{"nature": "DEGATS", "valeur": "degats_autres", "portee": "AUTRES_ENNEMIS"}` |
+| CRT_83 | Laser défensif | Commune | Attaque | Ennemi Unique | MOD_1 | 1 | Illimitées | 1 | Non | Oui | Oui | Inflige 5 dégâts à un ennemi et donne 6 de bouclier au module principal | `{"degats": 5, "bouclier": 6}` | `{"nature": "DEGATS", "valeur": "degats"}`<br>`{"nature": "BOUCLIER", "valeur": "bouclier", "portee": "MODULE_PRINCIPAL"}` |
+| CRT_90 | Bouclier réfléchissant | Commune | Defense | Module Unique | MOD_1 | 1 | Illimitées | 1 | Non | Oui | Oui | Renvoi 5 sur un module : il renvoie à l'attaquant les dégâts reçus | `{"renvoi": 5}` | `{"nature": "RENVOI", "valeur": "renvoi"}` |
+| CRT_100 | Laser disrupteur | Rare | Attaque | Ennemi Unique | MOD_1 | 1 | Illimitées | 1 | Non | Oui | Oui | Retire 8 de bouclier à un ennemi, puis lui inflige 6 dégâts | `{"retrait": 8, "degats": 6}` | `{"nature": "RETRAIT_BOUCLIER", "valeur": "retrait"}`<br>`{"nature": "DEGATS", "valeur": "degats"}` |
+| CRT_102 | Bouclier miroir | Rare | Defense | Module Tous | MOD_1 | 1 | Illimitées | 1 | Non | Oui | Oui | Renvoi 4 sur tous vos modules | `{"renvoi": 4}` | `{"nature": "RENVOI", "valeur": "renvoi"}` |
+| CRT_107 | Protocole de riposte | Rare | Defense | Module Principal | MOD_1 | 1 | Illimitées | 1 | Non | Oui | Oui | Donne 5 de bouclier et Renvoi 5 au module principal | `{"bouclier": 5, "renvoi": 5}` | `{"nature": "BOUCLIER", "valeur": "bouclier"}`<br>`{"nature": "RENVOI", "valeur": "renvoi"}` |
 | CRT_13 | Missile à fragmentation | Commune | Attaque | Ennemi Unique | MOD_2 | 2 | Illimitées | 1 | Non | Oui | Oui | Inflige 15 dégâts à un ennemi et 6 à tous les autres | `{"degats_cible": 15, "degats_autres": 6}` | `{"nature": "DEGATS", "valeur": "degats_cible"}`<br>`{"nature": "DEGATS", "valeur": "degats_autres", "portee": "AUTRES_ENNEMIS"}` |
 | CRT_14 | Vague de torpilles | Commune | Attaque | Ennemi Tous | MOD_2 | 2 | Illimitées | 1 | Non | Oui | Oui | Inflige 10 dégâts à la ligne avant et 8 à la ligne arrière | `{"degats_avant": 10, "degats_arriere": 8}` | `{"nature": "DEGATS", "valeur": "degats_avant", "portee": "LIGNE_AVANT_ENNEMIE"}`<br>`{"nature": "DEGATS", "valeur": "degats_arriere", "portee": "LIGNE_ARRIERE_ENNEMIE"}` |
 | CRT_9 | Ogive légère | Commune | Attaque | Ennemi Tous | MOD_2 | 1 | Illimitées | 1 | Non | Oui | Oui | Inflige 5 dégâts à tous les ennemis | `{"degats": 5}` | `{"nature": "DEGATS", "valeur": "degats"}` |
@@ -43,6 +48,9 @@
 | CRT_53 | Missile guidé | Commune | Attaque | Ennemi Unique | MOD_2 | 1 | Illimitées | 1 | Non | Oui | Oui | Inflige 7 dégâts à un ennemi. Piochez 1 carte | `{"degats": 7, "pioche": 1}` | `{"nature": "DEGATS", "valeur": "degats"}`<br>`{"nature": "PIOCHE", "valeur": "pioche"}` |
 | CRT_58 | Missiles jumeaux | Commune | Attaque | Ennemi Unique | MOD_2 | 1 | Illimitées | 2 | Non | Oui | Oui | Inflige 4 dégâts à un ennemi, deux fois | `{"degats": 4}` | `{"nature": "DEGATS", "valeur": "degats"}` |
 | CRT_65 | Missile thermique | Commune | Attaque | Ennemi Unique | MOD_2 | 1 | Illimitées | 1 | Non | Oui | Oui | Inflige 4 dégâts et 3 d'incendie à un ennemi | `{"degats": 4, "incendie": 3}` | `{"nature": "DEGATS", "valeur": "degats"}`<br>`{"nature": "INCENDIE", "valeur": "incendie"}` |
+| CRT_54 | Missile de couverture | Commune | Attaque | Ennemi Unique | MOD_2 | 1 | Illimitées | 1 | Non | Oui | Oui | Inflige 6 dégâts à un ennemi et donne 5 de bouclier au module principal | `{"degats": 6, "bouclier": 5}` | `{"nature": "DEGATS", "valeur": "degats"}`<br>`{"nature": "BOUCLIER", "valeur": "bouclier", "portee": "MODULE_PRINCIPAL"}` |
+| CRT_61 | Torpille traversante | Commune | Attaque | Ennemi Unique | MOD_2 | 2 | Illimitées | 1 | Non | Oui | Oui | Inflige 12 dégâts à un ennemi et 8 à l'ennemi de sa colonne (derrière ou devant) | `{"degats_cible": 12, "degats_colonne": 8}` | `{"nature": "DEGATS", "valeur": "degats_cible"}`<br>`{"nature": "DEGATS", "valeur": "degats_colonne", "portee": "MEME_COLONNE"}` |
+| CRT_62 | Torpille de barrage | Commune | Attaque | Ennemi Avant | MOD_2 | 2 | Illimitées | 1 | Non | Oui | Oui | Inflige 12 dégâts à la ligne avant et donne 8 de bouclier au Lanceur | `{"degats": 12, "bouclier": 8}` | `{"nature": "DEGATS", "valeur": "degats"}`<br>`{"nature": "BOUCLIER", "valeur": "bouclier", "portee": "MODULE_DE_LA_CARTE"}` |
 | CRT_15 | Ogive lourde | Rare | Attaque | Ennemi Tous | MOD_2 | 1 | Illimitées | 1 | Non | Oui | Oui | Inflige 7 dégâts à tous les ennemis | `{"degats": 7}` | `{"nature": "DEGATS", "valeur": "degats"}` |
 | CRT_17 | Missile incendiaire | Rare | Attaque | Ennemi Unique | MOD_2 | 2 | Illimitées | 1 | Non | Oui | Oui | Inflige 6 dégâts et 8 d'incendie à un ennemi | `{"degats": 6, "incendie": 8}` | `{"nature": "DEGATS", "valeur": "degats"}`<br>`{"nature": "INCENDIE", "valeur": "incendie"}` |
 | CRT_18 | Leurre | Rare | Defense | Module Unique | — | 1 | Illimitées | 1 | Non | Oui | Oui | Annule la prochaine attaque ciblant le module | `{}` | `{"nature": "ANNULATION_PROCHAINE_ATTAQUE"}` |
