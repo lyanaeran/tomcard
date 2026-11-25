@@ -282,6 +282,12 @@ class SourceBonus(Enum):
     # Bouclier du module principal (Laser de contre-charge)
     BOUCLIER_PRINCIPAL = auto()
 
+    @property
+    def statut(self) -> Statut:
+        """Statut du module principal compte par ce bonus (seule correspondance, pour le combat et
+        les simulateurs)."""
+        return {SourceBonus.SURCHARGE_JOUEUR: Statut.SURCHARGE, SourceBonus.BOUCLIER_PRINCIPAL: Statut.BOUCLIER}[self]
+
 
 @dataclass(frozen=True)
 class BonusCalcule:

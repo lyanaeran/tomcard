@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "102";
+const VERSION_CACHE = "103";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -453,6 +453,8 @@ function lignesStatuts(objet) {
     if (objet.incendie) lignes.push(`🔥 Incendie ${objet.incendie}`);
     if (objet.renvoi) lignes.push(`↩ Renvoi ${objet.renvoi}`);
     if (objet.leurre) lignes.push("🎭 Leurre");
+    // Seule la Surcharge peut etre figee aujourd'hui (feminin) ; un autre statut figeable devra
+    // accorder "(fige)" comme textes_combat.py:lignes_statuts
     if (objet.surcharge) lignes.push(`⚡ Surcharge ${objet.surcharge}${objet.surcharge_figee ? " (figée)" : ""}`);
     return lignes;
 }

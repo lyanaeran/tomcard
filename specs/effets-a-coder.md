@@ -13,8 +13,12 @@ Une fois un effet codé, sa règle part dans [combat.md](combat.md) §3.5 (statu
 
 La **Surcharge du joueur est codée** depuis le 2026-11-25 (lot 3 de [plan-cartes.md](plan-cartes.md)) :
 règles dans [combat.md](combat.md) §3.5 et §3.8.4, natures dans [modules-cartes.md](modules-cartes.md)
-§12.2. Les décisions d'origine (2026-11-16) et le renommage des autres usages du mot « surcharge »
-sont dans l'historique git de ce fichier. Reste à décider la Surcharge **des ennemis** :
+§12.2. Les autres usages du mot « surcharge » ont été renommés (décision utilisateur du
+2026-11-16) ; les **noms restent des propositions** : *Tir de rupture* pour l'idée de carte du
+Canon lourd (modules-cartes.md §4.1) et *Réaction en chaîne* pour *Surcharge critique*
+(refonte-destruction.md §6). L'image `assets/cartes/surcharge.png` est réservée aux cartes de
+Surcharge : *Embrasement*, devenu *Missile incendiaire*, a reçu une image de feu
+(`zone_de_feu.png`) au lot 1. Reste à décider la Surcharge **des ennemis** :
 
 ### 1.1 Surcharge des ennemis (à préciser)
 

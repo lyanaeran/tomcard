@@ -96,7 +96,7 @@ _PAIRES_CASES_ENNEMIES = (("AV_G", "AR_G"), ("AV_M", "AR_M"), ("AV_D", "AR_D"))
 
 # Version du contrat entre bridge.py et src/web/app.js : doit etre egale a VERSION_CACHE (app.js),
 # verifie au demarrage par app.js (versionsAccordees) et par tests/test_architecture.py
-VERSION_WEB = "102"
+VERSION_WEB = "103"
 
 combat = None
 # Taille du journal deja transmise : les popups d'une action sont calcules a partir des seules
@@ -396,7 +396,7 @@ def _etat_dict() -> dict:
 
 _SYMBOLES_STATUT = {"BOUCLIER": "🛡", "INCENDIE": "🔥", "RENVOI": "↩", "SURCHARGE": "⚡"}
 # Couleur du popup d'un statut pose ou retire (classes .popup-* de style.css)
-_COULEUR_PAR_STATUT = {"BOUCLIER": "bouclier", "INCENDIE": "degats", "RENVOI": "debuff"}
+_COULEUR_PAR_STATUT = {"BOUCLIER": "bouclier", "INCENDIE": "degats", "RENVOI": "debuff", "SURCHARGE": "surcharge"}
 
 
 def _popup_evenement(evenement) -> dict | None:

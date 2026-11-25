@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from enum import Enum, auto
 
 from src.gameplay.carte import (
-    Camp, Carte, CibleCarte, Effet, NatureEffet, PorteeEffet, SourceBonus, appliquer_repetition,
+    Camp, Carte, CibleCarte, Effet, NatureEffet, PorteeEffet, appliquer_repetition,
 )
 from src.gameplay.deck import CARTES_PIOCHEES_PAR_TOUR, Deck
 from src.gameplay.ennemi import CibleEffetEnnemi, EffetEnnemi, Ennemi, NatureEffetEnnemi
@@ -445,7 +445,7 @@ class Combat:
         if bonus is None:
             return 0
         principal = self.vaisseau.principal
-        statut = {SourceBonus.SURCHARGE_JOUEUR: Statut.SURCHARGE, SourceBonus.BOUCLIER_PRINCIPAL: Statut.BOUCLIER}[bonus.par]
+        statut = bonus.par.statut
         compteur = principal.statuts[statut]
         if bonus.consomme and compteur:
             principal.statuts[statut] = 0

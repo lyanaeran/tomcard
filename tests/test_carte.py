@@ -484,3 +484,11 @@ def test_un_bonus_calcule_ne_va_que_sur_des_degats_et_son_facteur_est_une_valeur
         _carte_simple(description="", valeurs={"degats": 5}, effets=(Effet(NatureEffet.DEGATS, "degats", bonus=bonus),))
     entree = {"nature": "DEGATS", "valeur": "degats", "bonus": {"par": "BOUCLIER_PRINCIPAL", "facteur": "x", "consomme": True}}
     assert Effet.depuis_dict(entree).bonus == BonusCalcule(SourceBonus.BOUCLIER_PRINCIPAL, "x", True)
+
+
+
+def test_chaque_source_de_bonus_designe_un_statut_du_principal():
+    from src.gameplay.carte import SourceBonus
+
+    assert SourceBonus.SURCHARGE_JOUEUR.statut == Statut.SURCHARGE
+    assert SourceBonus.BOUCLIER_PRINCIPAL.statut == Statut.BOUCLIER

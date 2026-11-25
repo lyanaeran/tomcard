@@ -108,7 +108,7 @@ numériques (coûts, dégâts, munitions) sont des valeurs inventées**, à ajus
 | CRT_72 | Armer le lanceur | nouvelle | Buff | Module Principal | 1 | | | Piochez {pioche} cartes. Surcharge {surcharge} | `pioche: 2, surcharge: 2` | `PIOCHE(pioche)` ; `SURCHARGE(surcharge)` | Surcharge (§3.2) |
 | CRT_73 | Missile verrouilleur | nouvelle | Attaque | Ennemi Unique | 1 | | | Inflige {degats} dégâts à un ennemi et lui pose Verrouillage {verrouillage} | `degats: 4, verrouillage: 5` | `DEGATS(degats)` ; `VERROUILLAGE(verrouillage)` | Verrouillage (§3.3) |
 | CRT_74 | Missile de précision | nouvelle | Attaque | Ennemi Unique | 2 | | | Inflige {degats} dégâts à un ennemi, plus {par_point} par point de Verrouillage de la cible | `degats: 8, par_point: 3` | `DEGATS(degats) [`**`bonus`**`={par: VERROUILLAGE_CIBLE, facteur: par_point}]` | Verrouillage (§3.3), bonus calculé (§3.11) |
-| CRT_75 | Missile surchargé | nouvelle | Attaque | Ennemi Unique | 2 | | | Inflige {degats} dégâts à un ennemi, plus {par_point} par point de Surcharge | `degats: 6, par_point: 2` | `DEGATS(degats) [bonus={par: SURCHARGE_JOUEUR, facteur: par_point}]` | Surcharge (§3.2), bonus calculé (§3.11) |
+| CRT_75 | Missile surchargé | nouvelle | Attaque | Ennemi Unique | 2 | | | Inflige {degats} dégâts à un ennemi, plus {par_point} par point de Surcharge | `degats: 6, par_point: 1` | `DEGATS(degats) [bonus={par: SURCHARGE_JOUEUR, facteur: par_point}]` | Surcharge (§3.2), bonus calculé (§3.11) ; 1 par point : avec la Surcharge normale, la carte compte **2 × la Surcharge** (décision utilisateur, revue de la PR 79) |
 | CRT_76 | Piéger le lanceur | nouvelle | Buff | Module Principal | 1 | 1 | | Destruction (Lanceur) : {degats_explosion} dégâts à tous les ennemis | `degats_explosion: 30` | **`DESTRUCTION`**` @MODULE_DE_LA_CARTE [declenche=DEGATS(degats_explosion) @TOUS_ENNEMIS]` | Destruction (§3.12), portées (§3.1) |
 
 ### 2.4 Légendaires (4)
@@ -495,7 +495,7 @@ revues d'après un tableau de recommandations, ligne par ligne ; les légendaire
 | CRT_72 | Chargeur automatique | **Armer le lanceur** | 1⚡, pioche 2 + Surcharge 2 | décidé |
 | CRT_73 | Verrouillage total | **Missile verrouilleur** | 1⚡, 4 + Verrouillage 5 | décidé |
 | CRT_74 | Frappe de précision | **Missile de précision** | 2⚡, 8 + 3 par point de Verrouillage de la cible | décidé |
-| CRT_75 | Frappe surchargée | **Missile surchargé** | 2⚡, 6 + 2 par point de Surcharge | décidé |
+| CRT_75 | Frappe surchargée | **Missile surchargé** | 2⚡, 6 + **1** par point de Surcharge, soit 2 × la Surcharge avec la Surcharge normale (était 2 par point : 3 × la Surcharge ; décision utilisateur, revue de la PR 79) | décidé |
 | CRT_76 | Soute piégée | **Piéger le lanceur** | **1⚡** (était 2), catégorie **Buff** ; **plus de dégâts immédiats** : à la destruction du Lanceur, **30 à tous les ennemis** (était 6 immédiat + 20) ; **1 munition** (pour limiter le cumul ; la rejouer après un Rechargement est voulu) | décidé |
 
 Remarques :

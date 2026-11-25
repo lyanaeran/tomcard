@@ -148,3 +148,12 @@ def test_textes_de_la_surcharge():
     assert "10 dégâts (dont 4 de surcharge)" in "".join(m for m, _c in textes_combat.ligne_journal(attaque))
     fige = Evenement(NatureEvenement.STATUT_FIGE, 1, cible=principal, valeur=8, statut=Statut.SURCHARGE)
     assert textes_combat.popup_evenement(fige)[0] == "Surcharge figée"
+
+
+
+def test_fige_s_accorde_au_genre_du_statut():
+    combat = _combat()
+    principal = combat.vaisseau.principal
+    principal.statuts.ajouter(Statut.BOUCLIER, 5)
+    principal.statuts.figes.add(Statut.BOUCLIER)
+    assert "Bouclier 5 (figé)" in textes_combat.lignes_statuts(principal)

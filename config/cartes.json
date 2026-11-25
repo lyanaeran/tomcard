@@ -992,7 +992,7 @@
       "jouable": "oui",
       "refonte": true,
       "description": "Inflige {degats} dégâts à un ennemi, plus {par_point} par point de Surcharge",
-      "valeurs": { "degats": 6, "par_point": 2 },
+      "valeurs": { "degats": 6, "par_point": 1 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats", "bonus": { "par": "SURCHARGE_JOUEUR", "facteur": "par_point" } }
       ]

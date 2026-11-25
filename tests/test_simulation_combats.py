@@ -91,3 +91,22 @@ def test_valeur_du_retrait_de_bouclier_et_du_renvoi():
     renvoi = bouclier_miroir.valeurs["renvoi"]
     modules = min(RENVOI_MODULES_ATTAQUES, len(combat.vaisseau.modules_vivants()))
     assert valeur_d_un_lancement(bouclier_miroir, combat) == renvoi * modules
+
+
+
+def test_valeur_de_la_surcharge_plafonnee_et_gain_a_partir_de_l_existant():
+    from outils.simulation.bot import degats_a_venir_de_la_surcharge, valeur_d_un_lancement
+    from src.gameplay.carte import charger_cartes
+    from src.gameplay.statut import Statut
+
+    combat = construire_combat("depart", ("ENM_PAT_LE_PIRATE",), 1)
+    pv_ennemis = sum(ennemi.pv for ennemi in combat.flotte.ennemis_vivants())
+    # Plafond : jamais plus que les PV des ennemis vivants, meme figee et tres haute
+    assert degats_a_venir_de_la_surcharge(combat, 24, True) == pv_ennemis
+    assert degats_a_venir_de_la_surcharge(combat, 2, False) < pv_ennemis
+
+    # Amplificateur ne vaut rien sans Surcharge, et quelque chose avec
+    amplificateur = charger_cartes()["CRT_68"]
+    assert valeur_d_un_lancement(amplificateur, combat) == 0
+    combat.vaisseau.principal.statuts.ajouter(Statut.SURCHARGE, 2)
+    assert valeur_d_un_lancement(amplificateur, combat) > 0

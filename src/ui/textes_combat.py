@@ -42,6 +42,8 @@ NOMS_STATUT = {
     Statut.LEURRE: "Leurre",
     Statut.SURCHARGE: "Surcharge",
 }
+# Statuts de nom feminin, pour accorder "(figee)" / "(fige)"
+STATUTS_FEMININS = {Statut.SURCHARGE}
 # Statuts affiches en pastille a cote des PV, dans cet ordre (le bouclier a toujours sa pastille)
 STATUTS_EN_PASTILLE = (Statut.SURCHARGE, Statut.INCENDIE, Statut.RENVOI, Statut.LEURRE)
 
@@ -105,7 +107,8 @@ def lignes_statuts(entite: Module | Ennemi) -> list[str]:
         if statut == Statut.LEURRE:
             lignes.append(NOMS_STATUT[statut])
         elif statut in entite.statuts.figes:
-            lignes.append(f"{NOMS_STATUT[statut]} {intensite} (figée)")
+            accord = "figée" if statut in STATUTS_FEMININS else "figé"
+            lignes.append(f"{NOMS_STATUT[statut]} {intensite} ({accord})")
         else:
             lignes.append(f"{NOMS_STATUT[statut]} {intensite}")
     return lignes
