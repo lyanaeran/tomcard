@@ -106,3 +106,16 @@ def test_une_attaque_a_zero_degat_ne_consomme_ni_leurre_ni_renvoi():
 
     assert (encaissement.degats_pv, encaissement.renvoyes) == (0, 0)
     assert statuts.intensites == {Statut.LEURRE: 1, Statut.RENVOI: 5}
+
+
+
+def test_surcharge_cumulee_baisse_de_1_sauf_si_figee():
+    statuts = Statuts()
+    statuts.ajouter(Statut.SURCHARGE, 2)
+    statuts.ajouter(Statut.SURCHARGE, 2)
+    statuts.fin_de_tour()
+    assert statuts[Statut.SURCHARGE] == 3
+
+    statuts.figes.add(Statut.SURCHARGE)
+    statuts.fin_de_tour()
+    assert statuts[Statut.SURCHARGE] == 3

@@ -182,10 +182,10 @@ Principes communs, repris de l'existant :
   (proposition), il ne revient pas au principal.
 - **Tests** : une case par portée, avec le cas « pas d'ennemi derrière ».
 
-### 3.2 Surcharge (décidée dans [effets-a-coder.md](effets-a-coder.md) §1), doublement et Surcharge figée
+### 3.2 Surcharge, doublement et Surcharge figée (**codés le 2026-11-25**, lot 3 : règles dans combat.md §3.5)
 
 - **Statut** `Statut.SURCHARGE` : cumul `ADDITION`, extinction `MOINS_UN_PAR_TOUR`, porté par le
-  module principal (règles détaillées dans effets-a-coder.md §1.2–§1.3).
+  module principal (règles dans combat.md §3.5).
 - **Application** : dans `Combat._attaquer`, quand la source est une `Carte`, ajouter
   `principal.statuts[SURCHARGE]` aux dégâts **de chaque coup**. L'incendie et le renvoi ne sont pas
   concernés.
@@ -199,8 +199,8 @@ Principes communs, repris de l'existant :
   True` ; `_fin_de_tour_d_entite` saute l'extinction de la Surcharge du principal tant qu'il est
   levé. Il disparaît à la fin du combat, puisque le combat est recréé à chaque fois. Les poses
   suivantes continuent de s'ajouter (proposition).
-- **Affichage** : pastille Surcharge sur le principal, infobulle « Surcharge 4 : +4 dégâts à
-  chaque coup, −1 par tour » (« figée » si le drapeau est levé), journal
+- **Affichage** : pastille Surcharge sur le principal, infobulle « Surcharge 4 », comme les
+  autres statuts (« Surcharge 4 (figée) » une fois figée ; décision utilisateur du 2026-11-25), journal
   « Mini-missile → X : 16 dégâts (dont 12 de surcharge) ».
 - **Tests** : Surcharge sur chaque coup d'une zone et de chaque lancement ; baisse de 1 ;
   doublement ; Surcharge figée qui ne baisse plus ; incendie non concerné.

@@ -20,6 +20,7 @@ COULEUR_BOUCLIER = (50, 110, 200)
 COULEUR_INCENDIE = (215, 130, 40)
 COULEUR_RENVOI = (170, 130, 220)
 COULEUR_LEURRE = (90, 200, 210)
+COULEUR_SURCHARGE = (235, 185, 40)
 COULEUR_SOIN = (70, 200, 90)
 COULEUR_TEXTE = (235, 235, 235)
 COULEUR_NOM_CARTE = (235, 200, 60)
@@ -32,15 +33,17 @@ COULEUR_PAR_STATUT = {
     Statut.INCENDIE: COULEUR_INCENDIE,
     Statut.RENVOI: COULEUR_RENVOI,
     Statut.LEURRE: COULEUR_LEURRE,
+    Statut.SURCHARGE: COULEUR_SURCHARGE,
 }
 NOMS_STATUT = {
     Statut.BOUCLIER: "Bouclier",
     Statut.INCENDIE: "Incendie",
     Statut.RENVOI: "Renvoi",
     Statut.LEURRE: "Leurre",
+    Statut.SURCHARGE: "Surcharge",
 }
 # Statuts affiches en pastille a cote des PV, dans cet ordre (le bouclier a toujours sa pastille)
-STATUTS_EN_PASTILLE = (Statut.INCENDIE, Statut.RENVOI, Statut.LEURRE)
+STATUTS_EN_PASTILLE = (Statut.SURCHARGE, Statut.INCENDIE, Statut.RENVOI, Statut.LEURRE)
 
 COULEUR_PAR_NATURE_ENNEMI = {
     NatureEffetEnnemi.ATTAQUE: (255, 120, 120),
@@ -65,20 +68,31 @@ def texte_intention_court(intention: IntentionEffet) -> str:
     return f"{_NOMS_COURTS_NATURE_ENNEMI.get(effet.nature, '?')} {intention.valeur}{repetitions}{tous}"
 
 
+# Titre des actions du prochain tour dans l'infobulle d'un ennemi, pour les distinguer de ses
+# statuts actifs (decision utilisateur, 2026-11-25)
+TITRE_PROCHAIN_TOUR = "Prochain tour :"
+
+
 def texte_intention(intention: IntentionEffet) -> str:
-    """Dans l'infobulle de l'ennemi, une action par ligne : nature, valeur, repetitions, cible."""
+    """Dans l'infobulle de l'ennemi, sous TITRE_PROCHAIN_TOUR, une action par ligne en phrase :
+    "inflige 5 degats a Lanceur de missiles", "se donne 6 de bouclier"..."""
     effet = intention.effet
-    repetitions = f" ×{effet.repetitions}" if effet.repetitions > 1 else ""
-    if effet.cible == CibleEffetEnnemi.TOUS_MODULES:
-        cible = " → tous"
-    elif effet.cible == CibleEffetEnnemi.ALLIE_AVANT_SINON_ARRIERE:
-        cible = " → un allié"
-    elif effet.cible == CibleEffetEnnemi.PROXIMITE:
+    valeur = intention.valeur
+    fois = f", {effet.repetitions} fois" if effet.repetitions > 1 else ""
+    if effet.nature == NatureEffetEnnemi.ATTAQUE:
+        if effet.cible == CibleEffetEnnemi.TOUS_MODULES:
+            return f"- inflige {valeur} dégâts à chaque module{fois}"
         prevue = intention.cible_prevue
-        cible = f" → {prevue.nom}" if isinstance(prevue, Module) else " → module le plus proche"
+        cible = prevue.nom if isinstance(prevue, Module) else "module le plus proche"
+        return f"- inflige {valeur} dégâts à {cible}{fois}"
+    soi_meme = effet.cible == CibleEffetEnnemi.SOI_MEME
+    if effet.nature == NatureEffetEnnemi.BOUCLIER:
+        action = f"se donne {valeur} de bouclier" if soi_meme else f"donne {valeur} de bouclier à un allié de la ligne avant"
+    elif effet.nature == NatureEffetEnnemi.RENVOI:
+        action = f"se pose Renvoi {valeur}" if soi_meme else f"pose Renvoi {valeur} sur un allié de la ligne avant"
     else:
-        cible = ""
-    return f"{_NOMS_NATURE_ENNEMI.get(effet.nature, '?')} {intention.valeur}{repetitions}{cible}"
+        action = f"{_NOMS_NATURE_ENNEMI.get(effet.nature, '?')} {valeur}"
+    return f"- {action}{fois}"
 
 
 def lignes_statuts(entite: Module | Ennemi) -> list[str]:
@@ -86,8 +100,14 @@ def lignes_statuts(entite: Module | Ennemi) -> list[str]:
     lignes = []
     for statut in Statut:
         intensite = entite.statuts[statut]
-        if intensite > 0:
-            lignes.append(NOMS_STATUT[statut] if statut == Statut.LEURRE else f"{NOMS_STATUT[statut]} {intensite}")
+        if intensite <= 0:
+            continue
+        if statut == Statut.LEURRE:
+            lignes.append(NOMS_STATUT[statut])
+        elif statut in entite.statuts.figes:
+            lignes.append(f"{NOMS_STATUT[statut]} {intensite} (figée)")
+        else:
+            lignes.append(f"{NOMS_STATUT[statut]} {intensite}")
     return lignes
 
 
@@ -100,9 +120,9 @@ def menaces_par_module(combat: Combat) -> dict[int, list[str]]:
         return menaces
     for intention in combat.intentions():
         for effet in intention.effets:
-            repetitions = f" ×{effet.effet.repetitions}" if effet.effet.repetitions > 1 else ""
+            fois = f", {effet.effet.repetitions} fois" if effet.effet.repetitions > 1 else ""
             for module in combat.modules_vises(effet):
-                menaces.setdefault(id(module), []).append(f"{intention.ennemi.nom} : Attaque {effet.valeur}{repetitions}")
+                menaces.setdefault(id(module), []).append(f"- {intention.ennemi.nom} inflige {effet.valeur} dégâts{fois}")
     return menaces
 
 
@@ -149,7 +169,8 @@ def texte_compteurs(combat: Combat) -> str:
 
 _NATURES_AVEC_POPUP = (
     NatureEvenement.ATTAQUE, NatureEvenement.RENVOI, NatureEvenement.INCENDIE,
-    NatureEvenement.STATUT_POSE, NatureEvenement.STATUT_RETIRE, NatureEvenement.REPARATION,
+    NatureEvenement.STATUT_POSE, NatureEvenement.STATUT_RETIRE, NatureEvenement.STATUT_FIGE,
+    NatureEvenement.REPARATION,
 )
 
 
@@ -161,6 +182,8 @@ def popup_evenement(evenement: Evenement) -> tuple[str, tuple[int, int, int]] | 
         if evenement.statut == Statut.LEURRE:
             return "Leurre", COULEUR_LEURRE
         return f"+{evenement.valeur} {NOMS_STATUT[evenement.statut].lower()}", COULEUR_PAR_STATUT[evenement.statut]
+    if evenement.nature == NatureEvenement.STATUT_FIGE:
+        return f"{NOMS_STATUT[evenement.statut]} figée", COULEUR_PAR_STATUT[evenement.statut]
     if evenement.nature == NatureEvenement.STATUT_RETIRE:
         # Rien retire (la cible n'avait pas ce statut) : rien a montrer
         if not evenement.valeur:
@@ -202,6 +225,8 @@ def _nom(entite: object) -> Segment:
 def _detail_degats(evenement: Evenement) -> str:
     """Detail des degats recus : degats, part annulee, renvoyee, absorbee, PV perdus et restants."""
     morceaux = [f"{evenement.valeur} dégâts"]
+    if evenement.dont_surcharge:
+        morceaux[0] += f" (dont {evenement.dont_surcharge} de surcharge)"
     if evenement.annules_leurre:
         morceaux.append("annulés par le leurre")
     if evenement.renvoyes:
@@ -235,6 +260,9 @@ def ligne_journal(evenement: Evenement) -> list[Segment]:
         valeur = "" if evenement.statut == Statut.LEURRE else f" {evenement.valeur}"
         debut = [*source, texte(" → ")] if source else []
         return [*debut, *cible, texte(f" : {NOMS_STATUT[evenement.statut].lower()}{valeur}")]
+    if nature == NatureEvenement.STATUT_FIGE:
+        nom = NOMS_STATUT[evenement.statut].lower()
+        return [*source, texte(" → "), *cible, texte(f" : {nom} {evenement.valeur} figée jusqu'à la fin du combat")]
     if nature == NatureEvenement.STATUT_RETIRE:
         nom = NOMS_STATUT[evenement.statut].lower()
         detail = f"{nom} -{evenement.valeur}" if evenement.valeur else f"aucun {nom} à retirer"

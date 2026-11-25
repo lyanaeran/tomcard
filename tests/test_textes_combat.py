@@ -30,7 +30,10 @@ def test_intention_courte_et_detaillee_pour_chaque_effet():
             if effet.effet.cible == CibleEffetEnnemi.PROXIMITE:
                 assert effet.cible_prevue.nom in detail
             if effet.effet.cible == CibleEffetEnnemi.TOUS_MODULES:
-                assert court.endswith("tous") and detail.endswith("→ tous")
+                assert court.endswith("tous") and "à chaque module" in detail
+            if effet.effet.repetitions > 1:
+                assert detail.endswith(f", {effet.effet.repetitions} fois")
+            assert detail.startswith("- ")
 
 
 def test_menaces_le_module_vise_par_une_attaque_de_proximite():
@@ -43,7 +46,7 @@ def test_menaces_le_module_vise_par_une_attaque_de_proximite():
     }
     assert attendus <= set(menaces)
     for lignes in menaces.values():
-        assert all("Attaque" in ligne for ligne in lignes)
+        assert all(" inflige " in ligne and "dégâts" in ligne for ligne in lignes)
 
 
 def test_menaces_tous_les_modules_pour_le_boss():
@@ -126,3 +129,22 @@ def test_popup_et_journal_du_retrait_de_bouclier():
     assert texte == f"{carte.nom} → {ennemi.nom} : bouclier -8"
     texte = "".join(morceau for morceau, _couleur in textes_combat.ligne_journal(rien))
     assert texte == f"{carte.nom} → {ennemi.nom} : aucun bouclier à retirer"
+
+
+
+def test_textes_de_la_surcharge():
+    combat = _combat()
+    principal = combat.vaisseau.principal
+    principal.statuts.ajouter(Statut.SURCHARGE, 4)
+    assert "Surcharge 4" in textes_combat.lignes_statuts(principal)
+    principal.statuts.figes.add(Statut.SURCHARGE)
+    assert "Surcharge 4 (figée)" in textes_combat.lignes_statuts(principal)
+
+    ennemi = combat.flotte.ennemis_vivants()[0]
+    attaque = Evenement(
+        NatureEvenement.ATTAQUE, 1, source=principal, cible=ennemi, valeur=10, annules_leurre=0, renvoyes=0,
+        absorbes_bouclier=0, pv_perdus=10, pv_restants=40, dont_surcharge=4,
+    )
+    assert "10 dégâts (dont 4 de surcharge)" in "".join(m for m, _c in textes_combat.ligne_journal(attaque))
+    fige = Evenement(NatureEvenement.STATUT_FIGE, 1, cible=principal, valeur=8, statut=Statut.SURCHARGE)
+    assert textes_combat.popup_evenement(fige)[0] == "Surcharge figée"

@@ -119,6 +119,7 @@ Bouclier, incendie, renvoi et leurre sont gérés **ensemble**, de la même faç
 | **Incendie** | Addition | −1 par tour | Inflige son intensité en dégâts à la fin du tour, avant la baisse |
 | **Renvoi** | Addition | Tour suivant (disparaît entièrement) | Renvoie à l'attaquant les dégâts reçus jusqu'à son intensité, qui diminue d'autant ; l'entité encaisse le reste |
 | **Leurre** | Remplacement (non cumulable) | Consommation | Annule entièrement la prochaine attaque reçue, puis disparaît |
+| **Surcharge** | Addition | −1 par tour, sauf si elle est **figée** (Lanceur incandescent) jusqu'à la fin du combat ; les nouvelles poses s'ajoutent toujours | Portée par le **module principal** : +intensité aux dégâts de **chaque coup** des cartes du joueur, quel que soit leur module (chaque cible d'une zone, chaque lancement). Pas sur l'incendie ni sur les dégâts renvoyés. Codée le 2026-11-25 (décisions du 2026-11-16 et du 2026-11-25) |
 
 Le renvoi est posé par l'ennemi Miroir (§13.3) et, depuis le 2026-11-25, par des cartes sur les
 modules du joueur (Bouclier réfléchissant, Bouclier miroir, Protocole de riposte : décision
@@ -153,9 +154,7 @@ Une seule source pour les règles : chaque nature d'effet de carte qui pose un s
 (`NatureEffet.statut_pose`) : `BOUCLIER` → Bouclier, `INCENDIE` → Incendie,
 `ANNULATION_PROCHAINE_ATTAQUE` → Leurre, `RENVOI` → Renvoi (modules-cartes.md §12.2).
 
-**Décidé, pas encore codé** : le statut **Surcharge** (+intensité aux dégâts de chaque coup,
-−1 par tour, porté par le principal pour toutes les cartes, et par les ennemis) :
-[effets-a-coder.md](effets-a-coder.md) §1.
+La Surcharge des **ennemis** (boss) reste à décider : [effets-a-coder.md](effets-a-coder.md) §1.
 
 **Points ouverts** : les statuts à durée (Vulnérabilité, Réduction de dégâts : une intensité et un
 nombre de tours) ne sont pas codés ; le buff Destruction portera des effets, pas un nombre, et
@@ -232,10 +231,18 @@ ligne avant puis ligne arrière) le touche une fois par effet.
 
 #### 3.8.4 Effets
 
+**Calcul d'un coup** de dégâts d'une carte (décision utilisateur, 2026-11-18) : valeur de base +
+bonus calculé (modules-cartes.md §12.2) + Surcharge du principal, **puis** les protections de la
+cible (leurre, renvoi, bouclier). Le journal donne la part de la Surcharge (« 13 dégâts (dont 10
+de surcharge) »).
+
 | Nature | Effet sur chaque entité touchée |
 |---|---|
 | Dégâts | Une attaque de la valeur (§3.5.1) ; les dégâts renvoyés partent vers un module (§3.8.5) |
 | Bouclier, Incendie, Leurre, Renvoi | Pose du statut, selon sa règle de cumul (§3.5) |
+| Surcharge | Pose le statut sur le principal (la carte doit viser le principal, vérifié au chargement) |
+| Multiplier la Surcharge | Surcharge du principal × la valeur (sans effet à 0) |
+| Figer la Surcharge | La Surcharge du principal ne baisse plus jusqu'à la fin du combat |
 | Retrait de bouclier | Retire la valeur au bouclier de l'ennemi (jamais en dessous de 0), sans toucher à son renvoi ni à son leurre ; journal « bouclier −N » avec ce qui a vraiment été retiré |
 | Réparation | Rend des PV de combat, sans dépasser le PV max ; jamais sur un module détruit |
 | Gain d'électricité | Électricité en plus pour ce tour |

@@ -10,7 +10,9 @@ import random
 from dataclasses import dataclass
 from enum import Enum, auto
 
-from src.gameplay.carte import Camp, Carte, CibleCarte, Effet, NatureEffet, PorteeEffet, appliquer_repetition
+from src.gameplay.carte import (
+    Camp, Carte, CibleCarte, Effet, NatureEffet, PorteeEffet, SourceBonus, appliquer_repetition,
+)
 from src.gameplay.deck import CARTES_PIOCHEES_PAR_TOUR, Deck
 from src.gameplay.ennemi import CibleEffetEnnemi, EffetEnnemi, Ennemi, NatureEffetEnnemi
 from src.gameplay.flotte import Flotte
@@ -24,14 +26,14 @@ ELECTRICITE_PAR_TOUR = 3
 
 # Natures d'effet de carte laissees pour plus tard (specs.md 3.8.4) : une carte qui en porte
 # est refusee
-NATURES_NON_GEREES = {
-    NatureEffet.VULNERABILITE, NatureEffet.REDUCTION_DEGATS, NatureEffet.REDIRECTION_CIBLE,
-    # Decidee le 2026-11-16, pas encore codee (specs/effets-a-coder.md)
-    NatureEffet.SURCHARGE,
-}
+NATURES_NON_GEREES = {NatureEffet.VULNERABILITE, NatureEffet.REDUCTION_DEGATS, NatureEffet.REDIRECTION_CIBLE}
 
 # Natures qui agissent sur le joueur lui-meme (electricite, pioche, cartes), pas sur une entite
-NATURES_GLOBALES = {NatureEffet.GAIN_ELECTRICITE, NatureEffet.PIOCHE, NatureEffet.REPETITION}
+NATURES_GLOBALES = {
+    NatureEffet.GAIN_ELECTRICITE, NatureEffet.PIOCHE, NatureEffet.REPETITION,
+    # Agissent sur la Surcharge du principal (la carte vise le principal, verifie au chargement)
+    NatureEffet.MULTIPLIER_SURCHARGE, NatureEffet.FIGER_SURCHARGE,
+}
 
 
 Entite = Module | Ennemi
@@ -59,6 +61,8 @@ class NatureEvenement(Enum):
     STATUT_POSE = auto()
     # Statut retire par une carte (cible, statut, valeur : intensite reellement retiree)
     STATUT_RETIRE = auto()
+    # Statut fige jusqu'a la fin du combat (cible, statut, valeur : intensite au moment de figer)
+    STATUT_FIGE = auto()
     # Reparation (cible, valeur : PV rendus, pv_restants)
     REPARATION = auto()
     # Incendie en fin de tour (cible, valeur : intensite, et le detail des degats)
@@ -93,6 +97,8 @@ class Evenement:
     absorbes_bouclier: int | None = None
     pv_perdus: int | None = None
     pv_restants: int | None = None
+    # Attaque d'une carte : part des degats due a la Surcharge du joueur (comprise dans valeur)
+    dont_surcharge: int | None = None
 
 
 @dataclass(frozen=True)
@@ -383,13 +389,31 @@ class Combat:
         elif nature == NatureEffet.REPETITION:
             modifiees = appliquer_repetition(effet, valeur, self.deck.toutes_les_cartes() + [carte])
             self._noter(NatureEvenement.REPETITION, source=carte, valeur=modifiees)
+        elif nature == NatureEffet.MULTIPLIER_SURCHARGE:
+            principal = self.vaisseau.principal
+            gain = principal.statuts[Statut.SURCHARGE] * (valeur - 1)
+            if gain > 0:
+                self._poser_statut(principal, Statut.SURCHARGE, gain, source=carte)
+        elif nature == NatureEffet.FIGER_SURCHARGE:
+            principal = self.vaisseau.principal
+            principal.statuts.figes.add(Statut.SURCHARGE)
+            self._noter(
+                NatureEvenement.STATUT_FIGE, source=carte, cible=principal, statut=Statut.SURCHARGE,
+                valeur=principal.statuts[Statut.SURCHARGE],
+            )
         for cible in cibles:
             if cible.est_detruit() or not self.en_cours:
                 continue
             if nature == NatureEffet.DEGATS:
                 if not isinstance(cible, Ennemi):
                     raise ValueError(f"Carte {carte.id} : degats sur un module non geres")
-                self._attaquer(carte, cible, valeur, renvoi_vers=self._module_qui_recoit_le_renvoi(carte))
+                # Calcul d'un coup (decision utilisateur, 2026-11-18) : valeur de base + bonus
+                # calcule + Surcharge du joueur, puis les protections de la cible
+                surcharge = self.vaisseau.principal.statuts[Statut.SURCHARGE]
+                degats = valeur + self._bonus_calcule(carte, effet) + surcharge
+                self._attaquer(
+                    carte, cible, degats, renvoi_vers=self._module_qui_recoit_le_renvoi(carte), dont_surcharge=surcharge,
+                )
             elif nature == NatureEffet.RETRAIT_BOUCLIER:
                 retire = cible.statuts.retirer(Statut.BOUCLIER, valeur)
                 self._noter(
@@ -414,12 +438,29 @@ class Combat:
 
     # --- Resolution commune ---
 
-    def _attaquer(self, source: object, cible: Entite, degats: int, renvoi_vers: Entite) -> None:
+    def _bonus_calcule(self, carte: Carte, effet: Effet) -> int:
+        """Degats en plus d'un coup (BonusCalcule), lus au moment du coup ; un bonus qui consomme
+        remet son compteur a 0 (note au journal)."""
+        bonus = effet.bonus
+        if bonus is None:
+            return 0
+        principal = self.vaisseau.principal
+        statut = {SourceBonus.SURCHARGE_JOUEUR: Statut.SURCHARGE, SourceBonus.BOUCLIER_PRINCIPAL: Statut.BOUCLIER}[bonus.par]
+        compteur = principal.statuts[statut]
+        if bonus.consomme and compteur:
+            principal.statuts[statut] = 0
+            self._noter(NatureEvenement.STATUT_RETIRE, source=carte, cible=principal, valeur=compteur, statut=statut)
+        return carte.valeurs_actuelles[bonus.facteur] * compteur
+
+    def _attaquer(
+        self, source: object, cible: Entite, degats: int, renvoi_vers: Entite, dont_surcharge: int | None = None,
+    ) -> None:
         """Une attaque de `degats` sur `cible` ; les degats renvoyes sont une nouvelle attaque sur
-        `renvoi_vers` (decision utilisateur, 4.5), qui ne renvoie rien a son tour."""
+        `renvoi_vers` (decision utilisateur, 4.5), qui ne renvoie rien a son tour. `dont_surcharge` :
+        part des degats due a la Surcharge, pour le journal."""
         pv_avant = self._pv(cible)
         encaissement = cible.subir_degats(degats)
-        self._noter_degats(NatureEvenement.ATTAQUE, source, cible, encaissement, pv_avant)
+        self._noter_degats(NatureEvenement.ATTAQUE, source, cible, encaissement, pv_avant, dont_surcharge or None)
         self._traiter_destruction(cible)
         if encaissement.renvoyes and not renvoi_vers.est_detruit() and self.en_cours:
             pv_avant = self._pv(renvoi_vers)
@@ -428,13 +469,16 @@ class Combat:
             self._noter_degats(NatureEvenement.RENVOI, cible, renvoi_vers, renvoi, pv_avant)
             self._traiter_destruction(renvoi_vers)
 
-    def _noter_degats(self, nature: NatureEvenement, source: object, cible: Entite, encaissement: Encaissement, pv_avant: int) -> None:
+    def _noter_degats(
+        self, nature: NatureEvenement, source: object, cible: Entite, encaissement: Encaissement, pv_avant: int,
+        dont_surcharge: int | None = None,
+    ) -> None:
         """Note des degats recus avec leur detail : leurre, renvoi, bouclier, PV perdus et restants."""
         self._noter(
             nature, source=source, cible=cible, valeur=encaissement.degats,
             annules_leurre=encaissement.annules_leurre, renvoyes=encaissement.renvoyes,
             absorbes_bouclier=encaissement.absorbes_bouclier, pv_perdus=pv_avant - self._pv(cible),
-            pv_restants=self._pv(cible),
+            pv_restants=self._pv(cible), dont_surcharge=dont_surcharge,
         )
 
     def _poser_statut(self, cible: Entite, statut: Statut, valeur: int, source: object = None) -> None:

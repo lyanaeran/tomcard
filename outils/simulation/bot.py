@@ -31,6 +31,10 @@ POIDS_LEURRE = 3.0
 # Incendie restant : degats encore a venir (k + k-1 + ... + 1), comptes comme des PV ennemis
 # en moins, la recherche ne voyant que le tour suivant
 POIDS_INCENDIE = 1.0
+# Surcharge du principal : degats en plus a venir, comptes comme des PV ennemis en moins.
+# Estimation : COUPS_PAR_TOUR_ESTIMES coups par tour, et une Surcharge S qui baisse de 1 par tour
+# rapporte S + (S-1) + ... + 1 tours de bonus ; figee, S par tour jusqu'a la fin estimee du combat
+COUPS_PAR_TOUR_ESTIMES = 2
 
 # Valeur du deck (idee utilisateur, 2026-11-11) : une carte de repetition ne paie que sur les tours
 # suivants, que la recherche ne voit pas. On estime donc ce que rapportent les lancements en plus
@@ -117,6 +121,7 @@ def evaluer(combat: Combat) -> float:
             score += POIDS_BOUCLIER * module.statuts[Statut.BOUCLIER] + POIDS_LEURRE * module.statuts[Statut.LEURRE]
             if not module.principal:
                 score += BONUS_SECONDAIRE_VIVANT
+    score += POIDS_PV_ENNEMI * degats_a_venir_de_la_surcharge(combat)
     for ennemi in combat.flotte.ennemis_vivants():
         incendie = ennemi.statuts[Statut.INCENDIE]
         degats_a_venir = min(ennemi.pv, incendie * (incendie + 1) // 2)
@@ -125,6 +130,16 @@ def evaluer(combat: Combat) -> float:
     if VALEUR_DECK:
         score += valeur_des_lancements_en_plus(combat)
     return score
+
+
+def degats_a_venir_de_la_surcharge(combat: Combat) -> float:
+    """Degats en plus qu'apportera la Surcharge actuelle du principal (estimation)."""
+    statuts = combat.vaisseau.principal.statuts
+    surcharge = statuts[Statut.SURCHARGE]
+    if Statut.SURCHARGE in statuts.figes:
+        tours = max(1, DUREE_COMBAT_ESTIMEE - combat.tour)
+        return COUPS_PAR_TOUR_ESTIMES * surcharge * tours
+    return COUPS_PAR_TOUR_ESTIMES * surcharge * (surcharge + 1) / 2
 
 
 def _nombre_de_cibles(carte: Carte, effet, combat: Combat) -> int:
@@ -168,6 +183,17 @@ def valeur_d_un_lancement(carte: Carte, combat: Combat) -> float:
             # Vaut des degats, mais seulement a hauteur du bouclier que porte un ennemi
             boucliers = [ennemi.statuts[Statut.BOUCLIER] for ennemi in combat.flotte.ennemis_vivants()]
             valeur += POIDS_PV_ENNEMI * min(carte.valeur_de(effet), max(boucliers, default=0))
+            continue
+        if effet.nature == NatureEffet.SURCHARGE:
+            # Meme estimation que l'evaluation : S + (S-1) + ... + 1 tours de bonus
+            gain = carte.valeur_de(effet)
+            valeur += POIDS_PV_ENNEMI * COUPS_PAR_TOUR_ESTIMES * gain * (gain + 1) / 2
+            continue
+        if effet.nature == NatureEffet.DEGATS and effet.bonus is not None:
+            # Bonus calcule : lu sur l'etat actuel (Surcharge ou bouclier du principal)
+            statut = Statut.SURCHARGE if effet.bonus.par.name == "SURCHARGE_JOUEUR" else Statut.BOUCLIER
+            bonus = carte.valeurs_actuelles[effet.bonus.facteur] * combat.vaisseau.principal.statuts[statut]
+            valeur += POIDS_PV_ENNEMI * (carte.valeur_de(effet) + bonus) * max(0, _nombre_de_cibles(carte, effet, combat))
             continue
         if effet.nature == NatureEffet.RENVOI:
             cibles = min(RENVOI_MODULES_ATTAQUES, _nombre_de_cibles(carte, effet, combat))

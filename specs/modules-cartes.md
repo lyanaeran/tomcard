@@ -47,7 +47,7 @@ d'information :
 - Tir de précision (1⚡, 8 dégâts)
 - Charge concentrée (2⚡, 14 dégâts)
 - Tir perforant (2⚡, 10 dégâts, avant + arrière de la colonne)
-- Tir de rupture (3⚡, 20 dégâts, ne peut pas retirer au tour suivant) — ex-« Surcharge », renommée : le mot désigne désormais un statut (effets-a-coder.md §1)
+- Tir de rupture (3⚡, 20 dégâts, ne peut pas retirer au tour suivant) — ex-« Surcharge », renommée : le mot désigne désormais un statut (combat.md §3.5)
 
 **Batterie Gatling** — multi-cible / dégâts répartis. Fort contre les groupes de S, faible contre un seul L.
 - Rafale (1⚡, 3 dégâts à 2 cibles aléatoires)
@@ -237,7 +237,12 @@ règle systématique entre rareté et munitions (a-trancher.md §9.1).
 | `GAIN_ELECTRICITE` | Électricité en plus pour ce tour | codé |
 | `PIOCHE` | Pioche en plus | codé |
 | `REPETITION` | Les cartes désignées sont lancées N fois de plus (§12.5) | codé |
-| `SURCHARGE` | Pose le statut Surcharge sur le principal : +intensité aux dégâts de chaque coup des cartes, −1 par tour | **décidé le 2026-11-16, non codé** (effets-a-coder.md §1) ; *Lasers en surchauffe* non jouable en attendant |
+| `SURCHARGE` | Pose le statut Surcharge sur le principal : +intensité aux dégâts de chaque coup des cartes, −1 par tour | codé le 2026-11-25 (lot 3) |
+| `MULTIPLIER_SURCHARGE` | Surcharge du principal × la valeur | codé le 2026-11-25 (lot 3) |
+| `FIGER_SURCHARGE` | La Surcharge du principal ne baisse plus jusqu'à la fin du combat (sans valeur) | codé le 2026-11-25 (lot 3) |
+
+**Bonus calculé** (clé d'effet `bonus`, seulement sur `DEGATS`, codé le 2026-11-25) : `{"par": SOURCE, "facteur": "<valeur nommée>", "consomme": true|false}` ajoute facteur × compteur aux dégâts, lu au moment du coup. Sources : `SURCHARGE_JOUEUR` (Surcharge du principal, *Missile surchargé* : en plus de la Surcharge normale) et `BOUCLIER_PRINCIPAL` (bouclier du principal, *Laser de contre-charge*). Avec `consomme`, le compteur est remis à 0 au premier coup (noté au journal) ; `VERROUILLAGE_CIBLE` viendra avec le lot 4.
+
 | `VULNERABILITE`, `REDUCTION_DEGATS`, `REDIRECTION_CIBLE` | Statuts à durée, Tir allié | **non codé** : une carte qui en porte n'est pas jouable |
 
 Règles des statuts : combat.md §3.5. Résolution d'une carte : combat.md §3.8. Le **renvoi** est
