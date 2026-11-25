@@ -64,7 +64,10 @@ def construire_deck(variante: str, aleatoire: random.Random) -> list:
     cartes_lanceur = sorted(id_carte for id_carte, exemplaire in modules.items() if exemplaire == "M2")
     ajouts = [aleatoire.choice(cartes_lanceur)]
     if variante == "etoffe":
-        hors_base = sorted(id_carte for id_carte, carte in modeles.items() if carte.rarete != RareteCarte.BASE)
+        # Seulement les cartes d'un module : une carte sans module (Leurre) n'est jamais obtenue
+        hors_base = sorted(
+            id_carte for id_carte, carte in modeles.items() if carte.rarete != RareteCarte.BASE and id_carte in modules
+        )
         ajouts += [aleatoire.choice(hors_base) for _ in range(CARTES_AJOUTEES_ETOFFE)]
     return deck + [modeles[id_carte].copie(exemplaire_module=modules[id_carte]) for id_carte in ajouts]
 

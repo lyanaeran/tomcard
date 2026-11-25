@@ -37,8 +37,16 @@ def test_valeur_d_un_lancement_d_une_carte_de_ligne_ne_compte_que_sa_ligne():
     combat = construire_combat("depart", ("ENM_PAT_LE_PIRATE", "ENM_LE_NETTOYEUR"), 1)  # un avant, un arriere
     cartes = charger_cartes()
 
-    assert valeur_d_un_lancement(cartes["CRT_8"], combat) == valeur_d_un_lancement(cartes["CRT_47"], combat) * 8 / 12
-    assert valeur_d_un_lancement(cartes["CRT_9"], combat) == 2 * valeur_d_un_lancement(cartes["CRT_7"], combat)
+    def degats(id_carte):
+        return cartes[id_carte].valeurs["degats"]
+
+    # Laser percant (une ligne) touche 1 ennemi, comme Laser lourd ; Ogive legere (tous) en touche 2
+    assert valeur_d_un_lancement(cartes["CRT_8"], combat) == (
+        valeur_d_un_lancement(cartes["CRT_47"], combat) * degats("CRT_8") / degats("CRT_47")
+    )
+    assert valeur_d_un_lancement(cartes["CRT_9"], combat) == (
+        2 * valeur_d_un_lancement(cartes["CRT_7"], combat) * degats("CRT_9") / degats("CRT_7")
+    )
 
 
 def test_valeur_d_un_lancement_sur_tous_les_modules_compte_chaque_module_vivant():
