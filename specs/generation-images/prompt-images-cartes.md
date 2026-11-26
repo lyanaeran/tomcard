@@ -1,14 +1,14 @@
 # Prompt Gemini : illustrations des cartes manquantes
 
-*Document de travail, hors numérotation (cf. [specs.md](specs.md)). Étape 6 de
-[plan-cartes.md](plan-cartes.md) : 40 cartes n'ont qu'une image provisoire, empruntée à une autre
+*Document de travail, hors numérotation (cf. [specs.md](../specs.md)). Étape 6 de
+[plan-cartes.md](../plan-cartes.md) : 40 cartes n'ont qu'une image provisoire, empruntée à une autre
 carte. Ce fichier contient le prompt à donner à Gemini (ou à un autre générateur d'images) pour
 créer leurs illustrations. Répartition des 23 images existantes validée par l'utilisateur le
 2026-11-26 (appliquée dans `config/cartes.json`).*
 
 **Mode d'emploi** :
 
-1. Joindre à Gemini les deux images modèles de `specs/images/` :
+1. Joindre à Gemini les deux images modèles de ce répertoire (`specs/generation-images/`) :
    - `modele_illustrations.png` : les 23 illustrations du jeu, chacune avec le nom de sa carte ;
    - `modele_cartes_en_jeu.png` : cinq cartes telles qu'elles s'affichent en jeu.
 2. Coller le prompt ci-dessous, puis demander les images **par petits lots** (4 ou 5 cartes à la
