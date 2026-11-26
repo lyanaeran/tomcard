@@ -214,6 +214,12 @@ règle systématique entre rareté et munitions (a-trancher.md §9.1).
   (booléen : carte revue).
 - `modules` : liste des types de module qui proposent la carte (ex. `["MOD_1"]`) ; une carte sans
   module n'est proposée nulle part, un module inconnu est refusé au chargement.
+- `famille` (optionnel, codé le 2026-11-26, lot 5) : famille de noms de la carte, sans accent
+  (`Laser`, `Bouclier`, `Reparation`, `Reacteur`, `Protocole`, `Missile`, `Torpille`, `Ogive`,
+  `Lanceur`) ; une famille hors de cette liste est refusée au chargement. **Rempli seulement sur
+  les cartes qu'un buff peut viser par famille**, aujourd'hui les **12 cartes Laser** du principal,
+  Laser de base compris (décision utilisateur, 2026-11-25) ; ailleurs, la famille reste une règle
+  de nommage, sans champ. Colonne « Famille » dans `config/cartes.md`.
 - `jouable` : **trois valeurs** (décision utilisateur, 2026-11-15) : `"oui"` (proposée et jouée),
   `"non"` (pas proposée), `"supprimee"` (retirée du jeu sans être effacée du fichier, traitée
   comme `"non"`). L'ancien format booléen est refusé.
@@ -303,9 +309,16 @@ carte.
 - Un effet `REPETITION` **augmente les lancements** des cartes que désigne son **filtre**, dans
   toutes les piles, **jusqu'à la fin du combat**, et se cumule (décision utilisateur). Le filtre
   désigne une carte par son **id** (`{"id": "CRT_7"}`, jamais par son nom), ou un ensemble par
-  rareté ou catégorie.
-- Cartes : *Salve laser* (les Laser), *Protocole d'urgence* (les cartes Base), *Bouclier
-  stabilisé* (les Bouclier de base).
+  rareté, catégorie, **famille** (`{"famille": "Laser"}`) ou **module** (`{"module": "MOD_2"}`) ;
+  tous les critères donnés doivent correspondre.
+- **Filtre par module** (lot 5, proposition-lanceur-missiles.md §3.9) : il vise les cartes
+  **rattachées à un exemplaire** de ce type de module (§12.4), pas les cartes dont la liste
+  `modules` cite ce type. Une carte du Lanceur rattachée au principal n'est donc pas visée ; avec
+  deux Lanceurs, les cartes des deux le sont. Un module inconnu dans un filtre est refusé au
+  chargement.
+- Cartes : *Salve laser* (le Laser de base, par son id), *Protocole d'urgence* (les cartes Base),
+  *Bouclier stabilisé* (les Bouclier de base), *Protocole laser* (la famille Laser), *Feu à
+  volonté* (les cartes rattachées au Lanceur de missiles).
 
 ### 12.6 Mécaniques envisagées, non codées
 

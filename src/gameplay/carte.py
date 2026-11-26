@@ -239,12 +239,18 @@ _CAMP_PAR_PORTEE = {
 # Cles autorisees dans config/cartes.json : une cle inconnue (ex. faute de frappe "persistant")
 # est refusee au chargement plutot qu'ignoree
 CLES_CARTE = {
-    "id", "nom", "image", "rarete", "categorie", "cible", "modules", "cout", "munition", "lancements",
+    "id", "nom", "image", "rarete", "categorie", "cible", "modules", "famille", "cout", "munition", "lancements",
     "persistante", "jouable", "refonte", "description", "valeurs", "effets",
 }
 CLES_EFFET = {"nature", "valeur", "portee", "duree", "filtre", "bonus"}
 CLES_BONUS = {"par", "facteur", "consomme"}
-CLES_FILTRE = {"id", "rarete", "categorie"}
+CLES_FILTRE = {"id", "rarete", "categorie", "famille", "module"}
+
+# Familles de noms des cartes (proposition-module-principal.md 1.2, proposition-lanceur-missiles.md
+# 5.1), sans accent. Le champ `famille` n'est rempli que sur les cartes qu'un buff doit pouvoir
+# viser, aujourd'hui les seules cartes Laser (decision utilisateur, 2026-11-25) ; une famille hors de
+# cette liste est refusee au chargement (coquille)
+FAMILLES = ("Laser", "Bouclier", "Reparation", "Reacteur", "Protocole", "Missile", "Torpille", "Ogive", "Lanceur")
 
 
 def _verifier_cles(entree: dict, autorisees: set[str], ou: str) -> None:
@@ -266,16 +272,28 @@ class FiltreCartes:
     rarete: RareteCarte | None = None
     # Categorie visee
     categorie: CategorieCarte | None = None
+    # Famille visee (champ `famille` des cartes, ex. "Laser" : Protocole laser)
+    famille: str | None = None
+    # Type de module vise (ex. "MOD_2" : Feu a volonte) : cartes rattachees a un exemplaire de ce
+    # type de module, pas cartes dont la liste `modules` le cite (proposition-lanceur-missiles.md 3.9)
+    module: str | None = None
 
     def __post_init__(self):
-        if self.id is None and self.rarete is None and self.categorie is None:
+        if all(critere is None for critere in (self.id, self.rarete, self.categorie, self.famille, self.module)):
             raise ValueError("Un filtre de cartes doit avoir au moins un critere")
+        if self.famille is not None and self.famille not in FAMILLES:
+            raise ValueError(f"Filtre : famille inconnue {self.famille!r}")
 
-    def correspond(self, carte: "Carte") -> bool:
+    def correspond(self, carte: "Carte", types_de_module: dict[str, str] | None = None) -> bool:
+        """`types_de_module` : type de module (ex. "MOD_2") de chaque exemplaire de la partie (ex.
+        "M2"), necessaire au critere `module` ; sans lui, aucune carte ne correspond a ce critere."""
+        type_du_module = (types_de_module or {}).get(carte.exemplaire_module)
         return (
             (self.id is None or carte.id == self.id)
             and (self.rarete is None or carte.rarete == self.rarete)
             and (self.categorie is None or carte.categorie == self.categorie)
+            and (self.famille is None or carte.famille == self.famille)
+            and (self.module is None or type_du_module == self.module)
         )
 
 
@@ -371,6 +389,8 @@ class Effet:
                 id=filtre.get("id"),
                 rarete=RareteCarte[filtre["rarete"].upper()] if "rarete" in filtre else None,
                 categorie=CategorieCarte(filtre["categorie"]) if "categorie" in filtre else None,
+                famille=filtre.get("famille"),
+                module=filtre.get("module"),
             ) if filtre else None,
             bonus=BonusCalcule.depuis_dict(entree["bonus"]) if "bonus" in entree else None,
         )
@@ -424,6 +444,9 @@ class Carte:
     # Ids des types de module qui proposent cette carte (config/modules.json), ex. ("MOD_2",) ;
     # vide : proposee nulle part. Verifies par module.py:charger_modules
     modules: tuple[str, ...] = ()
+    # Famille de noms (FAMILLES, ex. "Laser"), seulement sur les cartes qu'un buff peut viser par
+    # famille (Protocole laser) ; None ailleurs
+    famille: str | None = None
     # True si la carte a ete revue dans la refonte des cartes
     refonte: bool = False
     # Nombre de fois que les effets s'appliquent quand la carte est jouee, au depart de chaque combat
@@ -451,6 +474,8 @@ class Carte:
         self.modules = tuple(self.modules)
         if not all(isinstance(module, str) for module in self.modules):
             raise ValueError(f"{self.id} : modules doit etre une liste d'ids de module")
+        if self.famille is not None and self.famille not in FAMILLES:
+            raise ValueError(f"{self.id} : famille inconnue {self.famille!r} (familles : {', '.join(FAMILLES)})")
         if self.cout < 0:
             raise ValueError(f"{self.id} : cout negatif")
         if not self.effets:
@@ -581,6 +606,7 @@ class Carte:
                 persistante=entree.get("persistante", False),
                 jouabilite=_jouabilite(entree.get("jouable", "oui")),
                 modules=tuple(entree.get("modules", [])),
+                famille=entree.get("famille"),
                 refonte=entree.get("refonte", False),
                 lancements_base=entree.get("lancements", 1),
                 munitions_base=entree.get("munition"),
@@ -614,15 +640,18 @@ def charger_cartes(fichier: Path = FICHIER_CARTES) -> dict[str, Carte]:
     return cartes
 
 
-def appliquer_repetition(effet: Effet, supplement: int, cartes: Iterable[Carte]) -> int:
+def appliquer_repetition(
+    effet: Effet, supplement: int, cartes: Iterable[Carte], types_de_module: dict[str, str] | None = None,
+) -> int:
     """Effet REPETITION joue : chaque carte visee par son filtre est lancee `supplement` fois de plus
     (valeur de l'effet sur la carte jouee : carte.valeur_de(effet)), pour le reste du combat.
     `cartes` : toutes les cartes du combat, toutes piles confondues (main, pioche, defausse,
-    epuisees, Hors service), pour qu'une carte piochee plus tard soit concernee elle aussi. Renvoie
-    le nombre de cartes modifiees."""
+    epuisees, Hors service), pour qu'une carte piochee plus tard soit concernee elle aussi.
+    `types_de_module` : type de module de chaque exemplaire, pour un filtre par module
+    (FiltreCartes.correspond). Renvoie le nombre de cartes modifiees."""
     if effet.nature != NatureEffet.REPETITION:
         raise ValueError(f"Effet {effet.nature.name} : seul un effet REPETITION modifie les lancements")
-    visees = [carte for carte in cartes if effet.filtre.correspond(carte)]
+    visees = [carte for carte in cartes if effet.filtre.correspond(carte, types_de_module)]
     for carte in visees:
         carte.lancements_actuels += supplement
     return len(visees)
@@ -633,11 +662,11 @@ def appliquer_repetition(effet: Effet, supplement: int, cartes: Iterable[Carte])
 # Ordre des cles dans le fichier, comme ecrit a la main ; une cle absente de ces listes est ecrite
 # apres les autres
 ORDRE_CLES_CARTE = (
-    "id", "nom", "image", "rarete", "categorie", "cible", "modules", "cout", "munition", "lancements",
+    "id", "nom", "image", "rarete", "categorie", "cible", "modules", "famille", "cout", "munition", "lancements",
     "persistante", "jouable", "refonte", "description", "valeurs", "effets",
 )
 ORDRE_CLES_EFFET = ("nature", "valeur", "portee", "duree", "filtre")
-ORDRE_CLES_FILTRE = ("id", "rarete", "categorie")
+ORDRE_CLES_FILTRE = ("id", "rarete", "categorie", "famille", "module")
 
 
 def _trier_cles(entree: dict, ordre: tuple[str, ...]) -> dict:

@@ -502,3 +502,47 @@ def test_le_bonus_par_verrouillage_se_lit_sur_la_cible():
     assert SourceBonus.VERROUILLAGE_CIBLE.statut == Statut.VERROUILLAGE
     assert SourceBonus.VERROUILLAGE_CIBLE.sur_la_cible
     assert NatureEffet.VERROUILLAGE.statut_pose == Statut.VERROUILLAGE
+
+
+# --- Famille et filtres par famille ou par module (lot 5) ---
+
+
+def test_seules_les_cartes_laser_ont_une_famille():
+    cartes = charger_cartes()
+    avec_famille = {carte.id for carte in cartes.values() if carte.famille is not None}
+    assert "CRT_7" in avec_famille  # Laser de base (plan-cartes.md 2.3)
+    assert all(cartes[i].famille == "Laser" and cartes[i].nom.startswith("Laser") for i in avec_famille)
+    assert cartes["CRT_49"].famille is None  # Salve laser : famille Protocole, sans champ
+
+
+def test_une_famille_inconnue_est_refusee():
+    with pytest.raises(ValueError, match="famille inconnue 'Lazer'"):
+        _carte_simple(famille="Lazer")
+    with pytest.raises(ValueError, match="famille inconnue"):
+        FiltreCartes(famille="Lazer")
+    entree = {"nature": "REPETITION", "valeur": "x", "filtre": {"famille": "Laser", "module": "MOD_2"}}
+    assert Effet.depuis_dict(entree).filtre == FiltreCartes(famille="Laser", module="MOD_2")
+
+
+def test_filtre_par_famille_et_par_module():
+    laser = _carte_simple(famille="Laser").copie(exemplaire_module="M1")
+    autre = _carte_simple().copie(exemplaire_module="M2")
+    types = {"M1": "MOD_1", "M2": "MOD_2"}
+
+    assert FiltreCartes(famille="Laser").correspond(laser) and not FiltreCartes(famille="Laser").correspond(autre)
+    par_module = FiltreCartes(module="MOD_2")
+    assert par_module.correspond(autre, types) and not par_module.correspond(laser, types)
+    # Sans les types des exemplaires, le critere module ne retient rien
+    assert not par_module.correspond(autre)
+
+
+def test_l_export_range_famille_et_filtre_a_leur_place():
+    from src.gameplay.carte import cartes_vers_texte_json
+
+    entree = {
+        "id": "X", "famille": "Laser", "modules": ["MOD_1"], "nom": "N",
+        "effets": [{"filtre": {"module": "MOD_2", "famille": "Laser", "id": "CRT_7"}, "nature": "REPETITION"}],
+    }
+    texte = cartes_vers_texte_json([entree])
+    assert texte.index('"modules"') < texte.index('"famille"') < texte.index('"effets"')
+    assert '{ "id": "CRT_7", "famille": "Laser", "module": "MOD_2" }' in texte

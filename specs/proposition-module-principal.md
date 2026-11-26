@@ -156,7 +156,7 @@ Les mécaniques ◆ (portées vers un module, Surcharge, Verrouillage, répétit
 calculé) sont décrites dans [proposition-lanceur-missiles.md](proposition-lanceur-missiles.md)
 §3 et ne sont pas répétées ici.
 
-### 3.1 Champ `famille` et filtre par famille
+### 3.1 Champ `famille` et filtre par famille (**codé le 2026-11-26**, lot 5 : modules-cartes.md §12.1 et §12.5)
 
 - **Règle** (décision utilisateur, 2026-11-25) : le champ `famille` n'est rempli **que sur les
   cartes qu'un buff doit pouvoir viser**. Aujourd'hui, seule la famille **Laser** est visée
