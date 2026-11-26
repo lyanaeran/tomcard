@@ -99,6 +99,8 @@ class Evenement:
     pv_restants: int | None = None
     # Attaque d'une carte : part des degats due a la Surcharge du joueur (comprise dans valeur)
     dont_surcharge: int | None = None
+    # Attaque d'une carte : part des degats due au Verrouillage de la cible (comprise dans valeur)
+    dont_verrouillage: int | None = None
 
 
 @dataclass(frozen=True)
@@ -408,11 +410,13 @@ class Combat:
                 if not isinstance(cible, Ennemi):
                     raise ValueError(f"Carte {carte.id} : degats sur un module non geres")
                 # Calcul d'un coup (decision utilisateur, 2026-11-18) : valeur de base + bonus
-                # calcule + Surcharge du joueur, puis les protections de la cible
+                # calcule + Surcharge du joueur + Verrouillage de la cible, puis les protections
                 surcharge = self.vaisseau.principal.statuts[Statut.SURCHARGE]
-                degats = valeur + self._bonus_calcule(carte, effet) + surcharge
+                verrouillage = cible.statuts[Statut.VERROUILLAGE]
+                degats = valeur + self._bonus_calcule(carte, effet, cible) + surcharge + verrouillage
                 self._attaquer(
-                    carte, cible, degats, renvoi_vers=self._module_qui_recoit_le_renvoi(carte), dont_surcharge=surcharge,
+                    carte, cible, degats, renvoi_vers=self._module_qui_recoit_le_renvoi(carte),
+                    dont_surcharge=surcharge, dont_verrouillage=verrouillage,
                 )
             elif nature == NatureEffet.RETRAIT_BOUCLIER:
                 retire = cible.statuts.retirer(Statut.BOUCLIER, valeur)
@@ -438,29 +442,34 @@ class Combat:
 
     # --- Resolution commune ---
 
-    def _bonus_calcule(self, carte: Carte, effet: Effet) -> int:
-        """Degats en plus d'un coup (BonusCalcule), lus au moment du coup ; un bonus qui consomme
-        remet son compteur a 0 (note au journal)."""
+    def _bonus_calcule(self, carte: Carte, effet: Effet, cible: Entite) -> int:
+        """Degats en plus d'un coup (BonusCalcule), lus au moment du coup sur le principal ou sur
+        la cible (SourceBonus.sur_la_cible) ; un bonus qui consomme remet son compteur a 0 (note au
+        journal)."""
         bonus = effet.bonus
         if bonus is None:
             return 0
-        principal = self.vaisseau.principal
+        porteur = cible if bonus.par.sur_la_cible else self.vaisseau.principal
         statut = bonus.par.statut
-        compteur = principal.statuts[statut]
+        compteur = porteur.statuts[statut]
         if bonus.consomme and compteur:
-            principal.statuts[statut] = 0
-            self._noter(NatureEvenement.STATUT_RETIRE, source=carte, cible=principal, valeur=compteur, statut=statut)
+            porteur.statuts[statut] = 0
+            self._noter(NatureEvenement.STATUT_RETIRE, source=carte, cible=porteur, valeur=compteur, statut=statut)
         return carte.valeurs_actuelles[bonus.facteur] * compteur
 
     def _attaquer(
         self, source: object, cible: Entite, degats: int, renvoi_vers: Entite, dont_surcharge: int | None = None,
+        dont_verrouillage: int | None = None,
     ) -> None:
         """Une attaque de `degats` sur `cible` ; les degats renvoyes sont une nouvelle attaque sur
-        `renvoi_vers` (decision utilisateur, 4.5), qui ne renvoie rien a son tour. `dont_surcharge` :
-        part des degats due a la Surcharge, pour le journal."""
+        `renvoi_vers` (decision utilisateur, 4.5), qui ne renvoie rien a son tour. `dont_surcharge`,
+        `dont_verrouillage` : parts des degats dues a la Surcharge et au Verrouillage, pour le
+        journal."""
         pv_avant = self._pv(cible)
         encaissement = cible.subir_degats(degats)
-        self._noter_degats(NatureEvenement.ATTAQUE, source, cible, encaissement, pv_avant, dont_surcharge or None)
+        self._noter_degats(
+            NatureEvenement.ATTAQUE, source, cible, encaissement, pv_avant, dont_surcharge or None, dont_verrouillage or None,
+        )
         self._traiter_destruction(cible)
         if encaissement.renvoyes and not renvoi_vers.est_detruit() and self.en_cours:
             pv_avant = self._pv(renvoi_vers)
@@ -471,7 +480,7 @@ class Combat:
 
     def _noter_degats(
         self, nature: NatureEvenement, source: object, cible: Entite, encaissement: Encaissement, pv_avant: int,
-        dont_surcharge: int | None = None,
+        dont_surcharge: int | None = None, dont_verrouillage: int | None = None,
     ) -> None:
         """Note des degats recus avec leur detail : leurre, renvoi, bouclier, PV perdus et restants."""
         self._noter(
@@ -479,6 +488,7 @@ class Combat:
             annules_leurre=encaissement.annules_leurre, renvoyes=encaissement.renvoyes,
             absorbes_bouclier=encaissement.absorbes_bouclier, pv_perdus=pv_avant - self._pv(cible),
             pv_restants=self._pv(cible), dont_surcharge=dont_surcharge,
+            dont_verrouillage=dont_verrouillage,
         )
 
     def _poser_statut(self, cible: Entite, statut: Statut, valeur: int, source: object = None) -> None:

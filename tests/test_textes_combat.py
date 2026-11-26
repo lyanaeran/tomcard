@@ -151,6 +151,23 @@ def test_textes_de_la_surcharge():
 
 
 
+def test_textes_du_verrouillage():
+    combat = _combat()
+    ennemi = combat.flotte.ennemis_vivants()[0]
+    ennemi.statuts.ajouter(Statut.VERROUILLAGE, 3)
+    assert "Verrouillage 3" in textes_combat.lignes_statuts(ennemi)
+    assert Statut.VERROUILLAGE in textes_combat.STATUTS_EN_PASTILLE
+
+    attaque = Evenement(
+        NatureEvenement.ATTAQUE, 1, source=combat.vaisseau.principal, cible=ennemi, valeur=12, annules_leurre=0,
+        renvoyes=0, absorbes_bouclier=0, pv_perdus=12, pv_restants=38, dont_surcharge=4, dont_verrouillage=3,
+    )
+    texte = "".join(m for m, _c in textes_combat.ligne_journal(attaque))
+    assert "12 dégâts (dont 4 de surcharge, 3 de verrouillage)" in texte
+    pose = Evenement(NatureEvenement.STATUT_POSE, 1, cible=ennemi, valeur=2, statut=Statut.VERROUILLAGE)
+    assert textes_combat.popup_evenement(pose) == ("+2 verrouillage", textes_combat.COULEUR_VERROUILLAGE)
+
+
 def test_fige_s_accorde_au_genre_du_statut():
     combat = _combat()
     principal = combat.vaisseau.principal

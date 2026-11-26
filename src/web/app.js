@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "103";
+const VERSION_CACHE = "104";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -266,12 +266,15 @@ function nomJournal(nom, genre) {
     return segmentJournal(nom, CLASSES_GENRE_JOURNAL[genre] || "journal-texte");
 }
 
-const NOMS_STATUT_JOURNAL = { BOUCLIER: "bouclier", INCENDIE: "incendie", RENVOI: "renvoi", LEURRE: "leurre", SURCHARGE: "surcharge" };
+const NOMS_STATUT_JOURNAL = { BOUCLIER: "bouclier", INCENDIE: "incendie", RENVOI: "renvoi", LEURRE: "leurre", SURCHARGE: "surcharge", VERROUILLAGE: "verrouillage" };
 
 // Detail des degats recus : "6 degats, 2 absorbes par le bouclier, 4 PV perdus (46 restants)".
 function detailDegatsJournal(evenement) {
     const morceaux = [`${evenement.valeur} dégâts`];
-    if (evenement.dont_surcharge) morceaux[0] += ` (dont ${evenement.dont_surcharge} de surcharge)`;
+    const parts = [];
+    if (evenement.dont_surcharge) parts.push(`${evenement.dont_surcharge} de surcharge`);
+    if (evenement.dont_verrouillage) parts.push(`${evenement.dont_verrouillage} de verrouillage`);
+    if (parts.length > 0) morceaux[0] += ` (dont ${parts.join(", ")})`;
     if (evenement.annules_leurre) morceaux.push("annulés par le leurre");
     if (evenement.renvoyes) morceaux.push(`${evenement.renvoyes} renvoyés`);
     if (evenement.absorbes_bouclier) morceaux.push(`${evenement.absorbes_bouclier} absorbés par le bouclier`);
@@ -456,6 +459,7 @@ function lignesStatuts(objet) {
     // Seule la Surcharge peut etre figee aujourd'hui (feminin) ; un autre statut figeable devra
     // accorder "(fige)" comme textes_combat.py:lignes_statuts
     if (objet.surcharge) lignes.push(`⚡ Surcharge ${objet.surcharge}${objet.surcharge_figee ? " (figée)" : ""}`);
+    if (objet.verrouillage) lignes.push(`🔒 Verrouillage ${objet.verrouillage}`);
     return lignes;
 }
 
@@ -511,7 +515,7 @@ function attacherPressionCase(element, idCase, typeCase) {
 }
 
 // Pastilles d'une case (refonte-branchement.md 4.2/4.3), de droite a gauche : PV (rouge),
-// Bouclier (bleu), puis Surcharge (jaune), Incendie (orange), Renvoi (violet), Leurre (cyan) seulement s'ils sont
+// Bouclier (bleu), puis Surcharge (jaune), Verrouillage (magenta), Incendie (orange), Renvoi (violet), Leurre (cyan) seulement s'ils sont
 // actifs. Masquees si detruit (le bandeau "Detruit" les remplace).
 function pastillesStatuts(objet) {
     const pastilles = [
@@ -519,6 +523,7 @@ function pastillesStatuts(objet) {
         `<span class="pastille pastille-bouclier">${objet.bouclier}</span>`,
     ];
     if (objet.surcharge) pastilles.push(`<span class="pastille pastille-surcharge">⚡${objet.surcharge}</span>`);
+    if (objet.verrouillage) pastilles.push(`<span class="pastille pastille-verrouillage">🔒${objet.verrouillage}</span>`);
     if (objet.incendie) pastilles.push(`<span class="pastille pastille-incendie">🔥${objet.incendie}</span>`);
     if (objet.renvoi) pastilles.push(`<span class="pastille pastille-renvoi">↩${objet.renvoi}</span>`);
     if (objet.leurre) pastilles.push(`<span class="pastille pastille-leurre">🎭</span>`);

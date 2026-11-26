@@ -80,6 +80,25 @@ def test_une_attaque_arretee_par_le_renvoi_et_le_bouclier_n_affiche_pas_moins_ze
     assert "↩ 1" in popup["texte"] and "bloqué" in popup["texte"]
 
 
+def test_le_verrouillage_est_publie_avec_son_popup_et_sa_part_des_degats(bridge):
+    """Laser de visee (CRT_85) pose le Verrouillage ; un second coup en montre la part au journal."""
+    bridge._demarrer_combat(_combat_contre_le_boss(["CRT_85", "CRT_7"]))
+    etat = json.loads(bridge._resultat_combat())["etat"]
+    visee = next(c for c in etat["main"] if c["id_carte"] == "CRT_85")
+
+    resultat = json.loads(bridge.jouer_carte(visee["index"], "AV_M"))
+
+    boss = next(ennemi for ennemi in resultat["etat"]["ennemis"] if ennemi)
+    verrouillage = bridge.combat.flotte.ennemis[0].statuts[bridge.Statut.VERROUILLAGE]
+    assert verrouillage > 0 and boss["verrouillage"] == verrouillage
+    assert any(p["texte"] == f"+{verrouillage} 🔒" and p["couleur"] == "verrouillage" for p in resultat["popups"])
+
+    laser = next(c for c in resultat["etat"]["main"] if c["id_carte"] == "CRT_7")
+    resultat = json.loads(bridge.jouer_carte(laser["index"], "AV_M"))
+    attaque = [e for e in resultat["etat"]["journal"] if e["nature"] == "ATTAQUE"][-1]
+    assert attaque["dont_verrouillage"] == verrouillage
+
+
 def test_une_reparation_sans_effet_ne_donne_pas_de_popup(bridge):
     bridge._demarrer_combat(_combat_contre_le_boss(["CRT_12", "CRT_12"]))
     assert bridge.combat.vaisseau.principal.pv_combat == bridge.combat.vaisseau.principal.pv_max

@@ -240,8 +240,9 @@ règle systématique entre rareté et munitions (a-trancher.md §9.1).
 | `SURCHARGE` | Pose le statut Surcharge sur le principal : +intensité aux dégâts de chaque coup des cartes, −1 par tour | codé le 2026-11-25 (lot 3) |
 | `MULTIPLIER_SURCHARGE` | Surcharge du principal × la valeur | codé le 2026-11-25 (lot 3) |
 | `FIGER_SURCHARGE` | La Surcharge du principal ne baisse plus jusqu'à la fin du combat (sans valeur) | codé le 2026-11-25 (lot 3) |
+| `VERROUILLAGE` | Pose le statut Verrouillage sur un ennemi : +intensité aux dégâts de chaque coup de carte qu'il reçoit, −1 par tour | codé le 2026-11-25 (lot 4) |
 
-**Bonus calculé** (clé d'effet `bonus`, seulement sur `DEGATS`, codé le 2026-11-25) : `{"par": SOURCE, "facteur": "<valeur nommée>", "consomme": true|false}` ajoute facteur × compteur aux dégâts, lu au moment du coup. Sources : `SURCHARGE_JOUEUR` (Surcharge du principal, *Missile surchargé* : en plus de la Surcharge normale) et `BOUCLIER_PRINCIPAL` (bouclier du principal, *Laser de contre-charge*). Avec `consomme`, le compteur est remis à 0 au premier coup (noté au journal) ; `VERROUILLAGE_CIBLE` viendra avec le lot 4.
+**Bonus calculé** (clé d'effet `bonus`, seulement sur `DEGATS`, codé le 2026-11-25) : `{"par": SOURCE, "facteur": "<valeur nommée>", "consomme": true|false}` ajoute facteur × compteur aux dégâts, lu au moment du coup. Sources : `SURCHARGE_JOUEUR` (Surcharge du principal, *Missile surchargé* : en plus de la Surcharge normale) `BOUCLIER_PRINCIPAL` (bouclier du principal, *Laser de contre-charge*) et `VERROUILLAGE_CIBLE` (Verrouillage de l'ennemi touché, lu sur lui et non sur le principal, *Missile de précision* : en plus du Verrouillage normal, lot 4). Avec `consomme`, le compteur est remis à 0 au premier coup (noté au journal).
 
 | `VULNERABILITE`, `REDUCTION_DEGATS`, `REDIRECTION_CIBLE` | Statuts à durée, Tir allié | **non codé** : une carte qui en porte n'est pas jouable |
 

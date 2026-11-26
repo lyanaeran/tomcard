@@ -205,7 +205,7 @@ Principes communs, repris de l'existant :
 - **Tests** : Surcharge sur chaque coup d'une zone et de chaque lancement ; baisse de 1 ;
   doublement ; Surcharge figée qui ne baisse plus ; incendie non concerné.
 
-### 3.3 Verrouillage (statut ennemi)
+### 3.3 Verrouillage (statut ennemi) (**codé le 2026-11-25**, lot 4 : règles dans combat.md §3.5 et §3.8.4)
 
 - **Règle** (décision utilisateur) : un ennemi verrouillé X subit **+X dégâts à chaque coup** de
   carte ; cumul `ADDITION` ; **−1 par tour**.

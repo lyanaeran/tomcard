@@ -147,6 +147,9 @@ class NatureEffet(Enum):
     # La Surcharge du principal ne baisse plus jusqu'a la fin du combat, sans valeur (Lanceur
     # incandescent)
     FIGER_SURCHARGE = auto()
+    # Pose le statut VERROUILLAGE d'intensite `valeur` sur l'ennemi touche : il subit +intensite
+    # aux degats de chaque coup de carte, -1 par tour (Missile marqueur, Protocole de ciblage)
+    VERROUILLAGE = auto()
 
     @property
     def statut_pose(self) -> Statut | None:
@@ -167,6 +170,7 @@ STATUT_PAR_NATURE = {
     NatureEffet.ANNULATION_PROCHAINE_ATTAQUE: Statut.LEURRE,
     NatureEffet.RENVOI: Statut.RENVOI,
     NatureEffet.SURCHARGE: Statut.SURCHARGE,
+    NatureEffet.VERROUILLAGE: Statut.VERROUILLAGE,
 }
 
 # Natures qui n'agissent que sur la Surcharge du module principal : la carte doit viser le
@@ -179,6 +183,7 @@ CAMP_PAR_NATURE = {
     NatureEffet.DEGATS: Camp.ENNEMI,
     NatureEffet.INCENDIE: Camp.ENNEMI,
     NatureEffet.RETRAIT_BOUCLIER: Camp.ENNEMI,
+    NatureEffet.VERROUILLAGE: Camp.ENNEMI,
     NatureEffet.BOUCLIER: Camp.JOUEUR,
     NatureEffet.REPARATION: Camp.JOUEUR,
     NatureEffet.ANNULATION_PROCHAINE_ATTAQUE: Camp.JOUEUR,
@@ -281,12 +286,23 @@ class SourceBonus(Enum):
     SURCHARGE_JOUEUR = auto()
     # Bouclier du module principal (Laser de contre-charge)
     BOUCLIER_PRINCIPAL = auto()
+    # Verrouillage de l'ennemi touche (Missile de precision : en plus du Verrouillage normal)
+    VERROUILLAGE_CIBLE = auto()
 
     @property
     def statut(self) -> Statut:
-        """Statut du module principal compte par ce bonus (seule correspondance, pour le combat et
-        les simulateurs)."""
-        return {SourceBonus.SURCHARGE_JOUEUR: Statut.SURCHARGE, SourceBonus.BOUCLIER_PRINCIPAL: Statut.BOUCLIER}[self]
+        """Statut compte par ce bonus (seule correspondance, pour le combat et les simulateurs) :
+        sur le module principal, ou sur la cible du coup si sur_la_cible."""
+        return {
+            SourceBonus.SURCHARGE_JOUEUR: Statut.SURCHARGE,
+            SourceBonus.BOUCLIER_PRINCIPAL: Statut.BOUCLIER,
+            SourceBonus.VERROUILLAGE_CIBLE: Statut.VERROUILLAGE,
+        }[self]
+
+    @property
+    def sur_la_cible(self) -> bool:
+        """True si le compteur est lu sur l'ennemi touche, False s'il est lu sur le principal."""
+        return self == SourceBonus.VERROUILLAGE_CIBLE
 
 
 @dataclass(frozen=True)

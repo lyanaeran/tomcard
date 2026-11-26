@@ -120,6 +120,7 @@ Bouclier, incendie, renvoi et leurre sont gérés **ensemble**, de la même faç
 | **Renvoi** | Addition | Tour suivant (disparaît entièrement) | Renvoie à l'attaquant les dégâts reçus jusqu'à son intensité, qui diminue d'autant ; l'entité encaisse le reste |
 | **Leurre** | Remplacement (non cumulable) | Consommation | Annule entièrement la prochaine attaque reçue, puis disparaît |
 | **Surcharge** | Addition | −1 par tour, sauf si elle est **figée** (Lanceur incandescent) jusqu'à la fin du combat ; les nouvelles poses s'ajoutent toujours | Portée par le **module principal** : +intensité aux dégâts de **chaque coup** des cartes du joueur, quel que soit leur module (chaque cible d'une zone, chaque lancement). Pas sur l'incendie ni sur les dégâts renvoyés. Codée le 2026-11-25 (décisions du 2026-11-16 et du 2026-11-25) |
+| **Verrouillage** | Addition | −1 par tour (à la fin du tour du joueur, avec les autres statuts de l'ennemi) | Porté par un **ennemi** : +intensité aux dégâts de **chaque coup de carte** qu'il reçoit (chaque lancement, chaque coup d'une zone). Pas sur l'incendie ni sur les dégâts renvoyés ; il n'est pas consommé par les coups. Posé à 2 pendant le tour 1 : +2 au tour 1, +1 au tour 2, puis il disparaît. Codé le 2026-11-25, lot 4 (décision du 2026-11-18) |
 
 Le renvoi est posé par l'ennemi Miroir (§13.3) et, depuis le 2026-11-25, par des cartes sur les
 modules du joueur (Bouclier réfléchissant, Bouclier miroir, Protocole de riposte : décision
@@ -140,8 +141,8 @@ suit et disparaît à la fin de ce tour ennemi.
 pour un ennemi, fin du tour ennemi pour un module.
 
 **Règle commune à tous les statuts** (décision utilisateur, 2026-11-25) : tous les statuts d'une
-entité baissent **ensemble**, à ce moment-là, y compris les statuts décidés mais pas encore codés
-(Surcharge, Verrouillage ; plan-cartes.md §2).
+entité baissent **ensemble**, à ce moment-là, Surcharge et Verrouillage compris (plan-cartes.md
+§2).
 
 1. **L'incendie frappe** de son intensité, **absorbé par le bouclier** (jamais renvoyé ni annulé
    par le leurre).
@@ -152,7 +153,8 @@ entité baissent **ensemble**, à ce moment-là, y compris les statuts décidés
 
 Une seule source pour les règles : chaque nature d'effet de carte qui pose un statut le désigne
 (`NatureEffet.statut_pose`) : `BOUCLIER` → Bouclier, `INCENDIE` → Incendie,
-`ANNULATION_PROCHAINE_ATTAQUE` → Leurre, `RENVOI` → Renvoi (modules-cartes.md §12.2).
+`ANNULATION_PROCHAINE_ATTAQUE` → Leurre, `RENVOI` → Renvoi, `SURCHARGE` → Surcharge,
+`VERROUILLAGE` → Verrouillage (modules-cartes.md §12.2).
 
 La Surcharge des **ennemis** (boss) reste à décider : [effets-a-coder.md](effets-a-coder.md) §1.
 
@@ -232,14 +234,16 @@ ligne avant puis ligne arrière) le touche une fois par effet.
 #### 3.8.4 Effets
 
 **Calcul d'un coup** de dégâts d'une carte (décision utilisateur, 2026-11-18) : valeur de base +
-bonus calculé (modules-cartes.md §12.2) + Surcharge du principal, **puis** les protections de la
-cible (leurre, renvoi, bouclier). Le journal donne la part de la Surcharge (« 13 dégâts (dont 10
-de surcharge) »).
+bonus calculé (modules-cartes.md §12.2) + Surcharge du principal + Verrouillage de la cible,
+**puis** les protections de la cible (leurre, renvoi, bouclier). Le journal donne la part de la
+Surcharge et celle du Verrouillage (« 18 dégâts (dont 10 de surcharge, 2 de verrouillage) »).
+Exemple : Laser (6) avec Surcharge 3 sur un ennemi en Verrouillage 2 qui a 5 de bouclier → 11,
+le bouclier en absorbe 5, l'ennemi perd 6 PV.
 
 | Nature | Effet sur chaque entité touchée |
 |---|---|
 | Dégâts | Une attaque de la valeur (§3.5.1) ; les dégâts renvoyés partent vers un module (§3.8.5) |
-| Bouclier, Incendie, Leurre, Renvoi | Pose du statut, selon sa règle de cumul (§3.5) |
+| Bouclier, Incendie, Leurre, Renvoi, Verrouillage | Pose du statut, selon sa règle de cumul (§3.5) ; le Verrouillage ne se pose que sur un ennemi (vérifié au chargement). Une carte qui inflige des dégâts **puis** pose le Verrouillage n'en profite pas elle-même (effets dans l'ordre) |
 | Surcharge | Pose le statut sur le principal (la carte doit viser le principal, vérifié au chargement) |
 | Multiplier la Surcharge | Surcharge du principal × la valeur (sans effet à 0) |
 | Figer la Surcharge | La Surcharge du principal ne baisse plus jusqu'à la fin du combat |

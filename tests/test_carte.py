@@ -376,6 +376,7 @@ def test_meme_colonne_suppose_une_cible_ennemi_unique():
         (CibleCarte.ENNEMI_UNIQUE, NatureEffet.RETRAIT_BOUCLIER, PorteeEffet.MODULE_DE_LA_CARTE),
         (CibleCarte.ENNEMI_UNIQUE, NatureEffet.BOUCLIER, PorteeEffet.CIBLE),
         (CibleCarte.ENNEMI_UNIQUE, NatureEffet.RENVOI, PorteeEffet.CIBLE),
+        (CibleCarte.MODULE_PRINCIPAL, NatureEffet.VERROUILLAGE, PorteeEffet.CIBLE),
     ],
 )
 def test_une_nature_appliquee_au_mauvais_camp_est_refusee_au_chargement(cible, nature, portee):
@@ -492,3 +493,12 @@ def test_chaque_source_de_bonus_designe_un_statut_du_principal():
 
     assert SourceBonus.SURCHARGE_JOUEUR.statut == Statut.SURCHARGE
     assert SourceBonus.BOUCLIER_PRINCIPAL.statut == Statut.BOUCLIER
+    assert not SourceBonus.SURCHARGE_JOUEUR.sur_la_cible and not SourceBonus.BOUCLIER_PRINCIPAL.sur_la_cible
+
+
+def test_le_bonus_par_verrouillage_se_lit_sur_la_cible():
+    from src.gameplay.carte import SourceBonus
+
+    assert SourceBonus.VERROUILLAGE_CIBLE.statut == Statut.VERROUILLAGE
+    assert SourceBonus.VERROUILLAGE_CIBLE.sur_la_cible
+    assert NatureEffet.VERROUILLAGE.statut_pose == Statut.VERROUILLAGE
