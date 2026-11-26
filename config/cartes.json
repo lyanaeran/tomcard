@@ -147,7 +147,7 @@
     {
       "id": "CRT_47",
       "nom": "Laser lourd",
-      "image": "assets/cartes/tir_charge.png",
+      "image": "assets/cartes/plasma.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
@@ -208,7 +208,7 @@
     {
       "id": "CRT_50",
       "nom": "Protocole d'urgence",
-      "image": "assets/cartes/generateur_electricite.png",
+      "image": "assets/cartes/alerte_generale.png",
       "rarete": "Legendaire",
       "categorie": "Buff",
       "cible": "Module Tous",
@@ -250,7 +250,7 @@
     {
       "id": "CRT_84",
       "nom": "Laser double",
-      "image": "assets/cartes/attaque.png",
+      "image": "assets/cartes/mitrailleuse.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
@@ -412,7 +412,7 @@
     {
       "id": "CRT_96",
       "nom": "Protocole d'analyse",
-      "image": "assets/cartes/scanner.png",
+      "image": "assets/cartes/drone.png",
       "rarete": "Commune",
       "categorie": "Outils",
       "cible": "Module Principal",
@@ -473,7 +473,7 @@
     {
       "id": "CRT_103",
       "nom": "Réparation complète",
-      "image": "assets/cartes/reparation.png",
+      "image": "assets/cartes/teleportation.png",
       "rarete": "Rare",
       "categorie": "Reparation",
       "cible": "Module Principal",
@@ -493,7 +493,7 @@
     {
       "id": "CRT_104",
       "nom": "Réacteur en surrégime",
-      "image": "assets/cartes/generateur_electricite.png",
+      "image": "assets/cartes/surcharge.png",
       "rarete": "Rare",
       "categorie": "Outils",
       "cible": "Module Principal",
@@ -703,7 +703,7 @@
     {
       "id": "CRT_14",
       "nom": "Vague de torpilles",
-      "image": "assets/cartes/plasma.png",
+      "image": "assets/cartes/missiles.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Tous",
@@ -804,7 +804,7 @@
     {
       "id": "CRT_53",
       "nom": "Missile guidé",
-      "image": "assets/cartes/missiles_guides.png",
+      "image": "assets/cartes/missile_guide.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
@@ -908,7 +908,7 @@
     {
       "id": "CRT_62",
       "nom": "Torpille de barrage",
-      "image": "assets/cartes/tir_groupe.png",
+      "image": "assets/cartes/tourelle.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Avant",
@@ -1073,7 +1073,7 @@
     {
       "id": "CRT_18",
       "nom": "Leurre",
-      "image": "assets/cartes/invisibilite.png",
+      "image": "assets/cartes/camouflage.png",
       "rarete": "Rare",
       "categorie": "Defense",
       "cible": "Module Unique",
@@ -1093,7 +1093,7 @@
     {
       "id": "CRT_19",
       "nom": "Ogive nucléaire",
-      "image": "assets/cartes/alerte_generale.png",
+      "image": "assets/cartes/zone_de_feu.png",
       "rarete": "Legendaire",
       "categorie": "Attaque",
       "cible": "Ennemi Tous",
@@ -1176,7 +1176,7 @@
     {
       "id": "CRT_73",
       "nom": "Missile verrouilleur",
-      "image": "assets/cartes/missiles_guides.png",
+      "image": "assets/cartes/tir_charge.png",
       "rarete": "Rare",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
@@ -1217,7 +1217,7 @@
     {
       "id": "CRT_85",
       "nom": "Laser de visée",
-      "image": "assets/cartes/attaque.png",
+      "image": "assets/cartes/sabotage.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
