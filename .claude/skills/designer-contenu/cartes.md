@@ -73,7 +73,7 @@ coûts variés (0 à 3⚡). Proposer plus, l'utilisateur choisit.
 | **Carte morte** | dépend d'une condition rare (statut absent, une seule carte qui le pose) | au moins 3–4 cartes qui posent / utilisent la mécanique |
 | **Mécanique orpheline** | ✱ utilisée par une seule carte | l'assumer explicitement (« une seule carte, exprès ») ou ajouter des cartes |
 | **Règle cachée dans l'ordre des effets** | « puis Surcharge » : profite-t-elle à ses propres dégâts ? | trancher et l'écrire dans la description |
-| **Descriptions incohérentes** | mêmes effets formulés différemment | reprendre les tournures des cartes existantes (« Inflige {degats} dégâts à un ennemi ») |
+| **Descriptions incohérentes** | mêmes effets formulés différemment | reprendre les tournures des cartes existantes (« Inflige {degats} dégâts à un ennemi. »), avec un point final |
 | **Hasard non injecté** | rebond, cible au hasard | tirage par `Combat.aleatoire` (src/gameplay/CLAUDE.md) |
 | **Règle dans l'affichage** | effet qui dépendrait de l'UI | toute règle dans `src/gameplay/` |
 

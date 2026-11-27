@@ -29,6 +29,13 @@ reporté côté web (`_essayer_de_cibler` ↔ `cliquerCase`, cf. specs.md §8.3)
 - **Pas d'emoji ni de symbole rare dans les textes** (« ⚔ », « ↩ », « 🛡 »…) : leur affichage
   dépend de la police de la machine. Écrire des mots (`textes_combat.py`). Sous Linux (Xvfb), même
   « ⚡ » (coût des cartes) sort en carré sur les captures.
+- **Texte multiligne sous Windows** : une `Label(multiline=True, width=...)` perd ou élargit des
+  espaces (« moduleunique », « module   unique »), surtout en petit. Les cartes
+  (`carte_visuel.py:_label_ajuste`) coupent donc leurs lignes elles-mêmes et écrivent une `Label`
+  d'une seule ligne par ligne ; les autres textes multilignes ont encore le défaut.
+- **Cartes** : toujours les dessiner avec `carte_visuel.py` (gabarit, barre, texte, nom), jamais à
+  la main dans un écran ; une carte qui en chevauche une autre a ses propres groupes
+  (`groupes_carte(ordre)`), la carte agrandie passe au-dessus de tout (`GROUPE_CARTE_AGRANDIE`).
 - macOS : Python 3.14 fait planter pyglet (segfault) ; le `.venv` utilise Python 3.13.
 
 ## Tester un changement visible (obligatoire avant de le considérer terminé)

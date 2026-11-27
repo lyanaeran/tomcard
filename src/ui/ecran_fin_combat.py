@@ -12,39 +12,31 @@ from pyglet import shapes
 from src.gameplay.carte import Carte
 from src.gameplay.module import Module
 from src.gameplay.partie import Partie, deck_de_la_partie
-from src.ui import barre_laterale
+from src.ui import barre_laterale, carte_visuel
 from src.ui.ecran_deck import EcranDeck
 from src.ui.ecran_vaisseau import EcranVaisseau
-from src.ui.commun import chemin_image, noms_modules
+from src.ui.commun import noms_modules
 from src.ui.fenetre import (
-    COULEUR_ETOILE_RARETE,
     FOND_IMAGE,
     HAUTEUR_FENETRE,
     LARGEUR_FENETRE,
-    _sprite_ajuste,
     _sprite_etire,
-    texte_effet_carte,
 )
 
 COULEUR_DEFAITE = (190, 40, 40)
 COULEUR_VICTOIRE = (70, 190, 90)
 COULEUR_TEXTE = (255, 255, 255)
-COULEUR_NOM_MODULE = (180, 200, 230)
-COULEUR_FOND_CARTE = (20, 24, 34)
-COULEUR_CONTOUR_CARTE = (90, 110, 150)
-COULEUR_CONTOUR_CARTE_SURVOLEE = (255, 255, 255)
 COULEUR_BOUTON_PASSER = (60, 66, 82)
 COULEUR_CONTOUR_BOUTON_PASSER = (140, 150, 170)
-OPACITE_FOND_CARTE = 190
 
 MESSAGE_DEFAITE = "Pas d'inquiétude : vos restes seront recyclés, rien ne se perd dans l'espace."
 INSTRUCTION_VICTOIRE = "Choisissez une carte à ajouter à votre deck, ou passez."
 
-LARGEUR_CARTE_RECOMPENSE = 180
-HAUTEUR_IMAGE_RECOMPENSE = 100
+LARGEUR_CARTE_RECOMPENSE = 200
 ESPACEMENT_RECOMPENSE = 30
 Y_CARTE_RECOMPENSE = 240
-HAUTEUR_CARTE_RECOMPENSE = 340
+# Carte et nom du module au-dessus
+HAUTEUR_CARTE_RECOMPENSE = carte_visuel.hauteur_carte_titree(LARGEUR_CARTE_RECOMPENSE, "module")
 
 LARGEUR_BOUTON_PASSER = 140
 HAUTEUR_BOUTON_PASSER = 44
@@ -183,7 +175,7 @@ class EcranFinCombat(pyglet.window.Window):
             hauteur,
             border=2,
             color=COULEUR_BOUTON_PASSER,
-            border_color=COULEUR_CONTOUR_CARTE_SURVOLEE if self.survole_passer else COULEUR_CONTOUR_BOUTON_PASSER,
+            border_color=COULEUR_TEXTE if self.survole_passer else COULEUR_CONTOUR_BOUTON_PASSER,
             batch=lot,
         )
         texte = pyglet.text.Label(
@@ -201,80 +193,9 @@ class EcranFinCombat(pyglet.window.Window):
     def _dessiner_candidat(
         self, index: int, total: int, spec: Module, carte: Carte, lot: pyglet.graphics.Batch
     ) -> list:
-        x, y, largeur, hauteur = _rect_candidat(index, total)
-        survole = index == self.index_survole
-        cadre = shapes.BorderedRectangle(
-            x,
-            y,
-            largeur,
-            hauteur,
-            border=2,
-            color=COULEUR_FOND_CARTE,
-            border_color=COULEUR_CONTOUR_CARTE_SURVOLEE if survole else COULEUR_CONTOUR_CARTE,
-            batch=lot,
+        return carte_visuel.dessiner_carte_a_choisir(
+            carte, _rect_candidat(index, total), lot, ordre=index, titre=spec.nom, survolee=index == self.index_survole
         )
-        cadre.opacity = OPACITE_FOND_CARTE
-        cx = x + largeur / 2
-
-        nom_module = pyglet.text.Label(
-            spec.nom,
-            x=cx,
-            y=y + hauteur - 18,
-            anchor_x="center",
-            anchor_y="center",
-            font_size=11,
-            color=(*COULEUR_NOM_MODULE, 255),
-            batch=lot,
-        )
-
-        y_image = y + hauteur - 40 - HAUTEUR_IMAGE_RECOMPENSE
-        sprite = _sprite_ajuste(chemin_image(carte.image), cx - HAUTEUR_IMAGE_RECOMPENSE / 2, y_image, HAUTEUR_IMAGE_RECOMPENSE, HAUTEUR_IMAGE_RECOMPENSE, lot)
-
-        etoile = pyglet.text.Label(
-            "★",
-            x=x + 14,
-            y=y + hauteur - 14,
-            anchor_x="center",
-            anchor_y="center",
-            font_size=20,
-            color=(*COULEUR_ETOILE_RARETE[carte.rarete], 255),
-            batch=lot,
-        )
-
-        nom_carte = pyglet.text.Label(
-            carte.nom,
-            x=cx,
-            y=y_image - 18,
-            anchor_x="center",
-            anchor_y="center",
-            font_size=14,
-            color=(*COULEUR_TEXTE, 255),
-            batch=lot,
-        )
-        cout = pyglet.text.Label(
-            f"⚡{carte.cout}",
-            x=cx,
-            y=y_image - 40,
-            anchor_x="center",
-            anchor_y="center",
-            font_size=12,
-            color=(200, 200, 205, 255),
-            batch=lot,
-        )
-        description = pyglet.text.Label(
-            texte_effet_carte(carte),
-            x=cx,
-            y=y_image - 62,
-            anchor_x="center",
-            anchor_y="top",
-            font_size=10,
-            color=(200, 200, 205, 255),
-            multiline=True,
-            width=largeur - 24,
-            align="center",
-            batch=lot,
-        )
-        return [cadre, nom_module, sprite, etoile, nom_carte, cout, description]
 
     def on_mouse_motion(self, x: int, y: int, dx: int, dy: int) -> None:
         self.index_survole = self._index_a(x, y)

@@ -213,3 +213,11 @@ L'agent mesure la position exacte des zones sur le gabarit (la fenêtre grise se
 seule), réduit les quatre variantes à la taille du jeu, découpe les icônes et rend leur fond
 transparent. On décide ensuite ensemble de l'affichage (taille des cartes en main, éventail,
 polices) avant de le coder sur PC et sur le web, dans une PR à part.
+
+**Fait (2026-11-27)** : gabarits dans `assets/interface/cartes/modele_<rarete>.png` (432 × 608,
+coins transparents, zones de texte et de nom repeintes en bleu nuit uni), icônes dans
+`assets/interface/icones/` (64 × 64, fond transparent : `cout`, `munitions`, `lancements`, les
+statuts, `pv`, `attaque`, `module_vise`, et `type_<categorie>`). Affichage codé sur PC
+(`src/ui/carte_visuel.py`) et sur le web (`htmlCarteVisuel`, `.carte-visuel`) : interface.md §8.2.
+Les icônes de statuts, de PV, d'attaque et de module visé ne sont pas encore utilisées (pastilles
+des cases : prochaine étape, à décider).

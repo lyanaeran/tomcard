@@ -70,11 +70,11 @@ def test_une_carte_jouable_n_utilise_que_des_effets_codes():
 def test_description_affichee_remplace_les_valeurs_nommees():
     cartes = _cartes()
 
-    assert cartes["Missile à fragmentation"].description_affichee() == "Inflige 15 dégâts à un ennemi et 6 à tous les autres"
-    assert cartes["Vague de torpilles"].description_affichee() == "Inflige 10 dégâts à la ligne avant et 8 à la ligne arrière"
-    assert cartes["Laser"].description_affichee() == "Inflige 6 dégâts à un ennemi unique"
-    assert cartes["Laser incendiaire"].description_affichee() == "Inflige 2 dégâts et 4 d'incendie à un ennemi"
-    assert cartes["Leurre"].description_affichee() == "Annule la prochaine attaque ciblant le module"
+    assert cartes["Missile à fragmentation"].description_affichee() == "Inflige 15 dégâts à un ennemi et 6 à tous les autres."
+    assert cartes["Vague de torpilles"].description_affichee() == "Inflige 10 dégâts à la ligne avant et 8 à la ligne arrière."
+    assert cartes["Laser"].description_affichee() == "Inflige 6 dégâts à un ennemi unique."
+    assert cartes["Laser incendiaire"].description_affichee() == "Inflige 2 dégâts et 4 d'incendie à un ennemi."
+    assert cartes["Leurre"].description_affichee() == "Annule la prochaine attaque ciblant le module."
 
 
 def test_les_effets_lisent_leur_valeur_sur_la_carte():
@@ -227,7 +227,7 @@ def test_valeurs_actuelles_modifiables_sans_toucher_au_modele():
     laser.valeurs_actuelles["degats"] += 2
 
     assert laser.valeur_de(laser.effets[0]) == 8
-    assert laser.description_affichee() == "Inflige 8 dégâts à un ennemi unique"
+    assert laser.description_affichee() == "Inflige 8 dégâts à un ennemi unique."
     assert laser.valeurs["degats"] == 6
     assert laser.copie().valeur_de(laser.effets[0]) == 6  # un nouvel exemplaire repart du modele
 

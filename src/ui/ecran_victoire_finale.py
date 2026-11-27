@@ -13,28 +13,17 @@ import pyglet
 from pyglet import shapes
 
 from src.gameplay.carte import Carte
-from src.ui.commun import chemin_image, regrouper_cartes
+from src.ui import carte_visuel
+from src.ui.commun import regrouper_cartes
 from src.ui.fenetre import (
-    COULEUR_ETOILE_RARETE,
     FOND_IMAGE,
     HAUTEUR_FENETRE,
     LARGEUR_FENETRE,
-    _sprite_ajuste,
     _sprite_etire,
-    texte_effet_carte,
 )
 
 COULEUR_TEXTE = (255, 255, 255)
 COULEUR_VICTOIRE = (70, 190, 90)
-COULEUR_FOND_CARTE = (20, 24, 34)
-COULEUR_CONTOUR_CARTE = (90, 110, 150)
-COULEUR_CONTOUR_CARTE_SURVOLEE = (255, 255, 255)
-COULEUR_QUANTITE = (255, 220, 120)
-OPACITE_FOND_CARTE = 190
-
-COULEUR_FOND_PANNEAU = (10, 14, 30)
-COULEUR_CONTOUR_PANNEAU = (76, 110, 245)
-OPACITE_FOND_PANNEAU = 235
 
 COULEUR_BOUTON = (70, 190, 90)
 COULEUR_BOUTON_SURVOLE = (100, 210, 115)
@@ -42,16 +31,12 @@ COULEUR_BOUTON_SURVOLE = (100, 210, 115)
 MESSAGE_FELICITATIONS = "Vous avez vaincu le Boss et terminé ce run !"
 
 LARGEUR_CARTE_DECK = 130
-HAUTEUR_CARTE_DECK = 170
-IMAGE_TAILLE = 90
+HAUTEUR_CARTE_DECK = carte_visuel.hauteur_carte(LARGEUR_CARTE_DECK)
 ESPACEMENT_CARTE = 18
 COLONNES = 8
 # Grille decalee vers le bas par rapport a EcranDeck (Y_HAUT_GRILLE = HAUTEUR_FENETRE - 110) pour
 # laisser la place au sous-titre de felicitations sous le titre.
 Y_HAUT_GRILLE = HAUTEUR_FENETRE - 150
-
-HAUTEUR_PANNEAU = 70
-LARGEUR_PANNEAU = 500
 
 LARGEUR_BOUTON = 220
 HAUTEUR_BOUTON = 46
@@ -128,116 +113,21 @@ class EcranVictoireFinale(pyglet.window.Window):
             elements.extend(self._dessiner_carte(index, carte, quantite, lot))
         if self.index_survole is not None:
             carte, _quantite = self.groupes[self.index_survole]
-            elements.extend(self._dessiner_panneau_description(carte, lot))
+            elements.extend(self._dessiner_carte_agrandie(carte, lot))
         elements.extend(self._dessiner_bouton(lot))
         return elements
 
     def _dessiner_carte(self, index: int, carte: Carte, quantite: int, lot: pyglet.graphics.Batch) -> list:
-        x, y, largeur, hauteur = _rect_carte(index)
-        survole = index == self.index_survole
-        cadre = shapes.BorderedRectangle(
-            x,
-            y,
-            largeur,
-            hauteur,
-            border=2,
-            color=COULEUR_FOND_CARTE,
-            border_color=COULEUR_CONTOUR_CARTE_SURVOLEE if survole else COULEUR_CONTOUR_CARTE,
-            batch=lot,
-        )
-        cadre.opacity = OPACITE_FOND_CARTE
-        cx = x + largeur / 2
-
-        sprite = _sprite_ajuste(chemin_image(carte.image), cx - IMAGE_TAILLE / 2, y + hauteur - 12 - IMAGE_TAILLE, IMAGE_TAILLE, IMAGE_TAILLE, lot)
-
-        etoile = pyglet.text.Label(
-            "★",
-            x=x + 14,
-            y=y + hauteur - 14,
-            anchor_x="center",
-            anchor_y="center",
-            font_size=16,
-            color=(*COULEUR_ETOILE_RARETE[carte.rarete], 255),
-            batch=lot,
+        return carte_visuel.dessiner_carte_de_grille(
+            carte, _rect_carte(index), quantite, index == self.index_survole, lot, ordre=1 + index
         )
 
-        nom = pyglet.text.Label(
-            carte.nom,
-            x=cx,
-            y=y + hauteur - 20 - IMAGE_TAILLE,
-            anchor_x="center",
-            anchor_y="top",
-            font_size=11,
-            color=(*COULEUR_TEXTE, 255),
-            multiline=True,
-            width=largeur - 12,
-            align="center",
-            batch=lot,
+    def _dessiner_carte_agrandie(self, carte: Carte, lot: pyglet.graphics.Batch) -> list:
+        """Carte survolee en grand a cote d'elle."""
+        lignes = []
+        return carte_visuel.dessiner_carte_agrandie_a_cote(
+            carte, _rect_carte(self.index_survole), lignes, lot, carte_visuel.GROUPE_CARTE_AGRANDIE, LARGEUR_FENETRE, HAUTEUR_FENETRE
         )
-        cout = pyglet.text.Label(
-            f"⚡{carte.cout}",
-            x=cx,
-            y=y + 12,
-            anchor_x="center",
-            anchor_y="center",
-            font_size=11,
-            color=(200, 200, 205, 255),
-            batch=lot,
-        )
-        elements = [cadre, sprite, etoile, nom, cout]
-        if quantite > 1:
-            elements.append(
-                pyglet.text.Label(
-                    f"×{quantite}",
-                    x=x + largeur - 16,
-                    y=y + hauteur - 14,
-                    anchor_x="center",
-                    anchor_y="center",
-                    font_size=13,
-                    color=(*COULEUR_QUANTITE, 255),
-                    batch=lot,
-                )
-            )
-        return elements
-
-    def _dessiner_panneau_description(self, carte: Carte, lot: pyglet.graphics.Batch) -> list:
-        cx = LARGEUR_FENETRE / 2
-        y_bas = 20
-        fond = shapes.BorderedRectangle(
-            cx - LARGEUR_PANNEAU / 2,
-            y_bas,
-            LARGEUR_PANNEAU,
-            HAUTEUR_PANNEAU,
-            border=2,
-            color=COULEUR_FOND_PANNEAU,
-            border_color=COULEUR_CONTOUR_PANNEAU,
-            batch=lot,
-        )
-        fond.opacity = OPACITE_FOND_PANNEAU
-        nom = pyglet.text.Label(
-            carte.nom,
-            x=cx,
-            y=y_bas + HAUTEUR_PANNEAU - 16,
-            anchor_x="center",
-            anchor_y="center",
-            font_size=13,
-            color=(*COULEUR_QUANTITE, 255),
-            batch=lot,
-        )
-        description = pyglet.text.Label(
-            texte_effet_carte(carte),
-            x=cx,
-            y=y_bas + HAUTEUR_PANNEAU - 34,
-            anchor_x="center",
-            anchor_y="top",
-            font_size=12,
-            color=(*COULEUR_TEXTE, 255),
-            multiline=True,
-            width=LARGEUR_PANNEAU - 30,
-            align="center",
-            batch=lot,
-        )
-        return [fond, nom, description]
 
     def _dessiner_bouton(self, lot: pyglet.graphics.Batch) -> list:
         x, y, largeur, hauteur = _rect_bouton()

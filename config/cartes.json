@@ -15,7 +15,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats} dégâts à un ennemi unique",
+      "description": "Inflige {degats} dégâts à un ennemi unique.",
       "valeurs": { "degats": 6 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" }
@@ -35,7 +35,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Bouclier de {bouclier} sur un module unique",
+      "description": "Bouclier de {bouclier} sur un module unique.",
       "valeurs": { "bouclier": 4 },
       "effets": [
         { "nature": "BOUCLIER", "valeur": "bouclier" }
@@ -55,7 +55,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Bouclier de {bouclier} sur le module principal",
+      "description": "Bouclier de {bouclier} sur le module principal.",
       "valeurs": { "bouclier": 6 },
       "effets": [
         { "nature": "BOUCLIER", "valeur": "bouclier" }
@@ -75,7 +75,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Répare le module principal pour {reparation}",
+      "description": "Répare le module principal pour {reparation}.",
       "valeurs": { "reparation": 8 },
       "effets": [
         { "nature": "REPARATION", "valeur": "reparation" }
@@ -96,7 +96,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats} dégâts à la ligne ciblée",
+      "description": "Inflige {degats} dégâts à la ligne ciblée.",
       "valeurs": { "degats": 8 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" }
@@ -117,7 +117,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats} dégâts et {incendie} d'incendie à un ennemi",
+      "description": "Inflige {degats} dégâts et {incendie} d'incendie à un ennemi.",
       "valeurs": { "degats": 2, "incendie": 4 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" },
@@ -138,7 +138,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Bouclier de {bouclier} sur un module unique",
+      "description": "Bouclier de {bouclier} sur un module unique.",
       "valeurs": { "bouclier": 8 },
       "effets": [
         { "nature": "BOUCLIER", "valeur": "bouclier" }
@@ -159,7 +159,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats} dégâts à un ennemi unique",
+      "description": "Inflige {degats} dégâts à un ennemi unique.",
       "valeurs": { "degats": 14 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" }
@@ -240,7 +240,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats} dégâts à un ennemi. Piochez {pioche} carte",
+      "description": "Inflige {degats} dégâts à un ennemi. Piochez {pioche} carte.",
       "valeurs": { "degats": 2, "pioche": 1 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" },
@@ -262,7 +262,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats} dégâts à un ennemi, deux fois",
+      "description": "Inflige {degats} dégâts à un ennemi, deux fois.",
       "valeurs": { "degats": 3 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" }
@@ -282,7 +282,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Donne {bouclier} de bouclier à tous vos modules",
+      "description": "Donne {bouclier} de bouclier à tous vos modules.",
       "valeurs": { "bouclier": 4 },
       "effets": [
         { "nature": "BOUCLIER", "valeur": "bouclier" }
@@ -302,7 +302,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Donne {bouclier} de bouclier aux modules de la ligne avant",
+      "description": "Donne {bouclier} de bouclier aux modules de la ligne avant.",
       "valeurs": { "bouclier": 6 },
       "effets": [
         { "nature": "BOUCLIER", "valeur": "bouclier" }
@@ -322,7 +322,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Donne {bouclier} de bouclier à un module. Piochez {pioche} carte",
+      "description": "Donne {bouclier} de bouclier à un module. Piochez {pioche} carte.",
       "valeurs": { "bouclier": 4, "pioche": 1 },
       "effets": [
         { "nature": "BOUCLIER", "valeur": "bouclier" },
@@ -343,7 +343,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Donne {bouclier} de bouclier au module principal",
+      "description": "Donne {bouclier} de bouclier au module principal.",
       "valeurs": { "bouclier": 14 },
       "effets": [
         { "nature": "BOUCLIER", "valeur": "bouclier" }
@@ -363,7 +363,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Répare le module principal pour {reparation}",
+      "description": "Répare le module principal pour {reparation}.",
       "valeurs": { "reparation": 4 },
       "effets": [
         { "nature": "REPARATION", "valeur": "reparation" }
@@ -383,7 +383,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Répare tous vos modules pour {reparation}",
+      "description": "Répare tous vos modules pour {reparation}.",
       "valeurs": { "reparation": 4 },
       "effets": [
         { "nature": "REPARATION", "valeur": "reparation" }
@@ -403,7 +403,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Donne {electricite} électricité en plus ce tour",
+      "description": "Donne {electricite} électricité en plus ce tour.",
       "valeurs": { "electricite": 1 },
       "effets": [
         { "nature": "GAIN_ELECTRICITE", "valeur": "electricite" }
@@ -423,7 +423,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Piochez {pioche} cartes",
+      "description": "Piochez {pioche} cartes.",
       "valeurs": { "pioche": 2 },
       "effets": [
         { "nature": "PIOCHE", "valeur": "pioche" }
@@ -444,7 +444,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats} dégâts à un ennemi",
+      "description": "Inflige {degats} dégâts à un ennemi.",
       "valeurs": { "degats": 20 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" }
@@ -464,7 +464,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Donne {bouclier} de bouclier à tous vos modules",
+      "description": "Donne {bouclier} de bouclier à tous vos modules.",
       "valeurs": { "bouclier": 9 },
       "effets": [
         { "nature": "BOUCLIER", "valeur": "bouclier" }
@@ -484,7 +484,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Répare le module principal pour {reparation}",
+      "description": "Répare le module principal pour {reparation}.",
       "valeurs": { "reparation": 25 },
       "effets": [
         { "nature": "REPARATION", "valeur": "reparation" }
@@ -504,7 +504,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Donne {electricite} électricité en plus ce tour",
+      "description": "Donne {electricite} électricité en plus ce tour.",
       "valeurs": { "electricite": 2 },
       "effets": [
         { "nature": "GAIN_ELECTRICITE", "valeur": "electricite" }
@@ -525,7 +525,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats_cible} dégâts à un ennemi et {degats_autres} à tous les autres",
+      "description": "Inflige {degats_cible} dégâts à un ennemi et {degats_autres} à tous les autres.",
       "valeurs": { "degats_cible": 25, "degats_autres": 10 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats_cible" },
@@ -547,7 +547,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats} dégâts à un ennemi et donne {bouclier} de bouclier au module principal",
+      "description": "Inflige {degats} dégâts à un ennemi et donne {bouclier} de bouclier au module principal.",
       "valeurs": { "degats": 5, "bouclier": 6 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" },
@@ -568,7 +568,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Renvoi {renvoi} sur un module : il renvoie à l'attaquant les dégâts reçus",
+      "description": "Renvoi {renvoi} sur un module : il renvoie à l'attaquant les dégâts reçus.",
       "valeurs": { "renvoi": 5 },
       "effets": [
         { "nature": "RENVOI", "valeur": "renvoi" }
@@ -589,7 +589,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Retire {retrait} de bouclier à un ennemi, puis lui inflige {degats} dégâts",
+      "description": "Retire {retrait} de bouclier à un ennemi, puis lui inflige {degats} dégâts.",
       "valeurs": { "retrait": 8, "degats": 6 },
       "effets": [
         { "nature": "RETRAIT_BOUCLIER", "valeur": "retrait" },
@@ -610,7 +610,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Renvoi {renvoi} sur tous vos modules",
+      "description": "Renvoi {renvoi} sur tous vos modules.",
       "valeurs": { "renvoi": 4 },
       "effets": [
         { "nature": "RENVOI", "valeur": "renvoi" }
@@ -630,7 +630,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Donne {bouclier} de bouclier et Renvoi {renvoi} au module principal",
+      "description": "Donne {bouclier} de bouclier et Renvoi {renvoi} au module principal.",
       "valeurs": { "bouclier": 5, "renvoi": 5 },
       "effets": [
         { "nature": "BOUCLIER", "valeur": "bouclier" },
@@ -651,7 +651,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Surcharge {surcharge}. Piochez {pioche} carte",
+      "description": "Surcharge {surcharge}. Piochez {pioche} carte.",
       "valeurs": { "surcharge": 2, "pioche": 1 },
       "effets": [
         { "nature": "SURCHARGE", "valeur": "surcharge" },
@@ -673,7 +673,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Consomme tout le bouclier du module principal et inflige {par_point} dégât par point de bouclier à un ennemi",
+      "description": "Consomme tout le bouclier du module principal et inflige {par_point} dégât par point de bouclier à un ennemi.",
       "valeurs": { "degats": 0, "par_point": 1 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats", "bonus": { "par": "BOUCLIER_PRINCIPAL", "facteur": "par_point", "consomme": true } }
@@ -693,7 +693,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats_cible} dégâts à un ennemi et {degats_autres} à tous les autres",
+      "description": "Inflige {degats_cible} dégâts à un ennemi et {degats_autres} à tous les autres.",
       "valeurs": { "degats_cible": 15, "degats_autres": 6 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats_cible" },
@@ -714,7 +714,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats_avant} dégâts à la ligne avant et {degats_arriere} à la ligne arrière",
+      "description": "Inflige {degats_avant} dégâts à la ligne avant et {degats_arriere} à la ligne arrière.",
       "valeurs": { "degats_avant": 10, "degats_arriere": 8 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats_avant", "portee": "LIGNE_AVANT_ENNEMIE" },
@@ -735,7 +735,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats} dégâts à tous les ennemis",
+      "description": "Inflige {degats} dégâts à tous les ennemis.",
       "valeurs": { "degats": 5 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" }
@@ -755,7 +755,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats} dégâts à tous les ennemis de la ligne arrière",
+      "description": "Inflige {degats} dégâts à tous les ennemis de la ligne arrière.",
       "valeurs": { "degats": 9 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" }
@@ -775,7 +775,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats} dégâts à tous les ennemis de la ligne avant",
+      "description": "Inflige {degats} dégâts à tous les ennemis de la ligne avant.",
       "valeurs": { "degats": 9 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" }
@@ -795,7 +795,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats} dégâts à un ennemi",
+      "description": "Inflige {degats} dégâts à un ennemi.",
       "valeurs": { "degats": 4 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" }
@@ -815,7 +815,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats} dégâts à un ennemi. Piochez {pioche} carte",
+      "description": "Inflige {degats} dégâts à un ennemi. Piochez {pioche} carte.",
       "valeurs": { "degats": 7, "pioche": 1 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" },
@@ -836,7 +836,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats} dégâts à un ennemi, deux fois",
+      "description": "Inflige {degats} dégâts à un ennemi, deux fois.",
       "valeurs": { "degats": 4 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" }
@@ -856,7 +856,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats} dégâts et {incendie} d'incendie à un ennemi",
+      "description": "Inflige {degats} dégâts et {incendie} d'incendie à un ennemi.",
       "valeurs": { "degats": 4, "incendie": 3 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" },
@@ -877,7 +877,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats} dégâts à un ennemi et donne {bouclier} de bouclier au module principal",
+      "description": "Inflige {degats} dégâts à un ennemi et donne {bouclier} de bouclier au module principal.",
       "valeurs": { "degats": 6, "bouclier": 5 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" },
@@ -898,7 +898,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats_cible} dégâts à un ennemi et {degats_colonne} à l'ennemi de sa colonne (derrière ou devant)",
+      "description": "Inflige {degats_cible} dégâts à un ennemi et {degats_colonne} à l'ennemi de sa colonne (derrière ou devant).",
       "valeurs": { "degats_cible": 12, "degats_colonne": 8 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats_cible" },
@@ -919,7 +919,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats} dégâts à la ligne avant et donne {bouclier} de bouclier au Lanceur",
+      "description": "Inflige {degats} dégâts à la ligne avant et donne {bouclier} de bouclier au Lanceur.",
       "valeurs": { "degats": 12, "bouclier": 8 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" },
@@ -940,7 +940,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Surcharge {surcharge}, puis inflige {degats} dégâts (+ Surcharge) à tous les ennemis",
+      "description": "Surcharge {surcharge}, puis inflige {degats} dégâts (+ Surcharge) à tous les ennemis.",
       "valeurs": { "surcharge": 2, "degats": 3 },
       "effets": [
         { "nature": "SURCHARGE", "valeur": "surcharge", "portee": "MODULE_PRINCIPAL" },
@@ -961,7 +961,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Multiplie votre Surcharge par {facteur}",
+      "description": "Multiplie votre Surcharge par {facteur}.",
       "valeurs": { "facteur": 2 },
       "effets": [
         { "nature": "MULTIPLIER_SURCHARGE", "valeur": "facteur" }
@@ -981,7 +981,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Piochez {pioche} cartes. Surcharge {surcharge}",
+      "description": "Piochez {pioche} cartes. Surcharge {surcharge}.",
       "valeurs": { "pioche": 2, "surcharge": 2 },
       "effets": [
         { "nature": "PIOCHE", "valeur": "pioche" },
@@ -1002,7 +1002,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats} dégâts à un ennemi, plus {par_point} par point de Surcharge",
+      "description": "Inflige {degats} dégâts à un ennemi, plus {par_point} par point de Surcharge.",
       "valeurs": { "degats": 6, "par_point": 1 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats", "bonus": { "par": "SURCHARGE_JOUEUR", "facteur": "par_point" } }
@@ -1022,7 +1022,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Multiplie votre Surcharge par {facteur}. Elle ne baisse plus jusqu'à la fin du combat",
+      "description": "Multiplie votre Surcharge par {facteur}. Elle ne baisse plus jusqu'à la fin du combat.",
       "valeurs": { "facteur": 2 },
       "effets": [
         { "nature": "MULTIPLIER_SURCHARGE", "valeur": "facteur" },
@@ -1043,7 +1043,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats} dégâts à tous les ennemis",
+      "description": "Inflige {degats} dégâts à tous les ennemis.",
       "valeurs": { "degats": 7 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" }
@@ -1063,7 +1063,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats} dégâts et {incendie} d'incendie à un ennemi",
+      "description": "Inflige {degats} dégâts et {incendie} d'incendie à un ennemi.",
       "valeurs": { "degats": 6, "incendie": 8 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" },
@@ -1084,7 +1084,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Annule la prochaine attaque ciblant le module",
+      "description": "Annule la prochaine attaque ciblant le module.",
       "valeurs": {},
       "effets": [
         { "nature": "ANNULATION_PROCHAINE_ATTAQUE" }
@@ -1104,7 +1104,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats} dégâts et {incendie} d'incendie à tous les ennemis",
+      "description": "Inflige {degats} dégâts et {incendie} d'incendie à tous les ennemis.",
       "valeurs": { "degats": 15, "incendie": 4 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" },
@@ -1125,7 +1125,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Surcharge {surcharge} : chaque coup de vos cartes inflige {surcharge} dégâts de plus (−1 par tour)",
+      "description": "Surcharge {surcharge} : chaque coup de vos cartes inflige {surcharge} dégâts de plus (−1 par tour).",
       "valeurs": { "surcharge": 4 },
       "effets": [
         { "nature": "SURCHARGE", "valeur": "surcharge" }
@@ -1145,7 +1145,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats} dégâts à un ennemi et lui pose Verrouillage {verrouillage}",
+      "description": "Inflige {degats} dégâts à un ennemi et lui pose Verrouillage {verrouillage}.",
       "valeurs": { "degats": 5, "verrouillage": 2 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" },
@@ -1166,7 +1166,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats} dégâts à tous les ennemis et leur pose Verrouillage {verrouillage}",
+      "description": "Inflige {degats} dégâts à tous les ennemis et leur pose Verrouillage {verrouillage}.",
       "valeurs": { "degats": 3, "verrouillage": 2 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" },
@@ -1187,7 +1187,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats} dégâts à un ennemi et lui pose Verrouillage {verrouillage}",
+      "description": "Inflige {degats} dégâts à un ennemi et lui pose Verrouillage {verrouillage}.",
       "valeurs": { "degats": 4, "verrouillage": 5 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" },
@@ -1208,7 +1208,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats} dégâts à un ennemi, plus {par_point} par point de Verrouillage de la cible",
+      "description": "Inflige {degats} dégâts à un ennemi, plus {par_point} par point de Verrouillage de la cible.",
       "valeurs": { "degats": 8, "par_point": 3 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats", "bonus": { "par": "VERROUILLAGE_CIBLE", "facteur": "par_point" } }
@@ -1229,7 +1229,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Inflige {degats} dégâts à un ennemi et lui pose Verrouillage {verrouillage}",
+      "description": "Inflige {degats} dégâts à un ennemi et lui pose Verrouillage {verrouillage}.",
       "valeurs": { "degats": 4, "verrouillage": 2 },
       "effets": [
         { "nature": "DEGATS", "valeur": "degats" },
@@ -1250,7 +1250,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Pose Verrouillage {verrouillage} à tous les ennemis",
+      "description": "Pose Verrouillage {verrouillage} à tous les ennemis.",
       "valeurs": { "verrouillage": 3 },
       "effets": [
         { "nature": "VERROUILLAGE", "valeur": "verrouillage" }
@@ -1270,7 +1270,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Jusqu'à la fin du combat, vos cartes du Lanceur de missiles sont lancées {repetitions} fois de plus",
+      "description": "Jusqu'à la fin du combat, vos cartes du Lanceur de missiles sont lancées {repetitions} fois de plus.",
       "valeurs": { "repetitions": 1 },
       "effets": [
         { "nature": "REPETITION", "valeur": "repetitions", "filtre": { "module": "MOD_2" } }
@@ -1290,7 +1290,7 @@
       "persistante": false,
       "jouable": "oui",
       "refonte": true,
-      "description": "Jusqu'à la fin du combat, vos cartes Laser sont lancées {repetitions} fois de plus",
+      "description": "Jusqu'à la fin du combat, vos cartes Laser sont lancées {repetitions} fois de plus.",
       "valeurs": { "repetitions": 1 },
       "effets": [
         { "nature": "REPETITION", "valeur": "repetitions", "filtre": { "famille": "Laser" } }

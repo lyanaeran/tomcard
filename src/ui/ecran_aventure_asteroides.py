@@ -22,12 +22,11 @@ from src.gameplay.partie import (
     second_choc_asteroides,
     subir_degats_principal,
 )
-from src.ui import barre_laterale
+from src.ui import barre_laterale, carte_visuel
 from src.ui.ecran_deck import EcranDeck
 from src.ui.ecran_vaisseau import EcranVaisseau
-from src.ui.commun import chemin_image, noms_modules, texte_carte
+from src.ui.commun import noms_modules
 from src.ui.fenetre import (
-    COULEUR_ETOILE_RARETE,
     HAUTEUR_FENETRE,
     LARGEUR_FENETRE,
     _sprite_ajuste,
@@ -76,10 +75,9 @@ Y_HAUT_CHOIX = 560
 
 
 LARGEUR_CARTE_OFFERTE = 220
-HAUTEUR_CARTE_OFFERTE = 320
-IMAGE_CARTE_TAILLE = 120
+HAUTEUR_CARTE_OFFERTE = carte_visuel.hauteur_carte_titree(LARGEUR_CARTE_OFFERTE, "module")
 X_CARTE_OFFERTE = (LARGEUR_FENETRE - LARGEUR_CARTE_OFFERTE) / 2
-Y_CARTE_OFFERTE = 240
+Y_CARTE_OFFERTE = 190
 
 LARGEUR_BOUTON = 220
 HAUTEUR_BOUTON = 46
@@ -251,27 +249,9 @@ class EcranAventureAsteroides(pyglet.window.Window):
             )
         ]
         carte = self.carte_offerte
-        x, y, largeur, hauteur = X_CARTE_OFFERTE, Y_CARTE_OFFERTE, LARGEUR_CARTE_OFFERTE, HAUTEUR_CARTE_OFFERTE
-        cx = x + largeur / 2
-        cadre = shapes.BorderedRectangle(
-            x, y, largeur, hauteur, border=2, color=COULEUR_FOND_CARTE,
-            border_color=COULEUR_CONTOUR_CARTE, batch=lot,
-        )
-        cadre.opacity = OPACITE_FOND
-        etoile = pyglet.text.Label(
-            "★", x=x + 16, y=y + hauteur - 16, anchor_x="center", anchor_y="center",
-            font_size=18, color=(*COULEUR_ETOILE_RARETE[carte.rarete], 255), batch=lot,
-        )
-        sprite = _sprite_ajuste(chemin_image(carte.image), cx - IMAGE_CARTE_TAILLE / 2, y + hauteur - 30 - IMAGE_CARTE_TAILLE, IMAGE_CARTE_TAILLE, IMAGE_CARTE_TAILLE, lot)
-        nom = pyglet.text.Label(
-            carte.nom, x=cx, y=y + hauteur - 48 - IMAGE_CARTE_TAILLE, anchor_x="center", anchor_y="center",
-            font_size=15, color=(*COULEUR_TEXTE, 255), batch=lot,
-        )
-        description = pyglet.text.Label(
-            texte_carte(carte, noms_modules(self.partie)), x=cx, y=y + hauteur - 74 - IMAGE_CARTE_TAILLE, anchor_x="center", anchor_y="top",
-            font_size=11, color=(200, 200, 205, 255), multiline=True, width=largeur - 24, align="center", batch=lot,
-        )
-        elements.extend([cadre, etoile, sprite, nom, description])
+        rect = (X_CARTE_OFFERTE, Y_CARTE_OFFERTE, LARGEUR_CARTE_OFFERTE, HAUTEUR_CARTE_OFFERTE)
+        titre = noms_modules(self.partie).get(carte.exemplaire_module)
+        elements.extend(carte_visuel.dessiner_carte_a_choisir(carte, rect, lot, titre=titre))
         elements.extend(self._dessiner_bouton(_rect_bouton_prendre(), "Prendre", lot))
         elements.extend(self._dessiner_bouton(_rect_bouton_passer(), "Passer", lot))
         return elements

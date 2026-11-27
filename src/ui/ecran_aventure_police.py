@@ -23,11 +23,11 @@ from src.gameplay.partie import (
     payer_mise_aux_normes,
     retirer_carte,
 )
-from src.ui import barre_laterale
+from src.ui import barre_laterale, carte_visuel
 from src.ui.ecran_deck import EcranDeck
 from src.ui.ecran_vaisseau import EcranVaisseau
-from src.ui.commun import chemin_image, noms_modules, texte_carte
-from src.ui.fenetre import COULEUR_ETOILE_RARETE, HAUTEUR_FENETRE, LARGEUR_FENETRE, _sprite_ajuste, _sprite_etire
+from src.ui.commun import noms_modules
+from src.ui.fenetre import HAUTEUR_FENETRE, LARGEUR_FENETRE, _sprite_ajuste, _sprite_etire
 
 FOND_POLICE = str(RACINE / "assets" / "aventure" / "police.png")
 
@@ -44,7 +44,6 @@ COULEUR_TEXTE = (255, 255, 255)
 COULEUR_SOUS_TITRE = (200, 200, 205)
 COULEUR_FOND_CARTE = (20, 24, 34)
 COULEUR_CONTOUR_CARTE = (90, 110, 150)
-COULEUR_CONTOUR_CARTE_ACTUELLE = (235, 150, 30)
 COULEUR_CONTOUR_SURVOLEE = (255, 255, 255)
 COULEUR_FOND_VIDE = (15, 17, 24)
 COULEUR_NOM = (255, 220, 120)
@@ -64,9 +63,8 @@ CHOIX = (
 # en dessous) plutot que la ligne image+texte des choix en dessous - pour ne pas donner
 # l'impression que c'est elle-meme une option cliquable (specs.md 2.5). Meme composition que
 # _dessiner_carte_offerte de l'Aventure Asteroides (etoile + image + nom + description empiles).
-LARGEUR_CARTE_ACTUELLE = 240
-HAUTEUR_CARTE_ACTUELLE = 250
-IMAGE_CARTE_ACTUELLE_TAILLE = 130
+LARGEUR_CARTE_ACTUELLE = 160
+HAUTEUR_CARTE_ACTUELLE = carte_visuel.hauteur_carte_titree(LARGEUR_CARTE_ACTUELLE, "module")
 X_CARTE_ACTUELLE = (LARGEUR_FENETRE - LARGEUR_CARTE_ACTUELLE) / 2
 Y_HAUT_CARTE_ACTUELLE = 675
 
@@ -193,35 +191,12 @@ class EcranAventurePolice(pyglet.window.Window):
         return elements
 
     def _dessiner_carte_actuelle(self, lot: pyglet.graphics.Batch) -> list:
-        """Carte tiree, seule et non cliquable, dans le meme format qu'une carte en combat (image
-        en haut, texte en dessous) - pour ne pas la confondre avec les choix en dessous."""
+        """Carte tiree, seule et non cliquable, dessinee comme en combat (carte_visuel), avec son
+        module au-dessus - pour ne pas la confondre avec les choix en dessous."""
         carte = self._carte_actuelle()
-        x, y = X_CARTE_ACTUELLE, Y_HAUT_CARTE_ACTUELLE - HAUTEUR_CARTE_ACTUELLE
-        largeur, hauteur = LARGEUR_CARTE_ACTUELLE, HAUTEUR_CARTE_ACTUELLE
-        cx = x + largeur / 2
-        cadre = shapes.BorderedRectangle(
-            x, y, largeur, hauteur, border=2, color=COULEUR_FOND_CARTE,
-            border_color=COULEUR_CONTOUR_CARTE_ACTUELLE, batch=lot,
-        )
-        cadre.opacity = OPACITE_FOND
-        etoile = pyglet.text.Label(
-            "★", x=x + 16, y=y + hauteur - 16, anchor_x="center", anchor_y="center",
-            font_size=18, color=(*COULEUR_ETOILE_RARETE[carte.rarete], 255), batch=lot,
-        )
-        taille_image = IMAGE_CARTE_ACTUELLE_TAILLE
-        sprite = _sprite_ajuste(
-            chemin_image(carte.image), cx - taille_image / 2, y + hauteur - 30 - taille_image, taille_image, taille_image, lot
-        )
-        nom = pyglet.text.Label(
-            f"{carte.nom}  (⚡{carte.cout})", x=cx, y=y + hauteur - 48 - taille_image,
-            anchor_x="center", anchor_y="center", font_size=15, color=(*COULEUR_NOM, 255), batch=lot,
-        )
-        description = pyglet.text.Label(
-            texte_carte(carte, noms_modules(self.partie)), x=cx, y=y + hauteur - 70 - taille_image,
-            anchor_x="center", anchor_y="top", font_size=12, color=(*COULEUR_TEXTE, 255),
-            multiline=True, width=largeur - 24, align="center", batch=lot,
-        )
-        return [cadre, etoile, sprite, nom, description]
+        rect = (X_CARTE_ACTUELLE, Y_HAUT_CARTE_ACTUELLE - HAUTEUR_CARTE_ACTUELLE, LARGEUR_CARTE_ACTUELLE, HAUTEUR_CARTE_ACTUELLE)
+        titre = noms_modules(self.partie).get(carte.exemplaire_module)
+        return carte_visuel.dessiner_carte_a_choisir(carte, rect, lot, titre=titre)
 
     def _dessiner_ligne_choix(
         self, index: int, image: str | None, titre: str, description: str, lot: pyglet.graphics.Batch

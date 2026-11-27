@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "106";
+const VERSION_CACHE = "107";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -636,13 +636,82 @@ function rendreGrilleEnnemis() {
         </div>`;
 }
 
-// Couleur de l'etoile de rarete (specs.md 8.2), meme mapping que le PC.
-const CLASSE_ETOILE_RARETE = {
-    BASE: "etoile-base",
-    COMMUNE: "etoile-commune",
-    RARE: "etoile-rare",
-    LEGENDAIRE: "etoile-legendaire",
+// Icone du type de la carte (barre du haut, a droite), meme mapping que ICONE_TYPE de
+// src/ui/carte_visuel.py.
+const ICONE_TYPE = {
+    ATTAQUE: "type_attaque",
+    DEFENSE: "type_defense",
+    REPARATION: "type_reparation",
+    BUFF: "type_buff",
+    DEBUFF: "type_debuff",
+    OUTILS: "type_outils",
+    CONTROLE: "type_controle",
 };
+
+function iconeCarte(nom) {
+    return `assets/interface/icones/${nom}.png`;
+}
+
+// Une carte, partout (main, carte agrandie, recompenses, deck, Aventures) : gabarit de la couleur
+// de la rarete, illustration, barre du haut (cout, munitions, lancements, type), texte et nom.
+// Meme disposition que src/ui/carte_visuel.py (zones en % dans style.css, .carte-visuel) ; la
+// taille du texte est ajustee apres coup (ajusterTextesCartes) pour qu'il tienne dans sa zone.
+function htmlCarteVisuel(carte) {
+    const valeurs = [["cout", carte.cout]];
+    const munitions = texteMunitions(carte);
+    if (munitions) valeurs.push(["munitions", munitions]);
+    if (carte.lancements > 1) valeurs.push(["lancements", `×${carte.lancements}`]);
+    const barre = valeurs
+        .map(([icone, texte]) => `<span class="cv-valeur"><img src="${iconeCarte(icone)}" alt="">${texte}</span>`)
+        .join("");
+    return `
+        <div class="carte-visuel">
+            <img class="cv-gabarit" src="assets/interface/cartes/modele_${carte.rarete.toLowerCase()}.png" alt="">
+            <img class="cv-illustration" src="${carte.image}" alt="${carte.nom}">
+            <div class="cv-barre">${barre}<img class="cv-type" src="${iconeCarte(ICONE_TYPE[carte.categorie])}" alt=""></div>
+            ${carte.persistante ? '<div class="cv-persistante">PERSISTANTE</div>' : ""}
+            <div class="cv-texte"><span>${texteEffetCarte(carte)}</span></div>
+            <div class="cv-nom"><span>${carte.nom}</span></div>
+        </div>`;
+}
+
+// Reduit le texte et le nom des cartes qui debordent de leur zone (meme regle que _label_ajuste
+// de src/ui/carte_visuel.py : taille maximale = celle du nom, puis plus petit si besoin).
+function ajusterTextesCartes(racine = document) {
+    racine.querySelectorAll(".cv-texte, .cv-nom").forEach((zone) => {
+        if (!zone.offsetParent) return; // ecran cache : refait quand il s'affiche
+        let reduction = 1;
+        zone.style.setProperty("--reduction", reduction);
+        while ((zone.scrollHeight > zone.clientHeight + 1 || zone.scrollWidth > zone.clientWidth + 1) && reduction > 0.45) {
+            reduction -= 0.05;
+            zone.style.setProperty("--reduction", reduction);
+        }
+    });
+}
+
+// Toute carte ajoutee a la page est ajustee au rendu suivant, et toutes le sont au
+// redimensionnement (rotation du telephone).
+let ajustementCartesPrevu = false;
+function prevoirAjustementCartes() {
+    if (ajustementCartesPrevu) return;
+    ajustementCartesPrevu = true;
+    requestAnimationFrame(() => {
+        ajustementCartesPrevu = false;
+        ajusterTextesCartes();
+    });
+}
+new MutationObserver(prevoirAjustementCartes).observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["class"],
+});
+window.addEventListener("resize", prevoirAjustementCartes);
+
+// Lignes sous une carte agrandie : ce que la carte ne montre pas.
+function htmlDetailsCarte(lignes) {
+    return lignes.length ? `<div class="cv-details">${lignes.map((l) => `<div>${l}</div>`).join("")}</div>` : "";
+}
 
 // Munitions "restantes/de depart" (refonte-branchement.md 4.1), rien pour une carte illimitee.
 function texteMunitions(carte) {
@@ -651,25 +720,17 @@ function texteMunitions(carte) {
     return `${restantes}/${carte.munitions_base}`;
 }
 
-// Carte en main (refonte-branchement.md 4.1) : illustration, rarete, cout, munitions, "x2" si
-// elle est lancee plus d'une fois, bandeau Persistante ; grisee si elle n'est pas jouable
-// maintenant (decide par le gameplay : Combat.peut_jouer).
+// Carte en main (htmlCarteVisuel) ; grisee si elle n'est pas jouable maintenant (decide par le
+// gameplay : Combat.peut_jouer).
 function rendreMain() {
     return etatCourant.main
         .map((carte) => {
             const classes = ["carte"];
             if (carte.index === indexCarteSelectionnee) classes.push("selectionnee");
             if (!carte.jouable) classes.push("injouable");
-            const munitions = texteMunitions(carte);
             return `
             <button class="${classes.join(" ")}" data-index="${carte.index}" title="${carte.nom}">
-                <img src="${carte.image}" alt="${carte.nom}">
-                <span class="etoile-rarete ${CLASSE_ETOILE_RARETE[carte.rarete]}">★</span>
-                <span class="pastille pastille-cout">⚡${carte.cout}</span>
-                ${munitions ? `<span class="pastille pastille-munition">${munitions}</span>` : ""}
-                ${carte.lancements > 1 ? `<span class="pastille pastille-lancements">×${carte.lancements}</span>` : ""}
-                ${carte.persistante ? '<span class="bandeau-persistante">PERSISTANTE</span>' : ""}
-                <span class="nom-carte-main">${carte.nom}</span>
+                ${htmlCarteVisuel(carte)}
             </button>`;
         })
         .join("");
@@ -681,30 +742,16 @@ function texteEffetCarte(carte) {
     return carte.description;
 }
 
-// Details d'une carte sous sa description : munitions, lancements, Persistante, module.
-function detailsCarte(carte) {
-    const lignes = [];
-    const munitions = texteMunitions(carte);
-    if (munitions) lignes.push(`🔋 Munitions ${munitions}`);
-    if (carte.lancements > 1) lignes.push(`Lancée ${carte.lancements} fois`);
-    if (carte.persistante) lignes.push("Persistante");
-    if (carte.module_nom) lignes.push(`Module : ${carte.module_nom}`);
-    return lignes.map((ligne) => `<div class="info-carte-detail">${ligne}</div>`).join("");
-}
-
-// Infobulle de la carte armee (#info-carte), au centre de l'ecran. pointer-events:none (CSS) pour
-// ne pas bloquer le tap sur la case qui suit.
+// Carte armee en grand (#info-carte, decision utilisateur 2026-11-27), au centre de l'ecran, avec
+// dessous ce qu'elle ne montre pas (module, pas jouable). pointer-events:none (CSS) pour ne pas
+// bloquer le tap sur la case qui suit.
 function rendreInfoCarte() {
     const carte = carteSelectionnee();
     if (!carte) return "";
-    const injouable = carte.jouable ? "" : '<div class="info-carte-detail">Pas jouable maintenant</div>';
-    return `
-        <img src="${carte.image}" alt="${carte.nom}">
-        <div class="info-carte-nom">${carte.nom}</div>
-        <div class="info-carte-effet">${texteEffetCarte(carte)}</div>
-        <div class="info-carte-cout">⚡ ${carte.cout}</div>
-        ${detailsCarte(carte)}
-        ${injouable}`;
+    const lignes = [];
+    if (carte.module_nom) lignes.push(`Module : ${carte.module_nom}`);
+    if (!carte.jouable) lignes.push("Pas jouable maintenant");
+    return htmlCarteVisuel(carte) + htmlDetailsCarte(lignes);
 }
 
 function rendreBanniereFin() {
@@ -792,11 +839,7 @@ function afficherChoixCarteModule(nomModule, candidats) {
         .map(
             (candidat, index) => `
         <div class="candidat-recompense" data-index="${index}">
-            <span class="etoile-${candidat.rarete.toLowerCase()}">★</span>
-            <img src="${candidat.image}" alt="${candidat.nom}">
-            <div class="candidat-recompense-nom">${candidat.nom}</div>
-            <div class="candidat-recompense-cout">⚡ ${candidat.cout}</div>
-            <div class="candidat-recompense-description">${texteEffetCarte(candidat)}</div>
+            ${htmlCarteVisuel(candidat)}
         </div>`
         )
         .join("");
@@ -1187,11 +1230,9 @@ function rendreAventureTroisLunes() {
             .map(
                 (carte, index) => `
             <div class="carte-deck" data-index="${index}">
-                <span class="etoile-${carte.rarete.toLowerCase()}">★</span>
+                ${carte.module_nom ? `<div class="carte-deck-module">${carte.module_nom}</div>` : ""}
                 ${carte.quantite > 1 ? `<span class="carte-deck-quantite">×${carte.quantite}</span>` : ""}
-                <img src="${carte.image}" alt="${carte.nom}">
-                <div class="carte-deck-nom">${carte.nom}</div>
-                <div class="carte-deck-cout">⚡ ${carte.cout}</div>
+                ${htmlCarteVisuel(carte)}
             </div>`
             )
             .join("");
@@ -1312,12 +1353,9 @@ function rendreAventureAsteroides() {
         if (etapeAventureAsteroides === "sequence_3") {
             const carte = carteOfferteAsteroides;
             carteOfferte.innerHTML = `
-                <div class="candidat-recompense">
-                    <span class="etoile-${carte.rarete.toLowerCase()}">★</span>
-                    <img src="${carte.image}" alt="${carte.nom}">
-                    <div class="candidat-recompense-nom">${carte.nom}</div>
-                    <div class="candidat-recompense-cout">⚡ ${carte.cout}</div>
-                    <div class="candidat-recompense-description">${texteEffetCarte(carte)}</div>
+                <div class="candidat-recompense carte-seule">
+                    ${carte.module_nom ? `<div class="candidat-recompense-entete">${carte.module_nom}</div>` : ""}
+                    ${htmlCarteVisuel(carte)}
                 </div>`;
         }
     }
@@ -1459,12 +1497,9 @@ function rendreAventurePolice() {
         description.textContent = DESCRIPTION_POLICE;
         const carte = carteActuellePolice;
         carteActuelle.innerHTML = `
-            <div class="candidat-recompense carte-actuelle-police">
-                <span class="etoile-${carte.rarete.toLowerCase()}">★</span>
-                <img src="${carte.image}" alt="${carte.nom}">
-                <div class="candidat-recompense-nom">${carte.nom}</div>
-                <div class="candidat-recompense-cout">⚡ ${carte.cout}</div>
-                <div class="candidat-recompense-description">${texteEffetCarte(carte)}</div>
+            <div class="candidat-recompense carte-seule carte-actuelle-police">
+                ${carte.module_nom ? `<div class="candidat-recompense-entete">${carte.module_nom}</div>` : ""}
+                ${htmlCarteVisuel(carte)}
             </div>`;
 
         const { cout_mettre_aux_normes } = constantesAventurePolice;
@@ -1601,14 +1636,8 @@ function afficherFinCombat(victoire, candidats) {
             .map(
                 (candidat, index) => `
         <div class="candidat-recompense" data-index="${index}">
-            <div class="candidat-recompense-entete">
-                <span class="etoile-${candidat.rarete.toLowerCase()}">★</span>
-                <span>${candidat.module_nom}</span>
-            </div>
-            <img src="${candidat.image}" alt="${candidat.nom}">
-            <div class="candidat-recompense-nom">${candidat.nom}</div>
-            <div class="candidat-recompense-cout">⚡ ${candidat.cout}</div>
-            <div class="candidat-recompense-description">${texteEffetCarte(candidat)}</div>
+            <div class="candidat-recompense-entete">${candidat.module_nom}</div>
+            ${htmlCarteVisuel(candidat)}
         </div>`
             )
             .join("");
@@ -1692,11 +1721,8 @@ function ouvrirVictoireFinalePartie(partie) {
         .map(
             (carte, index) => `
         <div class="carte-deck" data-index="${index}">
-            <span class="etoile-${carte.rarete.toLowerCase()}">★</span>
             ${carte.quantite > 1 ? `<span class="carte-deck-quantite">×${carte.quantite}</span>` : ""}
-            <img src="${carte.image}" alt="${carte.nom}">
-            <div class="carte-deck-nom">${carte.nom}</div>
-            <div class="carte-deck-cout">⚡ ${carte.cout}</div>
+            ${htmlCarteVisuel(carte)}
         </div>`
         )
         .join("");
@@ -1711,11 +1737,8 @@ function ouvrirVictoireFinalePartie(partie) {
 }
 
 function afficherInfoCarteVictoireFinale(carte) {
-    document.getElementById("info-carte-victoire-finale").innerHTML = `
-        <img src="${carte.image}" alt="${carte.nom}">
-        <div class="info-carte-nom">${carte.nom}</div>
-        <div class="info-carte-effet">${texteEffetCarte(carte)}</div>
-        <div class="info-carte-cout">⚡ ${carte.cout}</div>`;
+    document.getElementById("info-carte-victoire-finale").innerHTML =
+        htmlCarteVisuel(carte) + htmlDetailsCarte(carte.module_nom ? [`Module : ${carte.module_nom}`] : []);
 }
 
 function terminerVictoireFinale() {
@@ -1735,11 +1758,8 @@ function construireGrilleDeck(cartes) {
         .map(
             (carte, index) => `
         <div class="carte-deck" data-index="${index}">
-            <span class="etoile-${carte.rarete.toLowerCase()}">★</span>
             ${carte.quantite > 1 ? `<span class="carte-deck-quantite">×${carte.quantite}</span>` : ""}
-            <img src="${carte.image}" alt="${carte.nom}">
-            <div class="carte-deck-nom">${carte.nom}</div>
-            <div class="carte-deck-cout">⚡ ${carte.cout}</div>
+            ${htmlCarteVisuel(carte)}
         </div>`
         )
         .join("");
@@ -1756,11 +1776,8 @@ function afficherDeck(cartes) {
 }
 
 function afficherInfoCarteDeck(carte) {
-    document.getElementById("info-carte-deck").innerHTML = `
-        <img src="${carte.image}" alt="${carte.nom}">
-        <div class="info-carte-nom">${carte.nom}</div>
-        <div class="info-carte-effet">${texteEffetCarte(carte)}</div>
-        <div class="info-carte-cout">⚡ ${carte.cout}</div>`;
+    document.getElementById("info-carte-deck").innerHTML =
+        htmlCarteVisuel(carte) + htmlDetailsCarte(carte.module_nom ? [`Module : ${carte.module_nom}`] : []);
 }
 
 
