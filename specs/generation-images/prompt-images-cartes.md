@@ -6,6 +6,21 @@ visuelle, **les 63 cartes du jeu sont toutes redessinées** par Gemini (ou un au
 d'images), y compris les 23 qui ont déjà une illustration. Gemini livre des **planches** (plusieurs
 illustrations sur une même image), que l'agent découpe : pas d'image à copier une par une.*
 
+**Résultat (2026-11-27)** : les 4 planches ont été produites et découpées ; les 63 cartes ont
+leur image (256 × 256, `assets/cartes/<fichier>`). Cases refaites à part : *Laser perçant*,
+*Laser défensif*, *Salve laser* (rendues en rectangles, recadrées en carré à gauche) et
+*Bouclier d'escadre* (Gemini y avait dessiné une escadrille de vaisseaux). Gemini n'a pas toujours
+tracé les traits noirs entre les cases : le découpage se cale alors sur les quarts de l'image.
+**Anciennes images gardées** (décision utilisateur) : les 31 images d'avant sont archivées dans
+`assets/cartes/anciennes/`, avec les deux versions de Gemini remplacées (`*_gemini.png`). Leur style
+est presque le même que celui des nouvelles (Gemini a recopié la moitié d'entre elles de près) ;
+deux reprennent donc du service pour éviter des cartes trop ressemblantes : *Missile guidé* ←
+`missiles_guides.png` (trajectoires courbes sur fond bleu, au lieu d'un réticule magenta comme les
+cartes de Verrouillage) et *Protéger le vaisseau* ← `defense.png` (bouclier blason, au lieu d'un
+vaisseau sous un dôme proche de *Bouclier intégral*). Ces deux images font environ 160 pixels au
+lieu de 256. Retouche encore possible : *Bouclier d'escadre* (fond plus sombre que les autres
+Boucliers).
+
 **Essais précédents (2026-11-26, Laser incendiaire)** :
 
 1. Image trop sombre (fond presque noir, métal terne), plan trop large (petite tourelle, grand
@@ -47,7 +62,7 @@ beaucoup de cases. Quatre planches restent quatre images à rapporter.
 > ### 1. Le jeu
 >
 > **Space Fight** est un jeu de cartes et de stratégie au tour par tour (un « deckbuilder »
-> roguelike, dans l'esprit de Slay the Spire), sur PC et sur téléphone. Le joueur pilote un
+> roguelike), sur PC et sur téléphone. Le joueur pilote un
 > vaisseau spatial un peu cabossé, fait de **modules** : le **module principal** (le vaisseau
 > lui-même) et des modules qu'on ajoute, comme le **Lanceur de missiles**. Chaque module apporte
 > ses cartes. Il affronte des pirates de l'espace, des ennemis mécaniques et un grand Boss des

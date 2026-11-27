@@ -3,7 +3,7 @@
     {
       "id": "CRT_7",
       "nom": "Laser",
-      "image": "assets/cartes/attaque.png",
+      "image": "assets/cartes/laser.png",
       "rarete": "Base",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
@@ -44,7 +44,7 @@
     {
       "id": "CRT_11",
       "nom": "Protéger le vaisseau",
-      "image": "assets/cartes/defense.png",
+      "image": "assets/cartes/proteger_vaisseau.png",
       "rarete": "Base",
       "categorie": "Defense",
       "cible": "Module Principal",
@@ -84,7 +84,7 @@
     {
       "id": "CRT_8",
       "nom": "Laser perçant",
-      "image": "assets/cartes/attaque_percante.png",
+      "image": "assets/cartes/laser_percant.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Ligne",
@@ -105,7 +105,7 @@
     {
       "id": "CRT_45",
       "nom": "Laser incendiaire",
-      "image": "assets/cartes/attaque.png",
+      "image": "assets/cartes/laser_incendiaire.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
@@ -127,7 +127,7 @@
     {
       "id": "CRT_46",
       "nom": "Blindage ciblé",
-      "image": "assets/cartes/champ_electromagnetique.png",
+      "image": "assets/cartes/blindage_cible.png",
       "rarete": "Commune",
       "categorie": "Defense",
       "cible": "Module Unique",
@@ -147,7 +147,7 @@
     {
       "id": "CRT_47",
       "nom": "Laser lourd",
-      "image": "assets/cartes/plasma.png",
+      "image": "assets/cartes/laser_lourd.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
@@ -168,7 +168,7 @@
     {
       "id": "CRT_48",
       "nom": "Bouclier stabilisé",
-      "image": "assets/cartes/bouclier.png",
+      "image": "assets/cartes/bouclier_stabilise.png",
       "rarete": "Rare",
       "categorie": "Buff",
       "cible": "Module Principal",
@@ -188,7 +188,7 @@
     {
       "id": "CRT_49",
       "nom": "Salve laser",
-      "image": "assets/cartes/attaque.png",
+      "image": "assets/cartes/salve_laser.png",
       "rarete": "Rare",
       "categorie": "Buff",
       "cible": "Module Tous",
@@ -208,7 +208,7 @@
     {
       "id": "CRT_50",
       "nom": "Protocole d'urgence",
-      "image": "assets/cartes/alerte_generale.png",
+      "image": "assets/cartes/protocole_urgence.png",
       "rarete": "Legendaire",
       "categorie": "Buff",
       "cible": "Module Tous",
@@ -228,7 +228,7 @@
     {
       "id": "CRT_82",
       "nom": "Laser d'appoint",
-      "image": "assets/cartes/attaque.png",
+      "image": "assets/cartes/laser_appoint.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
@@ -250,7 +250,7 @@
     {
       "id": "CRT_84",
       "nom": "Laser double",
-      "image": "assets/cartes/mitrailleuse.png",
+      "image": "assets/cartes/laser_double.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
@@ -271,7 +271,7 @@
     {
       "id": "CRT_86",
       "nom": "Bouclier d'escadre",
-      "image": "assets/cartes/bouclier.png",
+      "image": "assets/cartes/bouclier_escadre.png",
       "rarete": "Commune",
       "categorie": "Defense",
       "cible": "Module Tous",
@@ -291,7 +291,7 @@
     {
       "id": "CRT_87",
       "nom": "Bouclier avant",
-      "image": "assets/cartes/defense.png",
+      "image": "assets/cartes/bouclier_avant.png",
       "rarete": "Commune",
       "categorie": "Defense",
       "cible": "Module Avant",
@@ -311,7 +311,7 @@
     {
       "id": "CRT_88",
       "nom": "Bouclier réactif",
-      "image": "assets/cartes/bouclier.png",
+      "image": "assets/cartes/bouclier_reactif.png",
       "rarete": "Commune",
       "categorie": "Defense",
       "cible": "Module Unique",
@@ -332,7 +332,7 @@
     {
       "id": "CRT_89",
       "nom": "Bouclier chargé",
-      "image": "assets/cartes/champ_electromagnetique.png",
+      "image": "assets/cartes/bouclier_charge.png",
       "rarete": "Commune",
       "categorie": "Defense",
       "cible": "Module Principal",
@@ -352,7 +352,7 @@
     {
       "id": "CRT_91",
       "nom": "Réparation rapide",
-      "image": "assets/cartes/reparation.png",
+      "image": "assets/cartes/reparation_rapide.png",
       "rarete": "Commune",
       "categorie": "Reparation",
       "cible": "Module Principal",
@@ -372,7 +372,7 @@
     {
       "id": "CRT_92",
       "nom": "Réparation de champ",
-      "image": "assets/cartes/reparation.png",
+      "image": "assets/cartes/reparation_champ.png",
       "rarete": "Commune",
       "categorie": "Reparation",
       "cible": "Module Tous",
@@ -392,7 +392,7 @@
     {
       "id": "CRT_93",
       "nom": "Réacteur d'appoint",
-      "image": "assets/cartes/batteries.png",
+      "image": "assets/cartes/reacteur_appoint.png",
       "rarete": "Commune",
       "categorie": "Outils",
       "cible": "Module Principal",
@@ -412,7 +412,7 @@
     {
       "id": "CRT_96",
       "nom": "Protocole d'analyse",
-      "image": "assets/cartes/drone.png",
+      "image": "assets/cartes/protocole_analyse.png",
       "rarete": "Commune",
       "categorie": "Outils",
       "cible": "Module Principal",
@@ -432,7 +432,7 @@
     {
       "id": "CRT_98",
       "nom": "Laser de siège",
-      "image": "assets/cartes/tourelle.png",
+      "image": "assets/cartes/laser_siege.png",
       "rarete": "Rare",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
@@ -453,7 +453,7 @@
     {
       "id": "CRT_101",
       "nom": "Bouclier intégral",
-      "image": "assets/cartes/champ_electromagnetique.png",
+      "image": "assets/cartes/bouclier_integral.png",
       "rarete": "Rare",
       "categorie": "Defense",
       "cible": "Module Tous",
@@ -473,7 +473,7 @@
     {
       "id": "CRT_103",
       "nom": "Réparation complète",
-      "image": "assets/cartes/teleportation.png",
+      "image": "assets/cartes/reparation_complete.png",
       "rarete": "Rare",
       "categorie": "Reparation",
       "cible": "Module Principal",
@@ -493,7 +493,7 @@
     {
       "id": "CRT_104",
       "nom": "Réacteur en surrégime",
-      "image": "assets/cartes/surcharge.png",
+      "image": "assets/cartes/reacteur_surregime.png",
       "rarete": "Rare",
       "categorie": "Outils",
       "cible": "Module Principal",
@@ -513,7 +513,7 @@
     {
       "id": "CRT_110",
       "nom": "Laser orbital",
-      "image": "assets/cartes/onde_de_choc.png",
+      "image": "assets/cartes/laser_orbital.png",
       "rarete": "Legendaire",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
@@ -535,7 +535,7 @@
     {
       "id": "CRT_83",
       "nom": "Laser défensif",
-      "image": "assets/cartes/defense.png",
+      "image": "assets/cartes/laser_defensif.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
@@ -557,7 +557,7 @@
     {
       "id": "CRT_90",
       "nom": "Bouclier réfléchissant",
-      "image": "assets/cartes/champ_electromagnetique.png",
+      "image": "assets/cartes/bouclier_reflechissant.png",
       "rarete": "Commune",
       "categorie": "Defense",
       "cible": "Module Unique",
@@ -577,7 +577,7 @@
     {
       "id": "CRT_100",
       "nom": "Laser disrupteur",
-      "image": "assets/cartes/emp.png",
+      "image": "assets/cartes/laser_disrupteur.png",
       "rarete": "Rare",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
@@ -599,7 +599,7 @@
     {
       "id": "CRT_102",
       "nom": "Bouclier miroir",
-      "image": "assets/cartes/champ_electromagnetique.png",
+      "image": "assets/cartes/bouclier_miroir.png",
       "rarete": "Rare",
       "categorie": "Defense",
       "cible": "Module Tous",
@@ -619,7 +619,7 @@
     {
       "id": "CRT_107",
       "nom": "Protocole de riposte",
-      "image": "assets/cartes/defense.png",
+      "image": "assets/cartes/protocole_riposte.png",
       "rarete": "Rare",
       "categorie": "Defense",
       "cible": "Module Principal",
@@ -640,7 +640,7 @@
     {
       "id": "CRT_95",
       "nom": "Réacteur en surtension",
-      "image": "assets/cartes/batteries.png",
+      "image": "assets/cartes/reacteur_surtension.png",
       "rarete": "Commune",
       "categorie": "Buff",
       "cible": "Module Principal",
@@ -661,7 +661,7 @@
     {
       "id": "CRT_99",
       "nom": "Laser de contre-charge",
-      "image": "assets/cartes/attaque_percante.png",
+      "image": "assets/cartes/laser_contre_charge.png",
       "rarete": "Rare",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
@@ -682,7 +682,7 @@
     {
       "id": "CRT_13",
       "nom": "Missile à fragmentation",
-      "image": "assets/cartes/missile_guide.png",
+      "image": "assets/cartes/missile_fragmentation.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
@@ -703,7 +703,7 @@
     {
       "id": "CRT_14",
       "nom": "Vague de torpilles",
-      "image": "assets/cartes/missiles.png",
+      "image": "assets/cartes/vague_torpilles.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Tous",
@@ -724,7 +724,7 @@
     {
       "id": "CRT_9",
       "nom": "Ogive légère",
-      "image": "assets/cartes/bombe.png",
+      "image": "assets/cartes/ogive_legere.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Tous",
@@ -744,7 +744,7 @@
     {
       "id": "CRT_16",
       "nom": "Torpille arrière",
-      "image": "assets/cartes/tir_groupe.png",
+      "image": "assets/cartes/torpille_arriere.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Arriere",
@@ -764,7 +764,7 @@
     {
       "id": "CRT_81",
       "nom": "Torpille avant",
-      "image": "assets/cartes/tir_groupe.png",
+      "image": "assets/cartes/torpille_avant.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Avant",
@@ -784,7 +784,7 @@
     {
       "id": "CRT_52",
       "nom": "Mini-missile",
-      "image": "assets/cartes/missile_guide.png",
+      "image": "assets/cartes/mini_missile.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
@@ -825,7 +825,7 @@
     {
       "id": "CRT_58",
       "nom": "Missiles jumeaux",
-      "image": "assets/cartes/mitrailleuse.png",
+      "image": "assets/cartes/missiles_jumeaux.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
@@ -845,7 +845,7 @@
     {
       "id": "CRT_65",
       "nom": "Missile thermique",
-      "image": "assets/cartes/zone_de_feu.png",
+      "image": "assets/cartes/missile_thermique.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
@@ -866,7 +866,7 @@
     {
       "id": "CRT_54",
       "nom": "Missile de couverture",
-      "image": "assets/cartes/camouflage.png",
+      "image": "assets/cartes/missile_couverture.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
@@ -887,7 +887,7 @@
     {
       "id": "CRT_61",
       "nom": "Torpille traversante",
-      "image": "assets/cartes/plasma.png",
+      "image": "assets/cartes/torpille_traversante.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
@@ -908,7 +908,7 @@
     {
       "id": "CRT_62",
       "nom": "Torpille de barrage",
-      "image": "assets/cartes/tourelle.png",
+      "image": "assets/cartes/torpille_barrage.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Avant",
@@ -929,7 +929,7 @@
     {
       "id": "CRT_55",
       "nom": "Ogive surchauffée",
-      "image": "assets/cartes/bombe.png",
+      "image": "assets/cartes/ogive_surchauffee.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Tous",
@@ -950,7 +950,7 @@
     {
       "id": "CRT_68",
       "nom": "Amplificateur",
-      "image": "assets/cartes/surcharge.png",
+      "image": "assets/cartes/amplificateur.png",
       "rarete": "Rare",
       "categorie": "Buff",
       "cible": "Module Principal",
@@ -970,7 +970,7 @@
     {
       "id": "CRT_72",
       "nom": "Armer le lanceur",
-      "image": "assets/cartes/recharge.png",
+      "image": "assets/cartes/armer_lanceur.png",
       "rarete": "Rare",
       "categorie": "Buff",
       "cible": "Module Principal",
@@ -991,7 +991,7 @@
     {
       "id": "CRT_75",
       "nom": "Missile surchargé",
-      "image": "assets/cartes/missile_guide.png",
+      "image": "assets/cartes/missile_surcharge.png",
       "rarete": "Rare",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
@@ -1011,7 +1011,7 @@
     {
       "id": "CRT_77",
       "nom": "Lanceur incandescent",
-      "image": "assets/cartes/surcharge.png",
+      "image": "assets/cartes/lanceur_incandescent.png",
       "rarete": "Legendaire",
       "categorie": "Buff",
       "cible": "Module Principal",
@@ -1032,7 +1032,7 @@
     {
       "id": "CRT_15",
       "nom": "Ogive lourde",
-      "image": "assets/cartes/missiles.png",
+      "image": "assets/cartes/ogive_lourde.png",
       "rarete": "Rare",
       "categorie": "Attaque",
       "cible": "Ennemi Tous",
@@ -1052,7 +1052,7 @@
     {
       "id": "CRT_17",
       "nom": "Missile incendiaire",
-      "image": "assets/cartes/zone_de_feu.png",
+      "image": "assets/cartes/missile_incendiaire.png",
       "rarete": "Rare",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
@@ -1073,7 +1073,7 @@
     {
       "id": "CRT_18",
       "nom": "Leurre",
-      "image": "assets/cartes/camouflage.png",
+      "image": "assets/cartes/leurre.png",
       "rarete": "Rare",
       "categorie": "Defense",
       "cible": "Module Unique",
@@ -1093,7 +1093,7 @@
     {
       "id": "CRT_19",
       "nom": "Ogive nucléaire",
-      "image": "assets/cartes/zone_de_feu.png",
+      "image": "assets/cartes/ogive_nucleaire.png",
       "rarete": "Legendaire",
       "categorie": "Attaque",
       "cible": "Ennemi Tous",
@@ -1114,7 +1114,7 @@
     {
       "id": "CRT_51",
       "nom": "Post-combustion",
-      "image": "assets/cartes/surcharge.png",
+      "image": "assets/cartes/post_combustion.png",
       "rarete": "Rare",
       "categorie": "Buff",
       "cible": "Module Principal",
@@ -1134,7 +1134,7 @@
     {
       "id": "CRT_56",
       "nom": "Missile marqueur",
-      "image": "assets/cartes/missile_guide.png",
+      "image": "assets/cartes/missile_marqueur.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
@@ -1155,7 +1155,7 @@
     {
       "id": "CRT_57",
       "nom": "Ogive de marquage",
-      "image": "assets/cartes/bombe.png",
+      "image": "assets/cartes/ogive_marquage.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Tous",
@@ -1176,7 +1176,7 @@
     {
       "id": "CRT_73",
       "nom": "Missile verrouilleur",
-      "image": "assets/cartes/tir_charge.png",
+      "image": "assets/cartes/missile_verrouilleur.png",
       "rarete": "Rare",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
@@ -1197,7 +1197,7 @@
     {
       "id": "CRT_74",
       "nom": "Missile de précision",
-      "image": "assets/cartes/tir_charge.png",
+      "image": "assets/cartes/missile_precision.png",
       "rarete": "Rare",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
@@ -1217,7 +1217,7 @@
     {
       "id": "CRT_85",
       "nom": "Laser de visée",
-      "image": "assets/cartes/sabotage.png",
+      "image": "assets/cartes/laser_visee.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",
@@ -1239,7 +1239,7 @@
     {
       "id": "CRT_106",
       "nom": "Protocole de ciblage",
-      "image": "assets/cartes/scanner.png",
+      "image": "assets/cartes/protocole_ciblage.png",
       "rarete": "Rare",
       "categorie": "Debuff",
       "cible": "Ennemi Tous",
@@ -1259,7 +1259,7 @@
     {
       "id": "CRT_78",
       "nom": "Feu à volonté",
-      "image": "assets/cartes/tir_groupe.png",
+      "image": "assets/cartes/feu_a_volonte.png",
       "rarete": "Legendaire",
       "categorie": "Buff",
       "cible": "Module Principal",
@@ -1279,7 +1279,7 @@
     {
       "id": "CRT_108",
       "nom": "Protocole laser",
-      "image": "assets/cartes/plasma.png",
+      "image": "assets/cartes/protocole_laser.png",
       "rarete": "Legendaire",
       "categorie": "Buff",
       "cible": "Module Principal",
