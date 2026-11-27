@@ -389,7 +389,9 @@ class Combat:
             piochees = self.deck.piocher(valeur)
             self._noter(NatureEvenement.PIOCHE, source=carte, valeur=piochees)
         elif nature == NatureEffet.REPETITION:
-            modifiees = appliquer_repetition(effet, valeur, self.deck.toutes_les_cartes() + [carte])
+            # Type de module de chaque exemplaire, pour un filtre par module (Feu a volonte)
+            types_de_module = {module.exemplaire: module.id for module in self.vaisseau.modules}
+            modifiees = appliquer_repetition(effet, valeur, self.deck.toutes_les_cartes() + [carte], types_de_module)
             self._noter(NatureEvenement.REPETITION, source=carte, valeur=modifiees)
         elif nature == NatureEffet.MULTIPLIER_SURCHARGE:
             principal = self.vaisseau.principal

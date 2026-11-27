@@ -301,7 +301,7 @@ Principes communs, repris de l'existant :
   annulera le coup suivant (décision utilisateur, 2026-11-18).
 - **Tests** : ennemi avec bouclier, leurre et renvoi → tout passe en PV, statuts inchangés.
 
-### 3.9 Filtre de cartes : critères `module` et `cible`
+### 3.9 Filtre de cartes : critères `module` et `cible` (critère `module` **codé le 2026-11-26**, lot 5 : modules-cartes.md §12.5 ; critère `cible` pas codé, il attend Double frappe)
 
 - **Pourquoi** : Feu à volonté, Rechargement rapide et Cadence de tir visent « les cartes du
   Lanceur » ; Double frappe vise « les attaques à cible unique ».

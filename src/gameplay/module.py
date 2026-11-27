@@ -188,10 +188,14 @@ class Module:
 
 
 def verifier_modules_de_la_carte(carte, ids_modules) -> None:
-    """Refuse une carte qui cite un module absent de config/modules.json (ValueError)."""
+    """Refuse une carte qui cite un module absent de config/modules.json, dans son champ `modules`
+    ou dans le filtre d'un effet (ValueError)."""
     for id_module in carte.modules:
         if id_module not in ids_modules:
             raise ValueError(f"Carte {carte.id} : module inconnu {id_module!r} (absent de config/modules.json)")
+    for effet in carte.effets:
+        if effet.filtre is not None and effet.filtre.module is not None and effet.filtre.module not in ids_modules:
+            raise ValueError(f"Carte {carte.id} : filtre sur un module inconnu {effet.filtre.module!r}")
 
 
 def charger_modules(fichier: Path = FICHIER_MODULES, fichier_cartes: Path = FICHIER_CARTES) -> dict[str, Module]:

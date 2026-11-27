@@ -303,6 +303,35 @@ async function essaiSurchargeEtVerrouillage() {
     await fermer(page, "surcharge et verrouillage");
 }
 
+// Repetition par famille (Protocole laser) et par module (Feu a volonte), lot 5 : par de vrais clics,
+// les lancements affiches des cartes visees augmentent, pas ceux des autres.
+async function essaiRepetitionParFamilleEtModule() {
+    const page = await ouvrir();
+    await nouvellePartie(page, "Repetitions", false);
+    await page.evaluate((code) => pyodide.runPython(code), PREPARATION_PYTHON);
+    await combatPrepare(page, ["BOSS"], ["CRT_108", "CRT_78", "CRT_47", "CRT_9", "CRT_11"], ["CRT_78", "CRT_9"]);
+    await python(page, "combat.electricite = 20");
+    const lancements = (id) => page.evaluate((i) => etatCourant.main.find((c) => c.id_carte === i).lancements, id);
+
+    const protocole = await carteEnMain(page, "CRT_108");
+    await jouer(page, protocole, protocole.cases[0]);
+    verifier((await lancements("CRT_47")) === 2, "Protocole laser : Laser lourd lance 2 fois");
+    verifier((await lancements("CRT_9")) === 1, "Protocole laser : l'Ogive legere (Lanceur) n'est pas visee");
+
+    const feu = await carteEnMain(page, "CRT_78");
+    await jouer(page, feu, feu.cases[0]);
+    verifier((await lancements("CRT_9")) === 2, "Feu a volonte : l'Ogive legere du Lanceur est lancee 2 fois");
+    verifier((await lancements("CRT_11")) === 1, "Feu a volonte : Proteger le vaisseau (principal) n'est pas visee");
+    await capture(page, "repetitions_1_famille_et_module");
+
+    const pv = await page.evaluate(() => etatCourant.ennemis.find(Boolean).pv);
+    await jouer(page, await carteEnMain(page, "CRT_9"), await page.evaluate(() => etatCourant.ennemis.find(Boolean).id));
+    const journal = await page.evaluate(() => etatCourant.journal.filter((e) => e.nature === "ATTAQUE" && e.source_nom === "Ogive légère").length);
+    verifier(journal === 2, "Ogive legere : deux attaques au journal");
+    verifier((await page.evaluate(() => etatCourant.ennemis.find(Boolean).pv)) < pv, "Ogive legere : le Boss perd des PV");
+    await fermer(page, "repetitions par famille et par module");
+}
+
 async function essaiEcransHorsCombat() {
     // Une partie en cours d'une ancienne version doit etre effacee, le profil garde
     const page = await ouvrir({
@@ -429,7 +458,8 @@ async function essaiVersions() {
     navigateur = await chromium.launch();
     try {
         for (const essai of [
-            essaiPartieReelle, essaiCombatsPrepares, essaiSurchargeEtVerrouillage, essaiEcransHorsCombat, essaiVersions,
+            essaiPartieReelle, essaiCombatsPrepares, essaiSurchargeEtVerrouillage, essaiRepetitionParFamilleEtModule,
+            essaiEcransHorsCombat, essaiVersions,
         ]) {
             await essai();
             console.log(`ok : ${essai.name}`);

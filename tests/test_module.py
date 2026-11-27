@@ -273,3 +273,12 @@ def test_une_carte_qui_cite_un_module_inconnu_est_refusee(tmp_path):
     with pytest.raises(ValueError, match="CRT_7 : module inconnu 'MOD_9'"):
         charger_modules(fichier_cartes=_fichier_cartes(tmp_path, module_inconnu))
 
+
+
+def test_un_filtre_sur_un_module_inconnu_est_refuse(tmp_path):
+    def filtre_inconnu(cartes):
+        feu = next(carte for carte in cartes if carte["id"] == "CRT_78")
+        feu["effets"][0]["filtre"] = {"module": "MOD_9"}
+
+    with pytest.raises(ValueError, match="CRT_78 : filtre sur un module inconnu 'MOD_9'"):
+        charger_modules(fichier_cartes=_fichier_cartes(tmp_path, filtre_inconnu))

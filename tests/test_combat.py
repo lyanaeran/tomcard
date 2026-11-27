@@ -1009,3 +1009,36 @@ def test_missile_verrouilleur_et_laser_de_visee_posent_leur_verrouillage():
     assert pat.statuts[Statut.VERROUILLAGE] == v1 + _valeur("CRT_85", "verrouillage")
     # Le Laser de visee profite du Verrouillage pose par le Missile verrouilleur
     assert pat.pv == pat.pv_max - _valeur("CRT_73", "degats") - (_valeur("CRT_85", "degats") + v1)
+
+
+# --- Repetition par famille et par module (lot 5) ---
+
+
+def test_protocole_laser_lance_toutes_les_cartes_laser_une_fois_de_plus():
+    combat = _combat({AVANT_MID: _ennemi()})
+    protocole, laser, lourd = _en_main(combat, _carte("CRT_108"), _carte("CRT_7"), _carte("CRT_47"))
+    missile = _carte("CRT_53", "M2")
+    combat.deck.pioche = [_carte("CRT_98"), missile]
+
+    combat.jouer_carte(protocole, AVANT_MID)
+
+    supplement = _valeur("CRT_108", "repetitions")
+    # Laser de base compris (plan-cartes.md 2.3), et les cartes Laser de la pioche aussi
+    for carte in (laser, lourd, combat.deck.pioche[0]):
+        assert carte.lancements_actuels == carte.lancements_base + supplement, carte.id
+    assert missile.lancements_actuels == missile.lancements_base
+
+
+def test_feu_a_volonte_ne_vise_que_les_cartes_rattachees_au_lanceur():
+    combat = _combat({AVANT_MID: _ennemi()})
+    feu, ogive, laser = _en_main(combat, _carte("CRT_78", "M2"), _carte("CRT_9", "M2"), _carte("CRT_7"))
+    # Une carte du Lanceur rattachee au principal n'est pas visee : c'est l'exemplaire qui compte
+    ogive_sur_le_principal = _carte("CRT_9", "M1")
+    combat.deck.pioche = [ogive_sur_le_principal]
+
+    combat.jouer_carte(feu, AVANT_MID)
+
+    supplement = _valeur("CRT_78", "repetitions")
+    assert ogive.lancements_actuels == ogive.lancements_base + supplement
+    assert laser.lancements_actuels == laser.lancements_base
+    assert ogive_sur_le_principal.lancements_actuels == ogive_sur_le_principal.lancements_base

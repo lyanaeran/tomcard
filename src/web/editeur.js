@@ -285,7 +285,7 @@ function nouvelleCarteEditeur() {
     const carte = {
         id,
         nom: "Nouvelle carte",
-        image: "assets/cartes/attaque.png",
+        image: "assets/cartes/laser.png",
         rarete: "Commune",
         categorie: "Attaque",
         cible: "Ennemi Unique",
