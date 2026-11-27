@@ -44,7 +44,7 @@
     {
       "id": "CRT_11",
       "nom": "Protéger le vaisseau",
-      "image": "assets/cartes/proteger_vaisseau.png",
+      "image": "assets/cartes/proteger_vaisseau_v3.png",
       "rarete": "Base",
       "categorie": "Defense",
       "cible": "Module Principal",
@@ -804,7 +804,7 @@
     {
       "id": "CRT_53",
       "nom": "Missile guidé",
-      "image": "assets/cartes/missile_guide_v2.png",
+      "image": "assets/cartes/missile_guide_v3.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",

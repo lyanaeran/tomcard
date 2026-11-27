@@ -21,6 +21,11 @@ vaisseau sous un dôme proche de *Bouclier intégral*). Ces deux images font env
 lieu de 256. Retouche encore possible : *Bouclier d'escadre* (fond plus sombre que les autres
 Boucliers).
 
+**Ces deux images agrandies en 256** (2026-11-27, relecture de la PR 81 : elles s'affichaient plus
+petites que les autres) : Gemini les a redessinées telles quelles en 1024 × 1024 (« Redessine
+exactement cette image en 1024 × 1024, sans rien changer »), réduites ensuite en 256 sous de
+nouveaux noms (`missile_guide_v3.png`, `proteger_vaisseau_v3.png`) pour le cache du téléphone.
+
 **Essais précédents (2026-11-26, Laser incendiaire)** :
 
 1. Image trop sombre (fond presque noir, métal terne), plan trop large (petite tourelle, grand
@@ -170,7 +175,7 @@ Les colonnes « Fichier » ne sont pas à coller : elles servent à l'agent pour
 |---|---|---|---|---|
 | 1 | Réacteur en surrégime | Donne X électricité en plus ce tour | Réacteur dont l'aiguille est dans le rouge, éclairs jaunes intenses | `reacteur_surregime.png` |
 | 2 | Bouclier | Bouclier de X sur un module | Générateur qui projette un bouclier d'énergie bleu hexagonal | `bouclier_v2.png` |
-| 3 | Protéger le vaisseau | Bouclier de X sur le module principal | Le vaisseau principal sous un dôme de bouclier bleu | `proteger_vaisseau.png` |
+| 3 | Protéger le vaisseau | Bouclier de X sur le module principal | Le vaisseau principal sous un dôme de bouclier bleu | `proteger_vaisseau_v3.png` |
 | 4 | Blindage ciblé | Bouclier de X sur un module | Plaques de blindage qui se verrouillent sur un seul module du vaisseau | `blindage_cible.png` |
 | 5 | Bouclier d'escadre | Donne X de bouclier à tous vos modules | Plusieurs petits boucliers hexagonaux reliés entre eux, couvrant tout le vaisseau | `bouclier_escadre.png` |
 | 6 | Bouclier avant | Donne X de bouclier aux modules de la ligne avant | Mur de bouclier bleu dressé devant la proue du vaisseau | `bouclier_avant.png` |
@@ -193,7 +198,7 @@ Les colonnes « Fichier » ne sont pas à coller : elles servent à l'agent pour
 | 2 | Protocole d'urgence | Les cartes de base sont lancées X fois de plus | Gyrophare d'alarme rouge et voyants d'urgence sur une console | `protocole_urgence.png` |
 | 3 | Protocole d'analyse | Piochez X cartes | Drone scanner qui projette des cartes holographiques cyan | `protocole_analyse.png` |
 | 4 | Protocole de ciblage | Pose Verrouillage X à tous les ennemis | Écran radar qui verrouille plusieurs cibles avec des réticules magenta | `protocole_ciblage.png` |
-| 5 | Missile guidé | Inflige X dégâts à un ennemi. Piochez X carte | Missile qui file vers un réticule de visée, fond violet | `missile_guide_v2.png` |
+| 5 | Missile guidé | Inflige X dégâts à un ennemi. Piochez X carte | Missile qui file vers un réticule de visée, fond violet | `missile_guide_v3.png` |
 | 6 | Mini-missile | Inflige X dégâts à un ennemi | Un tout petit missile vif et nerveux | `mini_missile.png` |
 | 7 | Missiles jumeaux | Inflige X dégâts à un ennemi, deux fois | Deux missiles identiques côte à côte, trajectoires parallèles | `missiles_jumeaux.png` |
 | 8 | Missile à fragmentation | Inflige X dégâts à un ennemi et X à tous les autres | Missile qui éclate en multiples fragments qui partent dans toutes les directions | `missile_fragmentation.png` |
