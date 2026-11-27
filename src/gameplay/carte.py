@@ -286,7 +286,10 @@ class FiltreCartes:
 
     def correspond(self, carte: "Carte", types_de_module: dict[str, str] | None = None) -> bool:
         """`types_de_module` : type de module (ex. "MOD_2") de chaque exemplaire de la partie (ex.
-        "M2"), necessaire au critere `module` ; sans lui, aucune carte ne correspond a ce critere."""
+        "M2"), obligatoire pour le critere `module` (sinon ValueError : un oubli rendrait la carte
+        sans effet sans rien signaler)."""
+        if self.module is not None and types_de_module is None:
+            raise ValueError("Filtre par module : types_de_module (type de chaque exemplaire) manquant")
         type_du_module = (types_de_module or {}).get(carte.exemplaire_module)
         return (
             (self.id is None or carte.id == self.id)
@@ -665,7 +668,7 @@ ORDRE_CLES_CARTE = (
     "id", "nom", "image", "rarete", "categorie", "cible", "modules", "famille", "cout", "munition", "lancements",
     "persistante", "jouable", "refonte", "description", "valeurs", "effets",
 )
-ORDRE_CLES_EFFET = ("nature", "valeur", "portee", "duree", "filtre")
+ORDRE_CLES_EFFET = ("nature", "valeur", "portee", "duree", "filtre", "bonus")
 ORDRE_CLES_FILTRE = ("id", "rarete", "categorie", "famille", "module")
 
 

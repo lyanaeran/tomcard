@@ -515,6 +515,16 @@ def test_seules_les_cartes_laser_ont_une_famille():
     assert cartes["CRT_49"].famille is None  # Salve laser : famille Protocole, sans champ
 
 
+def test_toute_carte_dont_le_nom_commence_par_laser_a_la_famille_laser():
+    # Sens inverse du test precedent : une carte "Laser ..." creee dans l'editeur (qui n'a pas de
+    # champ famille) et fusionnee sans famille serait ignoree par Protocole laser, sans erreur
+    sans_famille = [
+        carte.nom for carte in charger_cartes().values()
+        if carte.jouable and carte.nom.startswith("Laser") and carte.famille != "Laser"
+    ]
+    assert sans_famille == []
+
+
 def test_une_famille_inconnue_est_refusee():
     with pytest.raises(ValueError, match="famille inconnue 'Lazer'"):
         _carte_simple(famille="Lazer")
@@ -532,8 +542,10 @@ def test_filtre_par_famille_et_par_module():
     assert FiltreCartes(famille="Laser").correspond(laser) and not FiltreCartes(famille="Laser").correspond(autre)
     par_module = FiltreCartes(module="MOD_2")
     assert par_module.correspond(autre, types) and not par_module.correspond(laser, types)
-    # Sans les types des exemplaires, le critere module ne retient rien
-    assert not par_module.correspond(autre)
+    # Sans les types des exemplaires, le critere module est refuse (un oubli ne passe pas en silence)
+    with pytest.raises(ValueError, match="types_de_module"):
+        par_module.correspond(autre)
+    assert FiltreCartes(famille="Laser").correspond(laser)  # les autres criteres n'en ont pas besoin
 
 
 def test_l_export_range_famille_et_filtre_a_leur_place():
@@ -546,3 +558,11 @@ def test_l_export_range_famille_et_filtre_a_leur_place():
     texte = cartes_vers_texte_json([entree])
     assert texte.index('"modules"') < texte.index('"famille"') < texte.index('"effets"')
     assert '{ "id": "CRT_7", "famille": "Laser", "module": "MOD_2" }' in texte
+
+
+def test_l_export_range_le_bonus_apres_les_autres_cles_de_l_effet():
+    from src.gameplay.carte import cartes_vers_texte_json
+
+    entree = {"id": "X", "effets": [{"bonus": {"par": "SURCHARGE_JOUEUR", "facteur": "f"}, "valeur": "degats", "nature": "DEGATS"}]}
+    texte = cartes_vers_texte_json([entree])
+    assert texte.index('"nature"') < texte.index('"valeur"') < texte.index('"bonus"')

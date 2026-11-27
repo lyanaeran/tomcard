@@ -41,7 +41,8 @@ L'utilisateur conçoit le jeu ; l'agent propose, documente et code. Préférence
   `specs/outil-editeur-cartes.md`) : l'utilisateur colle **seulement les cartes modifiées ou
   ajoutées**, copiées par l'outil (`{"cartes": [...]}`). Les **fusionner par id** dans
   `config/cartes.json` (une carte existante est remplacée, une nouvelle ajoutée à la fin, les
-  autres cartes ne bougent pas), puis **écrire ou corriger les effets** des cartes nouvelles ou
+  autres cartes ne bougent pas), **remplir le champ `famille`** d'une nouvelle carte Laser
+  (l'outil ne le saisit pas ; sans lui, Protocole laser l'ignorerait), puis **écrire ou corriger les effets** des cartes nouvelles ou
   dont la description ou les valeurs ont changé (l'outil ne les saisit pas : ils se déduisent de
   la description ; un effet d'un genre nouveau demande du code : tant qu'il n'est pas codé, la
   carte reste `"jouable": "non"` et l'effet est décrit dans `specs/effets-a-coder.md`), régénérer `config/cartes.md`
