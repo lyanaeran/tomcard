@@ -63,20 +63,43 @@ web montrent le **même contenu** ; les écarts sont listés en §8.4.
   §10.3) : électricité « ⚡ 3/3 », boutons icônes Tour suivant, Quitter, Journal (§8.3), puis le
   numéro de tour et les **compteurs des piles** : Pioche, Défausse, Épuisées, et Hors service
   seulement si elle n'est pas vide.
-- **Main de cartes** : alignée en bas de l'écran (pas en éventail), centrée.
+- **Main de cartes** : alignée en bas de l'écran, centrée. PC : cartes de **150 px** de large
+  (décision utilisateur, 2026-11-27), qui **se chevauchent** quand la main ne tient plus en largeur
+  (chacune passe au-dessus de sa voisine de gauche) ; la carte sélectionnée est soulevée et
+  entourée. Le vaisseau et la flotte sont remontés d'autant (`VAISSEAU_Y`) : la main ne cache
+  pas la ligne du bas ni ses intentions. Web : cartes plus petites, côte à côte (le texte se lit
+  sur la carte agrandie).
 - **Bouton Deck pendant un combat** : toutes les cartes du combat, toutes piles confondues.
+- **Écran du deck** : cartes de **180 px**, **6 par ligne** (demande utilisateur, 2026-11-27) ;
+  quand elles ne tiennent pas, la grille **défile** (molette sur PC, ascenseur à droite ; page qui
+  défile sur le web), sous un bandeau fixe (titre, Retour).
 
 ### 8.2 Formes visuelles
 
 - **Modules et ennemis** : images carrées ; le **principal** est le grand vaisseau qui porte les
   quatre emplacements. Un ennemi sur 2 cases (le Boss) est **un seul rectangle fusionné**.
-- **Cartes en main** : image, étoile de **rareté**, **coût** (« ⚡1 »), **munitions**
-  « restantes/de départ » si elles sont limitées, « ×2 » si la carte est lancée plus d'une fois,
-  bandeau **PERSISTANTE**, nom. Une carte **injouable maintenant** (électricité, aucune cible) est
-  assombrie.
-- **Texte d'une carte** : sa description avec ses valeurs actuelles (`description_affichee`),
-  puis ses détails (munitions, lancements, Persistante, module). PC : infobulle au survol de la
-  carte ; web : panneau au centre quand la carte est armée.
+- **Carte** (décisions utilisateur du 2026-11-27, gabarit et icônes :
+  `specs/generation-images/prompt-modele-carte.md`) : partout la même (main, récompenses, deck,
+  Aventures, victoire finale), dessinée sur un **gabarit** dont la **couleur dit la rareté**
+  (argent Base, vert Commune, bleu Rare, or Légendaire ; plus d'étoile). De haut en bas :
+  - **barre du haut** : à gauche le **coût** (icône éclair et chiffre), les **munitions**
+    « restantes/de départ » si elles sont limitées, les **lancements** « ×2 » si la carte est
+    lancée plus d'une fois (pas sur une carte qui en fait lancer d'autres, comme Feu à volonté) ;
+    à droite l'**icône du type** (Attaque : missile, Défense : bouclier plein, Réparation : clé,
+    Buff : flèche vers le haut, Debuff : flèche cassée, Outils : engrenage, Contrôle : main) ;
+  - l'**illustration** ; bandeau **PERSISTANTE** en bas de l'illustration si la carte l'est ;
+  - le **texte** : sa description avec ses valeurs actuelles (`description_affichee`), qui finit
+    par un point ;
+  - le **nom**, dans le bandeau du bas.
+
+  Le texte prend au plus la taille du nom, et rétrécit seulement s'il ne tient pas dans sa zone.
+  Une carte **injouable maintenant** (électricité, aucune cible) est assombrie.
+- **Carte agrandie** (décision utilisateur, 2026-11-27) : la carte en grand (300 px sur PC),
+  avec ce qu'elle ne montre pas : son **module**, « **Pas jouable maintenant** ». PC : au survol
+  d'une carte de la main, **collée au bas de l'écran** par-dessus la main (détails au-dessus
+  d'elle), ou d'une grille de deck (à côté d'elle, détails dessous) ;
+  web : quand la carte est armée, ou touchée dans un deck, au centre de l'écran. Les récompenses
+  et les cartes des Aventures sont déjà assez grandes, avec le nom de leur module au-dessus.
 - **Pastilles** au-dessus de chaque case, jamais sur l'image : **PV** (rouge) et **Bouclier**
   (bleu) toujours ; **Incendie** (orange), **Renvoi** (violet), **Leurre** (cyan) seulement s'ils
   sont actifs.

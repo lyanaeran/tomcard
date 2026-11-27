@@ -141,6 +141,7 @@ d'information :
 - **Texte d'une carte** : partout (main, récompenses, deck, Aventures), c'est la `description` de
   `config/cartes.json` avec ses valeurs actuelles (`Carte.description_affichee`), jamais un texte
   recomposé par l'affichage.
+  Elle **finit par un point** (décision utilisateur, 2026-11-27 ; `tests/test_visuel_cartes.py`).
 - **Planète commerciale** (parcours.md §2.2) : achat de cartes, pas encore codé.
 
 ---

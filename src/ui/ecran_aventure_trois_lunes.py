@@ -21,11 +21,11 @@ from src.gameplay.partie import (
     reparer_vaisseau,
     retirer_carte,
 )
-from src.ui import barre_laterale
+from src.ui import barre_laterale, carte_visuel
 from src.ui.ecran_deck import EcranDeck
 from src.ui.ecran_station_service import POSITIONS_AFFICHEES
 from src.ui.ecran_vaisseau import EcranVaisseau
-from src.ui.commun import chemin_image, image_case_module, noms_modules, regrouper_cartes
+from src.ui.commun import image_case_module, noms_modules, regrouper_cartes
 from src.ui.fenetre import HAUTEUR_FENETRE, LARGEUR_FENETRE, _sprite_ajuste, _sprite_etire
 
 FOND_TROIS_LUNES = str(RACINE / "assets" / "aventure" / "trois_lunes.png")
@@ -79,8 +79,7 @@ ESPACEMENT_MODULE = 24
 Y_HAUT_MODULES = HAUTEUR_FENETRE - 200
 
 LARGEUR_CARTE_DECK = 160
-HAUTEUR_CARTE_DECK = 220
-IMAGE_DECK_TAILLE = 90
+HAUTEUR_CARTE_DECK = carte_visuel.hauteur_carte_titree(LARGEUR_CARTE_DECK, "module")
 ESPACEMENT_DECK = 24
 Y_HAUT_DECK = HAUTEUR_FENETRE - 200
 
@@ -292,36 +291,11 @@ class EcranAventureTroisLunes(pyglet.window.Window):
         return elements
 
     def _dessiner_carte_deck(self, index: int, total: int, carte: Carte, quantite: int, lot: pyglet.graphics.Batch) -> list:
-        x, y, largeur, hauteur = _rect_carte_deck(index, total)
-        survole = index == self.index_survole
-        cadre = shapes.BorderedRectangle(
-            x, y, largeur, hauteur, border=2, color=COULEUR_FOND_CARTE,
-            border_color=COULEUR_CONTOUR_SURVOLEE if survole else COULEUR_CONTOUR_CARTE, batch=lot,
+        # Module auquel la carte est rattachee, au-dessus : deux entrees du meme nom se distinguent ainsi
+        return carte_visuel.dessiner_carte_de_grille(
+            carte, _rect_carte_deck(index, total), quantite, index == self.index_survole, lot, ordre=1 + index,
+            titre=noms_modules(self.partie).get(carte.exemplaire_module, ""),
         )
-        cadre.opacity = OPACITE_FOND
-        cx = x + largeur / 2
-        sprite = _sprite_ajuste(
-            chemin_image(carte.image), cx - IMAGE_DECK_TAILLE / 2, y + hauteur - 16 - IMAGE_DECK_TAILLE,
-            IMAGE_DECK_TAILLE, IMAGE_DECK_TAILLE, lot,
-        )
-        nom = pyglet.text.Label(
-            carte.nom, x=cx, y=y + hauteur - 26 - IMAGE_DECK_TAILLE, anchor_x="center", anchor_y="top",
-            font_size=13, color=(*COULEUR_TEXTE, 255), multiline=True, width=largeur - 16, align="center", batch=lot,
-        )
-        # Module auquel la carte est rattachee : deux entrees du meme nom se distinguent ainsi
-        module = pyglet.text.Label(
-            noms_modules(self.partie).get(carte.exemplaire_module, ""), x=cx, y=y + 12, anchor_x="center",
-            anchor_y="center", font_size=9, color=(*COULEUR_SOUS_TITRE, 255), batch=lot,
-        )
-        elements = [cadre, sprite, nom, module]
-        if quantite > 1:
-            elements.append(
-                pyglet.text.Label(
-                    f"×{quantite}", x=x + largeur - 20, y=y + hauteur - 16, anchor_x="center", anchor_y="center",
-                    font_size=14, color=(*COULEUR_NOM, 255), batch=lot,
-                )
-            )
-        return elements
 
     def _dessiner_instruction(self, texte: str, lot: pyglet.graphics.Batch) -> pyglet.text.Label:
         return pyglet.text.Label(

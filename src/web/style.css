@@ -4,11 +4,13 @@
 
 :root {
     /* Largeur d'une carte de la main (#main), et estimation de la hauteur totale de #main a
-       partir de cette largeur (aspect-ratio 3/4 de l'image, cf. .carte/.carte img plus bas, +
-       la bordure de .carte + le padding vertical de #main) - variable partagee pour que
-       --taille-case (juste apres) puisse reserver la place necessaire sans dupliquer le calcul. */
-    --largeur-carte: clamp(56px, 8vw, 96px);
-    --hauteur-main-estimee: calc(var(--largeur-carte) * 4 / 3 + 4px + 1rem);
+       partir de cette largeur (rapport du gabarit de carte, 1216/864, cf. .carte-visuel plus
+       bas, + la bordure de .carte + le padding vertical de #main) - variable partagee pour que
+       --taille-case (juste apres) puisse reserver la place necessaire sans dupliquer le calcul.
+       Sur PC les cartes font 150 px ; ici on garde une main plus petite (le texte se lit sur la
+       carte agrandie au toucher, #info-carte). */
+    --largeur-carte: clamp(60px, 9vw, 130px);
+    --hauteur-main-estimee: calc(var(--largeur-carte) * 1.4074 + 4px + 1rem);
 
     /* Taille des cases (modules du vaisseau et cases ennemies), pilotee par la
        hauteur d'ecran disponible pour que vaisseau/flotte remplissent le
@@ -430,62 +432,6 @@ body {
     background: rgb(50, 110, 200);
 }
 
-.pastille-cout {
-    top: 3px;
-    right: 3px;
-    background: #ffd43b;
-    color: #1c2547;
-}
-
-.pastille-munition {
-    position: absolute;
-    bottom: 3px;
-    right: 3px;
-    top: auto;
-    min-width: var(--taille-pastille);
-    height: var(--taille-pastille);
-    padding: 0 3px;
-    border-radius: 999px;
-    border: 2px solid rgba(0, 0, 0, 0.55);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    color: white;
-    font-size: calc(var(--taille-pastille) * 0.44);
-    line-height: 1;
-    z-index: 4;
-    background: rgb(70, 190, 90);
-}
-
-/* Indicateur de rarete : etoile en haut a gauche de la carte (specs.md paragraphe 8.2),
-   meme mapping de couleurs que COULEUR_ETOILE_RARETE dans src/ui/fenetre.py. */
-.etoile-rarete {
-    position: absolute;
-    top: 1px;
-    left: 3px;
-    font-size: calc(var(--taille-pastille) * 0.85);
-    line-height: 1;
-    text-shadow: 0 0 2px black, 0 0 2px black, 0 0 2px black;
-    z-index: 4;
-}
-
-.etoile-base {
-    color: #f5f5f5;
-}
-
-.etoile-commune {
-    color: rgb(70, 190, 90);
-}
-
-.etoile-rare {
-    color: rgb(60, 130, 230);
-}
-
-.etoile-legendaire {
-    color: rgb(235, 150, 30);
-}
-
 /* Pastilles PV/Bouclier du module de base : dans l'espace libre a droite du
    nez du vaisseau, a hauteur du pare-brise (repere CENTRE_PARE_BRISE_VAISSEAU_X
    / HAUT_PARE_BRISE_VAISSEAU_Y de src/ui/fenetre.py, ~36% depuis le haut de
@@ -708,73 +654,137 @@ body {
     flex: 0 0 auto;
     position: relative;
     width: var(--largeur-carte);
-    background: #1c2547;
+    background: none;
     border: 2px solid transparent;
     border-radius: 8px;
     padding: 0;
-    overflow: hidden;
-}
-
-.carte img {
-    display: block;
-    width: 100%;
-    aspect-ratio: 3/4;
-    object-fit: contain;
 }
 
 .carte.selectionnee {
-    border-color: #4c6ef5;
-    background: #26305c;
+    border-color: #ffd43b;
+    transform: translateY(-6px);
 }
 
 /* Carte qu'on ne peut pas jouer maintenant (electricite, aucune cible) : grisee, toujours
-   selectionnable pour lire sa description */
-.carte.injouable img {
+   selectionnable pour la voir en grand */
+.carte.injouable .carte-visuel {
     filter: grayscale(0.85) brightness(0.6);
 }
 
-/* Lancements (4.1) : "x2" si la carte est lancee plus d'une fois, en bas a gauche */
-.pastille-lancements {
-    top: auto;
-    bottom: 3px;
-    left: 3px;
-    right: auto;
-    background: #e8590c;
+/* Une carte, partout (htmlCarteVisuel dans app.js) : gabarit de la rarete, illustration dans la
+   fenetre, barre du haut, texte et nom. Zones mesurees sur le gabarit (864 x 1216), memes valeurs
+   que ZONE_* de src/ui/carte_visuel.py. Tailles de police en cqw (largeur de la carte) : la carte
+   garde ses proportions a toutes les tailles ; --reduction est baissee par ajusterTextesCartes
+   quand un texte deborde de sa zone. */
+.carte-visuel {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 864 / 1216;
+    container-type: inline-size;
+    color: #ebf0fa;
+    line-height: 1.15;
+    font-family: Arial, Helvetica, sans-serif;
 }
 
-.bandeau-persistante {
+.carte-visuel > * {
     position: absolute;
-    left: 0;
-    right: 0;
-    top: 38%;
+}
+
+.cv-gabarit {
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.cv-illustration {
+    left: 22.3%;
+    top: 14.4%;
+    width: 55.4%;
+    height: 41.7%;
+    object-fit: cover;
+}
+
+.cv-barre {
+    left: 6.7%;
+    top: 5.1%;
+    width: 86.6%;
+    height: 6.1%;
+    display: flex;
+    align-items: center;
+    gap: 3cqw;
+    padding: 0 1.7cqw;
+    font-size: 5.2cqw;
+    font-weight: bold;
+    color: #ffffff;
+    text-shadow: 0.4cqw 0.4cqw 0 #000000;
+}
+
+.cv-valeur {
+    display: flex;
+    align-items: center;
+}
+
+.cv-barre img {
+    width: 7.3cqw;
+    height: 7.3cqw;
+}
+
+.cv-type {
+    margin-left: auto;
+}
+
+.cv-texte,
+.cv-nom {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    overflow: hidden;
+    font-size: calc(6.2cqw * var(--reduction, 1));
+}
+
+.cv-texte {
+    left: 11.3%;
+    top: 60.7%;
+    width: 77.4%;
+    height: 23.8%;
+    padding: 2.5cqw;
+}
+
+.cv-nom {
+    left: 11.3%;
+    top: 87.5%;
+    width: 77.4%;
+    height: 5.8%;
+    padding: 0 2.5cqw;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+/* Mot-cle Persistante, sur le bas de l'illustration (la carte n'a pas d'autre place pour lui) */
+.cv-persistante {
+    left: 22.3%;
+    top: 50.3%;
+    width: 55.4%;
+    height: 5.4%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background: rgba(156, 54, 181, 0.85);
-    color: white;
-    font-size: calc(var(--taille-pastille) * 0.32);
+    color: #ffffff;
+    font-size: 3.4cqw;
     font-weight: bold;
     letter-spacing: 0.04em;
-    text-align: center;
-    z-index: 3;
 }
 
-/* Nom de la carte, lisible sous l'illustration (les illustrations n'ont aucun texte) */
-.nom-carte-main {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    padding: 1px 2px calc(var(--taille-pastille) * 1.05);
-    background: linear-gradient(transparent, rgba(10, 14, 30, 0.9) 45%);
-    color: white;
-    font-size: calc(var(--taille-pastille) * 0.34);
-    font-weight: bold;
-    line-height: 1.1;
+/* Sous une carte agrandie : ce que la carte ne montre pas (module, pas jouable) */
+.cv-details {
+    width: 100%;
+    padding: 0.3rem 0.5rem;
+    background: rgba(10, 10, 12, 0.85);
+    border-radius: 6px;
+    font-size: 0.85rem;
     text-align: center;
-    z-index: 2;
-}
-
-.info-carte-detail {
-    font-size: 0.75rem;
-    opacity: 0.85;
 }
 
 /* Panneau d'infobulle flottant, centre a l'ecran : partage par #info-carte
@@ -814,12 +824,16 @@ body {
     display: none;
 }
 
-#info-carte img,
-#info-carte-deck img,
-#info-carte-victoire-finale img {
-    width: 90px;
-    aspect-ratio: 1 / 1;
-    object-fit: contain;
+/* Carte agrandie (carte armee, deck, victoire finale) : la carte elle-meme, sans cadre de
+   panneau, aussi grande que l'ecran le permet (decision utilisateur, 2026-11-27). */
+#info-carte,
+#info-carte-deck,
+#info-carte-victoire-finale {
+    width: min(300px, 70vw, calc((100vh - 5rem) / 1.41));
+    max-width: none;
+    padding: 0;
+    background: none;
+    border: none;
 }
 
 .info-carte-nom {
@@ -829,11 +843,6 @@ body {
 
 .info-carte-effet {
     font-size: 0.85rem;
-}
-
-.info-carte-cout {
-    font-weight: bold;
-    color: #ffd43b;
 }
 
 .info-carte-munitions {
@@ -1371,11 +1380,9 @@ body {
 }
 
 .candidat-recompense {
-    width: clamp(130px, 17vw, 180px);
-    background: rgba(20, 24, 34, 0.75);
-    border: 2px solid #5a6e91;
+    width: clamp(130px, 17vw, 200px);
+    border: 3px solid transparent;
     border-radius: 10px;
-    padding: 0.8rem;
     cursor: pointer;
 }
 
@@ -1383,50 +1390,19 @@ body {
     border-color: #ffffff;
 }
 
-.candidat-recompense-entete {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    margin-bottom: 0.5rem;
-    font-size: 0.75rem;
+/* Carte seule (Aventures) : sa hauteur suit celle de l'ecran */
+.carte-seule {
+    width: min(200px, calc((100vh - 16rem) / 1.41));
+    min-width: 140px;
+}
+
+/* Nom du module de la carte, au-dessus d'elle */
+.candidat-recompense-entete,
+.carte-deck-module {
+    margin-bottom: 0.3rem;
+    font-size: 0.8rem;
     color: #b4c8e6;
-}
-
-/* Memes couleurs que COULEUR_ETOILE_RARETE dans src/ui/fenetre.py. */
-.etoile-commune {
-    color: rgb(70, 190, 90);
-}
-
-.etoile-rare {
-    color: rgb(60, 130, 230);
-}
-
-.etoile-legendaire {
-    color: rgb(235, 150, 30);
-}
-
-.candidat-recompense img {
-    display: block;
-    width: 100%;
-    aspect-ratio: 1/1;
-    object-fit: contain;
-    margin-bottom: 0.4rem;
-}
-
-.candidat-recompense-nom {
-    font-weight: bold;
-}
-
-.candidat-recompense-cout {
-    font-size: 0.85rem;
-    color: #dcdce1;
-}
-
-.candidat-recompense-description {
-    font-size: 0.75rem;
-    color: #b4c8e6;
-    margin-top: 0.3rem;
-    line-height: 1.3;
+    text-align: center;
 }
 
 /* Ecran "deck en entier" (specs.md 6/10.3), ouvert depuis l'ecran de partie (bouton "Voir le
@@ -1539,16 +1515,14 @@ body {
     flex-wrap: wrap;
     justify-content: center;
     gap: 1rem;
-    max-width: 900px;
+    max-width: 1200px;
 }
 
 .carte-deck {
     position: relative;
-    width: clamp(90px, 12vw, 120px);
-    background: rgba(20, 24, 34, 0.75);
-    border: 2px solid #5a6e91;
+    width: clamp(110px, 15vw, 180px);
+    border: 2px solid transparent;
     border-radius: 8px;
-    padding: 0.5rem;
     cursor: pointer;
 }
 
@@ -1556,29 +1530,12 @@ body {
     border-color: #ffffff;
 }
 
-.carte-deck img {
-    display: block;
-    width: 100%;
-    aspect-ratio: 1/1;
-    object-fit: contain;
-    margin-bottom: 0.3rem;
-}
-
-.carte-deck-nom {
-    font-size: 0.75rem;
-    font-weight: bold;
-}
-
-.carte-deck-cout {
-    font-size: 0.7rem;
-    color: #dcdce1;
-}
-
+/* Nombre d'exemplaires, au-dessus du coin haut droit de la carte */
 .carte-deck-quantite {
     position: absolute;
-    top: 0.3rem;
-    right: 0.4rem;
-    font-size: 0.75rem;
+    top: -1.1rem;
+    right: 0.2rem;
+    font-size: 0.9rem;
     font-weight: bold;
     color: #ffdc78;
 }
@@ -1613,7 +1570,7 @@ body {
     flex-wrap: wrap;
     justify-content: center;
     gap: 1rem;
-    max-width: 900px;
+    max-width: 1200px;
 }
 
 /* Selection/creation de profil joueur, puis accueil de ce joueur (specs.md 10.3) - nouveau point

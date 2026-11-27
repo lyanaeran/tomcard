@@ -11,42 +11,37 @@ import pyglet
 from pyglet import shapes
 
 from src.gameplay.carte import Carte
-from src.ui.commun import chemin_image, regrouper_cartes, texte_carte
+from src.ui import carte_visuel
+from src.ui.commun import regrouper_cartes
 from src.ui.fenetre import (
-    COULEUR_ETOILE_RARETE,
     FOND_IMAGE,
     HAUTEUR_FENETRE,
     LARGEUR_FENETRE,
-    _sprite_ajuste,
+    _image,
     _sprite_etire,
 )
 
 COULEUR_TEXTE = (255, 255, 255)
-COULEUR_FOND_CARTE = (20, 24, 34)
-COULEUR_CONTOUR_CARTE = (90, 110, 150)
-COULEUR_CONTOUR_CARTE_SURVOLEE = (255, 255, 255)
-COULEUR_QUANTITE = (255, 220, 120)
-OPACITE_FOND_CARTE = 190
 
 COULEUR_BOUTON = (60, 90, 160)
 COULEUR_BOUTON_SURVOLE = (90, 130, 210)
 
-COULEUR_FOND_PANNEAU = (10, 14, 30)
-COULEUR_CONTOUR_PANNEAU = (76, 110, 245)
-OPACITE_FOND_PANNEAU = 235
-
-LARGEUR_CARTE_DECK = 130
-HAUTEUR_CARTE_DECK = 170
-IMAGE_TAILLE = 90
-ESPACEMENT_CARTE = 18
-COLONNES = 8
-Y_HAUT_GRILLE = HAUTEUR_FENETRE - 110
-
-# Panneau de description fixe en bas de l'ecran (plutot qu'une infobulle flottante ancree sur
-# la carte survolee) : la grille est dense (peu d'espace entre les lignes), une infobulle
-# positionnee pres de la carte survolee chevaucherait la ligne voisine.
-HAUTEUR_PANNEAU = 92
-LARGEUR_PANNEAU = 500
+# Cartes de 180 px, 6 par ligne (demande utilisateur, 2026-11-27 : 130 px etait trop petit) ; la
+# grille defile a la molette quand elle depasse l'ecran.
+LARGEUR_CARTE_DECK = 180
+HAUTEUR_CARTE_DECK = carte_visuel.hauteur_carte(LARGEUR_CARTE_DECK)
+ESPACEMENT_CARTE = 24
+# Ecart vertical plus grand : le nombre d'exemplaires ("x4") s'ecrit au-dessus de la carte
+ESPACEMENT_LIGNES = 34
+COLONNES = 6
+Y_HAUT_GRILLE = HAUTEUR_FENETRE - 130
+MARGE_BAS = 20
+# Bandeau du haut (titre, Retour) : les cartes qui defilent passent dessous
+Y_BANDEAU = HAUTEUR_FENETRE - 100
+PAS_MOLETTE = 60
+GROUPE_BANDEAU = pyglet.graphics.Group(order=5)
+GROUPE_BANDEAU_DESSUS = pyglet.graphics.Group(order=6)
+COULEUR_ASCENSEUR = (200, 210, 230)
 
 # Bouton "Retour" en haut a droite (plutot qu'en bas, ou la place depend de la taille du deck) -
 # seul moyen de fermer cet ecran et de revenir a l'ecran de partie (specs.md 10.3), qui a ete
@@ -66,14 +61,22 @@ def _grille_depart_x() -> float:
     return (LARGEUR_FENETRE - largeur_totale) / 2
 
 
-def _rect_carte(index: int) -> tuple[float, float, float, float]:
+def _rect_carte(index: int, defilement: float = 0) -> tuple[float, float, float, float]:
     """Rectangle (x, y, largeur, hauteur) de la carte a cet index, grille de COLONNES
-    colonnes remplie ligne par ligne, centree horizontalement dans la fenetre."""
+    colonnes remplie ligne par ligne, centree horizontalement dans la fenetre, remontee de
+    `defilement` pixels."""
     colonne = index % COLONNES
     ligne = index // COLONNES
     x = _grille_depart_x() + colonne * (LARGEUR_CARTE_DECK + ESPACEMENT_CARTE)
-    y = Y_HAUT_GRILLE - HAUTEUR_CARTE_DECK - ligne * (HAUTEUR_CARTE_DECK + ESPACEMENT_CARTE)
+    y = Y_HAUT_GRILLE - HAUTEUR_CARTE_DECK - ligne * (HAUTEUR_CARTE_DECK + ESPACEMENT_LIGNES) + defilement
     return x, y, LARGEUR_CARTE_DECK, HAUTEUR_CARTE_DECK
+
+
+def defilement_max(nombre: int) -> float:
+    """Defilement maximal pour voir la derniere ligne au-dessus de MARGE_BAS (0 si tout tient)."""
+    lignes = (nombre + COLONNES - 1) // COLONNES
+    hauteur_grille = lignes * HAUTEUR_CARTE_DECK + max(0, lignes - 1) * ESPACEMENT_LIGNES
+    return max(0.0, hauteur_grille - (Y_HAUT_GRILLE - MARGE_BAS))
 
 
 def _point_dans_rectangle(px: float, py: float, x: float, y: float, largeur: float, hauteur: float) -> bool:
@@ -92,6 +95,8 @@ class EcranDeck(pyglet.window.Window):
         self.index_survole: int | None = None
         self.bouton_retour_survole: bool = False
         self.termine: bool = False
+        # Pixels dont la grille est remontee (molette), entre 0 et defilement_max
+        self.defilement: float = 0.0
 
     def on_draw(self) -> None:
         self.clear()
@@ -102,30 +107,51 @@ class EcranDeck(pyglet.window.Window):
 
     def _dessiner(self, lot: pyglet.graphics.Batch) -> list:
         elements = [_sprite_etire(FOND_IMAGE, 0, 0, LARGEUR_FENETRE, HAUTEUR_FENETRE, lot)]
-        elements.append(
-            pyglet.text.Label(
-                "Deck",
-                x=LARGEUR_FENETRE / 2,
-                y=HAUTEUR_FENETRE - 50,
-                anchor_x="center",
-                anchor_y="center",
-                font_size=26,
-                color=(*COULEUR_TEXTE, 255),
-                batch=lot,
-            )
-        )
         for index, (carte, quantite) in enumerate(self.groupes):
+            _x, y, _l, hauteur = self._rect(index)
+            if y > HAUTEUR_FENETRE or y + hauteur < 0:
+                continue  # hors de l'ecran
             elements.extend(self._dessiner_carte(index, carte, quantite, lot))
+        elements.extend(self._dessiner_bandeau(lot))
         if self.index_survole is not None:
             carte, _quantite = self.groupes[self.index_survole]
-            elements.extend(self._dessiner_panneau_description(carte, lot))
-        elements.extend(self._dessiner_bouton_retour(lot))
+            elements.extend(self._dessiner_carte_agrandie(carte, lot))
+        return elements
+
+    def _dessiner_bandeau(self, lot: pyglet.graphics.Batch) -> list:
+        """Haut de l'ecran (fond, titre, Retour, ascenseur) par-dessus les cartes qui defilent."""
+        fond = _image(FOND_IMAGE)
+        echelle_x, echelle_y = LARGEUR_FENETRE / fond.width, HAUTEUR_FENETRE / fond.height
+        y_image = int(Y_BANDEAU / echelle_y)
+        region = fond.get_region(0, y_image, fond.width, fond.height - y_image)
+        bandeau = pyglet.sprite.Sprite(region, x=0, y=Y_BANDEAU, batch=lot, group=GROUPE_BANDEAU)
+        bandeau.scale_x, bandeau.scale_y = echelle_x, echelle_y
+        titre = pyglet.text.Label(
+            "Deck", x=LARGEUR_FENETRE / 2, y=HAUTEUR_FENETRE - 50, anchor_x="center", anchor_y="center",
+            font_size=26, color=(*COULEUR_TEXTE, 255), batch=lot, group=GROUPE_BANDEAU_DESSUS,
+        )
+        elements = [bandeau, titre, *self._dessiner_bouton_retour(lot)]
+        maximum = defilement_max(len(self.groupes))
+        if maximum > 0:
+            # Ascenseur a droite : sa barre montre la part visible de la grille et sa position
+            haut, bas = Y_BANDEAU - 10, MARGE_BAS
+            course = haut - bas
+            visible = course * (Y_HAUT_GRILLE - MARGE_BAS) / (Y_HAUT_GRILLE - MARGE_BAS + maximum)
+            y_barre = haut - visible - (course - visible) * self.defilement / maximum
+            rail = shapes.Rectangle(
+                LARGEUR_FENETRE - 14, bas, 6, course, color=COULEUR_ASCENSEUR, batch=lot, group=GROUPE_BANDEAU
+            )
+            rail.opacity = 60
+            barre = shapes.Rectangle(
+                LARGEUR_FENETRE - 14, y_barre, 6, visible, color=COULEUR_ASCENSEUR, batch=lot, group=GROUPE_BANDEAU_DESSUS
+            )
+            elements += [rail, barre]
         return elements
 
     def _dessiner_bouton_retour(self, lot: pyglet.graphics.Batch) -> list:
         x, y, largeur, hauteur = _rect_bouton()
         couleur = COULEUR_BOUTON_SURVOLE if self.bouton_retour_survole else COULEUR_BOUTON
-        rectangle = shapes.Rectangle(x, y, largeur, hauteur, color=couleur, batch=lot)
+        rectangle = shapes.Rectangle(x, y, largeur, hauteur, color=couleur, batch=lot, group=GROUPE_BANDEAU)
         texte = pyglet.text.Label(
             "Retour",
             x=x + largeur / 2,
@@ -135,128 +161,43 @@ class EcranDeck(pyglet.window.Window):
             font_size=14,
             color=(*COULEUR_TEXTE, 255),
             batch=lot,
+            group=GROUPE_BANDEAU_DESSUS,
         )
         return [rectangle, texte]
 
     def _dessiner_carte(self, index: int, carte: Carte, quantite: int, lot: pyglet.graphics.Batch) -> list:
-        x, y, largeur, hauteur = _rect_carte(index)
-        survole = index == self.index_survole
-        cadre = shapes.BorderedRectangle(
-            x,
-            y,
-            largeur,
-            hauteur,
-            border=2,
-            color=COULEUR_FOND_CARTE,
-            border_color=COULEUR_CONTOUR_CARTE_SURVOLEE if survole else COULEUR_CONTOUR_CARTE,
-            batch=lot,
-        )
-        cadre.opacity = OPACITE_FOND_CARTE
-        cx = x + largeur / 2
-
-        sprite = _sprite_ajuste(chemin_image(carte.image), cx - IMAGE_TAILLE / 2, y + hauteur - 12 - IMAGE_TAILLE, IMAGE_TAILLE, IMAGE_TAILLE, lot)
-
-        etoile = pyglet.text.Label(
-            "★",
-            x=x + 14,
-            y=y + hauteur - 14,
-            anchor_x="center",
-            anchor_y="center",
-            font_size=16,
-            color=(*COULEUR_ETOILE_RARETE[carte.rarete], 255),
-            batch=lot,
+        return carte_visuel.dessiner_carte_de_grille(
+            carte, self._rect(index), quantite, index == self.index_survole, lot, ordre=1 + index
         )
 
-        nom = pyglet.text.Label(
-            carte.nom,
-            x=cx,
-            y=y + hauteur - 20 - IMAGE_TAILLE,
-            anchor_x="center",
-            anchor_y="top",
-            font_size=11,
-            color=(*COULEUR_TEXTE, 255),
-            multiline=True,
-            width=largeur - 12,
-            align="center",
-            batch=lot,
+    def _dessiner_carte_agrandie(self, carte: Carte, lot: pyglet.graphics.Batch) -> list:
+        """Carte survolee en grand a cote d'elle, avec le module auquel elle est rattachee."""
+        nom_module = self.noms_modules.get(carte.exemplaire_module)
+        lignes = [f"Module : {nom_module}"] if nom_module else []
+        return carte_visuel.dessiner_carte_agrandie_a_cote(
+            carte, self._rect(self.index_survole), lignes, lot, carte_visuel.GROUPE_CARTE_AGRANDIE, LARGEUR_FENETRE, HAUTEUR_FENETRE
         )
-        cout = pyglet.text.Label(
-            f"⚡{carte.cout}",
-            x=cx,
-            y=y + 12,
-            anchor_x="center",
-            anchor_y="center",
-            font_size=11,
-            color=(200, 200, 205, 255),
-            batch=lot,
-        )
-        elements = [cadre, sprite, etoile, nom, cout]
-        if quantite > 1:
-            elements.append(
-                pyglet.text.Label(
-                    f"×{quantite}",
-                    x=x + largeur - 16,
-                    y=y + hauteur - 14,
-                    anchor_x="center",
-                    anchor_y="center",
-                    font_size=13,
-                    color=(*COULEUR_QUANTITE, 255),
-                    batch=lot,
-                )
-            )
-        return elements
 
-    def _dessiner_panneau_description(self, carte: Carte, lot: pyglet.graphics.Batch) -> list:
-        """Description complete de la carte survolee, dans un panneau fixe en bas de l'ecran
-        (evite tout chevauchement avec la grille, dense)."""
-        cx = LARGEUR_FENETRE / 2
-        y_bas = 20
-        fond = shapes.BorderedRectangle(
-            cx - LARGEUR_PANNEAU / 2,
-            y_bas,
-            LARGEUR_PANNEAU,
-            HAUTEUR_PANNEAU,
-            border=2,
-            color=COULEUR_FOND_PANNEAU,
-            border_color=COULEUR_CONTOUR_PANNEAU,
-            batch=lot,
-        )
-        fond.opacity = OPACITE_FOND_PANNEAU
-        nom = pyglet.text.Label(
-            carte.nom,
-            x=cx,
-            y=y_bas + HAUTEUR_PANNEAU - 16,
-            anchor_x="center",
-            anchor_y="center",
-            font_size=13,
-            color=(*COULEUR_QUANTITE, 255),
-            batch=lot,
-        )
-        description = pyglet.text.Label(
-            texte_carte(carte, self.noms_modules),
-            x=cx,
-            y=y_bas + HAUTEUR_PANNEAU - 34,
-            anchor_x="center",
-            anchor_y="top",
-            font_size=12,
-            color=(*COULEUR_TEXTE, 255),
-            multiline=True,
-            width=LARGEUR_PANNEAU - 30,
-            align="center",
-            batch=lot,
-        )
-        return [fond, nom, description]
+    def _rect(self, index: int) -> tuple[float, float, float, float]:
+        return _rect_carte(index, self.defilement)
 
     def on_mouse_motion(self, x: int, y: int, dx: int, dy: int) -> None:
         self.index_survole = self._index_a(x, y)
         self.bouton_retour_survole = _point_dans_rectangle(x, y, *_rect_bouton())
+
+    def on_mouse_scroll(self, x: int, y: int, scroll_x: float, scroll_y: float) -> None:
+        """Molette : la grille defile (vers le bas quand on tourne vers soi)."""
+        self.defilement = min(max(self.defilement - scroll_y * PAS_MOLETTE, 0.0), defilement_max(len(self.groupes)))
+        self.index_survole = self._index_a(x, y)
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
         if _point_dans_rectangle(x, y, *_rect_bouton()):
             self.termine = True
 
     def _index_a(self, x: int, y: int) -> int | None:
+        if y >= Y_BANDEAU:
+            return None  # cartes cachees sous le bandeau du haut
         for index in range(len(self.groupes)):
-            if _point_dans_rectangle(x, y, *_rect_carte(index)):
+            if _point_dans_rectangle(x, y, *self._rect(index)):
                 return index
         return None

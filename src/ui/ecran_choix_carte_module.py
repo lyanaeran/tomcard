@@ -13,32 +13,25 @@ from pyglet import shapes
 
 from src.gameplay.carte import Carte
 from src.gameplay.partie import Partie, deck_de_la_partie
-from src.ui import barre_laterale
+from src.ui import barre_laterale, carte_visuel
 from src.ui.ecran_deck import EcranDeck
 from src.ui.ecran_vaisseau import EcranVaisseau
-from src.ui.commun import chemin_image, noms_modules
+from src.ui.commun import noms_modules
 from src.ui.fenetre import (
-    COULEUR_ETOILE_RARETE,
     FOND_IMAGE,
     HAUTEUR_FENETRE,
     LARGEUR_FENETRE,
-    _sprite_ajuste,
     _sprite_etire,
-    texte_effet_carte,
 )
 
 COULEUR_TEXTE = (255, 255, 255)
 COULEUR_TITRE = (255, 220, 120)
-COULEUR_FOND_CARTE = (20, 24, 34)
-COULEUR_CONTOUR_CARTE = (90, 110, 150)
 COULEUR_CONTOUR_CARTE_SURVOLEE = (255, 255, 255)
 COULEUR_BOUTON_PASSER = (60, 66, 82)
 COULEUR_CONTOUR_BOUTON_PASSER = (140, 150, 170)
-OPACITE_FOND_CARTE = 190
 
-LARGEUR_CARTE = 180
-HAUTEUR_CARTE = 340
-HAUTEUR_IMAGE = 100
+LARGEUR_CARTE = 200
+HAUTEUR_CARTE = carte_visuel.hauteur_carte(LARGEUR_CARTE)
 ESPACEMENT_CARTES = 30
 Y_CARTE = 220
 
@@ -120,68 +113,9 @@ class EcranChoixCarteModule(pyglet.window.Window):
         return elements
 
     def _dessiner_candidat(self, index: int, total: int, carte: Carte, lot: pyglet.graphics.Batch) -> list:
-        x, y, largeur, hauteur = _rect_candidat(index, total)
-        survole = index == self.index_survole
-        cadre = shapes.BorderedRectangle(
-            x,
-            y,
-            largeur,
-            hauteur,
-            border=2,
-            color=COULEUR_FOND_CARTE,
-            border_color=COULEUR_CONTOUR_CARTE_SURVOLEE if survole else COULEUR_CONTOUR_CARTE,
-            batch=lot,
+        return carte_visuel.dessiner_carte_a_choisir(
+            carte, _rect_candidat(index, total), lot, ordre=index, survolee=index == self.index_survole
         )
-        cadre.opacity = OPACITE_FOND_CARTE
-        cx = x + largeur / 2
-
-        y_image = y + hauteur - 40 - HAUTEUR_IMAGE
-        sprite = _sprite_ajuste(chemin_image(carte.image), cx - HAUTEUR_IMAGE / 2, y_image, HAUTEUR_IMAGE, HAUTEUR_IMAGE, lot)
-
-        etoile = pyglet.text.Label(
-            "★",
-            x=x + 14,
-            y=y + hauteur - 14,
-            anchor_x="center",
-            anchor_y="center",
-            font_size=20,
-            color=(*COULEUR_ETOILE_RARETE[carte.rarete], 255),
-            batch=lot,
-        )
-        nom = pyglet.text.Label(
-            carte.nom,
-            x=cx,
-            y=y_image - 18,
-            anchor_x="center",
-            anchor_y="center",
-            font_size=14,
-            color=(*COULEUR_TEXTE, 255),
-            batch=lot,
-        )
-        cout = pyglet.text.Label(
-            f"⚡{carte.cout}",
-            x=cx,
-            y=y_image - 40,
-            anchor_x="center",
-            anchor_y="center",
-            font_size=12,
-            color=(200, 200, 205, 255),
-            batch=lot,
-        )
-        description = pyglet.text.Label(
-            texte_effet_carte(carte),
-            x=cx,
-            y=y_image - 62,
-            anchor_x="center",
-            anchor_y="top",
-            font_size=10,
-            color=(200, 200, 205, 255),
-            multiline=True,
-            width=largeur - 24,
-            align="center",
-            batch=lot,
-        )
-        return [cadre, sprite, etoile, nom, cout, description]
 
     def _dessiner_bouton_passer(self, lot: pyglet.graphics.Batch) -> list:
         x, y, largeur, hauteur = _rect_bouton_passer()

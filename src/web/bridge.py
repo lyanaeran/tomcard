@@ -96,7 +96,7 @@ _PAIRES_CASES_ENNEMIES = (("AV_G", "AR_G"), ("AV_M", "AR_M"), ("AV_D", "AR_D"))
 
 # Version du contrat entre bridge.py et src/web/app.js : doit etre egale a VERSION_CACHE (app.js),
 # verifie au demarrage par app.js (versionsAccordees) et par tests/test_architecture.py
-VERSION_WEB = "106"
+VERSION_WEB = "108"
 
 combat = None
 # Taille du journal deja transmise : les popups d'une action sont calcules a partir des seules
@@ -132,6 +132,7 @@ def _carte_json(carte: Carte, nom_module: str | None = None) -> dict:
         "image": carte.image,
         "cout": carte.cout,
         "rarete": carte.rarete.name,
+        "categorie": carte.categorie.name,
         "description": carte.description_affichee(),
         "munitions_base": carte.munitions_base,
         "munitions_restantes": carte.munitions_restantes,

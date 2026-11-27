@@ -8,7 +8,7 @@ ennemis, journal. Les textes sont dans src/ui/textes_combat.py.
 import pyglet
 from pyglet import shapes
 
-from src.gameplay.carte import Camp, Carte, RareteCarte
+from src.gameplay.carte import Camp, Carte
 from src.gameplay.combat import ELECTRICITE_PAR_TOUR, Combat, EtatCombat
 from src.gameplay.ennemi import Ennemi
 from src.gameplay.module import Module
@@ -16,7 +16,7 @@ from src.gameplay.partie import RACINE, Partie
 from src.gameplay.position import Ligne, Position, Colonne
 from src.gameplay.statut import Statut
 from src.gameplay.vaisseau import CASES_PAR_EMPLACEMENT
-from src.ui import textes_combat
+from src.ui import carte_visuel, textes_combat
 from src.ui.animation import AnimationPopup
 from src.ui.commun import chemin_image
 
@@ -42,7 +42,9 @@ HAUTEUR_BANDEAU_INTENTION = 20
 # fournie par l'utilisateur (quasi carree, contrairement a l'ancienne tres
 # large) impose une hauteur bien plus grande a largeur egale.
 VAISSEAU_X = 150
-VAISSEAU_Y = 190
+# 240 (au lieu de 190) depuis les cartes de 150 px (2026-11-27) : la main ne cache plus les
+# cases du bas (ennemis de la colonne droite et leur intention)
+VAISSEAU_Y = 240
 VAISSEAU_LARGEUR = 527
 _TAILLE_IMAGE_PRINCIPAL = (978, 965)  # largeur, hauteur de assets/modules/principal.png
 VAISSEAU_HAUTEUR = VAISSEAU_LARGEUR * _TAILLE_IMAGE_PRINCIPAL[1] / _TAILLE_IMAGE_PRINCIPAL[0]
@@ -95,11 +97,18 @@ CENTRE_PARE_BRISE_VAISSEAU_X = VAISSEAU_X + _CENTRE_PARE_BRISE_IMAGE * _ECHELLE_
 HAUT_PARE_BRISE_VAISSEAU_Y = VAISSEAU_Y + _HAUT_PARE_BRISE_IMAGE * _ECHELLE_VAISSEAU
 
 # Main de cartes, centree en bas de l'ecran (specs.md paragraphe 8.1), comme
-# la version web (#main, justify-content:center) plutot qu'a une position fixe.
-CARTE_LARGEUR, CARTE_HAUTEUR = 100, 140
-CARTE_Y = 40
-CARTE_ESPACEMENT = 120
-HAUTEUR_BANDEAU_CARTE = 46
+# la version web (#main, justify-content:center) plutot qu'a une position fixe. Cartes de
+# 150 px de large (decision utilisateur, 2026-11-27) qui se chevauchent quand la main ne tient
+# plus entre la barre laterale et le bord droit.
+CARTE_LARGEUR = 150
+CARTE_HAUTEUR = carte_visuel.hauteur_carte(CARTE_LARGEUR)
+CARTE_Y = 6
+CARTE_ESPACEMENT = CARTE_LARGEUR + 8
+X_MIN_MAIN, X_MAX_MAIN = 100, LARGEUR_FENETRE - 10
+# Carte survolee montree en grand, collee au bas de l'ecran par-dessus la main (decision
+# utilisateur, 2026-11-27), ses details au-dessus d'elle
+CARTE_AGRANDIE_LARGEUR = 300
+CARTE_AGRANDIE_Y = CARTE_Y
 
 # Controles de combat (tour suivant / quitter la partie) : icones plutot qu'un bandeau+texte en
 # haut d'ecran (decision utilisateur, remplace l'ancien bandeau Electricite/"Fin de tour" - la
@@ -143,24 +152,12 @@ COULEUR_PASTILLE_PV = (190, 40, 40)
 COULEUR_PASTILLE_BOUCLIER = (50, 110, 200)
 _RAYON_TOTAL_PASTILLE = RAYON_PASTILLE + EPAISSEUR_CONTOUR_PASTILLE
 
-# Indicateur de rarete (etoile en haut a gauche de la carte) et pastille de munitions
-# restantes (en haut a droite, meme style que les pastilles PV/Bouclier), cf. specs.md 8.2
-COULEUR_ETOILE_RARETE = {
-    RareteCarte.BASE: (245, 245, 245),
-    RareteCarte.COMMUNE: (70, 190, 90),
-    RareteCarte.RARE: (60, 130, 230),
-    RareteCarte.LEGENDAIRE: (235, 150, 30),
-}
-COULEUR_PASTILLE_MUNITION = (70, 190, 90)
 # Statuts (refonte-branchement.md 4.2/4.3) : une pastille par statut actif, a gauche du Bouclier
 COULEUR_PASTILLE_STATUT = textes_combat.COULEUR_PAR_STATUT
-COULEUR_PASTILLE_COUT = (40, 60, 110)
-COULEUR_PASTILLE_LANCEMENTS = (150, 90, 200)
 # Marqueur du module vise par une attaque au prochain tour ennemi (anneau rouge)
 COULEUR_CIBLE = (235, 60, 60)
 # Contour d'une case ou la carte selectionnee peut etre confirmee
 COULEUR_CASE_VALIDE = (90, 220, 120)
-OPACITE_CARTE_INJOUABLE = 110
 
 # Popups +/-N affiches 2 secondes sur une cible touchee par une carte ou une
 # attaque ennemie (degats en rouge, bouclier pose en bleu, soin en vert)
@@ -380,12 +377,6 @@ def _rect_fusionne(positions: list[Position]) -> tuple[float, float, float, floa
     y1 = max(y + hauteur for _x, y, _l, hauteur in rects)
     return x0, y0, x1 - x0, y1 - y0
 
-
-
-def texte_effet_carte(carte: Carte) -> str:
-    """Texte d'une carte, partout (combat, recompenses, deck, Aventures) : la description de
-    config/cartes.json avec ses valeurs actuelles, fournie par le gameplay."""
-    return carte.description_affichee()
 
 
 def _pastilles_statuts(entite: Module | Ennemi, cx_pv: float, cy: float, lot: pyglet.graphics.Batch) -> list:
@@ -665,84 +656,67 @@ class FenetreCombat(pyglet.window.Window):
                 )
         return elements
 
+    def _pas_main(self) -> float:
+        """Ecart entre deux cartes de la main : CARTE_ESPACEMENT, reduit (cartes qui se
+        chevauchent) quand la main ne tient pas entre X_MIN_MAIN et X_MAX_MAIN."""
+        nombre = len(self._main())
+        if nombre <= 1:
+            return CARTE_ESPACEMENT
+        return min(CARTE_ESPACEMENT, (X_MAX_MAIN - X_MIN_MAIN - CARTE_LARGEUR) / (nombre - 1))
+
     def _x_carte_depart(self) -> float:
         """X du bord gauche de la premiere carte, pour que la rangee soit centree
         horizontalement dans la fenetre, comme #main (justify-content:center) sur le web."""
         main = self._main()
         if not main:
             return LARGEUR_FENETRE / 2
-        largeur_rangee = (len(main) - 1) * CARTE_ESPACEMENT + CARTE_LARGEUR
-        return (LARGEUR_FENETRE - largeur_rangee) / 2
+        largeur_rangee = (len(main) - 1) * self._pas_main() + CARTE_LARGEUR
+        return max(X_MIN_MAIN, (LARGEUR_FENETRE - largeur_rangee) / 2)
 
     def _dessiner_main(self, lot: pyglet.graphics.Batch) -> list:
-        """Dessine les cartes de la main (refonte-branchement.md 4.1) : illustration, rarete,
-        cout, munitions, "x2" si elle est lancee plus d'une fois, bandeau Persistante ; assombrie
-        si elle n'est pas jouable maintenant (decide par le gameplay : Combat.peut_jouer)."""
+        """Dessine les cartes de la main (carte_visuel : gabarit de la rarete, cout, munitions,
+        lancements, type, texte, nom), de gauche a droite, chacune au-dessus de la precedente ;
+        assombrie si elle n'est pas jouable maintenant (decide par le gameplay : Combat.peut_jouer).
+        La carte selectionnee est soulevee et entouree."""
         elements = []
         x_depart = self._x_carte_depart()
+        pas = self._pas_main()
         for index, carte in enumerate(self._main()):
-            x = x_depart + index * CARTE_ESPACEMENT
+            x = x_depart + index * pas
+            y = CARTE_Y
+            groupes = carte_visuel.groupes_carte(10 + index)
             if index == self.index_carte_selectionnee:
-                # Cadre creux autour de la carte (pas un rectangle plein dessous) : l'ordre de
-                # dessin forme/sprite n'etant pas garanti, un rectangle plein pouvait masquer l'image.
+                y += 14
                 elements.append(
                     shapes.Box(
-                        x - 4, CARTE_Y - 4, CARTE_LARGEUR + 8, CARTE_HAUTEUR + 8,
-                        thickness=4, color=COULEUR_CARTE_SURLIGNEE, batch=lot,
+                        x - 4, y - 4, CARTE_LARGEUR + 8, CARTE_HAUTEUR + 8,
+                        thickness=4, color=COULEUR_CARTE_SURLIGNEE, batch=lot, group=groupes[0],
                     )
                 )
-            sprite = _sprite_ajuste(chemin_image(carte.image), x, CARTE_Y, CARTE_LARGEUR, CARTE_HAUTEUR, lot)
-            if not self.combat.peut_jouer(carte):
-                sprite.opacity = OPACITE_CARTE_INJOUABLE
-            elements.append(sprite)
-            elements.append(_bandeau(x, CARTE_Y, CARTE_LARGEUR, HAUTEUR_BANDEAU_CARTE, lot))
-            elements.extend(self._dessiner_etoile_rarete(x, carte, lot))
-            elements.extend(self._dessiner_pastilles_carte(x, carte, lot))
-            if carte.persistante:
-                y_bandeau = CARTE_Y + HAUTEUR_BANDEAU_CARTE
-                elements.append(_bandeau(x, y_bandeau, CARTE_LARGEUR, 14, lot))
-                elements.append(
-                    pyglet.text.Label(
-                        "PERSISTANTE", x=x + CARTE_LARGEUR / 2, y=y_bandeau + 7, anchor_x="center", anchor_y="center",
-                        font_size=7, color=(*COULEUR_CARTE_SURLIGNEE, 255), batch=lot, group=GROUPE_INFOBULLE,
-                    )
-                )
-            elements.append(
-                pyglet.text.Label(
-                    carte.nom,
-                    x=x + CARTE_LARGEUR / 2, y=CARTE_Y + HAUTEUR_BANDEAU_CARTE / 2,
-                    anchor_x="center", anchor_y="center", font_size=9, multiline=True,
-                    width=CARTE_LARGEUR - 4, align="center", batch=lot, group=GROUPE_INFOBULLE,
+            elements.extend(
+                carte_visuel.dessiner_carte(
+                    carte, x, y, CARTE_LARGEUR, lot, groupes, injouable=not self.combat.peut_jouer(carte)
                 )
             )
         return elements
 
-    def _dessiner_pastilles_carte(self, x: float, carte: Carte, lot: pyglet.graphics.Batch) -> list:
-        """En haut a droite de la carte, de haut en bas : cout, munitions restantes/de depart
-        (si limitees), nombre de lancements (si > 1)."""
-        cx = x + CARTE_LARGEUR - _RAYON_TOTAL_PASTILLE
-        cy = CARTE_Y + CARTE_HAUTEUR - _RAYON_TOTAL_PASTILLE
-        pas = 2 * _RAYON_TOTAL_PASTILLE + 2
-        elements = _pastille(cx, cy, COULEUR_PASTILLE_COUT, f"⚡{carte.cout}", lot)
-        munitions = textes_combat.texte_munitions(carte)
-        if munitions:
-            cy -= pas
-            elements += _pastille(cx, cy, COULEUR_PASTILLE_MUNITION, munitions, lot)
-        if textes_combat.lancements(carte) > 1:
-            cy -= pas
-            elements += _pastille(cx, cy, COULEUR_PASTILLE_LANCEMENTS, f"×{textes_combat.lancements(carte)}", lot)
-        return elements
-
-    def _dessiner_etoile_rarete(self, x: float, carte: Carte, lot: pyglet.graphics.Batch) -> list:
-        """Etoile de rarete en haut a gauche de la carte (specs.md paragraphe 8.2)."""
-        couleur = COULEUR_ETOILE_RARETE[carte.rarete]
-        return [
-            pyglet.text.Label(
-                "★", x=x + 10 + decalage, y=CARTE_Y + CARTE_HAUTEUR - 10 + decalage, anchor_x="center",
-                anchor_y="center", font_size=16, color=(*teinte, 255), batch=lot, group=GROUPE_SUPERPOSITION,
-            )
-            for decalage, teinte in ((1, (0, 0, 0)), (0, couleur))
-        ]
+    def _dessiner_carte_agrandie(self, carte: Carte, lot: pyglet.graphics.Batch) -> list:
+        """Carte survolee en grand, collee au bas de l'ecran par-dessus la main (decisions
+        utilisateur, 2026-11-27), avec au-dessus ce que la carte ne montre pas : module, pas
+        jouable maintenant."""
+        index = self._main().index(carte)
+        cx = self._x_carte_depart() + index * self._pas_main() + CARTE_LARGEUR / 2
+        x = min(max(cx - CARTE_AGRANDIE_LARGEUR / 2, X_MIN_MAIN), LARGEUR_FENETRE - CARTE_AGRANDIE_LARGEUR - 10)
+        groupes = carte_visuel.groupes_carte(0, parent=carte_visuel.GROUPE_CARTE_AGRANDIE)
+        elements = carte_visuel.dessiner_carte(carte, x, CARTE_AGRANDIE_Y, CARTE_AGRANDIE_LARGEUR, lot, groupes)
+        lignes = []
+        nom_module = self._nom_module_de(carte)
+        if nom_module:
+            lignes.append(f"Module : {nom_module}")
+        if not self.combat.peut_jouer(carte):
+            lignes.append("Pas jouable maintenant")
+        y_haut = CARTE_AGRANDIE_Y + carte_visuel.hauteur_carte(CARTE_AGRANDIE_LARGEUR) + carte_visuel.hauteur_details(lignes)
+        return elements + carte_visuel.dessiner_details(lignes, x, y_haut, CARTE_AGRANDIE_LARGEUR, lot, groupes[2])
 
     def _y_haut_controles_combat(self, barre_laterale) -> float:
         """Sommet du bloc controles de combat (Electricite/tour suivant/Quitter) : sous la barre
@@ -799,12 +773,7 @@ class FenetreCombat(pyglet.window.Window):
             return []
         main = self._main()
         if self.index_carte_survolee is not None and self.index_carte_survolee < len(main):
-            carte = main[self.index_carte_survolee]
-            lignes = [carte.nom, texte_effet_carte(carte), f"⚡ {carte.cout}"]
-            lignes.extend(textes_combat.lignes_details_carte(carte, self._nom_module_de(carte)))
-            if not self.combat.peut_jouer(carte):
-                lignes.append("Pas jouable maintenant")
-            return _infobulle_au_curseur("\n".join(lignes), self.position_souris, lot)
+            return self._dessiner_carte_agrandie(main[self.index_carte_survolee], lot)
 
         entite = self.entite_survolee
         if entite is None:
@@ -902,9 +871,11 @@ class FenetreCombat(pyglet.window.Window):
     def _trouver_carte_cliquee(self, x: int, y: int) -> int | None:
         """Renvoie l'index de la carte de la main sous ce point, ou None si aucune."""
         x_depart = self._x_carte_depart()
-        for index in range(len(self._main())):
-            carte_x = x_depart + index * CARTE_ESPACEMENT
-            if _point_dans_rectangle(x, y, carte_x, CARTE_Y, CARTE_LARGEUR, CARTE_HAUTEUR):
+        pas = self._pas_main()
+        # De droite a gauche : une carte chevauchee est sous sa voisine de droite
+        for index in reversed(range(len(self._main()))):
+            carte_x = x_depart + index * pas
+            if _point_dans_rectangle(x, y, carte_x, CARTE_Y, CARTE_LARGEUR, CARTE_HAUTEUR + 14):
                 return index
         return None
 
