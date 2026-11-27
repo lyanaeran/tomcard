@@ -24,7 +24,7 @@
     {
       "id": "CRT_10",
       "nom": "Bouclier",
-      "image": "assets/cartes/bouclier.png",
+      "image": "assets/cartes/bouclier_v2.png",
       "rarete": "Base",
       "categorie": "Defense",
       "cible": "Module Unique",
@@ -64,7 +64,7 @@
     {
       "id": "CRT_12",
       "nom": "Réparation",
-      "image": "assets/cartes/reparation.png",
+      "image": "assets/cartes/reparation_v2.png",
       "rarete": "Base",
       "categorie": "Reparation",
       "cible": "Module Principal",
@@ -804,7 +804,7 @@
     {
       "id": "CRT_53",
       "nom": "Missile guidé",
-      "image": "assets/cartes/missile_guide.png",
+      "image": "assets/cartes/missile_guide_v2.png",
       "rarete": "Commune",
       "categorie": "Attaque",
       "cible": "Ennemi Unique",

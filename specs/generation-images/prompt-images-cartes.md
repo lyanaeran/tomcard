@@ -12,7 +12,7 @@ leur image (256 × 256, `assets/cartes/<fichier>`). Cases refaites à part : *La
 *Bouclier d'escadre* (Gemini y avait dessiné une escadrille de vaisseaux). Gemini n'a pas toujours
 tracé les traits noirs entre les cases : le découpage se cale alors sur les quarts de l'image.
 **Anciennes images gardées** (décision utilisateur) : les 31 images d'avant sont archivées dans
-`assets/cartes/anciennes/`, avec les deux versions de Gemini remplacées (`*_gemini.png`). Leur style
+`specs/generation-images/anciennes/` (hors du dossier servi par le jeu), avec les deux versions de Gemini remplacées (`*_gemini.png`). Leur style
 est presque le même que celui des nouvelles (Gemini a recopié la moitié d'entre elles de près) ;
 deux reprennent donc du service pour éviter des cartes trop ressemblantes : *Missile guidé* ←
 `missiles_guides.png` (trajectoires courbes sur fond bleu, au lieu d'un réticule magenta comme les
@@ -169,7 +169,7 @@ Les colonnes « Fichier » ne sont pas à coller : elles servent à l'agent pour
 | Case | Carte | Ce qu'elle fait | Idée d'image | Fichier |
 |---|---|---|---|---|
 | 1 | Réacteur en surrégime | Donne X électricité en plus ce tour | Réacteur dont l'aiguille est dans le rouge, éclairs jaunes intenses | `reacteur_surregime.png` |
-| 2 | Bouclier | Bouclier de X sur un module | Générateur qui projette un bouclier d'énergie bleu hexagonal | `bouclier.png` |
+| 2 | Bouclier | Bouclier de X sur un module | Générateur qui projette un bouclier d'énergie bleu hexagonal | `bouclier_v2.png` |
 | 3 | Protéger le vaisseau | Bouclier de X sur le module principal | Le vaisseau principal sous un dôme de bouclier bleu | `proteger_vaisseau.png` |
 | 4 | Blindage ciblé | Bouclier de X sur un module | Plaques de blindage qui se verrouillent sur un seul module du vaisseau | `blindage_cible.png` |
 | 5 | Bouclier d'escadre | Donne X de bouclier à tous vos modules | Plusieurs petits boucliers hexagonaux reliés entre eux, couvrant tout le vaisseau | `bouclier_escadre.png` |
@@ -181,7 +181,7 @@ Les colonnes « Fichier » ne sont pas à coller : elles servent à l'agent pour
 | 11 | Bouclier réfléchissant | Renvoi X sur un module : il renvoie à l'attaquant les dégâts reçus | Petit bouclier violet qui renvoie un tir ennemi vers son tireur | `bouclier_reflechissant.png` |
 | 12 | Bouclier stabilisé | Les Boucliers de base sont lancés X fois de plus | Générateur de bouclier stabilisé par des anneaux, deux boucliers superposés | `bouclier_stabilise.png` |
 | 13 | Protocole de riposte | Donne X de bouclier et Renvoi X au module principal | Écran tactique qui affiche un bouclier et une flèche de riposte, dominante violette | `protocole_riposte.png` |
-| 14 | Réparation | Répare le module principal pour X | Clé à molette et bras mécanique qui réparent une plaque de coque, fond vert | `reparation.png` |
+| 14 | Réparation | Répare le module principal pour X | Clé à molette et bras mécanique qui réparent une plaque de coque, fond vert | `reparation_v2.png` |
 | 15 | Réparation rapide | Répare le module principal pour X | Clé à molette et étincelles de soudure rapides, réparation express | `reparation_rapide.png` |
 | 16 | Réparation de champ | Répare tous vos modules pour X | Plusieurs petits drones de réparation verts qui travaillent sur tout le vaisseau | `reparation_champ.png` |
 
@@ -193,7 +193,7 @@ Les colonnes « Fichier » ne sont pas à coller : elles servent à l'agent pour
 | 2 | Protocole d'urgence | Les cartes de base sont lancées X fois de plus | Gyrophare d'alarme rouge et voyants d'urgence sur une console | `protocole_urgence.png` |
 | 3 | Protocole d'analyse | Piochez X cartes | Drone scanner qui projette des cartes holographiques cyan | `protocole_analyse.png` |
 | 4 | Protocole de ciblage | Pose Verrouillage X à tous les ennemis | Écran radar qui verrouille plusieurs cibles avec des réticules magenta | `protocole_ciblage.png` |
-| 5 | Missile guidé | Inflige X dégâts à un ennemi. Piochez X carte | Missile qui file vers un réticule de visée, fond violet | `missile_guide.png` |
+| 5 | Missile guidé | Inflige X dégâts à un ennemi. Piochez X carte | Missile qui file vers un réticule de visée, fond violet | `missile_guide_v2.png` |
 | 6 | Mini-missile | Inflige X dégâts à un ennemi | Un tout petit missile vif et nerveux | `mini_missile.png` |
 | 7 | Missiles jumeaux | Inflige X dégâts à un ennemi, deux fois | Deux missiles identiques côte à côte, trajectoires parallèles | `missiles_jumeaux.png` |
 | 8 | Missile à fragmentation | Inflige X dégâts à un ennemi et X à tous les autres | Missile qui éclate en multiples fragments qui partent dans toutes les directions | `missile_fragmentation.png` |
