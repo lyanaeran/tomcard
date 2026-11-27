@@ -70,6 +70,9 @@ web montrent le **même contenu** ; les écarts sont listés en §8.4.
   pas la ligne du bas ni ses intentions. Web : cartes plus petites, côte à côte (le texte se lit
   sur la carte agrandie).
 - **Bouton Deck pendant un combat** : toutes les cartes du combat, toutes piles confondues.
+- **Écran du deck** : cartes de **180 px**, **6 par ligne** (demande utilisateur, 2026-11-27) ;
+  quand elles ne tiennent pas, la grille **défile** (molette sur PC, ascenseur à droite ; page qui
+  défile sur le web), sous un bandeau fixe (titre, Retour).
 
 ### 8.2 Formes visuelles
 

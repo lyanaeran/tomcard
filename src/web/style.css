@@ -1515,12 +1515,12 @@ body {
     flex-wrap: wrap;
     justify-content: center;
     gap: 1rem;
-    max-width: 900px;
+    max-width: 1200px;
 }
 
 .carte-deck {
     position: relative;
-    width: clamp(90px, 12vw, 130px);
+    width: clamp(110px, 15vw, 180px);
     border: 2px solid transparent;
     border-radius: 8px;
     cursor: pointer;
@@ -1570,7 +1570,7 @@ body {
     flex-wrap: wrap;
     justify-content: center;
     gap: 1rem;
-    max-width: 900px;
+    max-width: 1200px;
 }
 
 /* Selection/creation de profil joueur, puis accueil de ce joueur (specs.md 10.3) - nouveau point
