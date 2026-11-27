@@ -42,7 +42,9 @@ HAUTEUR_BANDEAU_INTENTION = 20
 # fournie par l'utilisateur (quasi carree, contrairement a l'ancienne tres
 # large) impose une hauteur bien plus grande a largeur egale.
 VAISSEAU_X = 150
-VAISSEAU_Y = 190
+# 240 (au lieu de 190) depuis les cartes de 150 px (2026-11-27) : la main ne cache plus les
+# cases du bas (ennemis de la colonne droite et leur intention)
+VAISSEAU_Y = 240
 VAISSEAU_LARGEUR = 527
 _TAILLE_IMAGE_PRINCIPAL = (978, 965)  # largeur, hauteur de assets/modules/principal.png
 VAISSEAU_HAUTEUR = VAISSEAU_LARGEUR * _TAILLE_IMAGE_PRINCIPAL[1] / _TAILLE_IMAGE_PRINCIPAL[0]
@@ -103,9 +105,10 @@ CARTE_HAUTEUR = carte_visuel.hauteur_carte(CARTE_LARGEUR)
 CARTE_Y = 6
 CARTE_ESPACEMENT = CARTE_LARGEUR + 8
 X_MIN_MAIN, X_MAX_MAIN = 100, LARGEUR_FENETRE - 10
-# Carte survolee montree en grand au-dessus de la main, avec ses details dessous
+# Carte survolee montree en grand, collee au bas de l'ecran par-dessus la main (decision
+# utilisateur, 2026-11-27), ses details au-dessus d'elle
 CARTE_AGRANDIE_LARGEUR = 300
-CARTE_AGRANDIE_Y = CARTE_Y + CARTE_HAUTEUR + 40
+CARTE_AGRANDIE_Y = CARTE_Y
 
 # Controles de combat (tour suivant / quitter la partie) : icones plutot qu'un bandeau+texte en
 # haut d'ecran (decision utilisateur, remplace l'ancien bandeau Electricite/"Fin de tour" - la
@@ -698,8 +701,9 @@ class FenetreCombat(pyglet.window.Window):
         return elements
 
     def _dessiner_carte_agrandie(self, carte: Carte, lot: pyglet.graphics.Batch) -> list:
-        """Carte survolee en grand au-dessus de la main (decision utilisateur, 2026-11-27), avec
-        dessous ce que la carte ne montre pas : module, pas jouable maintenant."""
+        """Carte survolee en grand, collee au bas de l'ecran par-dessus la main (decisions
+        utilisateur, 2026-11-27), avec au-dessus ce que la carte ne montre pas : module, pas
+        jouable maintenant."""
         index = self._main().index(carte)
         cx = self._x_carte_depart() + index * self._pas_main() + CARTE_LARGEUR / 2
         x = min(max(cx - CARTE_AGRANDIE_LARGEUR / 2, X_MIN_MAIN), LARGEUR_FENETRE - CARTE_AGRANDIE_LARGEUR - 10)
@@ -711,21 +715,8 @@ class FenetreCombat(pyglet.window.Window):
             lignes.append(f"Module : {nom_module}")
         if not self.combat.peut_jouer(carte):
             lignes.append("Pas jouable maintenant")
-        if lignes:
-            hauteur = 22 * len(lignes) + 8
-            fond = shapes.Rectangle(
-                x, CARTE_AGRANDIE_Y - hauteur, CARTE_AGRANDIE_LARGEUR, hauteur, color=COULEUR_BANDEAU,
-                batch=lot, group=groupes[1],
-            )
-            fond.opacity = OPACITE_BANDEAU
-            texte = pyglet.text.Label(
-                "\n".join(lignes), x=x + CARTE_AGRANDIE_LARGEUR / 2, y=CARTE_AGRANDIE_Y - hauteur / 2,
-                anchor_x="center", anchor_y="center", multiline=True, width=CARTE_AGRANDIE_LARGEUR - 10,
-                align="center", font_size=TAILLE_POLICE_INFOBULLE, color=(*COULEUR_SURVOL, 255),
-                batch=lot, group=groupes[2],
-            )
-            elements += [fond, texte]
-        return elements
+        y_haut = CARTE_AGRANDIE_Y + carte_visuel.hauteur_carte(CARTE_AGRANDIE_LARGEUR) + carte_visuel.hauteur_details(lignes)
+        return elements + carte_visuel.dessiner_details(lignes, x, y_haut, CARTE_AGRANDIE_LARGEUR, lot, groupes[2])
 
     def _y_haut_controles_combat(self, barre_laterale) -> float:
         """Sommet du bloc controles de combat (Electricite/tour suivant/Quitter) : sous la barre

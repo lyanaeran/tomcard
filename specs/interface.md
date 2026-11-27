@@ -66,7 +66,9 @@ web montrent le **même contenu** ; les écarts sont listés en §8.4.
 - **Main de cartes** : alignée en bas de l'écran, centrée. PC : cartes de **150 px** de large
   (décision utilisateur, 2026-11-27), qui **se chevauchent** quand la main ne tient plus en largeur
   (chacune passe au-dessus de sa voisine de gauche) ; la carte sélectionnée est soulevée et
-  entourée. Web : cartes plus petites, côte à côte (le texte se lit sur la carte agrandie).
+  entourée. Le vaisseau et la flotte sont remontés d'autant (`VAISSEAU_Y`) : la main ne cache
+  pas la ligne du bas ni ses intentions. Web : cartes plus petites, côte à côte (le texte se lit
+  sur la carte agrandie).
 - **Bouton Deck pendant un combat** : toutes les cartes du combat, toutes piles confondues.
 
 ### 8.2 Formes visuelles
@@ -90,8 +92,9 @@ web montrent le **même contenu** ; les écarts sont listés en §8.4.
   Le texte prend au plus la taille du nom, et rétrécit seulement s'il ne tient pas dans sa zone.
   Une carte **injouable maintenant** (électricité, aucune cible) est assombrie.
 - **Carte agrandie** (décision utilisateur, 2026-11-27) : la carte en grand (300 px sur PC),
-  avec dessous ce qu'elle ne montre pas : son **module**, « **Pas jouable maintenant** ». PC : au
-  survol d'une carte de la main (au-dessus de la main) ou d'une grille de deck (à côté d'elle) ;
+  avec ce qu'elle ne montre pas : son **module**, « **Pas jouable maintenant** ». PC : au survol
+  d'une carte de la main, **collée au bas de l'écran** par-dessus la main (détails au-dessus
+  d'elle), ou d'une grille de deck (à côté d'elle, détails dessous) ;
   web : quand la carte est armée, ou touchée dans un deck, au centre de l'écran. Les récompenses
   et les cartes des Aventures sont déjà assez grandes, avec le nom de leur module au-dessus.
 - **Pastilles** au-dessus de chaque case, jamais sur l'image : **PV** (rouge) et **Bouclier**
