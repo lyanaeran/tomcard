@@ -104,6 +104,7 @@ CARTE_LARGEUR = 150
 CARTE_HAUTEUR = carte_visuel.hauteur_carte(CARTE_LARGEUR)
 CARTE_Y = 6
 CARTE_ESPACEMENT = CARTE_LARGEUR + 8
+ELEVATION_CARTE_SELECTIONNEE = 14
 X_MIN_MAIN, X_MAX_MAIN = 100, LARGEUR_FENETRE - 10
 # Carte survolee montree en grand, collee au bas de l'ecran par-dessus la main (decision
 # utilisateur, 2026-11-27), ses details au-dessus d'elle
@@ -414,6 +415,12 @@ class FenetreCombat(pyglet.window.Window):
         self.index_carte_selectionnee: int | None = None
         self.entite_survolee: Module | Ennemi | None = None
         self.index_carte_survolee: int | None = None
+        # Main de cartes (et carte agrandie) dans un lot a part, refait seulement quand ce qu'elle
+        # affiche change (_cle_main) : une carte cree une dizaine de Label, les recreer a chaque
+        # image divisait la cadence par deux (relecture PR 82).
+        self._lot_main: pyglet.graphics.Batch | None = None
+        self._elements_main: list = []
+        self._cle_lot_main: tuple | None = None
         # Derniere position connue de la souris, pour placer l'infobulle au-dessus du curseur
         self.position_souris: tuple[int, int] = (0, 0)
         self.survole_barre: str | None = None
@@ -484,7 +491,6 @@ class FenetreCombat(pyglet.window.Window):
         elements.extend(self._dessiner_flotte(lot))
         elements.extend(self._dessiner_cases_valides(lot))
         elements.extend(self._dessiner_popups(lot))
-        elements.extend(self._dessiner_main(lot))
         elements.extend(self._dessiner_survol(lot))
         if self.partie is not None:
             elements.extend(barre_laterale.dessiner(self.partie, self.survole_barre, lot))
@@ -495,6 +501,30 @@ class FenetreCombat(pyglet.window.Window):
             elements.extend(self._dessiner_message_fin(lot))
 
         lot.draw()
+        # La main par-dessus le reste du combat (la carte agrandie passe au-dessus de tout)
+        self._lot_main_a_jour().draw()
+
+    def _cle_main(self) -> tuple:
+        """Tout ce que la main affiche : si rien ne change, son lot est reutilise tel quel."""
+        cartes = tuple(
+            (
+                id(carte), carte.cout, textes_combat.texte_munitions(carte), textes_combat.lancements(carte),
+                carte.description_affichee(), self.combat.peut_jouer(carte),
+            )
+            for carte in self._main()
+        )
+        return cartes, self.index_carte_selectionnee, self.index_carte_survolee, self.combat.en_cours
+
+    def _lot_main_a_jour(self) -> pyglet.graphics.Batch:
+        cle = self._cle_main()
+        if self._lot_main is None or cle != self._cle_lot_main:
+            lot = pyglet.graphics.Batch()
+            elements = self._dessiner_main(lot)
+            main = self._main()
+            if self.combat.en_cours and self.index_carte_survolee is not None and self.index_carte_survolee < len(main):
+                elements.extend(self._dessiner_carte_agrandie(main[self.index_carte_survolee], lot))
+            self._lot_main, self._elements_main, self._cle_lot_main = lot, elements, cle
+        return self._lot_main
 
     def _dessiner_fond(self, lot: pyglet.graphics.Batch) -> list:
         """Dessine l'image de fond, etiree pour remplir toute la fenetre (deformation
@@ -686,7 +716,7 @@ class FenetreCombat(pyglet.window.Window):
             y = CARTE_Y
             groupes = carte_visuel.groupes_carte(10 + index)
             if index == self.index_carte_selectionnee:
-                y += 14
+                y += ELEVATION_CARTE_SELECTIONNEE
                 elements.append(
                     shapes.Box(
                         x - 4, y - 4, CARTE_LARGEUR + 8, CARTE_HAUTEUR + 8,
@@ -771,9 +801,8 @@ class FenetreCombat(pyglet.window.Window):
         (decision utilisateur, 2026-11-13, refonte-branchement.md 4.3)."""
         if not self.combat.en_cours:
             return []
-        main = self._main()
-        if self.index_carte_survolee is not None and self.index_carte_survolee < len(main):
-            return self._dessiner_carte_agrandie(main[self.index_carte_survolee], lot)
+        if self.index_carte_survolee is not None and self.index_carte_survolee < len(self._main()):
+            return []  # carte agrandie, dessinee avec la main (_lot_main_a_jour)
 
         entite = self.entite_survolee
         if entite is None:
@@ -872,10 +901,12 @@ class FenetreCombat(pyglet.window.Window):
         """Renvoie l'index de la carte de la main sous ce point, ou None si aucune."""
         x_depart = self._x_carte_depart()
         pas = self._pas_main()
-        # De droite a gauche : une carte chevauchee est sous sa voisine de droite
+        # De droite a gauche : une carte chevauchee est sous sa voisine de droite. La carte
+        # selectionnee est soulevee de 14 px : seule elle prend les clics un peu plus haut.
         for index in reversed(range(len(self._main()))):
             carte_x = x_depart + index * pas
-            if _point_dans_rectangle(x, y, carte_x, CARTE_Y, CARTE_LARGEUR, CARTE_HAUTEUR + 14):
+            hauteur = CARTE_HAUTEUR + (ELEVATION_CARTE_SELECTIONNEE if index == self.index_carte_selectionnee else 0)
+            if _point_dans_rectangle(x, y, carte_x, CARTE_Y, CARTE_LARGEUR, hauteur):
                 return index
         return None
 

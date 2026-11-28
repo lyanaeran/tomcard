@@ -20,7 +20,7 @@ const DUREE_INFOBULLE_MODULE_MS = 4000;
 // Cache-Control, et Safari iOS garde volontiers une vieille version de ces
 // fichiers en cache malgre un rechargement simple. A incrementer a chaque
 // modification de app.js/bridge.py qui change le contrat entre les deux.
-const VERSION_CACHE = "108";
+const VERSION_CACHE = "109";
 
 // Emplacements des 4 modules equipes, mesures sur assets/modules/principal.png
 // (978x965) - memes reperes que _EMPLACEMENTS_MODULES_IMAGE dans
@@ -677,9 +677,15 @@ function htmlCarteVisuel(carte) {
 
 // Reduit le texte et le nom des cartes qui debordent de leur zone (meme regle que _label_ajuste
 // de src/ui/carte_visuel.py : taille maximale = celle du nom, puis plus petit si besoin).
+// Une zone deja ajustee pour ce texte et cette largeur (data-ajuste) n'est pas refaite : le
+// passage qui suit chaque rendu ne fait alors que lire les largeurs (relecture PR 82 : refaire
+// toutes les zones forcait des dizaines de recalculs de mise en page a chaque popup).
 function ajusterTextesCartes(racine = document) {
     racine.querySelectorAll(".cv-texte, .cv-nom").forEach((zone) => {
         if (!zone.offsetParent) return; // ecran cache : refait quand il s'affiche
+        const cle = `${zone.clientWidth}|${zone.textContent}`;
+        if (zone.dataset.ajuste === cle) return;
+        zone.dataset.ajuste = cle;
         let reduction = 1;
         zone.style.setProperty("--reduction", reduction);
         while ((zone.scrollHeight > zone.clientHeight + 1 || zone.scrollWidth > zone.clientWidth + 1) && reduction > 0.45) {
