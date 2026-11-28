@@ -36,6 +36,9 @@ reporté côté web (`_essayer_de_cibler` ↔ `cliquerCase`, cf. specs.md §8.3)
 - **Cartes** : toujours les dessiner avec `carte_visuel.py` (gabarit, barre, texte, nom), jamais à
   la main dans un écran ; une carte qui en chevauche une autre a ses propres groupes
   (`groupes_carte(ordre)`), la carte agrandie passe au-dessus de tout (`GROUPE_CARTE_AGRANDIE`).
+  Une carte coûte une dizaine de `Label` : ne pas la recréer à chaque image. Le combat garde la
+  main dans un lot refait seulement quand ce qu'elle affiche change (`_lot_main_a_jour`), le deck
+  construit sa grille une fois et la fait défiler en décalant la vue (`EcranDeck.on_draw`).
 - macOS : Python 3.14 fait planter pyglet (segfault) ; le `.venv` utilise Python 3.13.
 
 ## Tester un changement visible (obligatoire avant de le considérer terminé)
