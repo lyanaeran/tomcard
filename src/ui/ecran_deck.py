@@ -9,6 +9,7 @@ Fond de combat reutilise en placeholder (decision utilisateur), a remplacer par 
 
 import pyglet
 from pyglet import shapes
+from pyglet.math import Mat4, Vec3
 
 from src.gameplay.carte import Carte
 from src.ui import carte_visuel
@@ -97,24 +98,56 @@ class EcranDeck(pyglet.window.Window):
         self.termine: bool = False
         # Pixels dont la grille est remontee (molette), entre 0 et defilement_max
         self.defilement: float = 0.0
+        self._lot_fond: pyglet.graphics.Batch | None = None
+        self._lot_grille: pyglet.graphics.Batch | None = None
+        self._lot_dessus: pyglet.graphics.Batch | None = None
+        self._cle_dessus: tuple | None = None
+        self._elements_fond: list = []
+        self._elements_grille: list = []
+        self._elements_dessus: list = []
 
     def on_draw(self) -> None:
+        """Trois lots : le fond, la grille (construite une seule fois, decalee par la vue pour
+        defiler) et le dessus (bandeau, survol, carte agrandie), refait seulement quand le survol
+        ou le defilement change (relecture PR 82 : refaire toutes les cartes a chaque image
+        prenait plus de 150 ms)."""
         self.clear()
-        lot = pyglet.graphics.Batch()
-        elements = self._dessiner(lot)
-        lot.draw()
-        del elements
+        if self._lot_fond is None:
+            self._lot_fond = pyglet.graphics.Batch()
+            self._elements_fond = [
+                _sprite_etire(FOND_IMAGE, 0, 0, LARGEUR_FENETRE, HAUTEUR_FENETRE, self._lot_fond)
+            ]
+        self._lot_fond.draw()
+        if self._lot_grille is None:
+            self._lot_grille = pyglet.graphics.Batch()
+            self._elements_grille = [
+                element
+                for index, (carte, quantite) in enumerate(self.groupes)
+                for element in carte_visuel.dessiner_carte_de_grille(
+                    carte, _rect_carte(index), quantite, False, self._lot_grille, ordre=1 + index
+                )
+            ]
+        vue = self.view
+        self.view = vue @ Mat4.from_translation(Vec3(0, self.defilement, 0))
+        self._lot_grille.draw()
+        self.view = vue
+        cle = (self.index_survole, self.bouton_retour_survole, self.defilement)
+        if self._lot_dessus is None or cle != self._cle_dessus:
+            self._lot_dessus = pyglet.graphics.Batch()
+            self._elements_dessus = self._dessiner_dessus(self._lot_dessus)
+            self._cle_dessus = cle
+        self._lot_dessus.draw()
 
-    def _dessiner(self, lot: pyglet.graphics.Batch) -> list:
-        elements = [_sprite_etire(FOND_IMAGE, 0, 0, LARGEUR_FENETRE, HAUTEUR_FENETRE, lot)]
-        for index, (carte, quantite) in enumerate(self.groupes):
-            _x, y, _l, hauteur = self._rect(index)
-            if y > HAUTEUR_FENETRE or y + hauteur < 0:
-                continue  # hors de l'ecran
-            elements.extend(self._dessiner_carte(index, carte, quantite, lot))
-        elements.extend(self._dessiner_bandeau(lot))
+    def _dessiner_dessus(self, lot: pyglet.graphics.Batch) -> list:
+        """Ce qui passe au-dessus de la grille : bandeau du haut, cadre de la carte survolee et
+        carte agrandie."""
+        elements = self._dessiner_bandeau(lot)
         if self.index_survole is not None:
             carte, _quantite = self.groupes[self.index_survole]
+            x, y, largeur, hauteur = self._rect(self.index_survole)
+            elements.append(
+                shapes.Box(x - 4, y - 4, largeur + 8, hauteur + 8, thickness=4, color=COULEUR_TEXTE, batch=lot)
+            )
             elements.extend(self._dessiner_carte_agrandie(carte, lot))
         return elements
 
@@ -165,10 +198,7 @@ class EcranDeck(pyglet.window.Window):
         )
         return [rectangle, texte]
 
-    def _dessiner_carte(self, index: int, carte: Carte, quantite: int, lot: pyglet.graphics.Batch) -> list:
-        return carte_visuel.dessiner_carte_de_grille(
-            carte, self._rect(index), quantite, index == self.index_survole, lot, ordre=1 + index
-        )
+
 
     def _dessiner_carte_agrandie(self, carte: Carte, lot: pyglet.graphics.Batch) -> list:
         """Carte survolee en grand a cote d'elle, avec le module auquel elle est rattachee."""
